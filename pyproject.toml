@@ -1,25 +1,34 @@
 [project]
 name = "ai-news-aggregator"
-version = "0.1.0"
-description = "Add your description here"
+version = "1.0.0"
+description = "Source-linked AI news, personalized digests, and Gmail delivery on Vercel"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.14.2",
-    "docling>=2.61.2",
+    "fastapi>=0.115,<1",
+    "httpx>=0.28,<1",
     "feedparser>=6.0.12",
     "markdown>=3.7.0",
     "markdownify>=0.11.6",
     "openai>=2.7.2",
-    "psycopg2-binary>=2.9.11",
+    "pymysql>=1.1,<2",
     "pydantic>=2.0.0",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
     "sqlalchemy>=2.0.44",
     "youtube-transcript-api>=1.2.3",
+    "uvicorn>=0.34,<1",
 ]
 
 [dependency-groups]
 dev = [
-    "ipykernel>=7.1.0",
+    "pytest>=8,<10",
+    "ruff>=0.12,<1",
 ]
+
+[project.scripts]
+app = "app.server:app"
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

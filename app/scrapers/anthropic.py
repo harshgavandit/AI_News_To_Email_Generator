@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 import feedparser
-from docling.document_converter import DocumentConverter
+from .web_content import url_to_markdown
 from pydantic import BaseModel
 
 
@@ -21,7 +21,6 @@ class AnthropicScraper:
             "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml",
             "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
         ]
-        self.converter = DocumentConverter()
 
     def get_articles(self, hours: int = 24) -> List[AnthropicArticle]:
         now = datetime.now(timezone.utc)
@@ -56,11 +55,7 @@ class AnthropicScraper:
         return articles
 
     def url_to_markdown(self, url: str) -> Optional[str]:
-        try:
-            result = self.converter.convert(url)
-            return result.document.export_to_markdown()
-        except Exception:
-            return None
+        return url_to_markdown(url)
 
 if __name__ == "__main__":
     scraper = AnthropicScraper()

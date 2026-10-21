@@ -1,50 +1,95 @@
-# AI News Aggregator - Live Build Repository
+# AI Brief — AI News to Email Generator
 
-. This is a repo containing valuable implementation details and deployment strategies used in production environments.
+A live AI reading room and personalized email digest by Harsh Gavand. Browse source-linked stories from OpenAI, Anthropic, and Matthew Berman's YouTube channel; generate a brief using OpenAI; then preview, copy, download, or send it to the owner's Gmail inbox.
 
-## Project Structure
+**Live app:** https://ai-news-to-email-generator.vercel.app
 
-This project is organized across three branches, each corresponding to a different phase of the build:
+## What the application does
 
-- **`master`** - Part 1: Local setup and core functionality
-- **`deployment`** - Part 2: Deployment configuration and infrastructure
-- **`deployment-final`** - Part 3: Final optimizations and production-ready changes
+- Collects five RSS feeds concurrently, deduplicates links, and caches feed responses for five minutes.
+- Filters stories by source, title/excerpt search, and a 24-hour, 7-day, or 30-day window.
+- Selects up to five recent stories across the chosen sources. The existing digest agent summarizes each feed excerpt, the curator ranks the summaries against your interests, and the email agent writes an introduction.
+- Validates OpenAI output against Pydantic schemas and rejects rankings with invented IDs or duplicate positions.
+- Renders a responsive email preview with original source links, relevance scores, and ranking explanations.
+- Sends through Gmail only after owner authentication. The recipient is the configured owner inbox; public visitors cannot choose recipients. A signed, expiring preview prevents altered email payloads.
 
-Each branch serves as an intermediate checkpoint, allowing you to reference the exact state of the codebase at any point during the video.
+Summaries use **RSS titles and excerpts**, not full article text or YouTube transcripts. Anthropic feeds are maintained by the third-party [Olshansk/rss-feeds](https://github.com/Olshansk/rss-feeds) project and link to Anthropic originals. Feed failures appear in the interface; the app never substitutes fabricated news.
 
-## How This Video Works
+## Architecture
 
-This is a **live coding build**, not a traditional step-by-step tutorial. Here's what to expect:
+```text
+Browser (HTML / CSS / JavaScript)
+  -> FastAPI on Vercel
+     -> Concurrent RSS collection and normalization
+     -> OpenAI digest agent -> curator agent -> email introduction
+     -> Signed email preview -> authenticated Gmail SMTP delivery
+```
 
-- **Fast-paced development** - I code at my natural pace, leveraging AI tools extensively
-- **AI-assisted workflow** - You won't see every code snippet or file generation in real-time
-- **Real-world approach** - This condenses 20-40 hours of learning into a single session
-- **Not cookie-cutter** - Unlike structured tutorials, this reflects how coding actually happens in practice
+The deployed web flow is stateless and needs no database. The original batch pipeline remains available through `main.py`, using SQLite locally by default or MySQL through `DATABASE_URL` / existing `MYSQL_*` settings. Local SQLite is not used as durable storage on Vercel.
 
-## How to Follow Along
+## Run locally
 
-### Recommended Approach (Maximum Learning)
+Requires Python 3.12+; Vercel uses Python 3.12 via `.python-version`. Install [uv](https://docs.astral.sh/uv/) and then:
 
-1. **Clone this repository** before starting the video
-2. **Keep a local copy ready** on your system as you code along
-3. **Use intermediate checkpoints** - When I make major updates or run tests, pause and:
-   - Reference the corresponding branch in this repository
-   - Copy relevant code snippets into your project
-   - Use AI coding assistants to help you reach the same checkpoint
-4. **Iterate step-by-step** - Don't rush ahead. Ensure each phase works before moving forward
-5. **Expect confusion** - Some parts will move fast and may not be immediately clear. This is where real learning happens
+```powershell
+uv sync --frozen
+Copy-Item .env.example .env
+# Fill in real values in the saved .env. Never commit this file.
+uv run uvicorn app.server:app --reload
+```
 
-### Alternative Approach (Not Recommended)
+Open http://127.0.0.1:8000. Interactive API docs are at `/api/docs`.
 
-You can skip ahead to the `deployment-final` branch and try to get everything working, but you'll miss the iterative problem-solving process that makes this valuable.
+| Environment setting | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Required for real AI generation. Browsing feeds works without it. |
+| `OPENAI_MODEL` | Model to use; defaults to `gpt-4o-mini`. |
+| `MY_EMAIL` | Gmail sender and fixed destination for digest delivery. |
+| `APP_PASSWORD` | Gmail app password, with Google two-step verification enabled. Spaces are removed before authentication. |
+| `ADMIN_TOKEN` | Long random owner access key required by `/api/email`. Enter it only in the owner delivery dialog. |
+| `DATABASE_URL` | Optional SQLAlchemy URL for the batch CLI. The deployed dashboard does not use it. |
 
-## Why This Approach?
+Generate a random owner access key locally, save it as `ADMIN_TOKEN` in `.env`, and keep it private. API keys, Gmail settings, and the owner access key stay on the server. Do not place secrets in public JavaScript or screenshots.
 
-Traditional tutorials show you the "right way" to do things. This video shows you the **real way** - with AI assistance, rapid iteration, debugging, and adapting on the fly. By following along and hitting the same checkpoints, you'll:
+### Original batch CLI
 
-- Learn how to effectively leverage AI coding tools
-- Understand the thought process behind architectural decisions
-- Experience real-world development workflows
-- Build muscle memory through hands-on practice
+```powershell
+uv run python main.py 24 10
+```
 
-**The most valuable learning happens when you struggle, reference the code, and push through to the next checkpoint.**
+This performs the original scraping, content/transcript enrichment, database persistence, digest generation, and Gmail delivery. Unlike the web preview flow, **this command sends email**. It is intended for a local machine or scheduled worker, not a long-running Vercel request. YouTube transcripts may be unavailable due to publisher restrictions or cloud IP blocking; the web flow uses feed excerpts instead.
+
+## Deploy to Vercel
+
+The repository is connected to the `ai-news-to-email-generator` project under `harshgavandits-projects`. Vercel detects `app/server.py` as FastAPI and serves `public/` assets through its CDN. `vercel.json` sets the request duration to 120 seconds.
+
+```powershell
+npx vercel link --project ai-news-to-email-generator --scope harshgavandits-projects
+uv run python scripts/sync_vercel_env.py
+npx vercel --prod --yes
+```
+
+The sync helper sends only the five application settings to the production environment through stdin. It does not print values or upload `VERCEL_OIDC_TOKEN`. Deploy again after changing production environment variables. Pushes to GitHub `main` also trigger the linked Vercel deployment.
+
+## Verification
+
+```powershell
+uv run pytest -q
+uv run ruff check app tests scripts main.py
+node --check public/app.js
+uv run python -m compileall -q app main.py
+```
+
+GitHub Actions runs the locked dependencies and offline checks on Python 3.12 and 3.14. Tests cover source filtering, unsafe feed links, input limits, caching, provider errors, ranking integrity, HTML escaping, authorization, signed-preview tampering/expiration, fixed-recipient delivery, and duplicate-send protection. They mock the provider and SMTP; live-provider results are recorded separately in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+
+## Operational boundaries
+
+- The dashboard is on demand. Deployment does not schedule a daily email or create subscriptions.
+- The browser retains its current generated preview until reload. There is no hosted account system, archive, or subscriber database.
+- Feed and digest caches, generation concurrency, request limits (three generations / two send attempts per ten minutes), and duplicate-send protection apply **per warm function instance**. They reset on cold starts and do not enforce an account-wide or distributed quota. Add a durable shared limiter and provider spending controls before high-volume public use.
+- SMTP acceptance establishes that Gmail accepted the message for delivery; recipient inbox placement requires checking the mailbox.
+- An available configuration flag in `/api/health` indicates settings are present. Real OpenAI and Gmail requests are needed to verify credentials.
+
+## Codebase origins
+
+The initial repository contains a tutorial-style batch aggregator and its original Git history. This deployment adapts that pipeline into a Vercel application, preserves the existing OpenAI migration, removes the heavyweight Docling/Torch dependency chain, and replaces the placeholder tutorial README and incompatible CI configuration with project-specific documentation and checks.

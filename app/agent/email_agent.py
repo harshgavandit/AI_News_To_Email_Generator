@@ -1,25 +1,7 @@
-import json
-import os
 from datetime import datetime
 from typing import List, Optional
-import requests
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-def generate_response(prompt: str, model: str = "llama3") -> str:
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-        },
-    )
-    response.raise_for_status()
-    return response.json().get("response", "")
+from .openai_client import generate_response
 
 
 class EmailIntroduction(BaseModel):
@@ -68,7 +50,7 @@ EMAIL_PROMPT = """You are an expert email writer specializing in creating engagi
 Your role is to write a warm, professional introduction for a daily AI news digest email that:
 - Greets the user by name
 - Includes the current date
-- Provides a brief, engaging overview of what's coming in the top 10 ranked articles
+- Provides a brief, engaging overview of the supplied ranked articles
 - Highlights the most interesting or important themes
 - Sets expectations for the content ahead
 
@@ -77,7 +59,6 @@ Keep it concise (2-3 sentences for the introduction), friendly, and professional
 
 class EmailAgent:
     def __init__(self, user_profile: dict):
-        self.model = "llama3"
         self.user_profile = user_profile
 
     def generate_introduction(self, ranked_articles: List) -> EmailIntroduction:
@@ -96,18 +77,18 @@ class EmailAgent:
         current_date = datetime.now().strftime('%B %d, %Y')
         user_prompt = f"""Create an email introduction for {self.user_profile['name']} for {current_date}.
 
-Top 10 ranked articles:
+Top {len(top_articles)} ranked articles:
 {article_summaries}
 
 Generate a greeting and introduction that previews these articles."""
 
         try:
             api_prompt = f"{EMAIL_PROMPT}\n\n{user_prompt}"
-            raw_response = generate_response(api_prompt, model=self.model)
+            raw_response = generate_response(api_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction)
 
             # Expect the LLM to return JSON matching EmailIntroduction
             try:
-                intro = EmailIntroduction.parse_raw(raw_response)
+                intro = EmailIntroduction.model_validate_json(raw_response)
             except Exception:
                 # Fallback: treat the response as plain text
                 intro = EmailIntroduction(

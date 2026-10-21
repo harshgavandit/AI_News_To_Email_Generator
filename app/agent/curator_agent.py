@@ -1,24 +1,6 @@
-import json
-import os
 from typing import List
-import requests
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-def generate_response(prompt: str, model: str = "llama3") -> str:
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-        },
-    )
-    response.raise_for_status()
-    return response.json().get("response", "")
+from .openai_client import generate_response
 
 
 class RankedArticle(BaseModel):
@@ -55,7 +37,6 @@ Rank articles from most relevant (rank 1) to least relevant. Ensure each article
 
 class CuratorAgent:
     def __init__(self, user_profile: dict):
-        self.model = "llama3"
         self.user_profile = user_profile
         self.system_prompt = self._build_system_prompt()
 
@@ -94,8 +75,14 @@ Provide a relevance score (0.0-10.0) and rank (1-{len(digests)}) for each articl
 
         try:
             api_prompt = f"{self.system_prompt}\n\n{user_prompt}"
-            raw_response = generate_response(api_prompt, model=self.model)
-            ranked_list = RankedDigestList.parse_raw(raw_response)
+            raw_response = generate_response(api_prompt, system_prompt=self.system_prompt, response_model=RankedDigestList)
+            ranked_list = RankedDigestList.model_validate_json(raw_response)
+            expected = {d["id"] for d in digests}
+            if {a.digest_id for a in ranked_list.articles} != expected or len(ranked_list.articles) != len(expected):
+                raise ValueError("Ranking must include each source exactly once")
+            if sorted(a.rank for a in ranked_list.articles) != list(range(1, len(expected) + 1)):
+                raise ValueError("Ranking positions must be unique and consecutive")
+            ranked_list.articles.sort(key=lambda article: article.rank)
             return ranked_list.articles if ranked_list else []
         except Exception as e:
             print(f"Error ranking digests: {e}")

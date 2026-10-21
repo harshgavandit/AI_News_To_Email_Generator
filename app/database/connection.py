@@ -9,6 +9,10 @@ from .models import Base
 load_dotenv()
 
 def get_database_url() -> str:
+    if os.getenv("DATABASE_URL"):
+        return os.environ["DATABASE_URL"]
+    if not os.getenv("MYSQL_HOST"):
+        return "sqlite:///./ai_news.db"
     user = os.getenv("MYSQL_USER", "root")
     password = quote_plus(os.getenv("MYSQL_PASSWORD", ""))
     host = os.getenv("MYSQL_HOST", "localhost")
@@ -18,7 +22,6 @@ def get_database_url() -> str:
     return f"mysql+pymysql://{user}:{password}@{host}:{port}/{db}"
 
 engine = create_engine(get_database_url())
-Base.metadata.create_all(bind=engine)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -27,4 +30,5 @@ SessionLocal = sessionmaker(
 )
 
 def get_session():
+    Base.metadata.create_all(bind=engine)
     return SessionLocal()

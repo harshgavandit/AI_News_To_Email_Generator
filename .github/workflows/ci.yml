@@ -1,0 +1,29 @@
+name: Python checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv
+          uv sync --frozen
+      - name: Check Python and frontend syntax
+        run: |
+          uv run ruff check app tests scripts main.py
+          uv run python -m compileall -q app main.py
+          node --check public/app.js
+      - name: Test API, feed handling, and delivery controls
+        run: uv run pytest -q

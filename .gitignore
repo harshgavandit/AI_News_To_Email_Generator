@@ -58,6 +58,13 @@ target/
 
 # DotEnv configuration
 .env
+.env.*
+!.env.example
+.vercel/
+.tmp/
+.pytest_cache/
+.ruff_cache/
+*.sqlite*
 
 # Database
 *.db
@@ -97,3 +104,8 @@ app/alembic/versions/*
 playground/*.png
 
 app/google-service-account.json
+.vercel
+.env*
+
+# Keep the safe template publishable after Vercel CLI ignore rules.
+!.env.example
