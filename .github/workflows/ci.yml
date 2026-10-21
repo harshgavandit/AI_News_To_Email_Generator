@@ -7,6 +7,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -26,4 +28,4 @@ jobs:
           uv run python -m compileall -q app main.py
           node --check public/app.js
       - name: Test API, feed handling, and delivery controls
-        run: uv run pytest -q
+        run: uv run python -m pytest -q
