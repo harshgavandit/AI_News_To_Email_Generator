@@ -22,7 +22,7 @@ def get_openai_model() -> str:
 
 @lru_cache(maxsize=1)
 def get_client() -> OpenAI:
-    return OpenAI(api_key=get_openai_api_key(), timeout=35, max_retries=1)
+    return OpenAI(api_key=get_openai_api_key(), timeout=35, max_retries=0)
 
 
 def generate_response(prompt: str, system_prompt: str = "Return JSON.", response_model: type[BaseModel] | None = None) -> str:

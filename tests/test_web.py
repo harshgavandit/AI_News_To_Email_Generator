@@ -206,3 +206,38 @@ def test_curator_rejects_hallucinated_source_ids(monkeypatch):
     from app.agent import curator_agent
     monkeypatch.setattr(curator_agent, "generate_response", lambda *a, **kw: '{"articles":[{"digest_id":"invented","rank":1,"relevance_score":9,"reasoning":"test"}]}')
     assert CuratorAgent(copy.deepcopy(USER_PROFILE)).rank_digests([{"id": "real", "title": "Source", "summary": "Text", "article_type": "openai"}]) == []
+
+
+@pytest.mark.parametrize("ids", [["9349f418e7bc7ab45091"], ["first-hash", "second-hash"]])
+def test_curator_schema_binds_exact_source_ids_and_preserves_ranking(monkeypatch, ids):
+    from app.agent import curator_agent
+
+    def complete(*args, response_model, **kwargs):
+        schema = response_model.model_json_schema()
+        assert schema["$defs"]["SourceId"]["enum"] == ids
+        payload = {"articles": [{"digest_id": source_id, "rank": rank,
+                                 "relevance_score": 9, "reasoning": "Matches the reader's interests"}
+                                for rank, source_id in enumerate(reversed(ids), 1)]}
+        # Exercise the same typed parsing boundary used by the OpenAI client.
+        return response_model.model_validate(payload).model_dump_json()
+
+    monkeypatch.setattr(curator_agent, "generate_response", complete)
+    articles = [{"id": value, "title": "Source", "summary": "Text", "article_type": "openai"} for value in ids]
+    ranked = CuratorAgent(copy.deepcopy(USER_PROFILE)).rank_digests(articles)
+    assert [article.digest_id for article in ranked] == list(reversed(ids))
+    assert [article.rank for article in ranked] == list(range(1, len(ids) + 1))
+
+
+def test_curator_schema_rejects_publisher_prefixed_ids(monkeypatch):
+    from pydantic import ValidationError
+    from app.agent import curator_agent
+
+    def complete(*args, response_model, **kwargs):
+        with pytest.raises(ValidationError):
+            response_model.model_validate({"articles": [{"digest_id": "openai:source-hash", "rank": 1,
+                                                          "relevance_score": 9, "reasoning": "Relevant"}]})
+        return '{"articles":[{"digest_id":"openai:source-hash","rank":1,"relevance_score":9,"reasoning":"Relevant"}]}'
+
+    monkeypatch.setattr(curator_agent, "generate_response", complete)
+    assert CuratorAgent(copy.deepcopy(USER_PROFILE)).rank_digests(
+        [{"id": "source-hash", "title": "Source", "summary": "Text", "article_type": "openai"}]) == []
