@@ -12,7 +12,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
@@ -24,7 +24,13 @@ jobs:
             echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
             exit 1
           fi
-          curl --silent --show-error --fail-with-body --max-time 115 \
+          result=$(curl --silent --show-error --fail --max-time 115 --retry 2 --retry-max-time 150 \
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
-            <<< "Authorization: Bearer $FEED_REFRESH_SECRET" | jq -e \
-            'select(.status == "already_started" or (.status == "refreshed" and .healthy > 0))'
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+          jq -e 'select(.status == "already_started" or (.status == "refreshed" and .healthy > 0))' <<< "$result"
+          ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
+            'https://ai-news-to-email-generator.vercel.app/api/ready')
+          jq -e '.freshness.counts | select(.fresh > 0)' <<< "$ready"
+          if [[ $(jq -r '.status' <<< "$ready") == 'degraded' ]]; then
+            echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
+          fi

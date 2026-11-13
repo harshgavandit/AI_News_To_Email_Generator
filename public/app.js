@@ -48,16 +48,31 @@ async function loadNews(append = false) {
     if (state.controller !== controller) return;
     state.articles = append ? state.articles.concat(data.articles) : data.articles;
     state.cursor = data.next_cursor; state.total = data.total; renderStories();
-    const unavailable = data.sources.filter(s => s.enabled !== false && s.available === false).length;
-    $('source-notice').hidden = !unavailable;
-    $('source-notice').textContent = `${unavailable} ${unavailable === 1 ? 'source is' : 'sources are'} temporarily unavailable. Previously collected stories are still shown when available.`;
-    const stale = !data.last_success || Date.now() - Date.parse(data.last_success) > 45 * 60 * 1000;
-    $('updated').textContent = data.fetched_at ? `Sources checked ${readableTime(data.fetched_at)}${stale ? ' · Updates delayed' : ''}` : 'Waiting for the first source check';
-    $('updated').classList.toggle('stale', stale);
+    renderFreshness(data.freshness);
   } catch (error) {
     if (error.name !== 'AbortError') {status('news-status', error.message, true); $('updated').textContent = 'Could not load stories';}
   } finally {
     if (state.controller === controller) {$('stories').setAttribute('aria-busy', 'false'); $('show-more').disabled = false;}
+  }
+}
+
+function renderFreshness(freshness) {
+  const notice = $('source-notice');
+  const checked = freshness?.checked_at;
+  const updated = $('updated');
+  updated.textContent = checked ? `Sources checked ${readableTime(checked)}` : 'Waiting for the first source check';
+  updated.classList.toggle('stale', freshness?.status !== 'fresh');
+  notice.hidden = !freshness || freshness.status === 'fresh';
+  if (notice.hidden) return;
+  const {enabled, fresh} = freshness.counts;
+  if (freshness.status === 'stale') {
+    notice.textContent = freshness.last_success
+      ? `Updates are delayed. Last successful check ${readableTime(freshness.last_success)}. Showing saved stories.`
+      : 'Updates are delayed. The selected sources have not completed a successful check.';
+  } else if (freshness.status === 'degraded') {
+    notice.textContent = `${fresh} of ${enabled} sources in this view are up to date. Saved stories remain available.`;
+  } else {
+    notice.textContent = enabled ? 'The selected sources are waiting for a successful check.' : 'There are no enabled sources in this view.';
   }
 }
 for (const id of ['window','kind','publisher']) $(id).addEventListener('change', () => loadNews());

@@ -1,9 +1,11 @@
 """Scheduled and admin-triggered refresh; browsing never waits on it with a store."""
-from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import UTC, datetime, timedelta
 
 from app.news import read_feed
 from app.sources import DEFAULT_SOURCES
+
+FRESH_FOR = timedelta(minutes=45)
 
 
 def refresh_sources(store, only=None):
@@ -11,8 +13,10 @@ def refresh_sources(store, only=None):
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)]
     with ThreadPoolExecutor(max_workers=10) as pool:
-        for s, (items, status) in zip(active, pool.map(read_feed, active)):
-            store.ingest(s.id, items, status["available"], status.get("error"))
+        futures = {pool.submit(read_feed, source): source for source in active}
+        for future in as_completed(futures):
+            items, status = future.result()
+            store.ingest(futures[future].id, items, status["available"], status.get("error"))
     store.prune()
     return source_catalog(store)
 
@@ -31,3 +35,29 @@ def source_catalog(store=None):
 
 def timestamp(value):
     return datetime.fromtimestamp(value, UTC).isoformat() if value else None
+
+
+def feed_freshness(catalog, *, source="all", publisher="", kind="all"):
+    active = [s for s in catalog if s["enabled"] and (source == "all" or source in (s["id"], s["source"]))
+              and (not publisher or s["id"] == publisher) and (kind == "all" or s["kind"] == kind)]
+    cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
+    counts = dict(enabled=len(active), fresh=0, stale=0, failed=0, pending=0)
+    for feed in active:
+        if feed["available"] is False:
+            counts["failed"] += 1
+        elif not feed.get("last_success"):
+            counts["pending"] += 1
+        elif feed["last_success"] < cutoff:
+            counts["stale"] += 1
+        else:
+            counts["fresh"] += 1
+
+    if counts["fresh"]:
+        status = "fresh" if counts["fresh"] == len(active) else "degraded"
+    elif counts["failed"] or counts["stale"]:
+        status = "stale"
+    else:
+        status = "pending"
+    return {"status": status, "counts": counts,
+            "checked_at": max((s.get("checked_at") or "" for s in active), default="") or None,
+            "last_success": max((s.get("last_success") or "" for s in active), default="") or None}

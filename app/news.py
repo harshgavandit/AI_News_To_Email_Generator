@@ -121,11 +121,16 @@ def collect_news():
         if not _cache or time.monotonic() - _refreshed >= 300:
             with ThreadPoolExecutor(max_workers=10) as pool:
                 for s, (articles, status) in zip(DEFAULT_SOURCES, pool.map(read_feed, DEFAULT_SOURCES)):
-                    if not status["available"] and s.id in _cache:
-                        articles = _cache[s.id][0]
+                    checked_at = datetime.now(timezone.utc).isoformat()
+                    previous_articles, previous_status = _cache.get(s.id, ([], {}))
+                    status["checked_at"] = checked_at
+                    status["last_success"] = checked_at if status["available"] else previous_status.get("last_success")
+                    if not status["available"]:
+                        articles = previous_articles
+                        status["count"] = len(articles)
                     _cache[s.id] = (articles, status)
             _refreshed = time.monotonic()
         unique = {a["url"]: a for articles, _ in _cache.values() for a in articles}
         return {"articles": sorted(unique.values(), key=lambda a: (a["published_at"], a["id"]), reverse=True),
                 "sources": [status for _, status in _cache.values()],
-                "fetched_at": datetime.now(timezone.utc).isoformat()}
+                "fetched_at": max((status["checked_at"] for _, status in _cache.values()), default=None)}

@@ -156,6 +156,38 @@ class Store:
         except QuotaReached:
             return False
 
+    def claim_refresh(self, *, scheduled=False):
+        """Claim one refresh across instances for longer than the function timeout."""
+        now = time.time()
+        expires = now + 180
+        active = and_(limits.c.scope == "feed-refresh-lease", limits.c.bucket == "active")
+        with self.engine.begin() as conn:
+            claim = self.insert(limits).values(scope="feed-refresh-lease", bucket="active", used=1, touched=expires)
+            acquired = conn.scalar(claim.on_conflict_do_update(
+                index_elements=[limits.c.scope, limits.c.bucket],
+                set_={"touched": claim.excluded.touched}, where=limits.c.touched <= now,
+            ).returning(limits.c.touched))
+            if acquired is None:
+                return None
+            if scheduled:
+                cooldown = conn.scalar(select(limits.c.touched).where(
+                    limits.c.scope == "feed-refresh-lease", limits.c.bucket == "cooldown"))
+                if cooldown is not None and cooldown > now:
+                    conn.execute(delete(limits).where(active))
+                    return None
+            return acquired
+
+    def finish_refresh(self, lease, *, cooldown=0):
+        with self.engine.begin() as conn:
+            released = conn.scalar(delete(limits).where(
+                limits.c.scope == "feed-refresh-lease", limits.c.bucket == "active", limits.c.touched == lease,
+            ).returning(limits.c.scope))
+            if released is not None and cooldown:
+                stmt = self.insert(limits).values(scope="feed-refresh-lease", bucket="cooldown", used=1,
+                                                  touched=time.time() + cooldown)
+                conn.execute(stmt.on_conflict_do_update(index_elements=[limits.c.scope, limits.c.bucket],
+                                                       set_={"touched": stmt.excluded.touched}))
+
     def save_code(self, ident, mailbox, proof, expires):
         with self.engine.begin() as conn:
             conn.execute(codes.insert().values(id=ident, mailbox=mailbox, proof=proof, expires=expires, tries=0))

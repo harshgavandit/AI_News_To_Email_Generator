@@ -28,7 +28,7 @@ from app.coverage import TOPICS, public_article, topic_for
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import refresh_sources, source_catalog
+from app.ingestion import feed_freshness, refresh_sources, source_catalog
 from app.launch_store import decode_cursor, get_store, page_result
 from app.public_mail import router as mail_router
 from app.selection import select_candidates, words
@@ -141,6 +141,16 @@ def health():
             "email_configured": all(os.getenv(k) for k in ("MY_EMAIL", "APP_PASSWORD", "ADMIN_TOKEN"))}
 
 
+@app.get("/api/ready")
+def readiness():
+    store = get_store()
+    if not store:
+        return JSONResponse({"status": "unavailable", "reason": "archive_not_configured"}, status_code=503)
+    freshness = feed_freshness(source_catalog(store))
+    available = freshness["counts"]["fresh"] > 0
+    return JSONResponse({"status": freshness["status"], "freshness": freshness}, status_code=200 if available else 503)
+
+
 @app.get("/api/sources")
 def sources():
     return {"sources": source_catalog(get_store()), "topics": TOPICS}
@@ -183,15 +193,20 @@ def refresh_job(authorization: str | None = Header(default=None)):
                                     for secret in secrets_):
         raise HTTPException(401, "Unauthorized.")
     store = source_store()
-    # Each scheduled run claims its own time bucket before contacting publishers.
-    if not store.admit([("feed-refresh", str(int(time.time()) // 300), 1)]):
+    lease = store.claim_refresh(scheduled=True)
+    if lease is None:
         return {"status": "already_started"}
-    catalog = refresh_sources(store)
-    active = [s for s in catalog if s["enabled"]]
-    healthy = sum(s["available"] is True for s in active)
-    if active and not healthy:
-        raise HTTPException(503, "All enabled feeds failed their latest check.")
-    return {"status": "refreshed", "sources": len(active), "healthy": healthy}
+    cooldown = 0
+    try:
+        catalog = refresh_sources(store)
+        active = [s for s in catalog if s["enabled"]]
+        healthy = sum(s["available"] is True for s in active)
+        if not healthy:
+            raise HTTPException(503, "No enabled feed passed its latest check.")
+        cooldown = 300
+        return {"status": "refreshed", "sources": len(active), "healthy": healthy}
+    finally:
+        store.finish_refresh(lease, cooldown=cooldown)
 
 
 @app.post("/api/admin/refresh")
@@ -202,7 +217,13 @@ def refresh_admin(source: str | None = None, authorization: str | None = Header(
     store = source_store()
     if not store.admit([("admin-refresh", str(int(time.time()) // 60), 1)]):
         raise HTTPException(429, "Wait a minute before refreshing again.")
-    return {"sources": refresh_sources(store, source)}
+    lease = store.claim_refresh()
+    if lease is None:
+        raise HTTPException(429, "A feed refresh is already running.")
+    try:
+        return {"sources": refresh_sources(store, source)}
+    finally:
+        store.finish_refresh(lease)
 
 
 @app.get("/api/news")
@@ -221,6 +242,7 @@ def news(hours: TimeWindow = TimeWindow.week, source: str = "all",
             page = store.page(hours=hours, source=source, query=q, kind=kind, publisher=publisher, limit=limit, cursor=cursor, topic=topic)
             active = [s for s in catalog if s["enabled"]]
             return dict(page, articles=[public_article(a) for a in page["articles"]], sources=catalog,
+                        freshness=feed_freshness(catalog, source=source, publisher=publisher, kind=kind),
                         fetched_at=max((s["checked_at"] or "" for s in active), default="") or None,
                         last_success=max((s["last_success"] or "" for s in active), default="") or None)
         payload = collect_news()
@@ -237,7 +259,8 @@ def news(hours: TimeWindow = TimeWindow.week, source: str = "all",
         if cursor:
             after = tuple(decode_cursor(cursor, fingerprint))
             articles = [a for a in articles if (a["published_at"], a["id"]) < after]
-        return {**payload, **page_result([public_article(a) for a in articles], total, limit, fingerprint)}
+        return {**payload, **page_result([public_article(a) for a in articles], total, limit, fingerprint),
+                "freshness": feed_freshness(payload.get("sources", []), source=source, publisher=publisher, kind=kind)}
     except ValueError:
         raise HTTPException(400, "Invalid page cursor.") from None
 
