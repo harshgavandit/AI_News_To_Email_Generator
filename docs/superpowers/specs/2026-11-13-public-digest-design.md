@@ -1,0 +1,9 @@
+# Public AI Brief design
+
+Readers browse a larger, searchable collection, generate a digest on demand, and can email it to an inbox they verify. Three digest emails per normalized mailbox per UTC day. No subscriptions, recurring sends, billing, or recipient lists. Verification codes have a separate, tighter quota. A mailbox verification session expires after seven days and can be cleared.
+
+Options: retain an in-memory service (simple, but quotas/history reset), build separate worker and delivery infrastructure (more control, higher operating burden), or use the existing Vercel/FastAPI app with shared PostgreSQL and transactional email. Use the last option: one deployment, one database, scheduled collection, the requested Gmail SMTP sender for the pilot, Turnstile for code requests. No additional AI provider.
+
+Use an allowlisted registry, an owner-only source manager for enabling/pausing and approved additions, cursor pagination, and last successful results per source. Scheduled refresh ingests only; it never sends mail. Store source metadata, feed excerpts, content versions, and cached summaries. Search a wider pool by user interest, diversify publishers, and keep the 3/5-story interface. Preserve browsing and the original owner CLI/web route. Use SQLite only in local tests/development; the public mail switch requires PostgreSQL on Vercel.
+
+Persist quotas, code challenge hashes, short-lived sendable previews and idempotent delivery records. Validate captcha, use a signed HttpOnly cookie for verified identity, and derive recipient only from the verified session. Hard-limit total daily generation and provider attempts before external calls. Save provider acceptance separately from inbox delivery; never resend automatically after an ambiguous SMTP failure. No raw addresses in logs. Do not publish with public sending enabled until sender, database, and captcha are configured and checked. Pilot mode allows only the configured owner address.

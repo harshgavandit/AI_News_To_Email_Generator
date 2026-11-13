@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import secrets
 import smtplib
 import threading
 import time
@@ -17,15 +18,22 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.exc import SQLAlchemyError
 
 load_dotenv()
 
 from app.news import collect_news
 from app.web_digest import build_digest
 from app.services.email import send_email
+from app.ingestion import refresh_sources, source_catalog
+from app.launch_store import decode_cursor, get_store, page_result
+from app.public_mail import router as mail_router
+from app.selection import select_candidates, words
+from app.sources import BY_ID, GROUPS, KINDS
 
 app = FastAPI(title="AI Brief", version="1.0.0", docs_url="/api/docs", redoc_url=None)
+app.include_router(mail_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 _limits = OrderedDict()
@@ -46,7 +54,18 @@ class DigestRequest(BaseModel):
     focus: str = Field(default="AI engineering, agents, research, and practical applications", max_length=400)
     hours: Literal[24, 168, 720] = 168
     top_n: int = Field(default=5, ge=1, le=5)
-    sources: list[Literal["openai", "anthropic", "youtube"]] = Field(default=["openai", "anthropic", "youtube"], min_length=1, max_length=3)
+    sources: list[str] = Field(default_factory=lambda: list(GROUPS), min_length=1, max_length=24)
+
+    @field_validator("sources")
+    @classmethod
+    def known_sources(cls, values):
+        if any(value not in GROUPS and value not in BY_ID for value in values):
+            raise ValueError("Choose a supported source.")
+        return list(dict.fromkeys(values))
+
+
+class SourceUpdate(BaseModel):
+    enabled: bool
 
 
 class EmailRequest(BaseModel):
@@ -92,15 +111,19 @@ def require_owner(authorization: str | None):
 async def response_headers(request: Request, call_next):
     if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 100000:
         return JSONResponse({"detail": "Request is too large."}, status_code=413)
-    if request.method == "POST" and request.headers.get("origin"):
+    if request.method in {"POST", "PATCH"} and request.headers.get("origin"):
         from urllib.parse import urlparse
         if urlparse(request.headers["origin"]).netloc != request.headers.get("host"):
             return JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403)
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except SQLAlchemyError:
+        logger.warning("Database request failed: %s", request.url.path)
+        response = JSONResponse({"detail": "The news database is temporarily unavailable."}, status_code=503)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     if request.url.path == "/api/docs":
         # Swagger's standard template loads its UI assets from jsDelivr.
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'"
@@ -115,51 +138,143 @@ def health():
             "email_configured": all(os.getenv(k) for k in ("MY_EMAIL", "APP_PASSWORD", "ADMIN_TOKEN"))}
 
 
+@app.get("/api/sources")
+def sources():
+    return {"sources": source_catalog(get_store())}
+
+
+def source_store():
+    store = get_store()
+    if not store:
+        raise HTTPException(503, "Source history is not configured.")
+    return store
+
+
+@app.post("/api/admin/sources")
+def admin_sources(authorization: str | None = Header(default=None)):
+    require_owner(authorization)
+    return {"sources": source_catalog(source_store())}
+
+
+@app.post("/api/admin/setup")
+def initialize_news(authorization: str | None = Header(default=None)):
+    require_owner(authorization)
+    store = source_store()
+    store.migrate()
+    return {"database": store.engine.dialect.name, "schema_ready": True}
+
+
+@app.patch("/api/admin/sources/{source_id}")
+def update_source(source_id: str, body: SourceUpdate, authorization: str | None = Header(default=None)):
+    require_owner(authorization)
+    if source_id not in BY_ID:
+        raise HTTPException(404, "Unknown source.")
+    source_store().enable(source_id, body.enabled)
+    return {"source": source_id, "enabled": body.enabled}
+
+
+@app.get("/api/jobs/refresh")
+def refresh_job(authorization: str | None = Header(default=None)):
+    secret = os.getenv("CRON_SECRET", "")
+    if len(secret) < 16 or not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+        raise HTTPException(401, "Unauthorized.")
+    store = source_store()
+    # Each scheduled run claims its own time bucket before contacting publishers.
+    if not store.admit([("feed-refresh", str(int(time.time()) // 300), 1)]):
+        return {"status": "already_started"}
+    catalog = refresh_sources(store)
+    return {"status": "refreshed", "sources": len(catalog), "healthy": sum(s["available"] is True for s in catalog)}
+
+
+@app.post("/api/admin/refresh")
+def refresh_admin(source: str | None = None, authorization: str | None = Header(default=None)):
+    require_owner(authorization)
+    if source and source not in BY_ID:
+        raise HTTPException(404, "Unknown source.")
+    store = source_store()
+    if not store.admit([("admin-refresh", str(int(time.time()) // 60), 1)]):
+        raise HTTPException(429, "Wait a minute before refreshing again.")
+    return {"sources": refresh_sources(store, source)}
+
+
 @app.get("/api/news")
-def news(hours: TimeWindow = TimeWindow.week, source: Literal["all", "openai", "anthropic", "youtube"] = "all", q: Annotated[str, Query(max_length=150)] = ""):
-    payload = collect_news()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-    articles = [a for a in payload["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff
-                and (source == "all" or a["source"] == source)
-                and (not q or q.lower() in (a["title"] + " " + a["description"]).lower())]
-    return dict(payload, articles=articles, total=len(articles))
+def news(hours: TimeWindow = TimeWindow.week, source: str = "all",
+         q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "",
+         limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
+    if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
+        raise HTTPException(422, "Choose a supported source or content type.")
+    q = q.strip()
+    store = get_store()
+    try:
+        if store:
+            catalog = source_catalog(store)
+            page = store.page(hours=hours, source=source, query=q, kind=kind, publisher=publisher, limit=limit, cursor=cursor)
+            return dict(page, sources=catalog, fetched_at=max((s["checked_at"] or "" for s in catalog), default="") or None)
+        payload = collect_news()
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        articles = [a for a in payload["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff
+                    and (source == "all" or source in (a["source"], a.get("source_id")))
+                    and (kind == "all" or a.get("kind") == kind)
+                    and (not publisher or a.get("source_id") == publisher)
+                    and (not q or q.lower() in (a["title"] + " " + a["description"]).lower())]
+        fingerprint = hashlib.sha256(json.dumps([hours, source, q, kind, publisher]).encode()).hexdigest()[:16]
+        total = len(articles)
+        articles.sort(key=lambda a: (a["published_at"], a["id"]), reverse=True)
+        if cursor:
+            after = tuple(decode_cursor(cursor, fingerprint))
+            articles = [a for a in articles if (a["published_at"], a["id"]) < after]
+        return {**payload, **page_result(articles, total, limit, fingerprint)}
+    except ValueError:
+        raise HTTPException(400, "Invalid page cursor.") from None
 
 
 @app.post("/api/digest")
 def generate(body: DigestRequest, request: Request):
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(503, "AI generation is not configured yet.")
-    rate_limit(request, "generate", 3)
-    payload = news(hours=body.hours)
-    available = [a for a in payload["articles"] if a["source"] in body.sources]
-    # Round-robin sources so one busy feed does not crowd out the others.
-    buckets = [[a for a in available if a["source"] == source] for source in dict.fromkeys(body.sources)]
-    selected = []
-    while len(selected) < body.top_n and any(buckets):
-        for bucket in buckets:
-            if bucket and len(selected) < body.top_n:
-                selected.append(bucket.pop(0))
+    store = get_store()
+    if store:
+        address = request.client.host if request.client else "unknown"
+        if os.getenv("VERCEL"):
+            address = request.headers.get("x-vercel-forwarded-for", address).split(",")[0].strip()
+        ident = hashlib.sha256(address.encode()).hexdigest()
+        today = datetime.now(timezone.utc).date().isoformat()
+        if not store.admit([(f"generate:{ident}", today, 8), ("generate-total", today, 60)]):
+            raise HTTPException(429, "Digest generation has reached its daily limit. Try again after midnight UTC.")
+        available = store.candidates(body.hours, body.sources, words(body.focus))
+    else:
+        rate_limit(request, "generate", 3)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=body.hours)
+        available = [a for a in collect_news()["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff]
+    selected = select_candidates(available, body.focus, body.top_n, body.sources)
     if not selected:
         raise HTTPException(404, "No articles in this window. Try the past 30 days or another source.")
-    cache_key = hashlib.sha256(json.dumps([body.model_dump(), [a["id"] for a in selected]], sort_keys=True).encode()).hexdigest()
-    if not _generation_lock.acquire(blocking=False):
+    cache_key = hashlib.sha256(json.dumps([body.model_dump(), [(a["id"], a["title"], a["description"]) for a in selected]], sort_keys=True).encode()).hexdigest()
+    if not store and not _generation_lock.acquire(blocking=False):
         raise HTTPException(429, "A digest is being prepared. Please try again in a moment.")
     try:
         cached = _digest_cache.get(cache_key)
         if cached and time.monotonic() - cached[0] < 600:
             digest = cached[1]
         else:
-            digest = build_digest(selected, body.name.strip() or "Reader", body.focus)
+            if store:
+                digest = build_digest(selected, body.name.strip() or "Reader", body.focus, store=store)
+            else:
+                digest = build_digest(selected, body.name.strip() or "Reader", body.focus)
             _digest_cache[cache_key] = (time.monotonic(), digest)
             while len(_digest_cache) > 24:
                 _digest_cache.popitem(last=False)
         expires = int(time.time()) + 3600
-        return {"digest": digest, "expires": expires, "signature": signature(digest, expires),
+        preview_id = secrets.token_urlsafe(24) if store else None
+        if store:
+            store.save_preview(preview_id, digest, expires)
+        return {"digest": digest, "expires": expires, "signature": signature(digest, expires), "preview_id": preview_id,
                 "source_basis": "Summaries use publisher RSS titles and excerpts, not full article text."}
     except (ValueError, RuntimeError):
         raise HTTPException(502, "The AI provider could not complete this digest. Please try again shortly.") from None
     finally:
-        _generation_lock.release()
+        if not store:
+            _generation_lock.release()
 
 
 @app.post("/api/email")
