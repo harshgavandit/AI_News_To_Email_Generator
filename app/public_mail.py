@@ -172,7 +172,7 @@ def challenge(body: ChallengeBody, request: Request, response: Response):
     ident, code = secrets.token_urlsafe(24), f"{secrets.randbelow(1_000_000):06d}"
     store.save_code(ident, mailbox, digest_key(f"code:{ident}:{code}"), time.time() + CODE_TTL)
     try:
-        send_message(email, "Your AI Brief verification code", f"This code expires in 10 minutes. Your code is {code}.", None, ident)
+        send_message(email, "Your World Tech Brief verification code", f"This code expires in 10 minutes. Your code is {code}.", None, ident)
     except (OSError, smtplib.SMTPException):
         raise HTTPException(502, "The verification message could not be sent right now.") from None
     cookie(response, CHALLENGE, "challenge", [ident, email], CODE_TTL)
@@ -215,13 +215,13 @@ def send(body: SendBody, request: Request):
     state, accepted = store.reserve_delivery(identity, [(f"mail:{mailbox}", day(), 3),
                                                         ("outbound", day(), 60), ("digests", day(), 45)])
     if state == "limited":
-        raise limited("This inbox or AI Brief has reached its daily sending limit. Try again after midnight UTC.")
+        raise limited("This inbox or World Tech Brief has reached its daily sending limit. Try again after midnight UTC.")
     if accepted:
         return {"status": "accepted", "message": "Your brief was accepted for delivery."}
     if state != "new":
         raise HTTPException(409, "This brief already has a send attempt. Check your inbox before requesting another.")
     try:
-        provider_id = send_message(recipient, "Your AI Brief", payload["markdown"], payload["html"], identity)
+        provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity)
     except (OSError, smtplib.SMTPException):
         # SMTP acceptance can be ambiguous after a timeout. Keep the reservation.
         raise HTTPException(502, "Delivery could not be confirmed. Check your inbox before trying another brief.") from None

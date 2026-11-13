@@ -14,8 +14,8 @@ def item(index, title='Generic AI news', publisher='Publisher'):
 
 def test_registry_has_expanded_sources_and_stable_channel_ids():
     from app.sources import DEFAULT_SOURCES
-    assert len(DEFAULT_SOURCES) == 17
-    assert len({s.id for s in DEFAULT_SOURCES}) == 17
+    assert len(DEFAULT_SOURCES) >= 35
+    assert len({s.id for s in DEFAULT_SOURCES}) == len(DEFAULT_SOURCES)
     assert len([s for s in DEFAULT_SOURCES if s.kind == 'video']) == 5
 
 

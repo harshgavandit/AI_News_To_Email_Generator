@@ -15,6 +15,7 @@ from app.web_digest import safe_email_html
 
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
+    monkeypatch.setattr(server, "get_store", lambda: None)
     monkeypatch.setenv("ADMIN_TOKEN", "test-owner-token")
     monkeypatch.setenv("OPENAI_API_KEY", "test-provider-key")
     monkeypatch.setenv("MY_EMAIL", "owner@example.com")
@@ -51,7 +52,7 @@ def signed(digest):
 def test_home_assets_and_security_headers(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "AI Brief" in response.text
+    assert "World Tech Brief" in response.text
     assert response.headers["x-frame-options"] == "DENY"
     assert "default-src 'self'" in response.headers["content-security-policy"]
     for path in ("/styles.css", "/app.js", "/favicon.svg"):

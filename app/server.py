@@ -24,7 +24,9 @@ from sqlalchemy.exc import SQLAlchemyError
 load_dotenv()
 
 from app.news import collect_news
+from app.coverage import TOPICS, public_article, topic_for
 from app.web_digest import build_digest
+from app.world_edition import build_world, select_world
 from app.services.email import send_email
 from app.ingestion import refresh_sources, source_catalog
 from app.launch_store import decode_cursor, get_store, page_result
@@ -32,7 +34,7 @@ from app.public_mail import router as mail_router
 from app.selection import select_candidates, words
 from app.sources import BY_ID, GROUPS, KINDS
 
-app = FastAPI(title="AI Brief", version="1.0.0", docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title="World Tech Brief", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
@@ -50,11 +52,12 @@ class TimeWindow(IntEnum):
 
 
 class DigestRequest(BaseModel):
+    edition: Literal["personal", "world"] = "personal"
     name: str = Field(default="Reader", min_length=1, max_length=60)
     focus: str = Field(default="AI engineering, agents, research, and practical applications", max_length=400)
     hours: Literal[24, 168, 720] = 168
     top_n: int = Field(default=5, ge=1, le=5)
-    sources: list[str] = Field(default_factory=lambda: list(GROUPS), min_length=1, max_length=24)
+    sources: list[str] = Field(default_factory=lambda: list(GROUPS), min_length=1, max_length=len(BY_ID))
 
     @field_validator("sources")
     @classmethod
@@ -140,7 +143,7 @@ def health():
 
 @app.get("/api/sources")
 def sources():
-    return {"sources": source_catalog(get_store())}
+    return {"sources": source_catalog(get_store()), "topics": TOPICS}
 
 
 def source_store():
@@ -175,15 +178,20 @@ def update_source(source_id: str, body: SourceUpdate, authorization: str | None 
 
 @app.get("/api/jobs/refresh")
 def refresh_job(authorization: str | None = Header(default=None)):
-    secret = os.getenv("CRON_SECRET", "")
-    if len(secret) < 16 or not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+    secrets_ = [os.getenv(name, "") for name in ("CRON_SECRET", "FEED_REFRESH_SECRET")]
+    if not authorization or not any(len(secret) >= 16 and hmac.compare_digest(authorization, f"Bearer {secret}")
+                                    for secret in secrets_):
         raise HTTPException(401, "Unauthorized.")
     store = source_store()
     # Each scheduled run claims its own time bucket before contacting publishers.
     if not store.admit([("feed-refresh", str(int(time.time()) // 300), 1)]):
         return {"status": "already_started"}
     catalog = refresh_sources(store)
-    return {"status": "refreshed", "sources": len(catalog), "healthy": sum(s["available"] is True for s in catalog)}
+    active = [s for s in catalog if s["enabled"]]
+    healthy = sum(s["available"] is True for s in active)
+    if active and not healthy:
+        raise HTTPException(503, "All enabled feeds failed their latest check.")
+    return {"status": "refreshed", "sources": len(active), "healthy": healthy}
 
 
 @app.post("/api/admin/refresh")
@@ -199,38 +207,45 @@ def refresh_admin(source: str | None = None, authorization: str | None = Header(
 
 @app.get("/api/news")
 def news(hours: TimeWindow = TimeWindow.week, source: str = "all",
-         q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "",
+         q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
         raise HTTPException(422, "Choose a supported source or content type.")
+    if topic != "all" and topic not in TOPICS:
+        raise HTTPException(422, "Choose a supported topic.")
     q = q.strip()
     store = get_store()
     try:
         if store:
             catalog = source_catalog(store)
-            page = store.page(hours=hours, source=source, query=q, kind=kind, publisher=publisher, limit=limit, cursor=cursor)
-            return dict(page, sources=catalog, fetched_at=max((s["checked_at"] or "" for s in catalog), default="") or None)
+            page = store.page(hours=hours, source=source, query=q, kind=kind, publisher=publisher, limit=limit, cursor=cursor, topic=topic)
+            active = [s for s in catalog if s["enabled"]]
+            return dict(page, articles=[public_article(a) for a in page["articles"]], sources=catalog,
+                        fetched_at=max((s["checked_at"] or "" for s in active), default="") or None,
+                        last_success=max((s["last_success"] or "" for s in active), default="") or None)
         payload = collect_news()
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         articles = [a for a in payload["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff
                     and (source == "all" or source in (a["source"], a.get("source_id")))
                     and (kind == "all" or a.get("kind") == kind)
+                    and (topic == "all" or topic_for(a) == topic)
                     and (not publisher or a.get("source_id") == publisher)
                     and (not q or q.lower() in (a["title"] + " " + a["description"]).lower())]
-        fingerprint = hashlib.sha256(json.dumps([hours, source, q, kind, publisher]).encode()).hexdigest()[:16]
+        fingerprint = hashlib.sha256(json.dumps([hours, source, q, kind, publisher, topic]).encode()).hexdigest()[:16]
         total = len(articles)
         articles.sort(key=lambda a: (a["published_at"], a["id"]), reverse=True)
         if cursor:
             after = tuple(decode_cursor(cursor, fingerprint))
             articles = [a for a in articles if (a["published_at"], a["id"]) < after]
-        return {**payload, **page_result(articles, total, limit, fingerprint)}
+        return {**payload, **page_result([public_article(a) for a in articles], total, limit, fingerprint)}
     except ValueError:
         raise HTTPException(400, "Invalid page cursor.") from None
 
 
 @app.post("/api/digest")
 def generate(body: DigestRequest, request: Request):
-    if not os.getenv("OPENAI_API_KEY"):
+    world = body.edition == "world"
+    if not world and not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(503, "AI generation is not configured yet.")
     store = get_store()
     if store:
@@ -239,14 +254,19 @@ def generate(body: DigestRequest, request: Request):
             address = request.headers.get("x-vercel-forwarded-for", address).split(",")[0].strip()
         ident = hashlib.sha256(address.encode()).hexdigest()
         today = datetime.now(timezone.utc).date().isoformat()
-        if not store.admit([(f"generate:{ident}", today, 8), ("generate-total", today, 60)]):
+        policies = ([(f"world:{ident}", str(int(time.time()) // 600), 30)] if world else
+                    [(f"generate:{ident}", today, 8), ("generate-total", today, 60)])
+        if not store.admit(policies):
+            if world:
+                raise HTTPException(429, "Too many brief requests. Please wait a few minutes.")
             raise HTTPException(429, "Digest generation has reached its daily limit. Try again after midnight UTC.")
-        available = store.candidates(body.hours, body.sources, words(body.focus))
+        available = store.world_candidates(body.hours, body.sources) if world else store.candidates(body.hours, body.sources, words(body.focus))
     else:
-        rate_limit(request, "generate", 3)
+        rate_limit(request, "world" if world else "generate", 15 if world else 3)
         cutoff = datetime.now(timezone.utc) - timedelta(hours=body.hours)
         available = [a for a in collect_news()["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff]
-    selected = select_candidates(available, body.focus, body.top_n, body.sources)
+    selected = (select_world(available, body.top_n, body.sources) if world else
+                select_candidates(available, body.focus, body.top_n, body.sources))
     if not selected:
         raise HTTPException(404, "No articles in this window. Try the past 30 days or another source.")
     cache_key = hashlib.sha256(json.dumps([body.model_dump(), [(a["id"], a["title"], a["description"]) for a in selected]], sort_keys=True).encode()).hexdigest()
@@ -257,7 +277,9 @@ def generate(body: DigestRequest, request: Request):
         if cached and time.monotonic() - cached[0] < 600:
             digest = cached[1]
         else:
-            if store:
+            if world:
+                digest = build_world(selected, body.hours)
+            elif store:
                 digest = build_digest(selected, body.name.strip() or "Reader", body.focus, store=store)
             else:
                 digest = build_digest(selected, body.name.strip() or "Reader", body.focus)
@@ -269,7 +291,8 @@ def generate(body: DigestRequest, request: Request):
         if store:
             store.save_preview(preview_id, digest, expires)
         return {"digest": digest, "expires": expires, "signature": signature(digest, expires), "preview_id": preview_id,
-                "source_basis": "Summaries use publisher RSS titles and excerpts, not full article text."}
+                "source_basis": ("The world edition uses titles and excerpts provided by the linked sources." if world else
+                                 "Summaries use publisher RSS titles and excerpts, not full article text.")}
     except (ValueError, RuntimeError):
         raise HTTPException(502, "The AI provider could not complete this digest. Please try again shortly.") from None
     finally:
@@ -292,7 +315,7 @@ def email(body: EmailRequest, request: Request, authorization: str | None = Head
         while len(_mail_history) > 500:
             _mail_history.popitem(last=False)
     try:
-        send_email("Your AI Brief", body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
+        send_email("Your World Tech Brief", body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
     except (smtplib.SMTPException, OSError, ValueError, KeyError):
         with _limit_lock:
             _mail_history.pop(body.signature, None)

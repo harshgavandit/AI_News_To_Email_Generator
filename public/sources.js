@@ -10,13 +10,16 @@ async function api(url, method = 'GET', body) {
   return data;
 }
 async function render() {
-  const {sources} = await api('/api/sources');
+  const {sources, topics} = await api('/api/sources');
   const list = element('source-rows');
   list.replaceChildren();
   for (const s of sources) {
     const row = document.createElement('article'); row.className = 'source-row';
     const name = document.createElement('a'); name.href = s.feed_url; name.textContent = s.label; name.target = '_blank'; name.rel = 'noopener noreferrer';
-    const info = document.createElement('span'); info.textContent = !s.enabled ? 'Paused' : s.available === null ? 'Not checked yet' : s.available ? 'Available' : 'Last check failed';
+    const info = document.createElement('span');
+    const type = s.coverage === 'status' ? 'Official status' : s.coverage === 'reporting' ? 'Reporting' : 'Publisher update';
+    const health = !s.enabled ? 'Paused' : s.available === null ? 'Not checked yet' : s.available ? 'Available' : 'Last check failed';
+    info.textContent = [type, s.region, topics[s.topic], health].join(' · ');
     if(s.last_success) info.textContent += ' · Last fetched '+new Date(s.last_success).toLocaleString();
     row.append(name,info);
     if(key) {

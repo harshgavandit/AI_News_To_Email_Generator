@@ -14,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from app.coverage import topic_expression
+
 schema = MetaData()
 articles = Table("brief_articles", schema,
     Column("id", String(40), primary_key=True), Column("url", Text, nullable=False),
@@ -101,9 +103,11 @@ class Store:
                                   func.lower(articles.c.description).contains(q, autoescape=True)))
         return stmt
 
-    def page(self, *, hours, source, query, kind, publisher, limit, cursor):
+    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all"):
         stmt = self.query(hours, source, query, kind, publisher)
-        fingerprint = hashlib.sha256(json.dumps([hours, source, query, kind, publisher]).encode()).hexdigest()[:16]
+        if topic != "all":
+            stmt = stmt.where(topic_expression(articles.c) == topic)
+        fingerprint = hashlib.sha256(json.dumps([hours, source, query, kind, publisher, topic]).encode()).hexdigest()[:16]
         with self.engine.connect() as conn:
             total = conn.scalar(select(func.count()).select_from(stmt.subquery()))
             if cursor:
@@ -112,6 +116,14 @@ class Store:
                                      and_(articles.c.published_at == published, articles.c.id < ident)))
             rows = [dict(r) for r in conn.execute(stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc()).limit(limit + 1)).mappings()]
         return page_result(rows, total, limit, fingerprint)
+
+    def world_candidates(self, hours, source_ids):
+        # Cap each topic independently so a burst of posts cannot crowd out the others.
+        rank = func.row_number().over(partition_by=topic_expression(articles.c),
+            order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
+        ranked = self.query(hours, source_ids=source_ids).add_columns(rank).subquery()
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 40)).mappings()]
 
     def candidates(self, hours, source_ids, terms):
         stmt = self.query(hours, source_ids=source_ids)

@@ -1,10 +1,13 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
-const state = {articles: [], total: 0, cursor: null, digest: null, health: null, controller: null, mail: null};
+const state = {articles: [], total: 0, cursor: null, digest: null, health: null, controller: null, mail: null, topic: 'all', composing: false};
+const topics = {all:'All topics', outages:'Outages', industry:'Industry & policy', chips:'Chips & devices', security:'Security & privacy', software:'Software & cloud', ai:'AI & research'};
+const coverageNames = {reporting:'Reporting', status:'Official status', publisher:'Publisher update'};
 const sourceNames = {openai: 'OpenAI', anthropic: 'Anthropic', youtube: 'YouTube'};
 const node = (tag, className, text) => {const el = document.createElement(tag); if (className) el.className = className; if (text !== undefined) el.textContent = text; return el;};
 const externalLink = (url, text) => {const el = node('a', '', text); el.href = url; el.target = '_blank'; el.rel = 'noopener noreferrer'; return el;};
 const status = (id, message, error = false) => {$(id).textContent = message; $(id).classList.toggle('error', error);};
+const readableTime = value => new Date(value).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short'});
 async function request(url, options = {}) {
   const response = await fetch(url, options);
   let data;
@@ -19,11 +22,13 @@ function renderStories() {
   for (const article of filtered) {
     const card = node('article', 'story');
     const top = node('div', 'story-top');
-    top.append(node('span', `source-badge ${article.source}`, sourceNames[article.source] || article.publisher));
-    const date = node('time', '', new Date(article.published_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})); date.dateTime = article.published_at; top.append(date);
+    top.append(node('span', `source-badge ${article.topic}`, topics[article.topic] || 'Technology'));
+    const date = node('time', '', readableTime(article.published_at)); date.dateTime = article.published_at; top.append(date);
     const heading = node('h3'); heading.append(externalLink(article.url, article.title));
-    const bottom = node('div', 'story-bottom'); bottom.append(node('span', '', article.publisher), externalLink(article.url, article.source === 'youtube' ? 'Watch story ↗' : 'Read story ↗'));
-    card.append(top, heading, node('p', '', article.description || 'Explore the full story at the original source.'), bottom); $('stories').append(card);
+    const label = [coverageNames[article.coverage], article.region === 'Global' ? '' : article.region].filter(Boolean).join(' · ');
+    const bottom = node('div', 'story-bottom'); bottom.append(node('span', '', article.publisher), externalLink(article.url, article.source === 'youtube' ? 'Watch story ↗' : 'Read source ↗'));
+    const excerpt = article.topic === 'security' ? 'See the source for affected products, impact, and updates.' : article.description;
+    card.append(top, node('div', 'story-context', label), heading, node('p', '', excerpt || 'Read the original source for details.'), bottom); $('stories').append(card);
   }
   $('show-more').hidden = !state.cursor;
   status('news-status', `${filtered.length} of ${state.total} ${state.total === 1 ? 'story' : 'stories'}`);
@@ -37,7 +42,7 @@ async function loadNews(append = false) {
   status('news-status', 'Loading stories…');
   try {
     const params = new URLSearchParams({hours: $('window').value, kind: $('kind').value,
-      publisher: $('publisher').value, q: $('search').value, limit: '9'});
+      publisher: $('publisher').value, q: $('search').value, topic: state.topic, limit: '9'});
     if (append && state.cursor) params.set('cursor', state.cursor);
     const data = await request(`/api/news?${params}`, {signal: controller.signal});
     if (state.controller !== controller) return;
@@ -46,7 +51,9 @@ async function loadNews(append = false) {
     const unavailable = data.sources.filter(s => s.enabled !== false && s.available === false).length;
     $('source-notice').hidden = !unavailable;
     $('source-notice').textContent = `${unavailable} ${unavailable === 1 ? 'source is' : 'sources are'} temporarily unavailable. Previously collected stories are still shown when available.`;
-    $('updated').textContent = data.fetched_at ? `Last source check: ${new Date(data.fetched_at).toLocaleString()}` : 'Waiting for the first source refresh';
+    const stale = !data.last_success || Date.now() - Date.parse(data.last_success) > 45 * 60 * 1000;
+    $('updated').textContent = data.fetched_at ? `Sources checked ${readableTime(data.fetched_at)}${stale ? ' · Updates delayed' : ''}` : 'Waiting for the first source check';
+    $('updated').classList.toggle('stale', stale);
   } catch (error) {
     if (error.name !== 'AbortError') {status('news-status', error.message, true); $('updated').textContent = 'Could not load stories';}
   } finally {
@@ -54,6 +61,17 @@ async function loadNews(append = false) {
   }
 }
 for (const id of ['window','kind','publisher']) $(id).addEventListener('change', () => loadNews());
+for (const [topic, label] of Object.entries(topics)) {
+  const button = node('button', 'topic-chip', label); button.type = 'button';
+  button.setAttribute('aria-pressed', String(topic === state.topic));
+  button.addEventListener('click', () => {
+    state.topic = topic;
+    $('outage-links').hidden = topic !== 'outages';
+    for (const peer of $('topics').children) peer.setAttribute('aria-pressed', String(peer === button));
+    loadNews();
+  });
+  $('topics').append(button);
+}
 $('refresh').addEventListener('click', () => loadNews());
 let searchTimer; $('search').addEventListener('input', () => {clearTimeout(searchTimer); searchTimer = setTimeout(loadNews, 300);});
 $('show-more').addEventListener('click', () => loadNews(true));
@@ -67,30 +85,52 @@ request('/api/sources').then(({sources}) => {
 }).catch(() => {});
 function renderDigest() {
   const digest = state.digest.digest; $('preview').replaceChildren();
-  $('preview').append(node('div', 'eyebrow muted', 'AI BRIEF / YOUR PERSONAL EDITION'), node('p', 'email-greeting', digest.introduction.greeting), node('p', 'email-intro', digest.introduction.introduction));
+  const world = digest.edition === 'world';
+  $('preview-title').textContent = world ? 'Your World Tech Brief.' : 'Your personal tech brief.';
+  $('preview').append(node('div', 'eyebrow muted', world ? 'WORLD EDITION / SOURCE EXCERPTS' : 'PERSONAL EDITION / AI SUMMARIES'), node('p', 'email-greeting', digest.introduction.greeting), node('p', 'email-intro', digest.introduction.introduction));
   for (const article of digest.articles) {
     const item = node('section', 'digest-item'); const meta = node('div', 'digest-meta');
-    meta.append(node('span', '', `${String(article.rank).padStart(2, '0')} / ${(sourceNames[article.article_type] || article.article_type)}`), node('span', '', `${article.relevance_score.toFixed(1)} / 10 relevance`));
+    meta.append(node('span', '', `${String(article.rank).padStart(2, '0')} / ${article.publisher || sourceNames[article.article_type] || article.article_type}`),
+      node('span', '', world ? `${article.topic_label} · ${readableTime(article.published_at)}` : `${article.relevance_score.toFixed(1)} / 10 relevance`));
     item.append(meta, node('h3', '', article.title), node('p', '', article.summary));
     if (article.reasoning) item.append(node('p', 'reason', `Why it’s here: ${article.reasoning}`));
     item.append(externalLink(article.url, 'Read the original story ↗')); $('preview').append(item);
   }
   $('preview-section').hidden = false; status('email-status', '');
+  $('preview-title').focus({preventScroll: true});
   $('preview-section').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
-$('digest-form').addEventListener('submit', async (event) => {
+async function composeBrief(body, isWorld) {
+  if (state.composing) return;
+  state.composing = true;
+  const button = $(isWorld ? 'world-brief' : 'generate');
+  const statusId = isWorld ? 'world-status' : 'digest-status';
+  const label = button.textContent;
+  $('world-brief').disabled = $('generate').disabled = true;
+  button.textContent = 'Preparing your brief…';
+  status(statusId, isWorld ? 'Picking recent stories across tech…' : 'Summarizing and ranking stories. This can take about a minute.');
+  try {
+    state.digest = await jsonPost('/api/digest', body);
+    status(statusId, `Your brief is ready: ${state.digest.digest.articles.length} stories with original sources.`);
+    renderDigest();
+  } catch (error) {status(statusId, error.message, true);}
+  finally {
+    state.composing = false;
+    $('world-brief').disabled = false;
+    $('generate').disabled = state.health?.ai_configured === false;
+    button.textContent = label;
+  }
+}
+$('world-brief').addEventListener('click', () => composeBrief({edition:'world', hours:24, top_n:5}, true));
+$('digest-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const source = $('digest-sources').value;
-  const button = $('generate'); button.disabled = true; button.textContent = 'Connecting the dots…';
-  status('digest-status', 'Reading the feed excerpts, summarizing, and ranking your stories. This can take about a minute.');
-  try {
-    state.digest = await request('/api/digest', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: $('reader-name').value.trim() || 'Reader', focus: $('focus').value, hours: Number($('digest-window').value), top_n: Number($('article-count').value), ...(source === 'all' ? {} : {sources:[source]})})});
-    status('digest-status', `Your brief is ready: ${state.digest.digest.articles.length} stories, with the original sources.`); renderDigest();
-  } catch (error) {status('digest-status', error.message, true);}
-  finally {button.disabled = false; button.textContent = 'Generate my brief ✦';}
+  composeBrief({name: $('reader-name').value.trim() || 'Reader', focus: $('focus').value,
+    hours: Number($('digest-window').value), top_n: Number($('article-count').value),
+    ...(source === 'all' ? {} : {sources:[source]})}, false);
 });
 $('copy').addEventListener('click', async () => {try {await navigator.clipboard.writeText(state.digest.digest.markdown); status('email-status', 'Brief copied to your clipboard.');} catch {status('email-status', 'Clipboard access was unavailable. Download the email instead.', true);}});
-$('download').addEventListener('click', () => {const url = URL.createObjectURL(new Blob([state.digest.digest.html], {type: 'text/html;charset=utf-8'})); const link = node('a'); link.href = url; link.download = 'your-ai-brief.html'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); status('email-status', 'Your email preview has been downloaded.');});
+$('download').addEventListener('click', () => {const url = URL.createObjectURL(new Blob([state.digest.digest.html], {type: 'text/html;charset=utf-8'})); const link = node('a'); link.href = url; link.download = 'your-tech-brief.html'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); status('email-status', 'Your email preview has been downloaded.');});
 $('owner-send').addEventListener('click', () => {
   if (!state.health?.email_configured) {status('email-status', 'Gmail delivery is not configured yet. Add MY_EMAIL, APP_PASSWORD and ADMIN_TOKEN to the server environment.', true); return;}
   status('dialog-status', ''); $('owner-dialog').showModal();

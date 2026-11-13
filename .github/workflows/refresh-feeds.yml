@@ -1,0 +1,30 @@
+name: Refresh world tech feeds
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+concurrency:
+  group: refresh-world-tech-feeds
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    steps:
+      - name: Check published sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
+            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
+            exit 1
+          fi
+          curl --silent --show-error --fail-with-body --max-time 115 \
+            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET" | jq -e \
+            'select(.status == "already_started" or (.status == "refreshed" and .healthy > 0))'
