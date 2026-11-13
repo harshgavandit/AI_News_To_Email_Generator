@@ -1,14 +1,2 @@
-[hidden]{display:none!important}.filters select,.search-controls select,.source-checks select{padding:.65rem .85rem;border:1px solid #bcc9bd;border-radius:.5rem;background:#fff;color:#18392e;font:inherit}.filters{gap:.5rem;flex-wrap:wrap}.search-controls{flex-wrap:wrap}.mail-inner{position:relative}.mail-inner input{box-sizing:border-box;width:100%}.mail-inner form{display:grid;gap:.65rem}.mail-inner .dialog-close{position:absolute;right:0;top:0}#mail-captcha{max-width:100%;overflow:auto}.source-table{display:grid;gap:.65rem;margin:1.5rem 0}.source-row{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;padding:.8rem;border:1px solid #bcc9bd;border-radius:.6rem}.source-controls{display:flex;align-items:end;gap:.65rem;flex-wrap:wrap}.source-controls input{padding:.55rem;border:1px solid #bcc9bd;border-radius:.5rem}.source-controls label{display:grid;gap:.3rem}
-.world-actions,.topic-controls{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
-.topic-controls{margin:0 0 1rem}
-.outage-links{display:flex;flex-wrap:wrap;gap:.55rem 1rem;margin:0 0 1rem;padding:.8rem 1rem;background:#f3ede2;border-radius:.5rem;font-size:.88rem}
-.topic-chip{background:#fff;color:#18392e;border:1px solid #bcc9bd;border-radius:2rem;padding:.55rem .85rem;font:inherit;font-size:.88rem;cursor:pointer}
-.topic-chip[aria-pressed="true"]{background:#163e32;color:#fff;border-color:#163e32}
-.topic-chip:focus-visible{outline:2px solid #285c4b;outline-offset:3px}
-.story-context{color:#495f56;font-size:.75rem;margin-top:.65rem;font-weight:600}
-.story-top{gap:.65rem;flex-wrap:wrap}
-.source-badge.outages{color:#742e19;background:#f7e6db}
-.source-badge.chips{color:#284452;background:#e4eff5}
-.source-badge.security{color:#514072;background:#eee7f6}
-.stale{color:#743a20}
-#world-status:empty{display:none}
+/* Source directory shares the editorial shell. */
+.source-table{display:grid;gap:12px;margin:28px 0}.source-row{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;padding:18px;border:1px solid var(--line);background:var(--paper);border-radius:8px}.source-row>a{font:21px var(--serif)}.source-row>span{font-size:11px;color:var(--muted)}.source-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.source-controls label{display:grid;gap:5px}

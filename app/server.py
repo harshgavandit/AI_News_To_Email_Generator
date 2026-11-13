@@ -56,8 +56,10 @@ class DigestRequest(BaseModel):
     name: str = Field(default="Reader", min_length=1, max_length=60)
     focus: str = Field(default="AI engineering, agents, research, and practical applications", max_length=400)
     hours: Literal[24, 168, 720] = 168
-    top_n: int = Field(default=5, ge=1, le=5)
+    top_n: int = Field(default=5, ge=1, le=10)
     sources: list[str] = Field(default_factory=lambda: list(GROUPS), min_length=1, max_length=len(BY_ID))
+    pinned_ids: list[str] = Field(default_factory=list, max_length=10)
+    style: Literal["executive", "technical", "skim"] = "executive"
 
     @field_validator("sources")
     @classmethod
@@ -290,9 +292,14 @@ def generate(body: DigestRequest, request: Request):
         available = [a for a in collect_news()["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff]
     selected = (select_world(available, body.top_n, body.sources) if world else
                 select_candidates(available, body.focus, body.top_n, body.sources))
+    if body.pinned_ids:
+        pinned_articles = [a for a in available if a["id"] in body.pinned_ids]
+        pinned_set = {a["id"] for a in pinned_articles}
+        other_selected = [a for a in selected if a["id"] not in pinned_set]
+        selected = (pinned_articles + other_selected)[:body.top_n]
     if not selected:
         raise HTTPException(404, "No articles in this window. Try the past 30 days or another source.")
-    cache_key = hashlib.sha256(json.dumps([body.model_dump(), [(a["id"], a["title"], a["description"]) for a in selected]], sort_keys=True).encode()).hexdigest()
+    cache_key = hashlib.sha256(json.dumps([body.model_dump(), [(a["id"], a["title"], a.get("description", "")) for a in selected]], sort_keys=True).encode()).hexdigest()
     if not store and not _generation_lock.acquire(blocking=False):
         raise HTTPException(429, "A digest is being prepared. Please try again in a moment.")
     try:
@@ -301,11 +308,11 @@ def generate(body: DigestRequest, request: Request):
             digest = cached[1]
         else:
             if world:
-                digest = build_world(selected, body.hours)
+                digest = build_world(selected, body.hours, all_pool=available)
             elif store:
-                digest = build_digest(selected, body.name.strip() or "Reader", body.focus, store=store)
+                digest = build_digest(selected, body.name.strip() or "Reader", body.focus, store=store, pinned_ids=body.pinned_ids, style=body.style)
             else:
-                digest = build_digest(selected, body.name.strip() or "Reader", body.focus)
+                digest = build_digest(selected, body.name.strip() or "Reader", body.focus, pinned_ids=body.pinned_ids, style=body.style)
             _digest_cache[cache_key] = (time.monotonic(), digest)
             while len(_digest_cache) > 24:
                 _digest_cache.popitem(last=False)

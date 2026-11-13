@@ -39,6 +39,13 @@ deliveries = Table("brief_deliveries", schema, Column("id", String(64), primary_
     Column("created", Float, nullable=False), Column("provider_id", String(160)))
 summaries = Table("brief_summaries", schema, Column("id", String(64), primary_key=True),
     Column("payload", Text, nullable=False), Column("created", Float, nullable=False))
+subscriptions = Table("brief_subscriptions", schema,
+    Column("mailbox", String(64), primary_key=True),
+    Column("email", String(254), nullable=False),
+    Column("timezone", String(64), nullable=False),
+    Column("next_run", Float, nullable=False, index=True),
+    Column("enabled", Boolean, nullable=False, default=True),
+    Column("claimed", Float, nullable=False, default=0.0))
 
 
 class QuotaReached(Exception):
@@ -237,6 +244,57 @@ class Store:
         with self.engine.begin() as conn:
             stmt = self.insert(summaries).values(id=ident, payload=json.dumps(payload), created=time.time())
             conn.execute(stmt.on_conflict_do_nothing(index_elements=[summaries.c.id]))
+
+    def subscription(self, mailbox):
+        with self.engine.connect() as conn:
+            row = conn.execute(select(subscriptions).where(subscriptions.c.mailbox == mailbox)).first()
+            return dict(row._mapping) if row else None
+
+    def subscribe(self, mailbox, email, timezone, next_run):
+        with self.engine.begin() as conn:
+            stmt = self.insert(subscriptions).values(
+                mailbox=mailbox, email=email, timezone=timezone, next_run=next_run, enabled=True, claimed=0.0
+            )
+            conn.execute(stmt.on_conflict_do_update(
+                index_elements=[subscriptions.c.mailbox],
+                set_={
+                    "email": email,
+                    "timezone": timezone,
+                    "next_run": next_run,
+                    "enabled": True,
+                    "claimed": 0.0,
+                }
+            ))
+
+    def unsubscribe(self, mailbox):
+        with self.engine.begin() as conn:
+            conn.execute(update(subscriptions).where(subscriptions.c.mailbox == mailbox).values(enabled=False))
+
+    def due_subscriptions(self, now):
+        with self.engine.connect() as conn:
+            stmt = select(subscriptions).where(
+                subscriptions.c.enabled.is_(True),
+                subscriptions.c.next_run <= now,
+                subscriptions.c.claimed <= now,
+            )
+            return [dict(row._mapping) for row in conn.execute(stmt)]
+
+    def claim_subscription(self, mailbox, now, lease_time=180):
+        with self.engine.begin() as conn:
+            stmt = update(subscriptions).where(
+                subscriptions.c.mailbox == mailbox,
+                subscriptions.c.enabled.is_(True),
+                subscriptions.c.next_run <= now,
+                subscriptions.c.claimed <= now,
+            ).values(claimed=now + lease_time)
+            result = conn.execute(stmt)
+            return result.rowcount > 0
+
+    def reschedule_subscription(self, mailbox, next_run):
+        with self.engine.begin() as conn:
+            conn.execute(update(subscriptions).where(subscriptions.c.mailbox == mailbox).values(
+                next_run=next_run, claimed=0.0
+            ))
 
     def prune(self):
         now = time.time()

@@ -27,5 +27,6 @@ jobs:
           uv run ruff check app tests scripts main.py
           uv run python -m compileall -q app main.py
           node --check public/app.js
+          npm run build
       - name: Test API, feed handling, and delivery controls
         run: uv run python -m pytest -q

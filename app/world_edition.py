@@ -57,23 +57,69 @@ def select_world(articles, count, sources):
     return picked
 
 
-def build_world(articles, hours):
-    window = {24: "24 hours", 168: "7 days", 720: "30 days"}[hours]
-    intro = {"greeting": "Your World Tech Brief",
-             "introduction": f"Recent stories across tech from the past {window}. Excerpts come from the linked publishers; check provider status pages for current incident details."}
-    result = {"edition": "world", "introduction": intro, "articles": [], "generated_at": datetime.now(UTC).isoformat()}
+def build_world(articles, hours, all_pool=None):
+    window = {24: "24 hours", 168: "7 days", 720: "30 days"}.get(hours, f"{hours} hours")
+    intro = {
+        "greeting": "Your World Tech Brief",
+        "introduction": f"Recent stories across tech from the past {window}. Excerpts come from the linked publishers; check provider status pages for current incident details.",
+    }
+    result = {
+        "edition": "world",
+        "introduction": intro,
+        "articles": [],
+        "generated_at": datetime.now(UTC).isoformat(),
+        "quick_hits": [],
+    }
     markdown = [f"# {intro['greeting']}", intro["introduction"]]
+
+    picked_ids = {item["id"] for item in articles}
+    if all_pool:
+        quick_candidates = [a for a in all_pool if a["id"] not in picked_ids][:3]
+        result["quick_hits"] = [
+            {
+                "title": q["title"],
+                "url": q["url"],
+                "publisher": q.get("publisher", ""),
+                "region": q.get("region", "Global"),
+            }
+            for q in quick_candidates
+        ]
+
     for rank, item in enumerate(articles, start=1):
-        excerpt = item["description"]
+        excerpt = item.get("cleanSummary") or item.get("description", "")
         excerpt = (excerpt[:480].rsplit(" ", 1)[0] + "…") if len(excerpt) > 480 else excerpt
-        label = TOPICS[item["topic"]]
-        result["articles"].append({"digest_id": item["id"], "rank": rank, "title": item["title"],
-            "summary": excerpt or "Read the original source for details.", "url": item["url"],
-            "article_type": item["source"], "publisher": item["publisher"], "topic": item["topic"],
-            "topic_label": label, "published_at": item["published_at"], "coverage": item["coverage"],
-            "region": item["region"]})
-        markdown.append(f"## {rank}. {item['title']}\n{item['publisher']} · {label} · {item['published_at']}\n\n"
-                        f"{result['articles'][-1]['summary']}\n\nSource: {item['url']}")
+        label = TOPICS.get(item["topic"], item["topic"].title())
+        takeaway = item.get("keyTakeaway") or item.get("whyItMatters", "")
+        
+        art_entry = {
+            "digest_id": item["id"],
+            "rank": rank,
+            "title": item["title"],
+            "summary": excerpt or "Read the original source for details.",
+            "url": item["url"],
+            "article_type": item["source"],
+            "publisher": item["publisher"],
+            "topic": item["topic"],
+            "topic_label": label,
+            "published_at": item["published_at"],
+            "coverage": item["coverage"],
+            "region": item["region"],
+            "keyTakeaway": takeaway,
+            "whyItMatters": item.get("whyItMatters", ""),
+        }
+        result["articles"].append(art_entry)
+        
+        md_part = f"## {rank}. {item['title']}\n{item['publisher']} · {label} · {item['published_at']}\n\n{art_entry['summary']}\n"
+        if takeaway:
+            md_part += f"\n* **Key Takeaway:** {takeaway}\n"
+        md_part += f"\nSource: {item['url']}"
+        markdown.append(md_part)
+
+    if result["quick_hits"]:
+        markdown.append("### Quick Hits Around the World")
+        for qh in result["quick_hits"]:
+            markdown.append(f"- [{qh['title']}]({qh['url']}) — {qh['publisher']} ({qh['region']})")
+
     result["markdown"] = "\n\n".join(markdown)
     result["html"] = safe_email_html(result)
     return result

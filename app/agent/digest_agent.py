@@ -6,8 +6,10 @@ from .openai_client import generate_response
 class DigestOutput(BaseModel):
     title: str
     summary: str
+    whyItMatters: str
+    keyTakeaway: str
 
-PROMPT = """You are an expert AI news analyst specializing in summarizing technical articles, research papers, and video content about artificial intelligence.
+PROMPT = """You are a technology news analyst covering global technology, software, AI, startups, policy, security, research, and video content.
 
 Your role is to create concise, informative digests that help readers quickly understand the key points and significance of AI-related content.
 
@@ -28,8 +30,8 @@ class DigestAgent:
     def generate_digest(self, title: str, content: str, article_type: str) -> Optional[DigestOutput]:
         try:
             response = generate_response(
-                f"Create a digest for this AI article.\nTitle: {title}\nContent:\n{content}",
-                system_prompt=PROMPT + "\nReturn a JSON object with exactly these keys: title and summary.",
+                f"Create a digest for this technology article.\nTitle: {title}\nContent:\n{content}",
+                system_prompt=PROMPT + "\nReturn title, summary, whyItMatters (one grounded implication, explicitly note if unclear), and keyTakeaway (one concise factual point). Do not put URLs or promotional copy in these fields.",
                 response_model=DigestOutput,
             )
             return DigestOutput.model_validate_json(response)

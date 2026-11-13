@@ -1,4 +1,4 @@
-"""On-demand digest delivery to a verified mailbox; no subscriptions."""
+"""On-demand digest delivery to a verified mailbox with optional morning subscription."""
 import base64
 import hashlib
 import hmac
@@ -11,6 +11,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from urllib.parse import urlsplit
+import zoneinfo
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -27,8 +28,14 @@ SESSION_TTL = 7 * 86400
 
 
 def ready():
-    return os.getenv("PUBLIC_EMAIL_ENABLED") == "1" and len(os.getenv("MAIL_SESSION_SECRET", "")) >= 32 and all(
-        os.getenv(key) for key in ("MY_EMAIL", "APP_PASSWORD", "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "PUBLIC_ORIGIN")
+    has_provider = bool(os.getenv("RESEND_API_KEY")) or bool(os.getenv("SMTP_URL")) or bool(os.getenv("POSTMARK_SERVER_TOKEN")) or all(
+        os.getenv(k) for k in ("MY_EMAIL", "APP_PASSWORD")
+    )
+    return (
+        os.getenv("PUBLIC_EMAIL_ENABLED") == "1"
+        and len(os.getenv("MAIL_SESSION_SECRET", "")) >= 32
+        and has_provider
+        and all(os.getenv(key) for key in ("TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "PUBLIC_ORIGIN"))
     )
 
 
@@ -52,7 +59,7 @@ def seal(purpose, payload, ttl):
 def unseal(purpose, token):
     try:
         encoded, proof = (token or "").split(".", 1)
-        if not hmac.compare_digest(digest_key(purpose + ':' + encoded), proof):
+        if not hmac.compare_digest(digest_key(purpose + ":" + encoded), proof):
             return None
         expiry, payload = json.loads(base64.urlsafe_b64decode(encoded))
         return payload if expiry > time.time() else None
@@ -61,12 +68,22 @@ def unseal(purpose, token):
 
 
 def cookie(response, key, purpose, payload, ttl):
-    response.set_cookie(key, seal(purpose, payload, ttl), max_age=ttl, httponly=True,
-                        secure=os.getenv("PUBLIC_ORIGIN", "").startswith("https://"), samesite="strict", path="/api/mail")
+    response.set_cookie(
+        key,
+        seal(purpose, payload, ttl),
+        max_age=ttl,
+        httponly=True,
+        secure=os.getenv("PUBLIC_ORIGIN", "").startswith("https://"),
+        samesite="strict",
+        path="/api/mail",
+    )
 
 
 def is_pilot_address(email):
-    return os.getenv("MAIL_PILOT_MODE") != "1" or email == normalize(os.environ["MY_EMAIL"])
+    my_email = os.getenv("MY_EMAIL")
+    if os.getenv("MAIL_PILOT_MODE") != "1" or not my_email:
+        return True
+    return email == normalize(my_email)
 
 
 def address_key(request):
@@ -99,17 +116,103 @@ def normalize(email):
 
 def verify_human(token, request):
     try:
-        response = httpx.post("https://challenges.cloudflare.com/turnstile/v0/siteverify",
-                              data={"secret": os.environ["TURNSTILE_SECRET_KEY"], "response": token}, timeout=7)
+        response = httpx.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={"secret": os.environ["TURNSTILE_SECRET_KEY"], "response": token},
+            timeout=7,
+        )
         response.raise_for_status()
         result = response.json()
-        return (result.get("success") is True and result.get("action") == "verify_email" and
-                result.get("hostname") == urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname)
+        return (
+            result.get("success") is True
+            and result.get("action") == "verify_email"
+            and result.get("hostname") == urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname
+        )
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "The bot check is temporarily unavailable.") from None
 
 
-def send_message(recipient, subject, body, html, key):
+def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kwargs):
+    # 1. Resend API
+    if os.getenv("RESEND_API_KEY"):
+        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or "brief@ai-news-to-email-generator.vercel.app"
+        email_headers = {}
+        if unsubscribe_url:
+            email_headers["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+            email_headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+        payload = {
+            "from": sender,
+            "to": [recipient],
+            "subject": subject,
+            "text": body,
+            "html": html,
+            "headers": email_headers,
+        }
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            json=payload,
+            headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY']}", "Content-Type": "application/json"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json().get("id", key)
+
+    # 2. Postmark API
+    if os.getenv("POSTMARK_SERVER_TOKEN"):
+        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL")
+        postmark_headers = []
+        if unsubscribe_url:
+            postmark_headers.append({"Name": "List-Unsubscribe", "Value": f"<{unsubscribe_url}>"})
+            postmark_headers.append({"Name": "List-Unsubscribe-Post", "Value": "List-Unsubscribe=One-Click"})
+        payload = {
+            "From": sender,
+            "To": recipient,
+            "Subject": subject,
+            "TextBody": body,
+            "HtmlBody": html,
+            "Headers": postmark_headers,
+        }
+        resp = httpx.post(
+            "https://api.postmarkapp.com/email",
+            json=payload,
+            headers={"X-Postmark-Server-Token": os.environ["POSTMARK_SERVER_TOKEN"], "Content-Type": "application/json"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json().get("MessageID", key)
+
+    # 3. SMTP URL
+    smtp_url = os.getenv("SMTP_URL")
+    if smtp_url:
+        from urllib.parse import urlparse, unquote
+        parsed = urlparse(smtp_url)
+        sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else "brief@ai-news-to-email-generator.vercel.app")
+        msg = EmailMessage()
+        msg["From"] = sender
+        msg["To"] = recipient
+        msg["Subject"] = subject
+        msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+        if unsubscribe_url:
+            msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+            msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
+        msg.set_content(body)
+        if html:
+            msg.add_alternative(html, subtype="html")
+        port = parsed.port or (465 if parsed.scheme == "smtps" else 587)
+        if parsed.scheme == "smtps":
+            with smtplib.SMTP_SSL(parsed.hostname, port, timeout=15, context=ssl.create_default_context()) as smtp:
+                if parsed.username and parsed.password:
+                    smtp.login(unquote(parsed.username), unquote(parsed.password))
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(parsed.hostname, port, timeout=15) as smtp:
+                smtp.starttls(context=ssl.create_default_context())
+                if parsed.username and parsed.password:
+                    smtp.login(unquote(parsed.username), unquote(parsed.password))
+                smtp.send_message(msg)
+        return key
+
+    # 4. Gmail SMTP Fallback
     sender = os.environ["MY_EMAIL"]
     password = "".join(os.environ["APP_PASSWORD"].split())
     msg = EmailMessage()
@@ -117,6 +220,9 @@ def send_message(recipient, subject, body, html, key):
     msg["To"] = recipient
     msg["Subject"] = subject
     msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+    if unsubscribe_url:
+        msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
     msg.set_content(body)
     if html:
         msg.add_alternative(html, subtype="html")
@@ -141,15 +247,24 @@ class VerifyBody(StrictBody):
 
 class SendBody(StrictBody):
     preview_id: str = Field(pattern=r"^[A-Za-z0-9_-]{24,80}$")
+    email: str | None = Field(default=None, max_length=254)
+    subscribe: bool = False
+    timezone: str | None = None
 
 
 @router.get("/config")
 def config(request: Request):
     enabled = ready() and bool(os.getenv("NEWS_DATABASE_URL"))
     email = unseal("session", request.cookies.get(SESSION)) if enabled else None
-    return {"enabled": enabled, "pilot": enabled and os.getenv("MAIL_PILOT_MODE") == "1",
-            "site_key": os.getenv("TURNSTILE_SITE_KEY") if enabled else None,
-            "verified": bool(email), "limit": 3, "timezone": "UTC"}
+    return {
+        "enabled": enabled,
+        "pilot": enabled and os.getenv("MAIL_PILOT_MODE") == "1",
+        "site_key": os.getenv("TURNSTILE_SITE_KEY") if enabled else None,
+        "verified": bool(email),
+        "verified_email": email,
+        "limit": 3,
+        "timezone": "UTC",
+    }
 
 
 @router.post("/challenge")
@@ -164,10 +279,13 @@ def challenge(body: ChallengeBody, request: Request, response: Response):
     if not verify_human(body.captcha, request):
         raise HTTPException(400, "Complete the bot check and try again.")
     mailbox = digest_key("mailbox:" + email)
-    # Keep verification and digest quotas separate, plus one shared outbound budget.
-    if not store.admit([(f"code:{mailbox}", str(int(time.time()) // 60), 1),
-                        (f"code-day:{mailbox}", day(), 3), (f"code-ip:{ip}", day(), 8),
-                        ("outbound", day(), 60), ("verification", day(), 20)]):
+    if not store.admit([
+        (f"code:{mailbox}", str(int(time.time()) // 60), 1),
+        (f"code-day:{mailbox}", day(), 3),
+        (f"code-ip:{ip}", day(), 8),
+        ("outbound", day(), 60),
+        ("verification", day(), 20),
+    ]):
         raise limited("Verification is limited. Wait a minute or try again tomorrow.")
     ident, code = secrets.token_urlsafe(24), f"{secrets.randbelow(1_000_000):06d}"
     store.save_code(ident, mailbox, digest_key(f"code:{ident}:{code}"), time.time() + CODE_TTL)
@@ -188,7 +306,7 @@ def verify(body: VerifyBody, request: Request, response: Response):
         if store.consume_code(ident, digest_key("mailbox:" + email), digest_key(f"code:{ident}:{body.code}")):
             response.delete_cookie(CHALLENGE, path="/api/mail")
             cookie(response, SESSION, "session", email, SESSION_TTL)
-            return {"verified": True}
+            return {"verified": True, "email": email}
     raise HTTPException(400, "That code is invalid or expired. Request a new code.")
 
 
@@ -207,23 +325,80 @@ def send(body: SendBody, request: Request):
         raise HTTPException(403, "Email delivery is in a limited test.")
     if not recipient:
         raise HTTPException(401, "Verify your inbox before sending a brief.")
+    if body.email is not None:
+        if normalize(body.email) != recipient:
+            raise HTTPException(422, "Email address does not match your verified inbox.")
+    if body.subscribe:
+        if not body.timezone or body.timezone not in zoneinfo.available_timezones():
+            raise HTTPException(422, "Provide a valid IANA timezone to enable scheduled delivery.")
     payload = store.get_preview(body.preview_id)
     if not payload:
         raise HTTPException(404, "This preview expired. Generate a new brief.")
     mailbox = digest_key("mailbox:" + recipient)
     identity = digest_key(f"delivery:{mailbox}:{body.preview_id}")
-    state, accepted = store.reserve_delivery(identity, [(f"mail:{mailbox}", day(), 3),
-                                                        ("outbound", day(), 60), ("digests", day(), 45)])
+    ip = address_key(request)
+    hour = str(int(time.time()) // 3600)
+    state, accepted = store.reserve_delivery(identity, [
+        (f"mail:{mailbox}", day(), 3),
+        ("outbound", day(), 60),
+        ("digests", day(), 45),
+        (f"mail-ip:{ip}", hour, 5),
+    ])
     if state == "limited":
-        raise limited("This inbox or World Tech Brief has reached its daily sending limit. Try again after midnight UTC.")
+        raise limited("This inbox or IP address has reached its hourly or daily sending limit. Please wait a bit before requesting another brief.")
     if accepted:
-        return {"status": "accepted", "message": "Your brief was accepted for delivery."}
+        res = {"status": "accepted", "message": "Your brief was accepted for delivery."}
+        if body.subscribe:
+            from app.mail_schedule import next_morning
+            store.subscribe(mailbox, recipient, body.timezone, next_morning(body.timezone))
+            res["subscribed"] = True
+        return res
     if state != "new":
         raise HTTPException(409, "This brief already has a send attempt. Check your inbox before requesting another.")
     try:
-        provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity)
+        from app.mail_schedule import build_unsubscribe_url
+        unsub_url = build_unsubscribe_url(mailbox) if body.subscribe else None
+        import inspect
+        sig = inspect.signature(send_message)
+        if "unsubscribe_url" in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+            provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity, unsubscribe_url=unsub_url)
+        else:
+            provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity)
     except (OSError, smtplib.SMTPException):
-        # SMTP acceptance can be ambiguous after a timeout. Keep the reservation.
+        # Transport acceptance can be ambiguous after a timeout. Keep the reservation.
         raise HTTPException(502, "Delivery could not be confirmed. Check your inbox before trying another brief.") from None
     store.record_delivery(identity, provider_id)
-    return {"status": "accepted", "message": "Your brief was accepted for delivery."}
+    res = {"status": "accepted", "message": "Your brief was accepted for delivery."}
+    if body.subscribe:
+        from app.mail_schedule import next_morning
+        store.subscribe(mailbox, recipient, body.timezone, next_morning(body.timezone))
+        res["subscribed"] = True
+    return res
+
+
+@router.get("/unsubscribe/{token}")
+def unsubscribe_confirm(token: str):
+    mailbox = unseal("unsubscribe", token)
+    if not mailbox:
+        raise HTTPException(400, "That unsubscribe link is invalid or expired.")
+    return Response(
+        content="""<!doctype html><html><head><meta charset="utf-8"><title>Unsubscribe Confirmation</title></head>
+        <body style="font-family:-apple-system,sans-serif;max-width:500px;margin:60px auto;padding:24px;text-align:center;background:#f6f4ee;color:#252e29;">
+        <h2 style="font-family:Georgia,serif;font-weight:normal;font-size:28px;">World Tech Brief</h2>
+        <p style="color:#697169;font-size:14px;line-height:1.6;">Click below to confirm unsubscribing from automatic daily morning delivery.</p>
+        <form method="POST">
+        <input type="hidden" name="List-Unsubscribe" value="One-Click">
+        <button type="submit" style="padding:12px 24px;font-size:13px;font-weight:600;background:#294a3b;color:white;border:none;border-radius:6px;cursor:pointer;">Unsubscribe My Inbox</button>
+        </form></body></html>""",
+        media_type="text/html",
+    )
+
+
+@router.post("/unsubscribe/{token}")
+def unsubscribe_action(token: str):
+    store = required_store()
+    mailbox = unseal("unsubscribe", token)
+    if not mailbox:
+        raise HTTPException(400, "That unsubscribe link is invalid or expired.")
+    store.unsubscribe(mailbox)
+    return {"unsubscribed": True, "message": "You have been successfully unsubscribed from daily morning delivery."}

@@ -8,9 +8,9 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
 import httpx
-from bs4 import BeautifulSoup
 
 from app.sources import DEFAULT_SOURCES, Source
+from app.sanitation import sanitize_text
 
 # Compatibility for the original read_feed helper and tests.
 ALLOWED_DOMAINS = {s.group: set(s.hosts) for s in DEFAULT_SOURCES}
@@ -31,10 +31,7 @@ def canonical_url(url):
 
 
 def plain_text(value):
-    value = value or ""
-    if "<" in value or "&" in value:
-        value = BeautifulSoup(value, "html.parser").get_text(" ")
-    return " ".join(value.split())[:4000]
+    return sanitize_text(value)
 
 
 def fetch_bytes(url):
@@ -83,7 +80,8 @@ def read_feed(task):
         now = datetime.now(timezone.utc)
         for entry in parsed.entries[:200]:
             try:
-                url = canonical_url(entry.get("link", ""))
+                # HN links to arbitrary external sites; retain the reviewed discussion URL.
+                url = canonical_url(entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", ""))
                 host = urlsplit(url).hostname.removeprefix("www.")
                 if host not in {d.removeprefix("www.") for d in s.hosts} or "/shorts/" in url:
                     continue
@@ -119,8 +117,9 @@ def collect_news():
     global _refreshed
     with _lock:
         if not _cache or time.monotonic() - _refreshed >= 300:
+            enabled = [s for s in DEFAULT_SOURCES if s.enabled]
             with ThreadPoolExecutor(max_workers=10) as pool:
-                for s, (articles, status) in zip(DEFAULT_SOURCES, pool.map(read_feed, DEFAULT_SOURCES)):
+                for s, (articles, status) in zip(enabled, pool.map(read_feed, enabled)):
                     checked_at = datetime.now(timezone.utc).isoformat()
                     previous_articles, previous_status = _cache.get(s.id, ([], {}))
                     status["checked_at"] = checked_at
