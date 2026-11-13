@@ -113,12 +113,26 @@ function mailStep(step) {
 }
 async function showCaptcha() {
   if (captchaWidget !== undefined) {window.turnstile.reset(captchaWidget); captchaToken = ''; return;}
-  captchaLoader ??= new Promise((resolve,reject) => {
-    const script = node('script'); script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.onload=resolve; script.onerror=reject; document.head.append(script);
+  captchaLoader ??= new Promise((resolve, reject) => {
+    const script = node('script');
+    const fail = () => {
+      clearTimeout(timer);
+      delete window.onBriefTurnstileLoad;
+      script.remove();
+      captchaLoader = undefined;
+      reject(new Error('The bot check could not load. Please try again.'));
+    };
+    const timer = setTimeout(fail, 12000);
+    window.onBriefTurnstileLoad = () => {
+      clearTimeout(timer);
+      delete window.onBriefTurnstileLoad;
+      resolve();
+    };
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onBriefTurnstileLoad';
+    script.onerror = fail;
+    document.head.append(script);
   });
   await captchaLoader;
-  await new Promise(resolve => window.turnstile.ready(resolve));
   if (captchaWidget !== undefined) return;
   captchaWidget=window.turnstile.render('#mail-captcha',{sitekey:state.mail.site_key, action:'verify_email',
     callback:token=>{captchaToken=token;},
@@ -134,7 +148,7 @@ $('send').addEventListener('click', async () => {
     mailStep(state.mail.verified ? 'send-brief' : 'request-code');
     $('mail-dialog').showModal();
     if (!state.mail.verified) await showCaptcha();
-  } catch {status('email-status','Email delivery is temporarily unavailable.',true);}
+  } catch(error) {status($('mail-dialog').open ? 'mail-status' : 'email-status',error.message,true);}
 });
 $('mail-close').addEventListener('click',()=> $('mail-dialog').close());
 $('mail-dialog').addEventListener('close',()=>{
