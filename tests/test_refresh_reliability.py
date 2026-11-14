@@ -84,3 +84,37 @@ def test_readiness_fails_when_no_feed_has_succeeded(archive):
     assert response.status_code == 503
     assert response.json()["freshness"]["status"] == "pending"
     assert client.get("/api/health").status_code == 200
+
+
+def test_twelve_hour_view_excludes_older_stories_and_refreshes_stale_archive_once(archive, monkeypatch):
+    store, client = archive
+    now = datetime.now(UTC)
+    source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    monkeypatch.setattr(launch_store.time, "time", lambda: (now - timedelta(minutes=16)).timestamp())
+
+    def story(ident, age):
+        return {"id": ident, "title": f"Story {ident}", "description": "Story details.",
+                "url": f"https://www.bbc.com/news/{ident}", "source": source.group, "publisher": source.label,
+                "published_at": (now - age).isoformat(), "category": "News"}
+
+    recent = story("recent", timedelta(hours=11, minutes=59))
+    older = story("older", timedelta(hours=12, minutes=1))
+    store.ingest(source.id, [older, recent], True)
+    monkeypatch.setattr(launch_store.time, "time", now.timestamp)
+    newest = story("newest", timedelta(minutes=5))
+    fetched = []
+
+    def fetch(feed):
+        fetched.append(feed.id)
+        return [newest, recent], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    initial = client.get("/api/news?hours=12").json()
+    assert [row["id"] for row in initial["articles"]] == ["recent"]
+    updated = client.get("/api/news?hours=12").json()
+    assert [row["id"] for row in updated["articles"]] == ["newest", "recent"]
+    assert client.get("/api/news?hours=24").json()["total"] == 3
+    assert fetched == [source.id]
+    preview = client.post("/api/digest", json={"edition": "world", "hours": 12}).json()
+    assert {row["digest_id"] for row in preview["digest"]["articles"]} == {"newest", "recent"}

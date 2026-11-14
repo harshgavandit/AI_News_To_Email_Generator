@@ -50,11 +50,14 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v2")
-_news_cache = Cache("news-v2")
+_news_cache = Cache("news-v3")
 _mail_history = OrderedDict()
+NEWS_PAGE_TTL = 60
+ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
 
 
 class TimeWindow(IntEnum):
+    half_day = 12
     day = 24
     week = 168
     month = 720
@@ -66,7 +69,7 @@ class DigestRequest(BaseModel):
     edition: Literal["personal", "world"] = "personal"
     name: str = Field(default="Reader", min_length=1, max_length=60)
     focus: str = Field(default="AI engineering, agents, research, and practical applications", max_length=400)
-    hours: Literal[24, 168, 720] = 168
+    hours: Literal[12, 24, 168, 720] = 168
     top_n: int = Field(default=5, ge=1, le=10)
     sources: list[str] = Field(default_factory=lambda: list(GROUPS), min_length=1, max_length=len(BY_ID))
     pinned_ids: list[Annotated[str, Field(pattern=r"^[a-zA-Z0-9_-]{1,40}$")]] = Field(
@@ -327,11 +330,11 @@ def news(request: Request, response: Response, background: BackgroundTasks,
                 response.headers["X-Cache"] = "STALE" if stale else "HIT"
                 if stale:
                     background.add_task(refresh_cached_page, store, filters, key)
+                queue_archive_refresh(background, store, filters, key, cached)
                 return cached
             response.headers["X-Cache"] = "MISS"
             result = refresh_cached_page(store, filters, key if cacheable else None, force=force)
-            if force and any(s["enabled"] and s["available"] is False for s in result["sources"]):
-                background.add_task(retry_failed_sources, store, filters, key if cacheable else None)
+            queue_archive_refresh(background, store, filters, key if cacheable else None, result, force=force)
             return result
 
         payload = collect_news()
@@ -367,26 +370,40 @@ def refresh_cached_page(store, filters, key, *, force=False):
             if cached is not None and not stale:
                 return cached
             result = load_archive_page(store, filters)
-            _news_cache.put(key, result, ttl=900, stale=900)
+            _news_cache.put(key, result, ttl=NEWS_PAGE_TTL, stale=NEWS_PAGE_TTL)
             return result
     return load_archive_page(store, filters)
 
 
-def retry_failed_sources(store, filters, key):
+def queue_archive_refresh(background, store, filters, key, page, *, force=False):
+    checked_at = page["fetched_at"]
+    archive_is_due = checked_at and datetime.now(timezone.utc) - datetime.fromisoformat(checked_at) >= ARCHIVE_REFRESH_INTERVAL
+    retry_failed = force and any(source["enabled"] and source["available"] is False for source in page["sources"])
+    if archive_is_due or retry_failed:
+        background.add_task(refresh_from_reader, store, filters, key, failed_only=not archive_is_due)
+
+
+def refresh_from_reader(store, filters, key, *, failed_only):
     try:
-        if not store.admit([("retry-failed-feeds", str(int(time.time()) // 300), 1)]):
-            return
         lease = store.claim_refresh(scheduled=True)
         if lease is None:
             return
+        cooldown = 0
         try:
-            refresh_sources(store, failed_only=True)
+            # A different instance can finish the same refresh while this page is cached.
+            if not failed_only:
+                active = [source for source in source_catalog(store) if source["enabled"] and source["checked_at"]]
+                latest = max((source["checked_at"] for source in active), default=None)
+                if latest and datetime.now(timezone.utc) - datetime.fromisoformat(latest) < ARCHIVE_REFRESH_INTERVAL:
+                    return
+            cooldown = 300
+            refresh_sources(store, failed_only=failed_only)
             if key:
                 refresh_cached_page(store, filters, key, force=True)
         finally:
-            store.finish_refresh(lease)
+            store.finish_refresh(lease, cooldown=cooldown)
     except SQLAlchemyError:
-        logger.warning("Could not retry failed feeds")
+        logger.warning("Could not refresh feeds from the Reading Room")
 
 
 def load_archive_page(store, filters):

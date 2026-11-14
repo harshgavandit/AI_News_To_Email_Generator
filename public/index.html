@@ -176,7 +176,9 @@
               role="group"
               aria-label="Published within"
             >
-              <button type="button" data-hours="24" aria-pressed="true">
+              <button type="button" data-hours="12" aria-pressed="true">
+                12h</button
+              ><button type="button" data-hours="24" aria-pressed="false">
                 24h</button
               ><button type="button" data-hours="168" aria-pressed="false">
                 7d</button
@@ -363,6 +365,7 @@
                   <div>
                     <label for="digest-window">Look back</label
                     ><select id="digest-window">
+                      <option value="12">12 hours</option>
                       <option value="24" selected>24 hours</option>
                       <option value="168">7 days</option>
                       <option value="720">30 days</option>

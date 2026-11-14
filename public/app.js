@@ -10,7 +10,7 @@ const state = {
   controller: null,
   topic: "all",
   source: "all",
-  hours: 24,
+  hours: 12,
   pins: new Map(),
   interests: new Set(),
   appendedInterests: new Set(),
@@ -58,6 +58,15 @@ const readableTime = (value) =>
         minute: "2-digit",
       })
     : "Not checked yet";
+const storyAge = new Intl.RelativeTimeFormat(undefined, { numeric: "always" });
+function relativeTime(value) {
+  const minutes = Math.floor((Date.now() - Date.parse(value)) / 60_000);
+  if (!Number.isFinite(minutes) || minutes < 0) return readableTime(value);
+  if (minutes === 0) return "Just now";
+  if (minutes < 60) return storyAge.format(-minutes, "minute");
+  if (minutes < 1440) return storyAge.format(-Math.floor(minutes / 60), "hour");
+  return storyAge.format(-Math.floor(minutes / 1440), "day");
+}
 const externalLink = (url, label) => {
   const a = node("a", "", label);
   try {
@@ -107,7 +116,7 @@ function syncURL() {
   const url = new URL(location.href);
   for (const [key, value] of Object.entries({
     source: state.source,
-    window: { 24: "24h", 168: "7d", 720: "30d" }[state.hours],
+    window: { 12: "12h", 24: "24h", 168: "7d", 720: "30d" }[state.hours],
     q: $("search").value.trim(),
     topic: state.topic,
     region: $("region").value,
@@ -123,9 +132,9 @@ function restoreURL() {
   const params = new URLSearchParams(location.search);
   state.source = params.get("source") || "all";
   const windowValue =
-    { "24h": 24, "7d": 168, "30d": 720 }[params.get("window")] ||
+    { "12h": 12, "24h": 24, "7d": 168, "30d": 720 }[params.get("window")] ||
     Number(params.get("window"));
-  state.hours = [24, 168, 720].includes(windowValue) ? windowValue : 24;
+  state.hours = [12, 24, 168, 720].includes(windowValue) ? windowValue : 12;
   state.topic = categories[params.get("topic")] ? params.get("topic") : "all";
   $("search").value = (params.get("q") || "").slice(0, 150);
   $("region").value = ["Global", "APAC", "EU"].includes(params.get("region"))
@@ -182,7 +191,8 @@ function renderStories() {
     );
     const top = node("div", "story-top");
     const timestamp = article.publishedAt || article.published_at;
-    const date = node("time", "", readableTime(timestamp));
+    const date = node("time", "", relativeTime(timestamp));
+    date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
     top.append(
       node(
@@ -333,12 +343,15 @@ function renderHealth(freshness) {
   const sources = state.sources.filter((s) => s.enabled);
   const failed = sources.filter((s) => s.available === false);
   const healthy = sources.filter((s) => s.available === true);
-  $("source-health-label").textContent = failed.length
+  const delayed = freshness?.status === "stale";
+  $("source-health-label").textContent = delayed
+    ? "Updates delayed"
+    : failed.length
     ? `${failed.length} source${failed.length === 1 ? "" : "s"} delayed`
     : healthy.length
       ? `${healthy.length} sources available`
       : "Sources awaiting check";
-  $("source-health-button").classList.toggle("degraded", failed.length > 0);
+  $("source-health-button").classList.toggle("degraded", delayed || failed.length > 0);
   $("updated").textContent = freshness?.checked_at
     ? `Last checked ${readableTime(freshness.checked_at)}`
     : "Individual source check times below.";
@@ -361,13 +374,13 @@ function renderHealth(freshness) {
     ? `${failed.map((s) => s.label).join(", ")} ${failed.length === 1 ? "is" : "are"} temporarily unavailable. Saved stories remain readable.`
     : "";
 }
-async function loadNews(append = false, force = false) {
+async function loadNews(append = false, force = false, quiet = false) {
   state.controller?.abort();
   const controller = new AbortController();
   state.controller = controller;
   $("stories").setAttribute("aria-busy", "true");
   $("show-more").disabled = true;
-  status("news-status", "Loading stories…");
+  if (!quiet) status("news-status", "Loading stories…");
   syncURL();
   try {
     const params = new URLSearchParams({
@@ -385,6 +398,7 @@ async function loadNews(append = false, force = false) {
       signal: controller.signal,
     });
     if (state.controller !== controller) return;
+    if (quiet && $("reading-room").contains(document.activeElement)) return;
     state.articles = append
       ? [...state.articles, ...data.articles]
       : data.articles;
@@ -396,7 +410,7 @@ async function loadNews(append = false, force = false) {
     renderSourceFilters();
     renderHealth(data.freshness);
   } catch (error) {
-    if (error.name !== "AbortError") status("news-status", error.message, true);
+    if (!quiet && error.name !== "AbortError") status("news-status", error.message, true);
   } finally {
     if (state.controller === controller) {
       $("stories").setAttribute("aria-busy", "false");
@@ -466,6 +480,14 @@ $("clear-search").addEventListener("click", () => {
   $("search").focus();
 });
 $("show-more").addEventListener("click", () => loadNews(true));
+setInterval(() => {
+  // Avoid replacing an expanded page, interrupting a filter, or polling a hidden tab.
+  if (!document.hidden && state.articles.length <= 12 &&
+      $("stories").getAttribute("aria-busy") === "false" &&
+      !$("reading-room").contains(document.activeElement) && !$("mail-dialog").open) {
+    loadNews(false, false, true);
+  }
+}, 60_000);
 for (const id of ["refresh", "retry-sources"])
   $(id).addEventListener("click", () => loadNews(false, true));
 let healthCloseTimer;

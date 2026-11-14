@@ -91,7 +91,7 @@ def test_news_filters_without_mutating_cache(client, article, monkeypatch):
     assert client.get("/api/news?q=nomatch").json()["total"] == 0
 
 
-@pytest.mark.parametrize("hours", [24, 168, 720])
+@pytest.mark.parametrize("hours", [12, 24, 168, 720])
 def test_news_accepts_browser_time_window_queries(client, article, monkeypatch, hours):
     monkeypatch.setattr(server, "collect_news", lambda: {"articles": [article], "sources": []})
     response = client.get(f"/api/news?hours={hours}")
