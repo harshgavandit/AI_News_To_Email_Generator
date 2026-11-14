@@ -18,6 +18,11 @@ class RankedArticleDetail(BaseModel):
     url: str
     article_type: str
     reasoning: Optional[str] = None
+    publisher: str = ""
+    topic_label: str = "Technology"
+    published_at: str = ""
+    whyItMatters: str = ""
+    keyTakeaway: str = ""
 
 
 class EmailDigestResponse(BaseModel):

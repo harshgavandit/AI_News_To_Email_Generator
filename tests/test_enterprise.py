@@ -91,3 +91,26 @@ def test_workspace_dispatch_checks_recipient_and_url_and_is_idempotent(workspace
     blocks = transport.stream.call_args.kwargs["json"]["blocks"]
     assert blocks[-1]["text"]["type"] == "plain_text"
     assert blocks[-1]["accessory"]["url"] == "https://openai.com/test"
+
+
+def test_personal_brief_preserves_citations_and_takeaways(monkeypatch):
+    from app.agent import curator_agent, digest_agent, email_agent
+    from app.web_digest import build_digest
+
+    monkeypatch.setattr(digest_agent, "generate_response", lambda *_, **__: json.dumps({
+        "title": "New runtime", "summary": "A new runtime ships.",
+        "whyItMatters": "Teams can evaluate shorter startup times.", "keyTakeaway": "A new runtime is available."}))
+    monkeypatch.setattr(curator_agent, "generate_response", lambda *_, **__: json.dumps({
+        "articles": [{"digest_id": "runtime", "rank": 1, "relevance_score": 9.0,
+                      "reasoning": "Matches the cloud infrastructure interest."}]}))
+    monkeypatch.setattr(email_agent, "generate_response", lambda *_, **__: json.dumps({
+        "greeting": "Hey Reader", "introduction": "A runtime has shipped. This brief explains the change."}))
+    result = build_digest([{"id": "runtime", "title": "New runtime", "description": "Release notes for a runtime.",
+                            "url": "https://github.blog/release", "source": "github-blog", "publisher": "The GitHub Blog",
+                            "published_at": datetime.now(UTC).isoformat()}], "Reader", "cloud", persona="engineer")
+    article = result["articles"][0]
+    assert article["publisher"] == "The GitHub Blog"
+    assert article["url"] == "https://github.blog/release"
+    assert article["keyTakeaway"] == "A new runtime is available."
+    assert article["whyItMatters"] == "Teams can evaluate shorter startup times."
+    assert article["keyTakeaway"] in result["html"]

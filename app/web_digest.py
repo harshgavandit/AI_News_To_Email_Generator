@@ -13,6 +13,7 @@ from app.agent.email_agent import EmailAgent, RankedArticleDetail
 from app.agent.openai_client import get_openai_model
 from app.coverage import public_article
 from app.profiles.user_profile import USER_PROFILE
+from app.sanitation import sanitize_text
 
 
 PERSONA_GUIDANCE = {
@@ -58,10 +59,10 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             raise ValueError("Could not summarize the sources. Please retry shortly.")
         
         saved = {
-            "summary": result.summary,
+            "summary": sanitize_text(result.summary, 1200),
             "digest_title": result.title,
-            "whyItMatters": result.whyItMatters,
-            "keyTakeaway": result.keyTakeaway,
+            "whyItMatters": sanitize_text(result.whyItMatters, 300),
+            "keyTakeaway": sanitize_text(result.keyTakeaway, 300),
         }
         if store:
             store.save_summary(key, saved)
@@ -87,6 +88,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
     details = []
     for rank_idx, r in enumerate(final_ranked, start=1):
         item = by_id[r.digest_id]
+        source = public_article(item)
         details.append(RankedArticleDetail(
             digest_id=r.digest_id,
             rank=rank_idx,
@@ -97,7 +99,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             article_type=item["source"],
             reasoning=r.reasoning if r.digest_id not in pinned_set else "Hand-pinned by reader from the Reading Room",
             publisher=item.get("publisher", ""),
-            topic_label=item.get("topic_label", "Technology"),
+            topic_label=source["topic_label"],
             published_at=item.get("published_at", ""),
             whyItMatters=item.get("whyItMatters", ""),
             keyTakeaway=item.get("keyTakeaway", ""),
