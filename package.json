@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build-web.mjs",
-    "lint": "node --check public/app.js && node --check public/sources.js"
+    "lint": "node --check public/app.js && node --check public/sources.js && node --check public/theme.js"
   }
 }

@@ -18,6 +18,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <link rel="preload" as="image" href="/edition-city.jpg" />
+    <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
     <script src="/app.js" defer></script>
@@ -32,6 +33,11 @@
       <nav aria-label="Main navigation">
         <a href="#reading-room">Reading Room</a>
         <a href="/sources.html">Sources</a>
+        <select id="site-theme" class="theme-select" aria-label="App color theme" disabled>
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
         <button id="nav-builder" class="text-button" type="button">
           Build a brief ↗
         </button>

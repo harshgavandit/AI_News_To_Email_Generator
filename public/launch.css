@@ -1,11 +1,12 @@
 /* Reading Room */
 .topbar { height: 66px; }
-.brand { gap: 9px; font-size: 24px; font-weight: 600; }
+.brand { gap: 9px; font-size: 24px; font-weight: 600; white-space: nowrap; }
 .brand-icon { display: block; border-radius: 7px; }
 .topbar nav { gap: 23px; font-size: 13px; }
 .topbar nav > a.text-button { display: block; }
-.topbar nav button { border: 1px solid #c9d4c5; border-radius: 6px; color: var(--green); padding: 8px 12px; text-decoration: none; font-weight: 600; }
+.topbar nav button { border: 1px solid var(--accent-line); border-radius: 6px; color: var(--green); padding: 8px 12px; text-decoration: none; font-weight: 600; white-space: nowrap; }
 .topbar nav button:hover { background: var(--sage); }
+.theme-select { width: auto; min-height: 36px; padding: 6px; font-size: 12px; }
 .hero {
   position: relative;
   isolation: isolate;
@@ -39,7 +40,7 @@
   background: var(--paper);
   color: var(--ink);
   border-radius: 10px;
-  border: 1px solid #fff9;
+  border: 1px solid var(--line);
   padding: 18px;
 }
 .quick-send h2 { margin: 0; font-size: 25px; }
@@ -86,7 +87,7 @@
 .filter-fields label { margin-bottom: 4px; }
 .results-line { justify-content: flex-start; align-items: center; gap: 12px; font-size: 12px; min-height: 32px; margin: 10px 0; }
 #sort { width: auto; margin-left: auto; padding: 5px 7px; font-size: 12px; }
-#news-status.error { color: #963b26; }
+#news-status.error { color: var(--error); }
 .story { min-height: 0; justify-content: flex-start; padding: 19px; }
 .story h3 { display: block; overflow: visible; margin: 11px 0 7px; font-size: clamp(20px, 1.6vw, 25px); }
 .story-summary { font-size: 13px; display: block; }
@@ -112,12 +113,11 @@
 .digest-topic { text-transform: none; font-weight: 500; }
 .digest-source-row { justify-content: space-between; color: var(--muted); font-size: 11px; }
 .digest-source-row a { color: inherit; }
-.preview-dark .digest-source-row { color: #c7cfbd; }
 footer { font-size: 12px; }
 footer > div { flex-wrap: wrap; }
 
 @media (min-width: 1024px) {
-  .stories.has-lead > .story:first-child { background: #f1f4ea; border-color: #c9d6c2; }
+  .stories.has-lead > .story:first-child { background: var(--lead); border-color: var(--accent-line); }
   .stories.has-lead > .story:first-child.pinned { border-color: var(--green); }
 }
 @media (max-width: 699px) {
@@ -125,6 +125,7 @@ footer > div { flex-wrap: wrap; }
   .brand { font-size: 21px; gap: 7px; }
   .brand-icon { width: 29px; height: 29px; }
   .topbar nav { gap: 10px; }
+  .theme-select { min-height: 40px; }
   .hero { grid-template-columns: minmax(0, 1fr); padding: 19px 14px 14px; gap: 15px; margin-top: 13px; }
   .hero::before { background-position: 58% 40%; }
   .hero h1 { font-size: clamp(31px, 8.5vw, 42px); margin-bottom: 10px; }
@@ -153,6 +154,13 @@ footer > div { flex-wrap: wrap; }
   .mobile-builder { bottom: max(10px, env(safe-area-inset-bottom)); }
   footer > div { gap: 9px 14px; }
   .composer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+  .topbar { gap: 8px; }
+  .topbar nav { gap: 6px; }
+  .topbar nav button { padding-inline: 6px; }
+  .brand { font-size: 19px; }
+  .brand-icon { width: 25px; height: 25px; }
 }
 @media (min-width: 700px) and (max-width: 1023px) {
   .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

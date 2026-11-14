@@ -3,8 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f4ee" />
     <title>Sources | Informa AI</title>
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
     <script defer src="/sources.js"></script>
@@ -15,7 +17,14 @@
         <img class="brand-icon" src="/informa-ai-icon.png" width="33" height="33" alt="" />
         <span>Informa AI</span>
       </a>
-      <nav aria-label="Main navigation"><a class="text-button" href="/">Latest stories</a></nav>
+      <nav aria-label="Main navigation">
+        <a class="text-button" href="/">Latest stories</a>
+        <select id="site-theme" class="theme-select" aria-label="App color theme" disabled>
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </nav>
     </header>
     <main class="wrap">
       <h1>Sources</h1>
