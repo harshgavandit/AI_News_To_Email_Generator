@@ -1,4 +1,9 @@
 "use strict";
+const sourceDescriptions = {
+  status: "Official status",
+  reporting: "Reporting",
+  discussion: "Community discussion",
+};
 const element = (id) => document.getElementById(id);
 const msg = (message) => {
   element("source-status").textContent = message;
@@ -20,16 +25,13 @@ async function render() {
     name.target = "_blank";
     name.rel = "noopener noreferrer";
     const info = document.createElement("span");
-    const type =
-      source.coverage === "status"
-        ? "Official status"
-        : source.coverage === "reporting"
-          ? "Reporting"
-          : "Publisher update";
+    const type = sourceDescriptions[source.coverage] || "Publisher update";
     const health = !source.enabled
       ? "Paused"
       : source.available === null
         ? "Not checked yet"
+        : source.freshness === "stale"
+          ? "Check overdue"
         : source.available
           ? "Available"
           : "Last check failed";

@@ -166,7 +166,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
 def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
     escape = html.escape
     intro = digest.get("introduction", {})
-    greeting = escape(intro.get("greeting", "Your World Tech Brief"))
+    greeting = escape(intro.get("greeting", "Your Informa AI"))
     overview = escape(intro.get("introduction", "The technology stories that matter, curated for your morning read."))
     origin = os.getenv("PUBLIC_ORIGIN", "https://ai-news-to-email-generator.vercel.app").rstrip("/")
     unsubscribe = f'<a href="{escape(unsubscribe_url, quote=True)}">Unsubscribe</a> · ' if unsubscribe_url else ""
@@ -272,7 +272,7 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#294a3b;letter-spacing:-0.5px;">World Tech Brief</span>
+                    <span style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#294a3b;letter-spacing:-0.5px;">Informa AI</span>
                     <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#697169;margin-top:3px;">Global Tech Intelligence &amp; Perspective</div>
                   </td>
                   <td align="right" style="vertical-align:top;">
@@ -310,7 +310,7 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
           <tr>
             <td style="padding-top:24px;border-top:1px solid #dedfd5;font-size:11px;line-height:1.6;color:#80867f;text-align:center;">
               <p style="margin:0 0 8px;">
-                You received this email on-demand from <a href="{origin}" style="color:#294a3b;text-decoration:none;font-weight:600;">World Tech Brief</a>.
+                You received this email on-demand from <a href="{origin}" style="color:#294a3b;text-decoration:none;font-weight:600;">Informa AI</a>.
               </p>
               <p style="margin:0 0 8px;">
                 {unsubscribe}
@@ -318,7 +318,7 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
                 <a href="{origin}" style="color:#697169;text-decoration:underline;">Web Edition</a>
               </p>
               <p style="margin:0;font-size:10px;color:#9ca29b;">
-                World Tech Brief · Independent Global Technology &amp; AI Intelligence
+                Informa AI · Independent Global Technology &amp; AI Intelligence
               </p>
             </td>
           </tr>

@@ -8,8 +8,9 @@
       content="The technology stories that matter, in one useful brief. Read the latest, build your own, or send today's global top five to your inbox."
     />
     <meta name="theme-color" content="#f6f4ee" />
-    <title>World Tech Brief — A little less noise.</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Informa AI — A little less noise.</title>
+    <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="preload" as="image" href="/edition-city.jpg" />
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
     <script src="/app.js" defer></script>
@@ -17,17 +18,13 @@
   <body>
     <a class="skip" href="#reading-room">Skip to stories</a>
     <header class="topbar wrap">
-      <a class="brand" href="/" aria-label="World Tech Brief home"
-        ><span class="brand-mark" aria-hidden="true">w.</span
-        ><span
-          >World Tech Brief<span class="brand-sub"
-            >A DAILY DOSE OF PERSPECTIVE</span
-          ></span
-        ></a
-      >
+      <a class="brand" href="/" aria-label="Informa AI home">
+        <img class="brand-logo" src="/informa-ai-logo.jpg" width="580" height="167" alt="Informa AI" />
+      </a>
       <nav aria-label="Main navigation">
-        <a href="#reading-room">The news desk</a
-        ><button id="nav-builder" class="text-button" type="button">
+        <a href="#reading-room">Latest stories</a>
+        <a href="/sources.html">Sources</a>
+        <button id="nav-builder" class="text-button" type="button">
           Build a brief ↗
         </button>
       </nav>
@@ -35,19 +32,17 @@
     <main id="main" class="wrap">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <div class="eyebrow">
-            <span class="live-dot"></span> TECHNOLOGY, WITH CONTEXT
-          </div>
           <h1 id="hero-title">
             A little less noise.<br /><em>A lot more signal.</em>
           </h1>
           <p>
-            The stories shaping technology, picked from sources around the
-            world. Five good reads. Straight to your inbox.
+            Global tech and AI news, from new chips and policy shifts to service outages.
           </p>
         </div>
         <form id="world-form" class="quick-send">
-          <label for="hero-email">Where should we send today's brief?</label>
+          <h2>The Global Top 5</h2>
+          <label class="sr-only" for="hero-email">Email address for today's brief</label>
+          <p class="brief-description">Five stories from the last 24 hours, in one email.</p>
           <div class="email-action">
             <input
               id="hero-email"
@@ -57,7 +52,7 @@
               autocomplete="email"
               placeholder="you@example.com"
             /><button id="world-brief" class="button primary" type="submit">
-              Send Today's Global Top 5 <span aria-hidden="true">↗</span>
+              Get the brief <span aria-hidden="true">↗</span>
             </button>
           </div>
           <label class="check-label"
@@ -65,10 +60,10 @@
               >Also send it daily at 8 AM, my local time
               <span id="timezone-label" class="muted"></span></span
           ></label>
-          <p class="small">
-            No account needed. Verify your inbox once. Up to 3 briefs per inbox
-            each day. Daily delivery is optional.
-          </p>
+          <div class="brief-footer">
+            <p class="small">Free. Up to 3 briefs per verified inbox each day.</p>
+            <button id="world-preview" class="text-button" type="button">Preview today’s brief</button>
+          </div>
           <p
             id="world-status"
             class="status"
@@ -85,8 +80,7 @@
         >
           <div class="section-top">
             <div>
-              <div class="eyebrow muted">THE NEWS DESK</div>
-              <h2 id="reading-title">Worth your attention.</h2>
+              <h2 id="reading-title">Latest stories</h2>
             </div>
             <div class="source-health">
               <button
@@ -118,12 +112,6 @@
               </div>
             </div>
           </div>
-          <div
-            id="source-filters"
-            class="topic-controls source-filters"
-            role="group"
-            aria-label="News sources"
-          ></div>
           <div
             id="topics"
             class="topic-controls"
@@ -169,58 +157,72 @@
               >GitHub ↗</a
             >
           </aside>
-          <div class="toolbar">
-            <div
-              class="segmented"
-              id="window-controls"
-              role="group"
-              aria-label="Published within"
-            >
-              <button type="button" data-hours="12" aria-pressed="true">
-                12h</button
-              ><button type="button" data-hours="24" aria-pressed="false">
-                24h</button
-              ><button type="button" data-hours="168" aria-pressed="false">
-                7d</button
-              ><button type="button" data-hours="720" aria-pressed="false">
-                30d
+          <div class="desk-controls">
+            <div class="toolbar">
+              <div
+                class="segmented"
+                id="window-controls"
+                role="group"
+                aria-label="Published within"
+              >
+                <button type="button" data-hours="12" aria-pressed="true">
+                  12h</button
+                ><button type="button" data-hours="24" aria-pressed="false">
+                  24h</button
+                ><button type="button" data-hours="168" aria-pressed="false">
+                  7d</button
+                ><button type="button" data-hours="720" aria-pressed="false">
+                  30d
+                </button>
+              </div>
+              <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">Filters<span id="filter-count" hidden></span></button>
+              <button
+                id="refresh"
+                class="text-button"
+                type="button"
+                aria-label="Reload latest stories"
+              >
+                ↻ Refresh
               </button>
             </div>
-            <label class="sr-only" for="region">Region</label
-            ><select id="region">
-              <option value="">All regions</option>
-              <option value="Global">Global</option>
-              <option value="APAC">APAC</option>
-              <option value="EU">Europe</option></select
-            ><label class="sr-only" for="publisher">Source</label
-            ><select id="publisher">
-              <option value="">All sources</option></select
-            ><button
-              id="refresh"
-              class="text-button"
-              type="button"
-              aria-label="Reload latest stories"
-            >
-              ↻ Refresh
-            </button>
+            <div class="search-wrap">
+              <span aria-hidden="true">⌕</span
+              ><label class="sr-only" for="search">Search stories</label
+              ><input
+                id="search"
+                type="search"
+                maxlength="150"
+                placeholder="Search stories, companies, or ideas…"
+              /><button
+                id="clear-search"
+                type="button"
+                class="text-button"
+                aria-label="Clear search"
+                hidden
+              >
+                Clear
+              </button>
+            </div>
           </div>
-          <div class="search-wrap">
-            <span aria-hidden="true">⌕</span
-            ><label class="sr-only" for="search">Search stories</label
-            ><input
-              id="search"
-              type="search"
-              maxlength="150"
-              placeholder="Search stories, companies, or ideas…"
-            /><button
-              id="clear-search"
-              type="button"
-              class="text-button"
-              aria-label="Clear search"
-              hidden
-            >
-              Clear
-            </button>
+          <div id="extra-filters" class="extra-filters" hidden>
+            <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="News sources"></div>
+            <div class="filter-fields">
+              <div>
+                <label for="region">Publisher region</label>
+                <select id="region">
+                  <option value="">All regions</option>
+                  <option value="Global">Global</option>
+                  <option value="APAC">Asia-Pacific</option>
+                  <option value="EU">Europe</option>
+                  <option value="Africa">Africa</option>
+                  <option value="LatAm">Latin America</option>
+                </select>
+              </div>
+              <div>
+                <label for="publisher">Publisher</label>
+                <select id="publisher"><option value="">All publishers</option></select>
+              </div>
+            </div>
           </div>
           <div id="failed-alert" class="failed-alert" hidden>
             <span id="failed-message"></span
@@ -232,7 +234,7 @@
             <p id="news-status" role="status" aria-live="polite">
               Finding fresh stories…
             </p>
-            <span>Pin a story to make it yours</span>
+            <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
           </div>
           <div id="stories" class="stories" aria-busy="true"></div>
           <button
@@ -247,10 +249,7 @@
         <aside id="composer" class="composer" aria-labelledby="composer-title">
           <div class="sheet-handle" aria-hidden="true"></div>
           <div class="builder-heading">
-            <div>
-              <div class="eyebrow muted">YOUR DAILY EDIT</div>
-              <h2 id="composer-title">Make it your brief.</h2>
-            </div>
+            <h2 id="composer-title" tabindex="-1">Brief builder</h2>
             <button
               id="close-builder"
               type="button"
@@ -443,7 +442,7 @@
                 </button>
               </div>
               <div id="preview-content" hidden>
-                <h3 id="preview-title" tabindex="-1">Your World Tech Brief.</h3>
+                <h3 id="preview-title" tabindex="-1">Your Informa AI.</h3>
                 <article id="preview" class="email-preview"></article>
                 <div class="preview-actions">
                   <button id="copy" type="button" class="button secondary">
@@ -558,9 +557,8 @@
     </button>
     <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
     <footer class="wrap">
-      <a class="footer-brand" href="/">World Tech Brief</a
-      ><span>Sources first. Perspective follows.</span>
-      <div>
+      <a class="footer-brand" href="/">Informa AI</a
+      ><div>
         <a href="/sources.html">Our sources</a
         ><a
           href="https://github.com/harshgavandit/AI_News_To_Email_Generator"

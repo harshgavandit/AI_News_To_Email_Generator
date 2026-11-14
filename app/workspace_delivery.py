@@ -54,16 +54,16 @@ def message_payload(digest: dict, provider: str) -> dict:
         rows.append((title, publisher, summary, url))
 
     if provider == "slack":
-        blocks = [{"type": "header", "text": {"type": "plain_text", "text": "World Tech Brief"}}]
+        blocks = [{"type": "header", "text": {"type": "plain_text", "text": "Informa AI"}}]
         if intro:
             blocks.append({"type": "section", "text": {"type": "plain_text", "text": intro}})
         for title, publisher, summary, url in rows:
             blocks.append({"type": "section", "text": {"type": "plain_text", "text": f"{title}\n{publisher}\n{summary}"},
                            "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Read source"},
                                          "url": url, "action_id": "read_source"}})
-        return {"text": "World Tech Brief", "blocks": blocks, "unfurl_links": False, "unfurl_media": False}
+        return {"text": "Informa AI", "blocks": blocks, "unfurl_links": False, "unfurl_media": False}
 
-    blocks = [{"type": "TextBlock", "text": "World Tech Brief", "weight": "Bolder", "size": "Large"}]
+    blocks = [{"type": "TextBlock", "text": "Informa AI", "weight": "Bolder", "size": "Large"}]
     if intro:
         blocks.append({"type": "TextBlock", "text": intro, "wrap": True})
     for title, publisher, summary, url in rows:

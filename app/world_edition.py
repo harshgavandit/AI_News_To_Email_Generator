@@ -60,7 +60,7 @@ def select_world(articles, count, sources):
 def build_world(articles, hours, all_pool=None):
     window = {24: "24 hours", 168: "7 days", 720: "30 days"}.get(hours, f"{hours} hours")
     intro = {
-        "greeting": "Your World Tech Brief",
+        "greeting": "Your global brief from Informa AI",
         "introduction": f"Recent stories across tech from the past {window}. Excerpts come from the linked publishers; check provider status pages for current incident details.",
     }
     result = {
@@ -72,9 +72,23 @@ def build_world(articles, hours, all_pool=None):
     }
     markdown = [f"# {intro['greeting']}", intro["introduction"]]
 
-    picked_ids = {item["id"] for item in articles}
     if all_pool:
-        quick_candidates = [a for a in all_pool if a["id"] not in picked_ids][:3]
+        picked_ids = {item["id"] for item in articles}
+        picked_incidents = {key for item in articles if (key := incident_key(item))}
+        quick_candidates = []
+        for item in sorted(all_pool, key=lambda a: (a["published_at"], a["id"]), reverse=True):
+            if item["id"] in picked_ids:
+                continue
+            story = public_article(item)
+            key = incident_key(story)
+            if key in picked_incidents or (story["coverage"] == "status" and re.search(
+                    r"\b(maintenance|scheduled work)\b", story["title"], re.I)):
+                continue
+            quick_candidates.append(story)
+            if key:
+                picked_incidents.add(key)
+            if len(quick_candidates) == 3:
+                break
         result["quick_hits"] = [
             {
                 "title": q["title"],

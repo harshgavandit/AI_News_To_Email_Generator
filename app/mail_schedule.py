@@ -91,7 +91,7 @@ def run_due_subscriptions(generate_fn):
         try:
             accepted = public_mail.send_message(
                 email,
-                "Your Daily World Tech Brief",
+                "Your Daily Informa AI",
                 message["markdown"],
                 message["html"],
                 ident,

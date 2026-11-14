@@ -1,4 +1,4 @@
-# World Tech Brief release operations
+# Informa AI release operations
 
 The Vercel project serves static HTML, CSS, and JavaScript from `public/` and routes API requests to FastAPI in `app/server.py`. There is no TypeScript or JSX build. Run `npm run build` and `npm run lint` to validate the static assets. Run `uv sync --frozen`, `uv run ruff check app tests scripts main.py`, and `uv run pytest -q` for Python. Start a local server with `uv run uvicorn app.server:app`.
 

@@ -103,9 +103,11 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
 
     def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=()):
-        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+        now = datetime.now(UTC)
+        cutoff = (now - timedelta(hours=hours)).isoformat()
         stmt = select(articles).outerjoin(sources, articles.c.source_id == sources.c.id).where(
-            articles.c.published_at >= cutoff, or_(sources.c.enabled.is_(True), sources.c.enabled.is_(None)))
+            articles.c.published_at.between(cutoff, now.isoformat()),
+            or_(sources.c.enabled.is_(True), sources.c.enabled.is_(None)))
         if source != "all":
             stmt = stmt.where(or_(articles.c.source == source, articles.c.source_id == source))
         if kind != "all":

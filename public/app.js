@@ -10,6 +10,7 @@ const state = {
   controller: null,
   topic: "all",
   source: "all",
+  publisher: "",
   hours: 12,
   pins: new Map(),
   interests: new Set(),
@@ -26,10 +27,17 @@ const categories = {
   software: "Software",
   startups: "Startups",
   bigtech: "Big Tech",
+  chips: "Chips & Hardware",
   industry: "Policy",
   security: "Security",
   outages: "Outages",
   video: "Video",
+};
+const sourceLabels = {
+  status: "Official status",
+  reporting: "Reporting",
+  publisher: "Publisher update",
+  discussion: "Community discussion",
 };
 const interestLabels = [
   "AI Agents & Tool Use",
@@ -120,26 +128,31 @@ function syncURL() {
     q: $("search").value.trim(),
     topic: state.topic,
     region: $("region").value,
-    publisher: $("publisher").value,
+    publisher: state.publisher,
   })) {
     if (!value || value === "all") url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
   history.replaceState(null, "", url);
   $("clear-search").hidden = !$("search").value;
+  const count = Number(state.source !== "all") + Number(Boolean($("region").value)) + Number(Boolean(state.publisher));
+  $("filter-count").hidden = !count;
+  $("filter-count").textContent = count;
+  $("reset-filters").hidden = !count && state.topic === "all" && state.hours === 12 && !$("search").value;
 }
 function restoreURL() {
   const params = new URLSearchParams(location.search);
   state.source = params.get("source") || "all";
+  state.publisher = params.get("publisher") || "";
+  $("publisher").value = state.publisher;
   const windowValue =
     { "12h": 12, "24h": 24, "7d": 168, "30d": 720 }[params.get("window")] ||
     Number(params.get("window"));
   state.hours = [12, 24, 168, 720].includes(windowValue) ? windowValue : 12;
-  state.topic = categories[params.get("topic")] ? params.get("topic") : "all";
+  state.topic = Object.hasOwn(categories, params.get("topic")) ? params.get("topic") : "all";
   $("search").value = (params.get("q") || "").slice(0, 150);
-  $("region").value = ["Global", "APAC", "EU"].includes(params.get("region"))
-    ? params.get("region")
-    : "";
+  $("region").value = params.get("region") || "";
+  if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
   for (const button of $("window-controls").children)
     button.setAttribute(
@@ -154,22 +167,22 @@ function renderSourceFilters() {
     anthropic: "Anthropic",
     youtube: "YouTube",
   };
-  $("source-filters").replaceChildren();
   for (const [id, label] of Object.entries(names)) {
-    const count = state.counts[id];
-    const button = node(
-      "button",
-      "topic-chip",
-      `${label}${Number.isInteger(count) ? ` (${count})` : ""}`,
-    );
-    button.type = "button";
+    const count = state.counts[id] ?? (Object.hasOwn(state.counts, "all") ? 0 : null);
+    let button = $("source-filters").querySelector(`[data-source="${id}"]`);
+    if (!button) {
+      button = node("button", "topic-chip");
+      button.dataset.source = id;
+      button.type = "button";
+      button.addEventListener("click", () => {
+        state.source = id;
+        renderSourceFilters();
+        loadNews();
+      });
+      $("source-filters").append(button);
+    }
+    button.textContent = `${label}${Number.isInteger(count) ? ` (${count})` : ""}`;
     button.setAttribute("aria-pressed", String(state.source === id));
-    button.addEventListener("click", () => {
-      state.source = id;
-      renderSourceFilters();
-      loadNews();
-    });
-    $("source-filters").append(button);
   }
 }
 function renderStories() {
@@ -197,7 +210,7 @@ function renderStories() {
     top.append(
       node(
         "span",
-        "source-badge",
+        `source-badge ${Object.hasOwn(categories, article.topic) ? article.topic : ""}`,
         categories[article.category || article.topic] ||
           article.topic_label ||
           "Technology",
@@ -208,29 +221,20 @@ function renderStories() {
     heading.append(
       externalLink(article.sourceUrl || article.url, article.title),
     );
-    const why = node("p", "why-matters");
-    why.append(
-      node("strong", "", "Why it matters: "),
-      document.createTextNode(
-        article.whyItMatters ||
-          article.reasoning ||
-          "Read the original reporting for context and details.",
-      ),
-    );
     const bottom = node("div", "story-bottom");
-    bottom.append(
-      node(
-        "span",
-        "",
-        `${article.sourceName || article.publisher || "Original source"} · ${article.region || "Global"}${article.readingTimeMinutes ? ` · ${article.readingTimeMinutes} min` : ""}`,
-      ),
+    const attribution = node("div", "story-attribution");
+    attribution.append(
+      node("strong", "", article.sourceName || article.publisher || "Original source"),
+      node("span", "", [sourceLabels[article.coverage], article.region && article.region !== "Global" ? article.region : ""].filter(Boolean).join(" · ")),
     );
+    bottom.append(attribution);
     const pin = node(
       "button",
       "pin-button",
       state.pins.has(String(article.id)) ? "✓ Pinned" : "+ Pin",
     );
     pin.type = "button";
+    pin.dataset.pinId = String(article.id);
     pin.setAttribute(
       "aria-pressed",
       String(state.pins.has(String(article.id))),
@@ -241,23 +245,20 @@ function renderStories() {
     );
     pin.addEventListener("click", () => togglePin(article));
     bottom.append(pin);
-    card.append(
-      top,
-      heading,
-      node(
-        "p",
-        "story-summary",
-        article.cleanSummary ||
-          article.description ||
-          article.summary ||
-          "Read the original story for details.",
-      ),
-      why,
-      bottom,
-    );
+    card.append(top, heading);
+    const summary = article.cleanSummary || article.description || article.summary;
+    if (summary) card.append(node("p", "story-summary", summary));
+    if (article.whyItMatters) {
+      const why = node("p", "why-matters");
+      why.append(node("strong", "", "Why it matters. "), document.createTextNode(article.whyItMatters));
+      card.append(why);
+    }
+    card.append(bottom);
     container.append(card);
   }
   $("show-more").hidden = !state.cursor;
+  $("stories").classList.toggle("has-lead", state.source === "all" && state.topic === "all" && state.hours <= 24 &&
+    !$("search").value && !$("region").value && !state.publisher && state.articles.length >= 3);
   status(
     "news-status",
     `${state.articles.length} of ${state.total} ${state.total === 1 ? "story" : "stories"}`,
@@ -281,7 +282,9 @@ function togglePin(article) {
     $("article-count").value = state.pins.size <= 5 ? "5" : "10";
   status("pin-status", "");
   renderPins();
+  const restorePinFocus = document.activeElement?.dataset.pinId === id;
   renderStories();
+  if (restorePinFocus) $("stories").querySelector(`[data-pin-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
 }
 function renderPins() {
   const count = state.pins.size;
@@ -317,9 +320,12 @@ for (const id of ["clear-pins", "pinned-clear"])
 function updateSourceCatalog(sources) {
   if (!sources?.length) return;
   state.sources = sources;
+  const enabled = sources.filter((s) => s.enabled);
   for (const id of ["publisher", "digest-sources"]) {
     const select = $(id);
-    const value = select.value;
+    const value = id === "publisher" ? state.publisher : select.value;
+    if (select.options.length === enabled.length + 1 && enabled.every((s, index) =>
+      select.options[index + 1].value === s.id && select.options[index + 1].text === s.label)) continue;
     select.replaceChildren();
     const option = node(
       "option",
@@ -328,7 +334,7 @@ function updateSourceCatalog(sources) {
     );
     option.value = id === "publisher" ? "" : "all";
     select.append(option);
-    for (const source of sources.filter((s) => s.enabled)) {
+    for (const source of enabled) {
       const item = node("option", "", source.label);
       item.value = source.id;
       select.append(item);
@@ -336,24 +342,20 @@ function updateSourceCatalog(sources) {
     select.value = value;
     if (!select.value) select.value = id === "publisher" ? "" : "all";
   }
-  renderHealth();
-  renderSourceFilters();
 }
 function renderHealth(freshness) {
   const sources = state.sources.filter((s) => s.enabled);
-  const failed = sources.filter((s) => s.available === false);
-  const healthy = sources.filter((s) => s.available === true);
-  const delayed = freshness?.status === "stale";
-  $("source-health-label").textContent = delayed
-    ? "Updates delayed"
-    : failed.length
-    ? `${failed.length} source${failed.length === 1 ? "" : "s"} delayed`
-    : healthy.length
-      ? `${healthy.length} sources available`
-      : "Sources awaiting check";
-  $("source-health-button").classList.toggle("degraded", delayed || failed.length > 0);
+  const scoped = sources.filter((s) => (state.source === "all" || [s.id, s.source].includes(state.source)) &&
+    (!state.publisher || s.id === state.publisher));
+  const failed = scoped.filter((s) => s.available === false);
+  const fresh = sources.filter((s) => s.freshness === "fresh" || (!s.freshness && s.available === true)).length;
+  const delayed = sources.some((s) => s.checked_at) && fresh === 0;
+  $("source-health-label").textContent = fresh
+    ? `${fresh} of ${sources.length} sources fresh`
+    : delayed ? "Updates delayed" : "Sources awaiting check";
+  $("source-health-button").classList.toggle("degraded", fresh < sources.length);
   $("updated").textContent = freshness?.checked_at
-    ? `Last checked ${readableTime(freshness.checked_at)}`
+    ? `Selected feeds checked ${readableTime(freshness.checked_at)}`
     : "Individual source check times below.";
   $("source-health-list").className = "source-health-list";
   $("source-health-list").replaceChildren();
@@ -364,22 +366,22 @@ function renderHealth(freshness) {
       node(
         "span",
         "",
-        `${s.available === true ? "Available" : s.available === false ? "Last check failed" : "Waiting for first check"} · Checked ${readableTime(s.checked_at)}${s.last_success ? ` · Last success ${readableTime(s.last_success)}` : ""}`,
+        `${s.freshness === "stale" ? "Check overdue" : s.available === true ? "Available" : s.available === false ? "Last check failed" : "Waiting for first check"}${s.checked_at ? ` · Checked ${readableTime(s.checked_at)}` : ""}${s.last_success ? ` · Last success ${readableTime(s.last_success)}` : ""}`,
       ),
     );
     $("source-health-list").append(row);
   }
-  $("failed-alert").hidden = !failed.length;
+  $("failed-alert").hidden = !failed.length && freshness?.status !== "stale";
   $("failed-message").textContent = failed.length
     ? `${failed.map((s) => s.label).join(", ")} ${failed.length === 1 ? "is" : "are"} temporarily unavailable. Saved stories remain readable.`
-    : "";
+    : "Source checks are delayed. Showing the latest stories in the archive.";
 }
 async function loadNews(append = false, force = false, quiet = false) {
   state.controller?.abort();
   const controller = new AbortController();
   state.controller = controller;
   $("stories").setAttribute("aria-busy", "true");
-  $("show-more").disabled = true;
+  $("show-more").disabled = $("refresh").disabled = true;
   if (!quiet) status("news-status", "Loading stories…");
   syncURL();
   try {
@@ -388,7 +390,7 @@ async function loadNews(append = false, force = false, quiet = false) {
       source: state.source,
       topic: state.topic,
       region: $("region").value,
-      publisher: $("publisher").value,
+      publisher: state.publisher,
       q: $("search").value.trim(),
       limit: "12",
     });
@@ -399,9 +401,12 @@ async function loadNews(append = false, force = false, quiet = false) {
     });
     if (state.controller !== controller) return;
     if (quiet && $("reading-room").contains(document.activeElement)) return;
-    state.articles = append
-      ? [...state.articles, ...data.articles]
-      : data.articles;
+    const focusMore = append && document.activeElement === $("show-more");
+    const previousSize = append ? state.articles.length : 0;
+    if (append) {
+      const known = new Set(state.articles.map((article) => article.id));
+      state.articles.push(...data.articles.filter((article) => !known.has(article.id)));
+    } else state.articles = data.articles;
     state.cursor = data.next_cursor;
     state.total = data.total;
     state.counts = data.source_counts || {};
@@ -409,12 +414,21 @@ async function loadNews(append = false, force = false, quiet = false) {
     renderStories();
     renderSourceFilters();
     renderHealth(data.freshness);
+    if (focusMore) $("stories").children[previousSize]?.querySelector("h3 a")?.focus();
   } catch (error) {
-    if (!quiet && error.name !== "AbortError") status("news-status", error.message, true);
+    if (!quiet && error.name !== "AbortError") {
+      if (!append && !force) {
+        $("stories").replaceChildren();
+        $("show-more").hidden = true;
+        state.articles = [];
+        state.cursor = null;
+      }
+      status("news-status", error.message, true);
+    }
   } finally {
     if (state.controller === controller) {
       $("stories").setAttribute("aria-busy", "false");
-      $("show-more").disabled = false;
+      $("show-more").disabled = $("refresh").disabled = false;
     }
   }
 }
@@ -465,9 +479,26 @@ for (const button of $("window-controls").children)
       peer.setAttribute("aria-pressed", String(peer === button));
     loadNews();
   });
-for (const id of ["region", "publisher"])
-  $(id).addEventListener("change", () => loadNews());
+$("region").addEventListener("change", () => loadNews());
+$("publisher").addEventListener("change", () => {
+  state.publisher = $("publisher").value;
+  loadNews();
+});
+$("filter-toggle").addEventListener("click", () => {
+  $("extra-filters").hidden = !$("extra-filters").hidden;
+  $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
+});
 let searchTimer;
+$("reset-filters").addEventListener("click", () => {
+  clearTimeout(searchTimer);
+  state.topic = state.source = "all";
+  state.publisher = "";
+  state.hours = 12;
+  for (const id of ["search", "region", "publisher"]) $(id).value = "";
+  reflectFilters();
+  $("search").focus();
+  loadNews();
+});
 $("search").addEventListener("input", () => {
   clearTimeout(searchTimer);
   $("clear-search").hidden = !$("search").value;
@@ -543,7 +574,10 @@ function openBuilder(tab = "build") {
     $("composer").setAttribute("role", "dialog");
     $("composer").setAttribute("aria-modal", "true");
     $("close-builder").focus();
-  } else $("composer").scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    $("composer-title").focus({ preventScroll: true });
+    $("composer").scrollIntoView({ block: "start" });
+  }
 }
 function closeBuilder() {
   $("composer").classList.remove("open");
@@ -735,7 +769,7 @@ async function composeBrief(body, isWorld) {
   const button = $(isWorld ? "world-brief" : "generate"),
     message = isWorld ? "world-status" : "digest-status";
   const label = button.textContent;
-  $("world-brief").disabled = $("generate").disabled = true;
+  $("world-brief").disabled = $("world-preview").disabled = $("generate").disabled = true;
   button.textContent = "Preparing your brief…";
   status(
     message,
@@ -770,7 +804,7 @@ async function composeBrief(body, isWorld) {
     return null;
   } finally {
     state.composing = false;
-    $("world-brief").disabled = $("generate").disabled = false;
+    $("world-brief").disabled = $("world-preview").disabled = $("generate").disabled = false;
     button.textContent = label;
   }
 }
@@ -797,13 +831,11 @@ $("digest-form").addEventListener("submit", async (event) => {
     );
     return;
   }
-  await composeBrief(body, false);
+  const brief = await composeBrief(body, false);
+  if (brief) $("preview-title").focus();
 });
-$("world-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const email = $("hero-email").value.trim(),
-    subscribe = $("hero-subscribe").checked;
-  const digest = await composeBrief(
+function composeWorldBrief() {
+  return composeBrief(
     {
       edition: "world",
       hours: 24,
@@ -813,6 +845,18 @@ $("world-form").addEventListener("submit", async (event) => {
     },
     true,
   );
+}
+$("world-preview").addEventListener("click", async () => {
+  if (await composeWorldBrief()) {
+    openBuilder("preview");
+    $("preview-title").focus();
+  }
+});
+$("world-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = $("hero-email").value.trim(),
+    subscribe = $("hero-subscribe").checked;
+  const digest = await composeWorldBrief();
   if (!digest) return;
   $("preview-email").value = email;
   $("preview-subscribe").checked = subscribe;
@@ -850,7 +894,7 @@ $("download").addEventListener("click", () => {
   download(
     state.digest.digest.html,
     "text/html;charset=utf-8",
-    "world-tech-brief.html",
+    "informa-ai.html",
   );
   status("email-status", "HTML downloaded.");
 });
@@ -861,8 +905,8 @@ $("download-eml").addEventListener("click", () => {
       String.fromCharCode(byte),
     ).join(""),
   );
-  const eml = `Subject: Your World Tech Brief\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded.match(/.{1,76}/g).join("\r\n")}\r\n`;
-  download(eml, "message/rfc822", "world-tech-brief.eml");
+  const eml = `Subject: Your Informa AI\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded.match(/.{1,76}/g).join("\r\n")}\r\n`;
+  download(eml, "message/rfc822", "informa-ai.eml");
   status("email-status", "Email file downloaded. Open it in your email app.");
 });
 for (const mode of ["desktop", "mobile"])
@@ -1141,30 +1185,21 @@ $("owner-email-form").addEventListener("submit", (event) =>
     );
   }),
 );
-restoreURL();
-for (const button of $("topics").children)
-  button.setAttribute(
-    "aria-pressed",
-    String(button.dataset.topic === state.topic),
-  );
-renderSourceFilters();
-setTab("build");
-request("/api/sources")
-  .then(({ sources }) => {
-    updateSourceCatalog(sources);
-    const publisher = new URLSearchParams(location.search).get("publisher");
-    if (publisher && sources.some((s) => s.id === publisher))
-      $("publisher").value = publisher;
-    loadNews();
-  })
-  .catch(() => loadNews());
-window.addEventListener("popstate", () => {
-  restoreURL();
+function reflectFilters() {
   for (const button of $("topics").children)
-    button.setAttribute(
-      "aria-pressed",
-      String(button.dataset.topic === state.topic),
-    );
+    button.setAttribute("aria-pressed", String(button.dataset.topic === state.topic));
+  for (const button of $("window-controls").children)
+    button.setAttribute("aria-pressed", String(Number(button.dataset.hours) === state.hours));
+  $("outage-links").hidden = state.topic !== "outages";
   renderSourceFilters();
+}
+restoreURL();
+reflectFilters();
+setTab("build");
+loadNews();
+window.addEventListener("popstate", () => {
+  clearTimeout(searchTimer);
+  restoreURL();
+  reflectFilters();
   loadNews();
 });

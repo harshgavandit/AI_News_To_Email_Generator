@@ -100,8 +100,8 @@ def read_feed(task):
                 if not title:
                     continue
                 media = entry.get("media_description") or ""
-                desc = sanitize_story_excerpt(media or entry.get("summary") or entry.get("description") or "",
-                                              s.group, title, channel=s.label)
+                desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
+                    media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label)
                 tags = entry.get("tags") or [{}]
                 articles[url] = {
                     "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,

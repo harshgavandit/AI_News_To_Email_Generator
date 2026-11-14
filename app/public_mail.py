@@ -325,7 +325,7 @@ def challenge(body: ChallengeBody, request: Request, response: Response):
     ident, code = secrets.token_urlsafe(24), f"{secrets.randbelow(1_000_000):06d}"
     store.save_code(ident, mailbox, digest_key(f"code:{ident}:{code}"), time.time() + CODE_TTL)
     try:
-        send_message(email, "Your World Tech Brief verification code", f"This code expires in 10 minutes. Your code is {code}.", None, ident)
+        send_message(email, "Your Informa AI verification code", f"This code expires in 10 minutes. Your code is {code}.", None, ident)
     except (OSError, smtplib.SMTPException):
         raise HTTPException(502, "The verification message could not be sent right now.") from None
     cookie(response, CHALLENGE, "challenge", [ident, email], CODE_TTL)
@@ -398,7 +398,7 @@ def send(body: SendBody, request: Request):
             from app.mail_schedule import build_unsubscribe_url, with_unsubscribe
             message_options["unsubscribe_url"] = build_unsubscribe_url(mailbox)
             payload = with_unsubscribe(payload, message_options["unsubscribe_url"])
-        provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity, **message_options)
+        provider_id = send_message(recipient, "Your Informa AI", payload["markdown"], payload["html"], identity, **message_options)
     except (OSError, smtplib.SMTPException):
         # Transport acceptance can be ambiguous after a timeout. Keep the reservation.
         raise HTTPException(502, "Delivery could not be confirmed. Check your inbox before trying another brief.") from None
@@ -419,7 +419,7 @@ def unsubscribe_confirm(token: str):
     return Response(
         content="""<!doctype html><html><head><meta charset="utf-8"><title>Unsubscribe Confirmation</title></head>
         <body style="font-family:-apple-system,sans-serif;max-width:500px;margin:60px auto;padding:24px;text-align:center;background:#f6f4ee;color:#252e29;">
-        <h2 style="font-family:Georgia,serif;font-weight:normal;font-size:28px;">World Tech Brief</h2>
+        <h2 style="font-family:Georgia,serif;font-weight:normal;font-size:28px;">Informa AI</h2>
         <p style="color:#697169;font-size:14px;line-height:1.6;">Click below to confirm unsubscribing from automatic daily morning delivery.</p>
         <form method="POST">
         <input type="hidden" name="List-Unsubscribe" value="One-Click">

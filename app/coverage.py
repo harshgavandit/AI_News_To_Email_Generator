@@ -28,19 +28,6 @@ HEADLINE_RULES = {
     "software": ("open source", "programming language", "linux kernel", "kubernetes", "developer tools", "postgresql", "fastapi", "react", "compiler", "rust"),
 }
 
-WHY_IT_MATTERS_BY_TOPIC = {
-    "ai": "Signals major progress in frontier model architecture, inference efficiency, and real-world agentic deployment.",
-    "software": "Directly impacts cloud architecture patterns, engineering team velocity, and modern developer infrastructure.",
-    "startups": "Highlights shifts in venture capital deployment, founder execution, and emerging product-market fit.",
-    "bigtech": "Reflects platform power dynamics, antitrust regulatory pressure, and ecosystem moat transitions.",
-    "chips": "Drives the foundational hardware economics and high-performance computing capacity underpinning global tech.",
-    "security": "Affects critical enterprise risk posture, vulnerability patching urgency, and data governance standards.",
-    "outages": "Directly influences mission-critical SLA resilience, failover engineering, and platform uptime.",
-    "video": "Offers hands-on technical walkthroughs, system design analysis, and practitioner perspectives.",
-    "industry": "Shapes policy frameworks, cross-border technology adoption, and macroeconomic headwinds.",
-}
-
-
 def topic_for(article):
     source = BY_ID.get(article.get("source_id") or article.get("source"))
     base = source.topic if source else "ai"
@@ -75,13 +62,6 @@ def topic_expression(columns):
     )
 
 
-def generate_why_it_matters(article, topic):
-    custom = article.get("whyItMatters")
-    if custom and len(custom.strip()) > 10:
-        return custom.strip()
-    return WHY_IT_MATTERS_BY_TOPIC.get(topic, WHY_IT_MATTERS_BY_TOPIC["ai"])
-
-
 def public_article(article):
     article = sanitize_article(article)
     source = BY_ID.get(article.get("source_id") or article.get("source"))
@@ -92,12 +72,14 @@ def public_article(article):
     published_at = article.get("published_at", "")
     
     raw_summary = article.get("cleanSummary") or article.get("description") or article.get("summary") or ""
+    if source and source.id == "hacker-news":
+        raw_summary = ""  # The syndicated feed carries link labels and popularity counters.
     clean_summary = sanitize_story_excerpt(raw_summary, article.get("source", ""), article.get("title", ""),
-                                           channel=publisher) or "Read the original source for details."
+                                           channel=publisher)
     if topic == "security":
         clean_summary = "See the source for affected products, impact, and security mitigation advisories."
     
-    why_it_matters = generate_why_it_matters(article, topic)
+    why_it_matters = article.get("whyItMatters", "")
     words_count = len(clean_summary.split())
     reading_time = max(1, (words_count + 199) // 200)
 
@@ -122,12 +104,13 @@ def public_article(article):
         "publisher": publisher,
         "url": url,
         "published_at": published_at,
-        "coverage": source.coverage if source else "reporting",
+        "coverage": source.coverage if source else "publisher",
     })
     return result
 
 
-REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"}}
+REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"},
+           "Africa": {"Africa"}, "LatAm": {"Latin America"}}
 
 
 def region_matches(article, region):

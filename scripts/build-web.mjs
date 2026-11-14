@@ -13,7 +13,7 @@ for (const filename of readdirSync('public')) {
   const html = readFileSync(resolve('public', filename), 'utf8');
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(ids).size !== ids.length) throw new Error(`Duplicate element IDs in ${filename}`);
-  for (const match of html.matchAll(/(?:src|href)="(\/[^"?#]+\.(?:js|css|svg))"/g)) {
+  for (const match of html.matchAll(/(?:src|href)="(\/[^"?#]+\.(?:js|css|svg|jpg|png))"/g)) {
     if (!existsSync(resolve('public', match[1].slice(1)))) {
       throw new Error(`Missing static asset ${match[1]} in ${filename}`);
     }

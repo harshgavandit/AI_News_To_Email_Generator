@@ -43,7 +43,7 @@ from app.public_mail import router as mail_router
 from app.selection import select_candidates, words
 from app.sources import BY_ID, GROUPS, KINDS
 
-app = FastAPI(title="World Tech Brief", version="1.1.0", docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title="Informa AI", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
 app.include_router(mail_events_router)
 app.include_router(workspace_router)
@@ -52,8 +52,8 @@ logger = logging.getLogger(__name__)
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v2")
-_news_cache = Cache("news-v3")
+_digest_cache = Cache("digest-v3")
+_news_cache = Cache("news-v4")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -320,7 +320,7 @@ def refresh_admin(source: str | None = None, authorization: str | None = Header(
 @app.get("/api/news")
 def news(request: Request, response: Response, background: BackgroundTasks,
          hours: TimeWindow = TimeWindow.week, source: str = "all",
-         force: bool = False, region: Literal["", "all", "Global", "APAC", "EU"] = "",
+         force: bool = False, region: Literal["", "all", "Global", "APAC", "EU", "Africa", "LatAm"] = "",
          q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
@@ -340,21 +340,27 @@ def news(request: Request, response: Response, background: BackgroundTasks,
             key = hashlib.sha256(json.dumps([str(store.engine.url), filters], sort_keys=True).encode()).hexdigest()
             # Reuse common views. Arbitrary search terms and cursors stay out of shared Redis.
             cacheable = not q and not cursor
+            edge_cacheable = (cacheable and not force and source == "all" and kind == "all" and not publisher
+                              and not region and limit in (12, 24) and not request.headers.get("authorization"))
             cached, stale = _news_cache.get(key) if cacheable and not force else (None, False)
             if cached is not None:
                 response.headers["X-Cache"] = "STALE" if stale else "HIT"
                 if stale:
                     background.add_task(refresh_cached_page, store, filters, key)
-                queue_archive_refresh(background, store, filters, key, cached)
-                return cached
-            response.headers["X-Cache"] = "MISS"
-            result = refresh_cached_page(store, filters, key if cacheable else None, force=force)
+                result = cached
+            else:
+                response.headers["X-Cache"] = "MISS"
+                result = refresh_cached_page(store, filters, key if cacheable else None, force=force)
             queue_archive_refresh(background, store, filters, key if cacheable else None, result, force=force)
+            if edge_cacheable and result["freshness"]["counts"]["fresh"]:
+                response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+                response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
 
         payload = collect_news()
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-        matching = [a for a in payload["articles"] if datetime.fromisoformat(a["published_at"]) >= cutoff
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=hours)
+        matching = [a for a in payload["articles"] if cutoff <= datetime.fromisoformat(a["published_at"]) <= now
                     and (kind == "all" or a.get("kind") == kind)
                     and (topic == "all" or topic_for(a) == topic)
                     and region_matches(a, region)
@@ -392,7 +398,7 @@ def refresh_cached_page(store, filters, key, *, force=False):
 
 def queue_archive_refresh(background, store, filters, key, page, *, force=False):
     checked_at = page["fetched_at"]
-    archive_is_due = checked_at and datetime.now(timezone.utc) - datetime.fromisoformat(checked_at) >= ARCHIVE_REFRESH_INTERVAL
+    archive_is_due = not checked_at or datetime.now(timezone.utc) - datetime.fromisoformat(checked_at) >= ARCHIVE_REFRESH_INTERVAL
     retry_failed = force and any(source["enabled"] and source["available"] is False for source in page["sources"])
     if archive_is_due or retry_failed:
         background.add_task(refresh_from_reader, store, filters, key, failed_only=not archive_is_due)
@@ -564,7 +570,7 @@ def email(body: EmailRequest, request: Request, authorization: str | None = Head
         while len(_mail_history) > 500:
             _mail_history.popitem(last=False)
     try:
-        send_email("Your World Tech Brief", body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
+        send_email("Your Informa AI", body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
     except (smtplib.SMTPException, OSError, ValueError, KeyError):
         with _limit_lock:
             _mail_history.pop(body.signature, None)

@@ -90,7 +90,7 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
                 def message_for(subscription):
                     url = build_unsubscribe_url(subscription["mailbox"])
                     content = with_unsubscribe(brief, url)
-                    return {"from": sender, "to": [subscription["email"]], "subject": "Your Daily World Tech Brief",
+                    return {"from": sender, "to": [subscription["email"]], "subject": "Your Daily Informa AI",
                             "text": content["markdown"], "html": content["html"], "headers": {
                                 "List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
                             }}, next_morning(subscription["timezone"], moment)

@@ -28,18 +28,28 @@ def refresh_sources(store, only=None, *, failed_only=False):
 
 def source_catalog(store=None):
     states = store.source_state() if store else {}
+    cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
     result = []
     for s in DEFAULT_SOURCES:
         state = states.get(s.id, {})
-        result.append({**s.public(), "enabled": state.get("enabled", s.enabled),
-                       "available": state.get("available"),
-                       "last_success": timestamp(state.get("last_success")),
-                       "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)})
+        feed = {**s.public(), "enabled": state.get("enabled", s.enabled),
+                "available": state.get("available"), "last_success": timestamp(state.get("last_success")),
+                "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
+        feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
+        result.append(feed)
     return result
 
 
 def timestamp(value):
     return datetime.fromtimestamp(value, UTC).isoformat() if value else None
+
+
+def source_freshness(feed, cutoff):
+    if feed["available"] is False:
+        return "failed"
+    if not feed.get("last_success"):
+        return "pending"
+    return "stale" if feed["last_success"] < cutoff else "fresh"
 
 
 def feed_freshness(catalog, *, source="all", publisher="", kind="all"):
@@ -48,14 +58,7 @@ def feed_freshness(catalog, *, source="all", publisher="", kind="all"):
     cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
     counts = dict(enabled=len(active), fresh=0, stale=0, failed=0, pending=0)
     for feed in active:
-        if feed["available"] is False:
-            counts["failed"] += 1
-        elif not feed.get("last_success"):
-            counts["pending"] += 1
-        elif feed["last_success"] < cutoff:
-            counts["stale"] += 1
-        else:
-            counts["fresh"] += 1
+        counts[source_freshness(feed, cutoff)] += 1
 
     if counts["fresh"]:
         status = "fresh" if counts["fresh"] == len(active) else "degraded"

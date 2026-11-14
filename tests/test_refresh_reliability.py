@@ -86,6 +86,17 @@ def test_readiness_fails_when_no_feed_has_succeeded(archive):
     assert client.get("/api/health").status_code == 200
 
 
+def test_first_reader_can_start_an_empty_archive(archive, monkeypatch):
+    _, client = archive
+    source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    monkeypatch.setattr(ingestion, "read_feed", lambda _: ([], {"available": True}))
+    first = client.get("/api/news?hours=12")
+    assert first.json()["freshness"]["status"] == "pending"
+    assert "Vercel-CDN-Cache-Control" not in first.headers
+    assert client.get("/api/news?hours=12").json()["freshness"]["status"] == "fresh"
+
+
 def test_twelve_hour_view_excludes_older_stories_and_refreshes_stale_archive_once(archive, monkeypatch):
     store, client = archive
     now = datetime.now(UTC)

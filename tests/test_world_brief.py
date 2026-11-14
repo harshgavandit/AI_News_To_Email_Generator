@@ -71,6 +71,24 @@ def test_world_release_uses_regional_news_and_official_status_feeds(archive):
     assert sources["nvidia-newsroom"]["topic"] == "chips"
 
 
+def test_front_page_uses_source_attribution_and_edge_cache_only_for_public_views(archive):
+    store, client = archive
+    store.ingest("latamlist", [story("latamlist", "latam", "Brazilian startups expand into payments")], True)
+    store.ingest("hacker-news", [story("hacker-news", "hn", "A new compiler", description="Article URL Comments URL Points: 102")], True)
+    store.ingest("bbc-tech", [story("bbc-tech", "future", "A future headline", minutes=-30)], True)
+
+    response = client.get("/api/news?hours=12&limit=12")
+    assert "s-maxage=30" in response.headers["Vercel-CDN-Cache-Control"]
+    articles = {item["id"]: item for item in response.json()["articles"]}
+    assert "future" not in articles
+    assert articles["hn"]["coverage"] == "discussion" and articles["hn"]["cleanSummary"] == ""
+    assert articles["launch"]["whyItMatters"] == ""
+    for suffix, ident in (("region=Africa", "regional"), ("region=LatAm", "latam"), ("q=compiler", "hn")):
+        filtered = client.get(f"/api/news?hours=12&{suffix}")
+        assert "Vercel-CDN-Cache-Control" not in filtered.headers
+        assert [item["id"] for item in filtered.json()["articles"]] == [ident]
+
+
 def test_scheduler_uses_a_scoped_secret_and_reports_all_feed_failures(archive, monkeypatch):
     _, client = archive
     monkeypatch.delenv("CRON_SECRET", raising=False)
