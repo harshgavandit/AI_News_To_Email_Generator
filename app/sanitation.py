@@ -75,9 +75,10 @@ def sanitize_text(value, limit=4000):
     return cleaned
 
 
-def sanitize_story_excerpt(raw_text: str, source: str, title: str = "", *, channel: str = "") -> str:
+def sanitize_story_excerpt(raw_text: str, source: str, title: str = "", *, channel: str = "",
+                           video_fallback: bool = True) -> str:
     excerpt = " ".join(SENTENCES.split(sanitize_text(raw_text))[:2])
-    if not excerpt and source == "youtube" and title:
+    if not excerpt and video_fallback and source == "youtube" and title:
         excerpt = f"Video by {channel or 'a featured creator'} covering {sanitize_text(title, 180)}."
     if len(excerpt) > 220:
         head = excerpt[:219]

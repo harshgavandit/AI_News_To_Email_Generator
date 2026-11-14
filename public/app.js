@@ -12,9 +12,10 @@ const state = {
   source: "all",
   publisher: "",
   hours: 12,
+  view: "feed",
   pins: new Map(),
+  digestSources: new Set(),
   interests: new Set(),
-  appendedInterests: new Set(),
   composing: false,
   mail: null,
   pending: null,
@@ -79,7 +80,7 @@ const externalLink = (url, label) => {
   const a = node("a", "", label);
   try {
     const target = new URL(url);
-    if (["http:", "https:"].includes(target.protocol)) a.href = target.href;
+    if (target.protocol === "https:" && !target.username && !target.password) a.href = target.href;
   } catch {}
   a.target = "_blank";
   a.rel = "noopener noreferrer";
@@ -98,6 +99,45 @@ function normalizeEmail(value) {
 }
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 $("timezone-label").textContent = `(${timezone.replaceAll("_", " ")})`;
+const date = new Date();
+$("edition-date").dateTime = date.toLocaleDateString("sv-SE");
+$("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(date);
+
+const savedKey = "informa-saved-v1";
+const saved = new Map();
+try {
+  const stored = JSON.parse(localStorage.getItem(savedKey) || "[]");
+  for (const item of stored.slice(0, 100)) {
+    if (typeof item.id === "string" && typeof item.title === "string" && typeof item.url === "string") saved.set(item.id, item);
+  }
+} catch {}
+
+function reflectSavedCount() {
+  $("saved-count").textContent = saved.size;
+  $("saved-count").hidden = !saved.size;
+}
+
+function toggleSaved(article) {
+  const id = String(article.id);
+  const removing = saved.has(id);
+  if (!removing && saved.size >= 100) {
+    status("news-status", "You can save up to 100 stories. Remove one to save another.", true);
+    return;
+  }
+  if (removing) saved.delete(id);
+  else saved.set(id, article);
+  let persisted = false;
+  try {
+    localStorage.setItem(savedKey, JSON.stringify([...saved.values()]));
+    persisted = true;
+  } catch {}
+  reflectSavedCount();
+  renderStories();
+  const replacement = [...$("stories").querySelectorAll(".save-button")].find((button) => button.dataset.storyId === id);
+  (replacement || $("view-saved")).focus();
+  status("news-status", removing ? `Story removed. ${saved.size} saved.` :
+    persisted ? `Story saved. ${saved.size} saved on this browser.` : "Story saved for this session. Browser storage is unavailable.");
+}
 async function request(url, options = {}) {
   const response = await fetch(url, options);
   let data;
@@ -129,16 +169,18 @@ function syncURL() {
     topic: state.topic,
     region: $("region").value,
     publisher: state.publisher,
+    kind: $("kind").value,
+    sort: $("sort").value === "latest" ? "" : $("sort").value,
   })) {
     if (!value || value === "all") url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
   history.replaceState(null, "", url);
   $("clear-search").hidden = !$("search").value;
-  const count = Number(state.source !== "all") + Number(Boolean($("region").value)) + Number(Boolean(state.publisher));
+  const count = Number(state.source !== "all") + Number(Boolean($("region").value)) + Number(Boolean(state.publisher)) + Number($("kind").value !== "all");
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
-  $("reset-filters").hidden = !count && state.topic === "all" && state.hours === 12 && !$("search").value;
+  $("reset-filters").hidden = state.view !== "feed" || (!count && state.topic === "all" && state.hours === 12 && !$("search").value && $("sort").value === "latest");
 }
 function restoreURL() {
   const params = new URLSearchParams(location.search);
@@ -152,6 +194,10 @@ function restoreURL() {
   state.topic = Object.hasOwn(categories, params.get("topic")) ? params.get("topic") : "all";
   $("search").value = (params.get("q") || "").slice(0, 150);
   $("region").value = params.get("region") || "";
+  $("kind").value = params.get("kind") || "all";
+  if ($("kind").selectedIndex === -1) $("kind").value = "all";
+  $("sort").value = params.get("sort") || "latest";
+  if ($("sort").selectedIndex === -1) $("sort").value = "latest";
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
   for (const button of $("window-controls").children)
@@ -189,15 +235,18 @@ function renderStories() {
   $("outage-links").hidden = state.topic !== "outages";
   const container = $("stories");
   container.replaceChildren();
-  if (!state.articles.length)
+  const isSaved = state.view === "saved";
+  const articles = isSaved ? [...saved.values()].reverse() : state.articles;
+  if (!articles.length)
     container.append(
       node(
         "div",
         "empty",
-        "No stories match these filters. Try another source or a longer time window.",
+        isSaved ? "You haven’t saved any stories. Use Save on any story to keep it in this browser." :
+          "No stories match these filters. Try another source or a longer time window.",
       ),
     );
-  for (const article of state.articles) {
+  for (const article of articles) {
     const card = node(
       "article",
       `story${state.pins.has(String(article.id)) ? " pinned" : ""}`,
@@ -222,12 +271,17 @@ function renderStories() {
       externalLink(article.sourceUrl || article.url, article.title),
     );
     const bottom = node("div", "story-bottom");
+    const publisher = article.sourceName || article.publisher || "Original source";
+    const sourceMark = node("span", "source-mark", publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase());
+    sourceMark.setAttribute("aria-hidden", "true");
     const attribution = node("div", "story-attribution");
     attribution.append(
-      node("strong", "", article.sourceName || article.publisher || "Original source"),
+      node("strong", "", publisher),
       node("span", "", [sourceLabels[article.coverage], article.region && article.region !== "Global" ? article.region : ""].filter(Boolean).join(" · ")),
     );
-    bottom.append(attribution);
+    const byline = node("div", "story-byline");
+    byline.append(sourceMark, attribution);
+    bottom.append(byline);
     const pin = node(
       "button",
       "pin-button",
@@ -244,10 +298,33 @@ function renderStories() {
       `${state.pins.has(String(article.id)) ? "Unpin" : "Pin"} ${article.title}`,
     );
     pin.addEventListener("click", () => togglePin(article));
-    bottom.append(pin);
+    const isBookmarked = saved.has(String(article.id));
+    const save = node("button", "pin-button save-button", isBookmarked ? "Saved" : "Save");
+    save.type = "button";
+    save.dataset.storyId = String(article.id);
+    save.setAttribute("aria-pressed", String(isBookmarked));
+    save.setAttribute("aria-label", `${isBookmarked ? "Remove saved story" : "Save story"}: ${article.title}`);
+    save.title = isBookmarked ? "Remove from saved stories" : "Save in this browser";
+    save.addEventListener("click", () => toggleSaved(article));
+    pin.title = "Include in your next brief";
+    const actions = node("div", "story-actions");
+    actions.append(save, pin);
+    bottom.append(actions);
     card.append(top, heading);
     const summary = article.cleanSummary || article.description || article.summary;
     if (summary) card.append(node("p", "story-summary", summary));
+    if (article.thumbnail_url && /^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/.test(article.thumbnail_url)) {
+      const image = node("img", "story-thumbnail");
+      image.alt = "";
+      image.width = 320;
+      image.height = 180;
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.referrerPolicy = "no-referrer";
+      image.addEventListener("error", () => image.remove(), { once: true });
+      image.src = article.thumbnail_url;
+      card.insertBefore(image, heading);
+    }
     if (article.whyItMatters) {
       const why = node("p", "why-matters");
       why.append(node("strong", "", "Why it matters. "), document.createTextNode(article.whyItMatters));
@@ -256,12 +333,13 @@ function renderStories() {
     card.append(bottom);
     container.append(card);
   }
-  $("show-more").hidden = !state.cursor;
-  $("stories").classList.toggle("has-lead", state.source === "all" && state.topic === "all" && state.hours <= 24 &&
+  $("show-more").hidden = isSaved || !state.cursor;
+  $("stories").classList.toggle("has-lead", !isSaved && state.source === "all" && state.topic === "all" && state.hours <= 24 &&
     !$("search").value && !$("region").value && !state.publisher && state.articles.length >= 3);
   status(
     "news-status",
-    `${state.articles.length} of ${state.total} ${state.total === 1 ? "story" : "stories"}`,
+    isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
+      `${state.articles.length} of ${state.total} ${state.total === 1 ? "story" : "stories"}`,
   );
 }
 function togglePin(article) {
@@ -342,11 +420,35 @@ function updateSourceCatalog(sources) {
     select.value = value;
     if (!select.value) select.value = id === "publisher" ? "" : "all";
   }
+  renderDigestSources();
 }
+function renderDigestSources() {
+  const selection = $("digest-source-selection");
+  selection.hidden = state.digestSources.size === 0;
+  selection.replaceChildren();
+  for (const id of state.digestSources) {
+    const label = state.sources.find((source) => source.id === id)?.label || id;
+    const remove = node("button", "topic-chip", `${label} ×`);
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove ${label} from brief sources`);
+    remove.addEventListener("click", () => {
+      state.digestSources.delete(id);
+      renderDigestSources();
+      $("digest-sources").focus();
+    });
+    selection.append(remove);
+  }
+  $("digest-sources").options[0].textContent = state.digestSources.size ? "Choose another source" : "All sources";
+}
+$("digest-sources").addEventListener("change", (event) => {
+  if (event.target.value !== "all") state.digestSources.add(event.target.value);
+  event.target.value = "all";
+  renderDigestSources();
+});
 function renderHealth(freshness) {
   const sources = state.sources.filter((s) => s.enabled);
   const scoped = sources.filter((s) => (state.source === "all" || [s.id, s.source].includes(state.source)) &&
-    (!state.publisher || s.id === state.publisher));
+    (!state.publisher || s.id === state.publisher) && ($("kind").value === "all" || s.kind === $("kind").value));
   const failed = scoped.filter((s) => s.available === false);
   const fresh = sources.filter((s) => s.freshness === "fresh" || (!s.freshness && s.available === true)).length;
   const delayed = sources.some((s) => s.checked_at) && fresh === 0;
@@ -377,12 +479,22 @@ function renderHealth(freshness) {
     : "Source checks are delayed. Showing the latest stories in the archive.";
 }
 async function loadNews(append = false, force = false, quiet = false) {
+  if (state.view !== "feed") return;
   state.controller?.abort();
   const controller = new AbortController();
   state.controller = controller;
   $("stories").setAttribute("aria-busy", "true");
   $("show-more").disabled = $("refresh").disabled = true;
   if (!quiet) status("news-status", "Loading stories…");
+  if (!state.articles.length) {
+    $("stories").classList.remove("has-lead");
+    $("stories").replaceChildren(...Array.from({ length: 3 }, () => {
+      const card = node("div", "story-skeleton");
+      card.setAttribute("aria-hidden", "true");
+      card.append(node("span"), node("span"), node("span"));
+      return card;
+    }));
+  }
   syncURL();
   try {
     const params = new URLSearchParams({
@@ -392,6 +504,8 @@ async function loadNews(append = false, force = false, quiet = false) {
       region: $("region").value,
       publisher: state.publisher,
       q: $("search").value.trim(),
+      kind: $("kind").value,
+      sort: $("sort").value,
       limit: "12",
     });
     if (append && state.cursor) params.set("cursor", state.cursor);
@@ -399,7 +513,7 @@ async function loadNews(append = false, force = false, quiet = false) {
     const data = await request(`/api/news?${params}`, {
       signal: controller.signal,
     });
-    if (state.controller !== controller) return;
+    if (state.controller !== controller || state.view !== "feed") return;
     if (quiet && $("reading-room").contains(document.activeElement)) return;
     const focusMore = append && document.activeElement === $("show-more");
     const previousSize = append ? state.articles.length : 0;
@@ -414,11 +528,22 @@ async function loadNews(append = false, force = false, quiet = false) {
     renderStories();
     renderSourceFilters();
     renderHealth(data.freshness);
+    if (data.refresh_requested) {
+      status("news-status", "Showing the archive while source checks are requested.");
+      if (force) setTimeout(() => {
+        if (state.controller === controller && state.view === "feed") loadNews(false, false, true);
+      }, 9000);
+    }
     if (focusMore) $("stories").children[previousSize]?.querySelector("h3 a")?.focus();
   } catch (error) {
     if (!quiet && error.name !== "AbortError") {
-      if (!append && !force) {
-        $("stories").replaceChildren();
+      if (!append && (!force || !state.articles.length)) {
+        const retry = node("button", "button secondary", "Try again");
+        retry.type = "button";
+        retry.addEventListener("click", () => loadNews());
+        const empty = node("div", "empty news-empty");
+        empty.append(node("strong", "", "Stories are temporarily unavailable"), retry);
+        $("stories").replaceChildren(empty);
         $("show-more").hidden = true;
         state.articles = [];
         state.cursor = null;
@@ -450,24 +575,8 @@ for (const label of interestLabels) {
   button.type = "button";
   button.setAttribute("aria-pressed", "false");
   button.addEventListener("click", () => {
-    if (state.interests.has(label)) {
-      state.interests.delete(label);
-      if (state.appendedInterests.has(label)) {
-        $("focus").value = $("focus")
-          .value.split("; ")
-          .filter((part) => part !== label)
-          .join("; ");
-        state.appendedInterests.delete(label);
-      }
-    } else {
-      state.interests.add(label);
-      const text = $("focus").value.trim();
-      const next = text ? `${text}; ${label}` : label;
-      if (!text.includes(label) && next.length <= 400) {
-        $("focus").value = next;
-        state.appendedInterests.add(label);
-      }
-    }
+    if (state.interests.has(label)) state.interests.delete(label);
+    else state.interests.add(label);
     button.setAttribute("aria-pressed", String(state.interests.has(label)));
   });
   $("interests").append(button);
@@ -480,6 +589,7 @@ for (const button of $("window-controls").children)
     loadNews();
   });
 $("region").addEventListener("change", () => loadNews());
+for (const id of ["kind", "sort"]) $(id).addEventListener("change", () => loadNews());
 $("publisher").addEventListener("change", () => {
   state.publisher = $("publisher").value;
   loadNews();
@@ -489,12 +599,29 @@ $("filter-toggle").addEventListener("click", () => {
   $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
 });
 let searchTimer;
+for (const view of ["feed", "saved"]) {
+  $(`view-${view}`).addEventListener("click", () => {
+    if (state.view === view) return;
+    clearTimeout(searchTimer);
+    state.controller?.abort();
+    state.view = view;
+    for (const peer of ["feed", "saved"])
+      $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
+    $("feed-controls").hidden = $("sort").hidden = view === "saved";
+    $("stories").setAttribute("aria-busy", "false");
+    syncURL();
+    renderStories();
+    if (view === "feed") loadNews();
+  });
+}
 $("reset-filters").addEventListener("click", () => {
   clearTimeout(searchTimer);
   state.topic = state.source = "all";
   state.publisher = "";
   state.hours = 12;
   for (const id of ["search", "region", "publisher"]) $(id).value = "";
+  $("kind").value = "all";
+  $("sort").value = "latest";
   reflectFilters();
   $("search").focus();
   loadNews();
@@ -513,7 +640,7 @@ $("clear-search").addEventListener("click", () => {
 $("show-more").addEventListener("click", () => loadNews(true));
 setInterval(() => {
   // Avoid replacing an expanded page, interrupting a filter, or polling a hidden tab.
-  if (!document.hidden && state.articles.length <= 12 &&
+  if (state.view === "feed" && !document.hidden && state.articles.length <= 12 &&
       $("stories").getAttribute("aria-busy") === "false" &&
       !$("reading-room").contains(document.activeElement) && !$("mail-dialog").open) {
     loadNews(false, false, true);
@@ -644,13 +771,17 @@ $("composer").addEventListener("keydown", (event) => {
 });
 function renderDigest() {
   const digest = state.digest.digest;
+  $("copy-fallback").hidden = true;
   $("preview-empty").hidden = true;
   $("preview-content").hidden = false;
   $("preview").replaceChildren();
   $("preview-title").textContent =
     digest.edition === "world"
-      ? "Today’s global top stories."
-      : "Your personal tech brief.";
+      ? "Today’s Global Top 5"
+      : "Your personalized brief";
+  $("preview-basis").textContent = digest.synthesis?.degraded
+    ? "Some AI processing was unavailable. Publisher excerpts or headline-only entries are labeled below."
+    : state.digest.source_basis || "Based on publisher feed titles and excerpts.";
   $("preview-count").textContent = `(${digest.articles.length})`;
   if (digest.introduction) {
     $("preview").append(
@@ -662,24 +793,29 @@ function renderDigest() {
     const item = node("section", "digest-item");
     const citation = node("div", "digest-meta");
     citation.append(
-      node("span", "", `${String(index + 1).padStart(2, "0")} / `),
-      externalLink(a.sourceUrl || a.url, `${a.publisher || a.sourceName || a.article_type || "Source"} ↗`),
+      node("span", "digest-rank", String(index + 1)),
+      node("span", "", a.publisher || a.sourceName || a.article_type || "Source"),
+      node("span", "digest-topic", a.topic_label || "Technology"),
     );
     item.append(
       citation,
       node("h3", "", a.title),
       node("p", "", a.cleanSummary || a.summary || ""),
     );
-    if (a.whyItMatters || a.reasoning)
+    if (a.whyItMatters && !a.keyTakeaway)
       item.append(
-        node("p", "reason", `${digest.edition === "world" ? "Why it matters" : "Why this matters to you"}: ${a.reasoning || a.whyItMatters}`),
+        node("p", "reason", `Why it matters · ${a.whyItMatters}`),
       );
     if (a.keyTakeaway) {
       const takeaway = node("p", "reason");
       takeaway.append(node("strong", "", "Key takeaway. "), document.createTextNode(a.keyTakeaway));
       item.append(takeaway);
     }
-    item.append(externalLink(a.sourceUrl || a.url, "Read original source ↗"));
+    const provenance = { ai_feed_summary: "AI summary of publisher feed", publisher_excerpt: "Publisher excerpt", headline_only: "Headline only" };
+    const sourceRow = node("div", "digest-source-row");
+    sourceRow.append(externalLink(a.sourceUrl || a.url, "Read source ↗"));
+    if (provenance[a.summary_basis]) sourceRow.append(node("span", "", provenance[a.summary_basis]));
+    item.append(sourceRow);
     $("preview").append(item);
   }
   if (digest.quick_hits?.length) {
@@ -710,7 +846,7 @@ function generationStage(stage) {
     [
       "",
       "Filtering and deduplicating stories…",
-      "Ranking stories for your persona and interests…",
+      "Summarizing and ranking the selected stories…",
       "Formatting the preview…",
     ][stage] || "Preparing your brief…",
   );
@@ -723,6 +859,7 @@ async function streamDigest(body) {
       Accept: "application/x-ndjson",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(115_000),
   });
   if (!response.ok) {
     let data;
@@ -800,7 +937,7 @@ async function composeBrief(body, isWorld) {
     );
     return state.digest;
   } catch (error) {
-    status(message, error.message, true);
+    status(message, error.name === "TimeoutError" ? "The brief took too long to prepare. Please try again." : error.message, true);
     return null;
   } finally {
     state.composing = false;
@@ -810,7 +947,6 @@ async function composeBrief(body, isWorld) {
 }
 $("digest-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const source = $("digest-sources").value;
   const body = {
     edition: "personal",
     name: $("reader-name").value.trim() || "Reader",
@@ -821,7 +957,7 @@ $("digest-form").addEventListener("submit", async (event) => {
     pinned_ids: [...state.pins.keys()],
     top_n: Number($("article-count").value),
     hours: Number($("digest-window").value),
-    ...(source === "all" ? {} : { sources: [source] }),
+    ...(state.digestSources.size ? { sources: [...state.digestSources] } : {}),
   };
   if (body.pinned_ids.length > body.top_n) {
     status(
@@ -879,16 +1015,19 @@ function download(content, type, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 $("copy").addEventListener("click", async () => {
+  const markdown = state.digest.digest.markdown;
   try {
-    await navigator.clipboard.writeText(state.digest.digest.markdown);
-    status("email-status", "Markdown copied to your clipboard.");
+    await navigator.clipboard.writeText(markdown);
   } catch {
-    status(
-      "email-status",
-      "Clipboard access was unavailable. Download the brief instead.",
-      true,
-    );
+    const fallback = $("copy-fallback");
+    fallback.value = markdown;
+    fallback.hidden = false;
+    fallback.select();
+    status("email-status", "Clipboard access was unavailable. Copy the selected Markdown manually.");
+    return;
   }
+  $("copy-fallback").hidden = true;
+  status("email-status", "Markdown copied to your clipboard.");
 });
 $("download").addEventListener("click", () => {
   download(
@@ -1195,6 +1334,7 @@ function reflectFilters() {
 }
 restoreURL();
 reflectFilters();
+reflectSavedCount();
 setTab("build");
 loadNews();
 window.addEventListener("popstate", () => {

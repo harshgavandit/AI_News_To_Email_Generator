@@ -1,4 +1,7 @@
 """One classification for API filters, archives, and global edition selection."""
+import re
+from urllib.parse import parse_qs, urlsplit
+
 from sqlalchemy import case, func, or_
 
 from app.sources import BY_ID
@@ -74,8 +77,11 @@ def public_article(article):
     raw_summary = article.get("cleanSummary") or article.get("description") or article.get("summary") or ""
     if source and source.id == "hacker-news":
         raw_summary = ""  # The syndicated feed carries link labels and popularity counters.
-    clean_summary = sanitize_story_excerpt(raw_summary, article.get("source", ""), article.get("title", ""),
-                                           channel=publisher)
+    # Earlier releases stored a headline-derived sentence for videos with no excerpt.
+    synthetic_video = article.get("source") == "youtube" and raw_summary.startswith(f"Video by {publisher} covering ")
+    clean_summary = sanitize_story_excerpt("" if synthetic_video else raw_summary, article.get("source", ""),
+                                           video_fallback=False)
+    has_excerpt = bool(clean_summary) and topic != "security"
     if topic == "security":
         clean_summary = "See the source for affected products, impact, and security mitigation advisories."
     
@@ -96,6 +102,7 @@ def public_article(article):
         "sourceUrl": url,
         "publishedAt": published_at,
         "readingTimeMinutes": reading_time,
+        "has_excerpt": has_excerpt,
         # Backward compatibility properties:
         "description": clean_summary,
         "summary": clean_summary,
@@ -106,7 +113,28 @@ def public_article(article):
         "published_at": published_at,
         "coverage": source.coverage if source else "publisher",
     })
+    if article.get("kind") == "video" and len(url) <= 2048:
+        thumbnail = youtube_thumbnail(url)
+        if thumbnail:
+            result["thumbnail_url"] = thumbnail
     return result
+
+
+def youtube_thumbnail(url):
+    try:
+        parts = urlsplit(url)
+        if parts.scheme != "https" or parts.username or parts.password or parts.port not in (None, 443):
+            return None
+        if parts.hostname == "youtu.be":
+            video = parts.path.strip("/")
+        elif parts.hostname in {"youtube.com", "www.youtube.com"} and parts.path == "/watch":
+            video = parse_qs(parts.query, max_num_fields=64).get("v", [""])[0]
+        else:
+            return None
+    except ValueError:
+        return None
+    if re.fullmatch(r"[A-Za-z0-9_-]{11}", video):
+        return f"https://i.ytimg.com/vi/{video}/mqdefault.jpg"
 
 
 REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"},

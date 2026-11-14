@@ -23,10 +23,13 @@ TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid"}
 
 
 def canonical_url(url):
-    parts = urlsplit(url)
-    if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or parts.port not in (443, None):
+    if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() or ord(c) < 32 for c in url) or "\\" in url:
         raise ValueError("Invalid article link")
-    query = urlencode(sorted((k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
+    parts = urlsplit(url)
+    if (parts.scheme != "https" or not parts.hostname or parts.username or parts.password or
+            parts.port not in (443, None) or not parts.hostname.isascii() or ":" in parts.hostname):
+        raise ValueError("Invalid article link")
+    query = urlencode(sorted((k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True, max_num_fields=64)
                              if not k.lower().startswith("utm_") and k.lower() not in TRACKERS))
     return urlunsplit(("https", parts.hostname.lower(), parts.path.rstrip("/") or "/", query, ""))
 
@@ -43,7 +46,7 @@ async def fetch_with_deadline(url):
     # The deadline covers DNS, connection, redirects and the response body.
     headers = {"User-Agent": "Mozilla/5.0 (compatible; AIBrief/1.0; +https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
     async with asyncio.timeout(8):
-        async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=4), follow_redirects=False) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=4), follow_redirects=False, trust_env=False) as client:
             for _ in range(3):
                 async with client.stream("GET", url, headers=headers) as response:
                     if response.is_redirect:
@@ -78,6 +81,8 @@ def read_feed(task):
                 response = client.get(s.url)
                 response.raise_for_status()
                 content = response.content
+        if len(content) > MAX_BYTES:
+            return [], dict(status, error="feed_too_large")
         parsed = feedparser.parse(content)
         if not parsed.version:
             return [], dict(status, error="invalid_feed")
@@ -101,7 +106,8 @@ def read_feed(task):
                     continue
                 media = entry.get("media_description") or ""
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
-                    media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label)
+                    media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label,
+                    video_fallback=False)
                 tags = entry.get("tags") or [{}]
                 articles[url] = {
                     "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,
@@ -109,7 +115,7 @@ def read_feed(task):
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
                     "category": plain_text(tags[0].get("term", "News"))[:100],
                 }
-            except (ValueError, TypeError, OverflowError):
+            except (ValueError, TypeError, OverflowError, AttributeError, IndexError):
                 continue
         if parsed.entries and not articles:
             return [], dict(status, error="no_eligible_entries")
@@ -118,11 +124,12 @@ def read_feed(task):
         return [], dict(status, error="fetch_failed")
 
 
-def collect_news():
+def collect_news(*, force=False):
     """Development and no-database fallback. Production ingestion uses refresh_sources."""
     global _refreshed
     with _lock:
-        if not _cache or time.monotonic() - _refreshed >= 300:
+        cache_age = time.monotonic() - _refreshed
+        if not _cache or cache_age >= (30 if force else 300):
             enabled = [s for s in DEFAULT_SOURCES if s.enabled]
             with ThreadPoolExecutor(max_workers=10) as pool:
                 for s, (articles, status) in zip(enabled, pool.map(read_feed, enabled)):

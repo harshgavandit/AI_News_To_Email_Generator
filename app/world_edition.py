@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from app.coverage import TOPICS, public_article
 from app.selection import words
 from app.sources import BY_ID
-from app.web_digest import safe_email_html
+from app.web_digest import SUMMARY_LABELS, safe_email_html, safe_href
 
 PROVIDERS = {
     "microsoft-365": r"\b(microsoft 365|m365|outlook|exchange online|microsoft outage|microsoft teams)\b",
@@ -110,6 +110,7 @@ def build_world(articles, hours, all_pool=None):
             "rank": rank,
             "title": item["title"],
             "summary": excerpt or "Read the original source for details.",
+            "summary_basis": "publisher_excerpt" if excerpt and item.get("has_excerpt", True) else "headline_only",
             "url": item["url"],
             "article_type": item["source"],
             "publisher": item["publisher"],
@@ -123,16 +124,18 @@ def build_world(articles, hours, all_pool=None):
         }
         result["articles"].append(art_entry)
         
-        md_part = f"## {rank}. {item['title']}\n{item['publisher']} · {label} · {item['published_at']}\n\n{art_entry['summary']}\n"
+        basis = SUMMARY_LABELS[art_entry["summary_basis"]]
+        md_part = (f"## {rank}. {item['title']}\n{item['publisher']} · {label} · "
+                   f"{item['published_at'][:10]} · {basis}\n\n{art_entry['summary']}\n")
         if takeaway:
             md_part += f"\n* **Key Takeaway:** {takeaway}\n"
-        md_part += f"\nSource: {item['url']}"
+        md_part += f"\nSource: {safe_href(item['url'])}"
         markdown.append(md_part)
 
     if result["quick_hits"]:
         markdown.append("### Quick Hits Around the World")
         for qh in result["quick_hits"]:
-            markdown.append(f"- [{qh['title']}]({qh['url']}) — {qh['publisher']} ({qh['region']})")
+            markdown.append(f"- {qh['title']} · {qh['publisher']} ({qh['region']}) · <{safe_href(qh['url'])}>")
 
     result["markdown"] = "\n\n".join(markdown)
     result["html"] = safe_email_html(result)

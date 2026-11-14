@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.requests import ClientDisconnect
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.news import collect_news
 from app.coverage import TOPICS, public_article, region_matches, topic_for
+from app.discovery import SortOrder, page_fingerprint, relevance_score, search_terms
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
@@ -49,14 +51,53 @@ app.include_router(mail_events_router)
 app.include_router(workspace_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
+MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v3")
-_news_cache = Cache("news-v4")
+_digest_cache = Cache("digest-v4")
+_news_cache = Cache("news-v5")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
+
+
+class LimitRequestBody:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] not in {"POST", "PATCH"}:
+            await self.app(scope, receive, send)
+            return
+        request = Request(scope, receive)
+        length = request.headers.get("content-length", "")
+        chunks = bytearray()
+        if not length.isdecimal() or (len(length) <= 12 and int(length) <= MAX_REQUEST_BYTES):
+            try:
+                async for chunk in request.stream():
+                    if len(chunks) + len(chunk) > MAX_REQUEST_BYTES:
+                        break
+                    chunks.extend(chunk)
+                else:
+                    pending = True
+
+                    async def replay():
+                        nonlocal pending
+                        if pending:
+                            pending = False
+                            return {"type": "http.request", "body": bytes(chunks)}
+                        return await receive()
+
+                    await self.app(scope, replay, send)
+                    return
+            except ClientDisconnect:
+                return
+        response = JSONResponse({"detail": "Request is too large."}, status_code=413)
+        await response(scope, receive, send)
+
+
+app.add_middleware(LimitRequestBody)
 
 
 class TimeWindow(IntEnum):
@@ -167,21 +208,33 @@ def require_owner(authorization: str | None):
 
 @app.middleware("http")
 async def response_headers(request: Request, call_next):
-    if request.headers.get("content-length", "").isdigit() and int(request.headers["content-length"]) > 100000:
-        return JSONResponse({"detail": "Request is too large."}, status_code=413)
-    if request.method in {"POST", "PATCH"} and request.headers.get("origin"):
-        from urllib.parse import urlparse
-        if urlparse(request.headers["origin"]).netloc != request.headers.get("host"):
-            return JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403)
+    request_id = secrets.token_hex(8)
+    started = time.monotonic()
+    if request.method in {"POST", "PATCH"}:
+        from urllib.parse import urlsplit
+        origin = request.headers.get("origin")
+        if origin:
+            try:
+                parsed = urlsplit(origin)
+                allowed = parsed.scheme in {"https", "http"} and parsed.netloc == request.headers.get("host")
+            except ValueError:
+                allowed = False
+            if not allowed:
+                return JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403,
+                                    headers={"Cache-Control": "no-store", "X-Request-ID": request_id})
     try:
         response = await call_next(request)
-    except SQLAlchemyError:
-        logger.warning("Database request failed: %s", request.url.path)
+    except SQLAlchemyError as error:
+        logger.warning("database_unavailable request_id=%s error_type=%s", request_id, type(error).__name__)
         response = JSONResponse({"detail": "The news database is temporarily unavailable."}, status_code=503)
+    except Exception as error:
+        logger.error("api_request_failed request_id=%s error_type=%s", request_id, type(error).__name__)
+        response = JSONResponse({"detail": "The service could not complete this request. Try again shortly."}, status_code=500)
+    response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https://i.ytimg.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     if request.url.path == "/api/docs":
         # Swagger's standard template loads its UI assets from jsDelivr.
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'"
@@ -190,6 +243,11 @@ async def response_headers(request: Request, call_next):
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
     if request.url.path.startswith("/api") and "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
+    if request.url.path.startswith("/api"):
+        route = request.scope.get("route")
+        logger.info("api_request request_id=%s method=%s route=%s status=%d elapsed_ms=%d", request_id,
+                    request.method, getattr(route, "path", "unmatched"), response.status_code,
+                    (time.monotonic() - started) * 1000)
     return response
 
 
@@ -322,6 +380,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
          hours: TimeWindow = TimeWindow.week, source: str = "all",
          force: bool = False, region: Literal["", "all", "Global", "APAC", "EU", "Africa", "LatAm"] = "",
          q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
+         sort: SortOrder = "latest",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
         raise HTTPException(422, "Choose a supported source or content type.")
@@ -336,12 +395,12 @@ def news(request: Request, response: Response, background: BackgroundTasks,
     try:
         if store:
             filters = dict(hours=hours, source=source, query=q, kind=kind, publisher=publisher,
-                           limit=limit, cursor=cursor, topic=topic, region=region)
+                           limit=limit, cursor=cursor, topic=topic, region=region, sort=sort)
             key = hashlib.sha256(json.dumps([str(store.engine.url), filters], sort_keys=True).encode()).hexdigest()
             # Reuse common views. Arbitrary search terms and cursors stay out of shared Redis.
             cacheable = not q and not cursor
             edge_cacheable = (cacheable and not force and source == "all" and kind == "all" and not publisher
-                              and not region and limit in (12, 24) and not request.headers.get("authorization"))
+                              and not region and sort == "latest" and limit in (12, 24) and not request.headers.get("authorization"))
             cached, stale = _news_cache.get(key) if cacheable and not force else (None, False)
             if cached is not None:
                 response.headers["X-Cache"] = "STALE" if stale else "HIT"
@@ -351,36 +410,47 @@ def news(request: Request, response: Response, background: BackgroundTasks,
             else:
                 response.headers["X-Cache"] = "MISS"
                 result = refresh_cached_page(store, filters, key if cacheable else None, force=force)
-            queue_archive_refresh(background, store, filters, key if cacheable else None, result, force=force)
-            if edge_cacheable and result["freshness"]["counts"]["fresh"]:
+            result = queue_archive_refresh(background, store, filters, key if cacheable else None, result, force=force)
+            if edge_cacheable and result["freshness"]["counts"]["fresh"] and not result.get("refresh_requested"):
                 response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
                 response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
 
-        payload = collect_news()
+        payload = collect_news(force=True) if force else collect_news()
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=hours)
         matching = [a for a in payload["articles"] if cutoff <= datetime.fromisoformat(a["published_at"]) <= now
                     and (kind == "all" or a.get("kind") == kind)
                     and (topic == "all" or topic_for(a) == topic)
                     and region_matches(a, region)
-                    and (not publisher or a.get("source_id") == publisher)
-                    and (not q or q.lower() in (a["title"] + " " + a["description"] + " " + a["publisher"]).lower())]
+                    and (not publisher or a.get("source_id") == publisher)]
+        ranked = sort == "relevance" and bool(q)
+        if q:
+            terms = search_terms(q) or (q.lower(),)
+            matching = [dict(a, **({"search_score": score} if ranked else {})) for a in matching
+                        if (score := relevance_score(a, q, terms)) is not None]
         articles = [a for a in matching if source == "all" or source in (a["source"], a.get("source_id"))]
-        fingerprint = hashlib.sha256(json.dumps([hours, source, q, kind, publisher, topic, region]).encode()).hexdigest()[:16]
+        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort)
         total = len(articles)
-        articles.sort(key=lambda a: (a["published_at"], a["id"]), reverse=True)
+
+        def sort_key(article):
+            date_key = (article["published_at"], article["id"])
+            return (article["search_score"], *date_key) if ranked else date_key
+
         if cursor:
-            after = tuple(decode_cursor(cursor, fingerprint))
-            articles = [a for a in articles if (a["published_at"], a["id"]) < after]
+            after = tuple(decode_cursor(cursor, fingerprint, ranked=ranked))
+            articles = [a for a in articles if sort_key(a) > after] if sort == "oldest" else [a for a in articles if sort_key(a) < after]
+        articles.sort(key=sort_key, reverse=sort != "oldest")
         counts = {"all": len(matching)}
         for article in matching:
             group = article["source"]
             counts[group] = counts.get(group, 0) + 1
-        return {**payload, **page_result([public_article(a) for a in articles], total, limit, fingerprint),
+        return {**payload, **page_result([public_article(a) for a in articles[:limit + 1]], total, limit, fingerprint),
                 "source_counts": counts,
                 "freshness": feed_freshness(payload.get("sources", []), source=source, publisher=publisher, kind=kind)}
     except ValueError:
+        if cursor is None:
+            raise
         raise HTTPException(400, "Invalid page cursor.") from None
 
 
@@ -402,6 +472,8 @@ def queue_archive_refresh(background, store, filters, key, page, *, force=False)
     retry_failed = force and any(source["enabled"] and source["available"] is False for source in page["sources"])
     if archive_is_due or retry_failed:
         background.add_task(refresh_from_reader, store, filters, key, failed_only=not archive_is_due)
+        page = dict(page, refresh_requested=True)
+    return page
 
 
 def refresh_from_reader(store, filters, key, *, failed_only):
@@ -446,7 +518,8 @@ def generate(body: DigestRequest, request: Request, response: Response, stream: 
     store = get_store()
     admit_expensive(store, request, "brief", 10, 600)
     if stream:
-        return StreamingResponse(digest_stream(body, store), media_type="application/x-ndjson")
+        return StreamingResponse(digest_stream(body, store), media_type="application/x-ndjson",
+                                 headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store, no-transform"})
     result, hit = assemble_digest(body, store)
     response.headers["X-Cache"] = "HIT" if hit else "MISS"
     return result
@@ -465,8 +538,8 @@ async def digest_stream(body, store):
             emit({"result": result, "cached": hit})
         except HTTPException as error:
             emit({"error": error.detail, "status": error.status_code, "retry_after": (error.headers or {}).get("Retry-After")})
-        except Exception:
-            logger.exception("Brief stream failed")
+        except Exception as error:
+            logger.warning("brief_stream_failed error_type=%s", type(error).__name__)
             emit({"error": "The brief could not be prepared. Try again shortly.", "status": 503})
         finally:
             emit(None)
@@ -483,7 +556,7 @@ def assemble_digest(body, store, progress=None):
     focus = " ".join(", ".join([body.focus, *body.topics]).split()).strip(", ")
     # Include every output-affecting input and a rolling archive boundary.
     inputs = body.model_dump()
-    inputs.update(name=name, focus=focus.casefold(), sources=sorted(body.sources), topics=[])
+    inputs.update(name=name, focus=focus, sources=sorted(body.sources), topics=[])
     archive = str(store.engine.url) if store else "local"
     ttl = 300 if world else 1800
     key = hashlib.sha256(json.dumps([archive, inputs, int(time.time()) // ttl, os.getenv("OPENAI_MODEL")],
@@ -496,14 +569,26 @@ def assemble_digest(body, store, progress=None):
             if not lock.acquire(blocking=False):
                 raise HTTPException(429, "A brief is already being prepared. Try again shortly.",
                                     headers={"Retry-After": "5"})
+            lease = None
+            scope = f"brief:{key}"
             try:
                 digest, _ = _digest_cache.get(key)
                 hit = digest is not None
                 if not hit:
+                    if store:
+                        lease = store.claim_refresh(scope=scope)
+                        if lease is None:
+                            raise HTTPException(429, "This brief is already being prepared. Try again shortly.",
+                                                headers={"Retry-After": "5"})
+                        digest, _ = _digest_cache.get(key)
+                        hit = digest is not None
+                if not hit:
                     digest = prepare_digest(body, store, name, focus, world, progress)
-                    _digest_cache.put(key, digest, ttl=ttl)
+                    _digest_cache.put(key, digest, ttl=60 if digest.get("synthesis", {}).get("degraded") else ttl)
             finally:
                 lock.release()
+                if lease is not None:
+                    store.finish_refresh(lease, scope=scope)
     except (ValueError, RuntimeError):
         raise HTTPException(502, "The AI provider could not complete this digest. Please try again shortly.") from None
     expires = int(time.time()) + 3600
@@ -522,8 +607,9 @@ def prepare_digest(body, store, name, focus, world, progress):
         pins = store.pinned_articles(body.pinned_ids)
     else:
         archive = collect_news()["articles"]
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=body.hours)
-        available = [article for article in archive if datetime.fromisoformat(article["published_at"]) >= cutoff]
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=body.hours)
+        available = [article for article in archive if cutoff <= datetime.fromisoformat(article["published_at"]) <= now]
         pins = [article for article in archive if article["id"] in body.pinned_ids]
     pin_map = {article["id"]: article for article in pins}
     if any(ident not in pin_map for ident in body.pinned_ids):
@@ -540,14 +626,15 @@ def prepare_digest(body, store, name, focus, world, progress):
     if world:
         if progress:
             progress(3)
-        return build_world([public_article(article) for article in selected], body.hours, all_pool=pool)
-    if store and not store.admit([("generate-total", datetime.now(timezone.utc).date().isoformat(), 60)]):
-        raise HTTPException(429, "Personalized synthesis has reached its daily limit. Try the global brief.",
-                            headers={"Retry-After": str(86400 - int(time.time()) % 86400)})
+        return build_world([public_article(article) for article in selected], body.hours, all_pool=[
+            a for a in pool if a["source"] in body.sources or a.get("source_id") in body.sources])
     if not _generation_lock.acquire(blocking=False):
         raise HTTPException(429, "A personalized brief is already being prepared. Try again shortly.",
                             headers={"Retry-After": "5"})
     try:
+        if store and not store.admit([("generate-total", datetime.now(timezone.utc).date().isoformat(), 60)]):
+            raise HTTPException(429, "Personalized synthesis has reached its daily limit. Try the global brief.",
+                                headers={"Retry-After": str(86400 - int(time.time()) % 86400)})
         return build_digest(selected, name, focus, store=store, pinned_ids=body.pinned_ids,
                             style=body.style, persona=body.persona, all_pool=[a for a in pool if a["source"] in body.sources or a.get("source_id") in body.sources],
                             progress=progress)

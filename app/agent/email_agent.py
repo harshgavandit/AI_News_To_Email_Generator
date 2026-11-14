@@ -1,8 +1,10 @@
+import logging
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from .openai_client import generate_response
 
+logger = logging.getLogger(__name__)
 
 class EmailIntroduction(BaseModel):
     greeting: str = Field(description="Personalized greeting with user's name and date")
@@ -12,7 +14,7 @@ class EmailIntroduction(BaseModel):
 class RankedArticleDetail(BaseModel):
     digest_id: str
     rank: int
-    relevance_score: float
+    relevance_score: float | None
     title: str
     summary: str
     url: str
@@ -23,6 +25,7 @@ class RankedArticleDetail(BaseModel):
     published_at: str = ""
     whyItMatters: str = ""
     keyTakeaway: str = ""
+    summary_basis: str = ""
 
 
 class EmailDigestResponse(BaseModel):
@@ -88,8 +91,7 @@ Editorial angle: {self.user_profile.get('preferences', {}).get('Editorial angle'
 Generate a greeting and introduction that previews these articles."""
 
         try:
-            api_prompt = f"{EMAIL_PROMPT}\n\n{user_prompt}"
-            raw_response = generate_response(api_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction)
+            raw_response = generate_response(user_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction)
 
             # Expect the LLM to return JSON matching EmailIntroduction
             try:
@@ -105,8 +107,8 @@ Generate a greeting and introduction that previews these articles."""
                 intro.greeting = f"Hey {self.user_profile['name']}, here is your tech brief for {current_date}."
 
             return intro
-        except Exception as e:
-            print(f"Error generating introduction: {e}")
+        except Exception as error:
+            logger.info("brief_intro_failed error_type=%s", type(error).__name__)
             current_date = datetime.now().strftime('%B %d, %Y')
             return EmailIntroduction(
                 greeting=f"Hey {self.user_profile['name']}, here is your tech brief for {current_date}.",

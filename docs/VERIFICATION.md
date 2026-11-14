@@ -1,4 +1,15 @@
-# Deployment verification — October 21, 2026
+# Informa AI verification
+
+## Reading Room and digest update — November 15, 2026
+
+- The locked environments passed 72 tests each on Python 3.12 and 3.14. The tests cover both news storage modes, sorted cursors, streamed previews, provider failure and fallback, size limits, verified-inbox delivery, and owner authorization. Ruff, Python compilation, frontend lint, and the static production build passed. Starlette emits a deprecation warning about its test client’s `httpx` integration.
+- Chrome at 1440 and 375 CSS pixels exercised real RSS stories, pagination, date sorting, search and reset, saved stories across reload, multiple digest sources, the Global Top 5, preview controls, manual copying when clipboard permission was unavailable, and HTML and `.eml` export.
+- The disposable PostgreSQL archive verified idempotent setup and ranked pagination. In the recorded ingest it reached 47 enabled feeds. An earlier run reached 44, reflecting feeds that can fail temporarily.
+- A simulated transport processed 10,000 unique recipients in 100 batch calls with zero duplicates on both SQLite and PostgreSQL. This covers scheduling and fan-out with an isolated database and simulated provider.
+- The updated production dependency lock had no known advisories in `pip-audit` at verification time.
+- This update was verified locally. Personalized AI responses, SMTP and transactional email, and workspace delivery were exercised with test doubles. Live OpenAI generation, provider delivery, and Vercel promotion remain release checks.
+
+## Historical deployment verification — October 21, 2026
 
 Production URL: https://ai-news-to-email-generator.vercel.app
 

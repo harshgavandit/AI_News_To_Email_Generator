@@ -1,17 +1,20 @@
 /* Reading Room */
-.topbar { height: 78px; }
-.brand-logo { display: block; width: 210px; height: auto; border-radius: 7px; }
-.topbar nav { font-size: 13px; }
+.topbar { height: 66px; }
+.brand { gap: 9px; font-size: 24px; font-weight: 600; }
+.brand-icon { display: block; border-radius: 7px; }
+.topbar nav { gap: 23px; font-size: 13px; }
 .topbar nav > a.text-button { display: block; }
+.topbar nav button { border: 1px solid #c9d4c5; border-radius: 6px; color: var(--green); padding: 8px 12px; text-decoration: none; font-weight: 600; }
+.topbar nav button:hover { background: var(--sage); }
 .hero {
   position: relative;
   isolation: isolate;
-  grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
-  padding: clamp(26px, 3vw, 46px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 430px);
+  padding: clamp(24px, 3.1vw, 46px);
   gap: clamp(22px, 4vw, 64px);
   border: 0;
   border-radius: 14px;
-  margin: 20px 0 0;
+  margin: 18px 0 0;
   background: #183c34;
   color: #fffefa;
 }
@@ -21,35 +24,38 @@
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(90deg, #102d27 0%, #102d27db 42%, #102d2754 100%),
+  background: linear-gradient(90deg, #112e26 0%, #112e26ec 35%, #112e2677 100%),
     url("/edition-city.jpg") center 51% / cover;
 }
 .hero h1 {
-  font-size: clamp(40px, 4.3vw, 68px);
+  font-size: clamp(35px, 3.65vw, 57px);
   line-height: 1.02;
   letter-spacing: -.045em;
-  margin: 0 0 18px;
+  margin: 0 0 12px;
 }
-.hero h1 em { color: #e0edcc; }
-.hero-copy > p { color: #e7ebe3; max-width: 35ch; font-size: 15px; }
+.edition-date { display: block; color: #dbead4; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+.hero-copy > p { color: #e7ebe3; max-width: 47ch; font-size: 14px; margin: 0; }
 .quick-send {
   background: var(--paper);
   color: var(--ink);
   border-radius: 10px;
   border: 1px solid #fff9;
-  box-shadow: 0 4px 20px #0a211d50;
-  padding: 20px;
+  padding: 18px;
 }
-.quick-send h2 { margin: 0; font-size: 27px; }
+.quick-send h2 { margin: 0; font-size: 25px; }
 .brief-description { color: var(--muted); margin: 4px 0 14px; }
 .quick-send .small { margin: 9px 0 0; }
 .brief-footer { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; }
 #world-preview { white-space: nowrap; }
 .email-action { flex-direction: row; }
 .email-action .button { flex-shrink: 0; }
-.desk-layout { padding-top: 27px; }
-.section-top { margin-bottom: 14px; }
-.section-top h2 { margin: 0; }
+.desk-layout { padding-top: 28px; }
+.section-top { margin-bottom: 10px; }
+.section-top h2 { margin: 0; font-size: clamp(27px, 3vw, 35px); letter-spacing: -.025em; }
+.reading-views { display: flex; gap: 20px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.reading-views button { background: transparent; border: 0; padding: 8px 2px; min-height: 42px; border-bottom: 2px solid transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+.reading-views button[aria-pressed="true"] { border-bottom-color: var(--green); color: var(--green); }
+#saved-count { font-variant-numeric: tabular-nums; margin-left: 4px; }
 .health-pill { font-size: 11px; min-height: 36px; }
 #topics { margin-bottom: 14px; }
 .desk-controls { display: flex; align-items: center; gap: 12px; }
@@ -76,38 +82,55 @@
   padding: 14px;
   margin: 12px 0;
 }
-.filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.filter-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .filter-fields label { margin-bottom: 4px; }
-.results-line { align-items: center; font-size: 12px; min-height: 22px; margin: 10px 0; }
+.results-line { justify-content: flex-start; align-items: center; gap: 12px; font-size: 12px; min-height: 32px; margin: 10px 0; }
+#sort { width: auto; margin-left: auto; padding: 5px 7px; font-size: 12px; }
 #news-status.error { color: #963b26; }
 .story { min-height: 0; justify-content: flex-start; padding: 19px; }
-.story h3 { display: block; overflow: visible; margin: 11px 0 7px; font-size: clamp(21px, 1.65vw, 26px); }
-.story-summary { font-size: 13px; }
-.story-bottom { padding-top: 10px; gap: 10px; }
+.story h3 { display: block; overflow: visible; margin: 11px 0 7px; font-size: clamp(20px, 1.6vw, 25px); }
+.story-summary { font-size: 13px; display: block; }
+.story-thumbnail { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; margin-top: 12px; }
+.story-bottom { padding-top: 10px; gap: 8px; flex-wrap: wrap; }
+.story-byline { display: flex; align-items: center; gap: 7px; flex: 1 1 112px; }
+.source-mark { display: grid; place-items: center; background: var(--sage); color: var(--green); width: 27px; height: 27px; border-radius: 5px; flex: 0 0 27px; font-weight: 700; }
+.story-actions { margin-left: auto; gap: 5px; }
 .story-attribution { display: grid; font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 .story-attribution strong { color: var(--ink); font-size: 12px; font-weight: 650; }
 .source-badge { font-size: 9px; letter-spacing: .04em; }
 .story time { font-size: 11px; text-align: right; }
 .pin-button { min-height: 34px; flex-shrink: 0; }
+.story-skeleton { background: var(--paper); border: 1px solid var(--line); padding: 19px; border-radius: 8px; min-height: 158px; display: grid; align-content: center; gap: 10px; }
+.story-skeleton span { height: 10px; border-radius: 4px; background: var(--sage); width: 75%; }
+.story-skeleton span:first-child { width: 28%; }
+.story-skeleton span:last-child { width: 53%; }
+.news-empty { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.preview-basis { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+#digest-source-selection { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.digest-meta, .digest-source-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.digest-rank { display: grid; place-items: center; background: var(--sage); color: var(--green); min-width: 22px; min-height: 22px; border-radius: 4px; }
+.digest-topic { text-transform: none; font-weight: 500; }
+.digest-source-row { justify-content: space-between; color: var(--muted); font-size: 11px; }
+.digest-source-row a { color: inherit; }
+.preview-dark .digest-source-row { color: #c7cfbd; }
+footer { font-size: 12px; }
+footer > div { flex-wrap: wrap; }
 
 @media (min-width: 1024px) {
-  .stories.has-lead > .story:first-child {
-    grid-column: span 2;
-    background: #eaf0e3;
-    border-color: #ccd8c3;
-    padding: 23px 25px;
-  }
+  .stories.has-lead > .story:first-child { background: #f1f4ea; border-color: #c9d6c2; }
   .stories.has-lead > .story:first-child.pinned { border-color: var(--green); }
-  .stories.has-lead > .story:first-child > h3 { font-size: clamp(28px, 2.5vw, 39px); max-width: 33ch; }
-  .stories.has-lead > .story:first-child > .story-summary { max-width: 73ch; }
 }
 @media (max-width: 699px) {
   .topbar { height: 61px; }
-  .brand-logo { width: min(166px, 53vw); }
-  .hero { grid-template-columns: minmax(0, 1fr); padding: 21px 16px 14px; gap: 18px; margin-top: 13px; }
+  .brand { font-size: 21px; gap: 7px; }
+  .brand-icon { width: 29px; height: 29px; }
+  .topbar nav { gap: 10px; }
+  .hero { grid-template-columns: minmax(0, 1fr); padding: 19px 14px 14px; gap: 15px; margin-top: 13px; }
   .hero::before { background-position: 58% 40%; }
-  .hero h1 { font-size: clamp(31px, 8.5vw, 44px); margin-bottom: 10px; }
+  .hero h1 { font-size: clamp(31px, 8.5vw, 42px); margin-bottom: 10px; }
+  .edition-date { margin-bottom: 7px; }
   .hero-copy > p, .brief-description { font-size: 12px; }
+  .hero-copy > p { line-height: 1.55; }
   .quick-send { padding: 13px; }
   .quick-send h2 { font-size: 22px; }
   .email-action input { font-size: 16px; height: 44px; }
@@ -125,7 +148,10 @@
   #topics .topic-chip { flex-shrink: 0; min-height: 35px; font-size: 11px; }
   .stories { grid-template-columns: minmax(0, 1fr); }
   .story h3 { font-size: 23px; }
+  .filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .pin-button { min-height: 40px; }
   .mobile-builder { bottom: max(10px, env(safe-area-inset-bottom)); }
+  footer > div { gap: 9px 14px; }
   .composer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 }
 @media (min-width: 700px) and (max-width: 1023px) {

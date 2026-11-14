@@ -1,13 +1,15 @@
+import logging
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .openai_client import generate_response
 
+logger = logging.getLogger(__name__)
 
 class DigestOutput(BaseModel):
-    title: str
-    summary: str
-    whyItMatters: str
-    keyTakeaway: str
+    title: str = Field(min_length=1, max_length=180)
+    summary: str = Field(min_length=1, max_length=900)
+    whyItMatters: str = Field(max_length=300)
+    keyTakeaway: str = Field(max_length=300)
 
 PROMPT = """You are a technology news analyst covering global technology, software, AI, startups, policy, security, research, and video content.
 
@@ -31,11 +33,12 @@ class DigestAgent:
         try:
             response = generate_response(
                 f"Create a digest for this technology article.\nTitle: {title}\nContent:\n{content}",
-                system_prompt=PROMPT + "\nReturn title, summary, whyItMatters (one grounded implication, explicitly note if unclear), and keyTakeaway (one concise factual point). Do not put URLs or promotional copy in these fields.",
+                system_prompt=PROMPT + "\nReturn a title, a concise summary and up to one distinct takeaway and grounded implication. Leave either optional insight as an empty string if the excerpt lacks evidence. Preserve uncertainty and attribute publisher claims. Do not include URLs, promotional copy or invented numbers.",
                 response_model=DigestOutput,
+                max_tokens=650,
             )
             return DigestOutput.model_validate_json(response)
-        except Exception as e:
-            print(f"Error generating digest: {e}")
+        except Exception as error:
+            logger.info("article_synthesis_failed error_type=%s", type(error).__name__)
             return None
 

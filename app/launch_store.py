@@ -9,12 +9,13 @@ from functools import lru_cache
 
 from sqlalchemy import (
     Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
-    and_, bindparam, create_engine, delete, func, or_, select, update,
+    and_, bindparam, case, create_engine, delete, func, or_, select, tuple_, update,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.coverage import REGIONS, topic_expression
+from app.discovery import page_fingerprint, search_terms
 from app.sources import BY_ID
 
 schema = MetaData()
@@ -24,6 +25,10 @@ articles = Table("brief_articles", schema,
     Column("source", String(64), nullable=False), Column("source_id", String(64), nullable=False, index=True),
     Column("publisher", String(140), nullable=False), Column("kind", String(24), nullable=False),
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True))
+article_indexes = (
+    Index("brief_articles_page", articles.c.published_at, articles.c.id),
+    Index("brief_articles_source_page", articles.c.source_id, articles.c.published_at, articles.c.id),
+)
 sources = Table("brief_sources", schema,
     Column("id", String(64), primary_key=True), Column("enabled", Boolean, nullable=False, default=True),
     Column("available", Boolean, nullable=False, default=False), Column("count", Integer, nullable=False, default=0),
@@ -76,6 +81,9 @@ class Store:
 
     def migrate(self):
         schema.create_all(self.engine)
+        with self.engine.begin() as conn:
+            for index in article_indexes:
+                index.create(conn, checkfirst=True)
 
     def source_state(self):
         with self.engine.connect() as conn:
@@ -117,30 +125,40 @@ class Store:
         if source_ids:
             stmt = stmt.where(or_(articles.c.source.in_(source_ids), articles.c.source_id.in_(source_ids)))
         if query:
-            q = query.strip().lower()
-            stmt = stmt.where(or_(func.lower(articles.c.title).contains(q, autoescape=True),
-                                  func.lower(articles.c.description).contains(q, autoescape=True),
-                                  func.lower(articles.c.publisher).contains(q, autoescape=True)))
+            terms = search_terms(query) or (query.lower(),)
+            text_columns = [func.lower(articles.c[key]) for key in ("title", "description", "publisher")]
+            stmt = stmt.where(*(or_(*(column.contains(term, autoescape=True) for column in text_columns))
+                                for term in terms))
         return stmt
 
-    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region=""):
+    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest"):
         base = self.query(hours, query=query, kind=kind, publisher=publisher)
         if topic != "all":
             base = base.where(topic_expression(articles.c) == topic)
         if region:
             base = base.where(articles.c.source_id.in_([s.id for s in BY_ID.values() if s.region in REGIONS[region]]))
         stmt = base if source == "all" else base.where(or_(articles.c.source == source, articles.c.source_id == source))
-        fingerprint = hashlib.sha256(json.dumps([hours, source, query, kind, publisher, topic, region]).encode()).hexdigest()[:16]
+        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort)
+        columns = (articles.c.published_at, articles.c.id)
+        ranked = sort == "relevance" and bool(query)
+        if ranked:
+            title, name = func.lower(articles.c.title), func.lower(articles.c.publisher)
+            score = case((title.contains(query.lower(), autoescape=True), 10), else_=0)
+            for term in search_terms(query) or (query.lower(),):
+                score += case((title.contains(term, autoescape=True), 3), else_=0)
+                score += case((name.contains(term, autoescape=True), 1), else_=0)
+            stmt = stmt.add_columns(score.label("search_score"))
+            columns = (score, *columns)
         with self.engine.connect() as conn:
             grouped = base.subquery()
             counts = {group: count for group, count in conn.execute(
                 select(grouped.c.source, func.count()).group_by(grouped.c.source))}
             total = sum(counts.values()) if source == "all" else conn.scalar(select(func.count()).select_from(stmt.subquery()))
             if cursor:
-                published, ident = decode_cursor(cursor, fingerprint)
-                stmt = stmt.where(or_(articles.c.published_at < published,
-                                     and_(articles.c.published_at == published, articles.c.id < ident)))
-            rows = [dict(r) for r in conn.execute(stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc()).limit(limit + 1)).mappings()]
+                after = tuple_(*decode_cursor(cursor, fingerprint, ranked=ranked))
+                stmt = stmt.where(tuple_(*columns) > after if sort == "oldest" else tuple_(*columns) < after)
+            order = [column.asc() if sort == "oldest" else column.desc() for column in columns]
+            rows = [dict(r) for r in conn.execute(stmt.order_by(*order).limit(limit + 1)).mappings()]
         return dict(page_result(rows, total, limit, fingerprint), source_counts={**counts, "all": sum(counts.values())})
 
     def pinned_articles(self, ids):
@@ -469,14 +487,15 @@ class Store:
                 conn.execute(delete(table).where(condition))
 
 
-def decode_cursor(cursor, fingerprint):
+def decode_cursor(cursor, fingerprint, *, ranked=False):
     try:
         value = json.loads(base64.urlsafe_b64decode(cursor).decode())
-        if (not isinstance(value, list) or len(value) != 3 or value[2] != fingerprint or
-                not all(isinstance(v, str) for v in value)):
+        if (not isinstance(value, list) or len(value) != (4 if ranked else 3) or value[-1] != fingerprint or
+                not all(isinstance(v, str) for v in value[-3:-1]) or
+                (ranked and (type(value[0]) is not int or not 0 <= value[0] <= 58))):
             raise ValueError
-        datetime.fromisoformat(value[0])
-        return value[:2]
+        datetime.fromisoformat(value[-3])
+        return value[:-1]
     except (TypeError, ValueError, UnicodeError) as exc:
         raise ValueError("Invalid page cursor") from exc
 
@@ -486,8 +505,12 @@ def page_result(rows, total, limit, fingerprint):
     cursor = None
     if len(rows) > limit:
         last = shown[-1]
-        cursor = base64.urlsafe_b64encode(json.dumps([last["published_at"], last["id"], fingerprint]).encode()).decode()
-    return {"articles": shown, "total": total, "next_cursor": cursor}
+        marker = [last["published_at"], last["id"], fingerprint]
+        if "search_score" in last:
+            marker.insert(0, last["search_score"])
+        cursor = base64.urlsafe_b64encode(json.dumps(marker).encode()).decode()
+    return {"articles": [{k: v for k, v in row.items() if k != "search_score"} for row in shown],
+            "total": total, "next_cursor": cursor}
 
 
 @lru_cache(maxsize=2)
