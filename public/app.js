@@ -1,1014 +1,1131 @@
-'use strict';
-
+"use strict";
 const $ = (id) => document.getElementById(id);
-
 const state = {
   articles: [],
   total: 0,
   cursor: null,
   digest: null,
-  previewId: null,
-  health: null,
-  mailConfig: null,
-  controller: null,
-  topic: 'all',
-  hours: 24,
-  region: '',
-  publisher: '',
-  searchQuery: '',
-  pinned: new Map(),
-  selectedInterests: new Set(),
-  composing: false,
   sources: [],
-  activeTab: 'build',
-  userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-  pendingSend: null,
+  counts: {},
+  controller: null,
+  topic: "all",
+  source: "all",
+  hours: 24,
+  pins: new Map(),
+  interests: new Set(),
+  appendedInterests: new Set(),
+  composing: false,
+  mail: null,
+  pending: null,
+  tab: "build",
+  delivery: "email",
 };
-
-const categoryMap = [
-  { id: 'all', label: 'All Global' },
-  { id: 'ai', label: 'AI & LLMs' },
-  { id: 'software', label: 'Engineering & Dev' },
-  { id: 'startups', label: 'Startups & Venture' },
-  { id: 'bigtech', label: 'Big Tech' },
-  { id: 'regional', label: 'APAC / EU / Global' },
-  { id: 'video', label: 'Video Briefs' },
-];
-
-const topicLabels = {
-  all: 'All Topics',
-  ai: 'AI & LLMs',
-  software: 'Engineering & Dev',
-  startups: 'Startups & Venture',
-  bigtech: 'Big Tech',
-  industry: 'Industry & Policy',
-  video: 'Video Briefs',
-  chips: 'Chips & Hardware',
-  security: 'Security & Privacy',
-  outages: 'Outages & Updates',
-  regional: 'APAC / EU / Global',
+const categories = {
+  all: "All stories",
+  ai: "AI & LLMs",
+  software: "Software",
+  startups: "Startups",
+  bigtech: "Big Tech",
+  industry: "Policy",
+  security: "Security",
+  outages: "Outages",
+  video: "Video",
 };
-
-const interestChips = [
-  'AI Agents',
-  'RAG & Production AI',
-  'Cloud & Backend',
-  'Semiconductors',
-  'Cybersecurity',
-  'Open Source',
-  'Global Tech Policy',
-  'Venture Deals',
+const interestLabels = [
+  "AI Agents & Tool Use",
+  "RAG & Production Engineering",
+  "Voice & Multimodal",
+  "AI Security & Red Teaming",
+  "Model Benchmarks & Pricing",
+  "Enterprise Governance & Policy",
 ];
-
 const node = (tag, className, text) => {
   const el = document.createElement(tag);
   if (className) el.className = className;
-  if (text !== undefined && text !== null) el.textContent = text;
+  if (text !== undefined) el.textContent = text;
   return el;
 };
-
-const externalLink = (url, text) => {
-  const el = node('a', '', text);
-  el.href = url || '#';
-  el.target = '_blank';
-  el.rel = 'noopener noreferrer';
-  return el;
-};
-
 const status = (id, message, error = false) => {
-  const el = $(id);
-  if (!el) return;
-  el.textContent = message || '';
-  el.classList.toggle('error', Boolean(error));
+  $(id).textContent = message;
+  $(id).classList.toggle("error", error);
 };
-
-const readableTime = (value) => {
-  if (!value) return '';
+const readableTime = (value) =>
+  value && !Number.isNaN(Date.parse(value))
+    ? new Date(value).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "Not checked yet";
+const externalLink = (url, label) => {
+  const a = node("a", "", label);
   try {
-    return new Date(value).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  } catch {
-    return String(value);
-  }
+    const target = new URL(url);
+    if (["http:", "https:"].includes(target.protocol)) a.href = target.href;
+  } catch {}
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  return a;
 };
-
+function normalizeEmail(value) {
+  let [local, domain] = String(value || "")
+    .trim()
+    .toLowerCase()
+    .split("@");
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    local = local.split("+")[0].replaceAll(".", "");
+    domain = "gmail.com";
+  }
+  return `${local}@${domain}`;
+}
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+$("timezone-label").textContent = `(${timezone.replaceAll("_", " ")})`;
 async function request(url, options = {}) {
   const response = await fetch(url, options);
   let data;
   try {
     data = await response.json();
   } catch {
-    throw new Error('The server is temporarily unavailable. Please try again.');
+    throw new Error("The server is temporarily unavailable. Please try again.");
   }
-  if (!response.ok) {
-    const detail = typeof data?.detail === 'string' ? data.detail : 'Please check your inputs and try again.';
-    throw new Error(detail);
-  }
+  if (!response.ok)
+    throw new Error(
+      typeof data.detail === "string"
+        ? data.detail
+        : "This request could not be completed. Check your settings and try again.",
+    );
   return data;
 }
-
-function jsonPost(url, data) {
-  return request(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+const jsonPost = (url, data) =>
+  request(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-}
-
-function showToast(message, error = false) {
-  let toast = $('toast-notification');
-  if (!toast) {
-    toast = node('div', 'toast-notification');
-    toast.id = 'toast-notification';
-    document.body.append(toast);
+function syncURL() {
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries({
+    source: state.source,
+    window: { 24: "24h", 168: "7d", 720: "30d" }[state.hours],
+    q: $("search").value.trim(),
+    topic: state.topic,
+    region: $("region").value,
+    publisher: $("publisher").value,
+  })) {
+    if (!value || value === "all") url.searchParams.delete(key);
+    else url.searchParams.set(key, value);
   }
-  toast.textContent = message;
-  toast.className = `toast-notification show${error ? ' error' : ''}`;
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => {
-    toast.className = 'toast-notification';
-  }, 4500);
+  history.replaceState(null, "", url);
+  $("clear-search").hidden = !$("search").value;
 }
-
-// ---------------------------------------------------------------------------
-// Reading Room & Story Cards
-// ---------------------------------------------------------------------------
-function renderStories() {
-  const container = $('stories');
-  container.replaceChildren();
-  const list = state.articles;
-
-  if (!list.length) {
-    container.append(node('div', 'empty', 'No stories found in this view. Try adjusting the category, time window, or search query.'));
-    $('show-more').hidden = true;
-    status('news-status', '0 stories found');
-    return;
-  }
-
-  for (const article of list) {
-    const isPinned = state.pinned.has(article.id);
-    const card = node('article', `story${isPinned ? ' pinned' : ''}`);
-
-    // Top metadata
-    const top = node('div', 'story-top');
-    const badgeCategory = article.category || article.topic || 'ai';
-    const badgeText = topicLabels[badgeCategory] || 'Technology';
-    const badge = node('span', `source-badge ${badgeCategory}`, badgeText);
-    const date = node('time', '', readableTime(article.publishedAt || article.published_at));
-    date.dateTime = article.publishedAt || article.published_at || '';
-    top.append(badge, date);
-
-    // Headline
-    const heading = node('h3');
-    heading.append(externalLink(article.sourceUrl || article.url, article.title));
-
-    // Clean summary (3-line clamped)
-    const summaryText = article.cleanSummary || article.description || 'Read the original source for details.';
-    const summary = node('p', 'story-summary', summaryText);
-
-    // Why It Matters badge
-    const whyMattersText = article.whyItMatters || 'Signals key industry shifts and practical technical implications.';
-    const whyMatters = node('div', 'why-matters');
-    const strongLabel = node('strong', '', 'Why it matters: ');
-    whyMatters.append(strongLabel, document.createTextNode(whyMattersText));
-
-    // Bottom Bar with Publisher + Pin Button + Source Link
-    const bottom = node('div', 'story-bottom');
-    const pubName = article.sourceName || article.publisher || 'Source';
-    const pubMeta = node('span', '', `${pubName} · ${article.readingTimeMinutes || 2} min read`);
-
-    const actions = node('div', 'story-actions');
-    const pinBtn = node('button', 'pin-button', isPinned ? '✓ Pinned' : '+ Pin to Brief');
-    pinBtn.type = 'button';
-    pinBtn.setAttribute('aria-pressed', String(isPinned));
-    pinBtn.setAttribute('aria-label', isPinned ? `Remove ${article.title} from brief` : `Pin ${article.title} to brief`);
-    pinBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      togglePin(article);
+function restoreURL() {
+  const params = new URLSearchParams(location.search);
+  state.source = params.get("source") || "all";
+  const windowValue =
+    { "24h": 24, "7d": 168, "30d": 720 }[params.get("window")] ||
+    Number(params.get("window"));
+  state.hours = [24, 168, 720].includes(windowValue) ? windowValue : 24;
+  state.topic = categories[params.get("topic")] ? params.get("topic") : "all";
+  $("search").value = (params.get("q") || "").slice(0, 150);
+  $("region").value = ["Global", "APAC", "EU"].includes(params.get("region"))
+    ? params.get("region")
+    : "";
+  $("clear-search").hidden = !$("search").value;
+  for (const button of $("window-controls").children)
+    button.setAttribute(
+      "aria-pressed",
+      String(Number(button.dataset.hours) === state.hours),
+    );
+}
+function renderSourceFilters() {
+  const names = {
+    all: "All sources",
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    youtube: "YouTube",
+  };
+  $("source-filters").replaceChildren();
+  for (const [id, label] of Object.entries(names)) {
+    const count = state.counts[id];
+    const button = node(
+      "button",
+      "topic-chip",
+      `${label}${Number.isInteger(count) ? ` (${count})` : ""}`,
+    );
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(state.source === id));
+    button.addEventListener("click", () => {
+      state.source = id;
+      renderSourceFilters();
+      loadNews();
     });
-
-    const link = externalLink(article.sourceUrl || article.url, article.kind === 'video' ? 'Watch ↗' : 'Read ↗');
-    link.className = 'text-button';
-
-    actions.append(pinBtn, link);
-    bottom.append(pubMeta, actions);
-
-    card.append(top, heading, summary, whyMatters, bottom);
+    $("source-filters").append(button);
+  }
+}
+function renderStories() {
+  $("outage-links").hidden = state.topic !== "outages";
+  const container = $("stories");
+  container.replaceChildren();
+  if (!state.articles.length)
+    container.append(
+      node(
+        "div",
+        "empty",
+        "No stories match these filters. Try another source or a longer time window.",
+      ),
+    );
+  for (const article of state.articles) {
+    const card = node(
+      "article",
+      `story${state.pins.has(String(article.id)) ? " pinned" : ""}`,
+    );
+    const top = node("div", "story-top");
+    const timestamp = article.publishedAt || article.published_at;
+    const date = node("time", "", readableTime(timestamp));
+    if (timestamp) date.dateTime = timestamp;
+    top.append(
+      node(
+        "span",
+        "source-badge",
+        categories[article.category || article.topic] ||
+          article.topic_label ||
+          "Technology",
+      ),
+      date,
+    );
+    const heading = node("h3");
+    heading.append(
+      externalLink(article.sourceUrl || article.url, article.title),
+    );
+    const why = node("p", "why-matters");
+    why.append(
+      node("strong", "", "Why it matters: "),
+      document.createTextNode(
+        article.whyItMatters ||
+          article.reasoning ||
+          "Read the original reporting for context and details.",
+      ),
+    );
+    const bottom = node("div", "story-bottom");
+    bottom.append(
+      node(
+        "span",
+        "",
+        `${article.sourceName || article.publisher || "Original source"} · ${article.region || "Global"}${article.readingTimeMinutes ? ` · ${article.readingTimeMinutes} min` : ""}`,
+      ),
+    );
+    const pin = node(
+      "button",
+      "pin-button",
+      state.pins.has(String(article.id)) ? "✓ Pinned" : "+ Pin",
+    );
+    pin.type = "button";
+    pin.setAttribute(
+      "aria-pressed",
+      String(state.pins.has(String(article.id))),
+    );
+    pin.setAttribute(
+      "aria-label",
+      `${state.pins.has(String(article.id)) ? "Unpin" : "Pin"} ${article.title}`,
+    );
+    pin.addEventListener("click", () => togglePin(article));
+    bottom.append(pin);
+    card.append(
+      top,
+      heading,
+      node(
+        "p",
+        "story-summary",
+        article.cleanSummary ||
+          article.description ||
+          article.summary ||
+          "Read the original story for details.",
+      ),
+      why,
+      bottom,
+    );
     container.append(card);
   }
-
-  $('show-more').hidden = !state.cursor;
-  status('news-status', `Showing ${list.length} of ${state.total} ${state.total === 1 ? 'story' : 'stories'}`);
+  $("show-more").hidden = !state.cursor;
+  status(
+    "news-status",
+    `${state.articles.length} of ${state.total} ${state.total === 1 ? "story" : "stories"}`,
+  );
 }
-
-async function loadNews(append = false) {
-  if (state.controller) state.controller.abort();
+function togglePin(article) {
+  const id = String(article.id);
+  if (state.pins.has(id)) state.pins.delete(id);
+  else {
+    if (state.pins.size === 10) {
+      status(
+        "pin-status",
+        "You can pin up to 10 stories. Remove one to add another.",
+        true,
+      );
+      return;
+    }
+    state.pins.set(id, article);
+  }
+  if (state.pins.size > Number($("article-count").value))
+    $("article-count").value = state.pins.size <= 5 ? "5" : "10";
+  status("pin-status", "");
+  renderPins();
+  renderStories();
+}
+function renderPins() {
+  const count = state.pins.size;
+  $("selected-count").textContent = `${count} / 10`;
+  $("mobile-pin-count").textContent = `${count} pinned`;
+  $("pinned-bar-count").textContent =
+    `${count} ${count === 1 ? "story" : "stories"} pinned`;
+  $("pinned-bar").hidden = !count;
+  $("clear-pins").hidden = !count;
+  $("selected-stories").replaceChildren();
+  if (!count)
+    $("selected-stories").append(
+      node("p", "small", "Pin stories from the news desk to include them."),
+    );
+  for (const article of state.pins.values()) {
+    const row = node("div", "selected-item");
+    row.append(node("span", "", article.title));
+    const remove = node("button", "", "×");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove ${article.title}`);
+    remove.addEventListener("click", () => togglePin(article));
+    row.append(remove);
+    $("selected-stories").append(row);
+  }
+}
+for (const id of ["clear-pins", "pinned-clear"])
+  $(id).addEventListener("click", () => {
+    state.pins.clear();
+    renderPins();
+    renderStories();
+    status("pin-status", "Pinned selection cleared.");
+  });
+function updateSourceCatalog(sources) {
+  if (!sources?.length) return;
+  state.sources = sources;
+  for (const id of ["publisher", "digest-sources"]) {
+    const select = $(id);
+    const value = select.value;
+    select.replaceChildren();
+    const option = node(
+      "option",
+      "",
+      id === "publisher" ? "All publishers" : "All sources",
+    );
+    option.value = id === "publisher" ? "" : "all";
+    select.append(option);
+    for (const source of sources.filter((s) => s.enabled)) {
+      const item = node("option", "", source.label);
+      item.value = source.id;
+      select.append(item);
+    }
+    select.value = value;
+    if (!select.value) select.value = id === "publisher" ? "" : "all";
+  }
+  renderHealth();
+  renderSourceFilters();
+}
+function renderHealth(freshness) {
+  const sources = state.sources.filter((s) => s.enabled);
+  const failed = sources.filter((s) => s.available === false);
+  const healthy = sources.filter((s) => s.available === true);
+  $("source-health-label").textContent = failed.length
+    ? `${failed.length} source${failed.length === 1 ? "" : "s"} delayed`
+    : healthy.length
+      ? `${healthy.length} sources available`
+      : "Sources awaiting check";
+  $("source-health-button").classList.toggle("degraded", failed.length > 0);
+  $("updated").textContent = freshness?.checked_at
+    ? `Last checked ${readableTime(freshness.checked_at)}`
+    : "Individual source check times below.";
+  $("source-health-list").className = "source-health-list";
+  $("source-health-list").replaceChildren();
+  for (const s of sources) {
+    const row = node("div", "health-source");
+    row.append(
+      node("strong", "", s.label),
+      node(
+        "span",
+        "",
+        `${s.available === true ? "Available" : s.available === false ? "Last check failed" : "Waiting for first check"} · Checked ${readableTime(s.checked_at)}${s.last_success ? ` · Last success ${readableTime(s.last_success)}` : ""}`,
+      ),
+    );
+    $("source-health-list").append(row);
+  }
+  $("failed-alert").hidden = !failed.length;
+  $("failed-message").textContent = failed.length
+    ? `${failed.map((s) => s.label).join(", ")} ${failed.length === 1 ? "is" : "are"} temporarily unavailable. Saved stories remain readable.`
+    : "";
+}
+async function loadNews(append = false, force = false) {
+  state.controller?.abort();
   const controller = new AbortController();
   state.controller = controller;
-
-  $('stories').setAttribute('aria-busy', 'true');
-  $('show-more').disabled = true;
-  status('news-status', 'Loading stories…');
-
+  $("stories").setAttribute("aria-busy", "true");
+  $("show-more").disabled = true;
+  status("news-status", "Loading stories…");
+  syncURL();
   try {
     const params = new URLSearchParams({
       hours: String(state.hours),
-      q: state.searchQuery,
-      limit: '12',
+      source: state.source,
+      topic: state.topic,
+      region: $("region").value,
+      publisher: $("publisher").value,
+      q: $("search").value.trim(),
+      limit: "12",
     });
-
-    if (state.topic === 'regional') {
-      params.set('topic', 'all');
-      params.set('publisher', '');
-    } else if (state.topic !== 'all') {
-      params.set('topic', state.topic);
-    }
-
-    if (state.publisher) params.set('publisher', state.publisher);
-    if (append && state.cursor) params.set('cursor', state.cursor);
-
-    const data = await request(`/api/news?${params}`, { signal: controller.signal });
+    if (append && state.cursor) params.set("cursor", state.cursor);
+    if (force) params.set("force", "true");
+    const data = await request(`/api/news?${params}`, {
+      signal: controller.signal,
+    });
     if (state.controller !== controller) return;
-
-    let received = data.articles || [];
-    if (state.topic === 'regional') {
-      received = received.filter(a => a.region && a.region !== 'Global');
-    }
-    if (state.region) {
-      received = received.filter(a => {
-        if (state.region === 'APAC') return ['Asia', 'India', 'APAC'].includes(a.region);
-        if (state.region === 'EU') return ['Europe', 'EU'].includes(a.region);
-        return a.region === state.region;
-      });
-    }
-
-    state.articles = append ? state.articles.concat(received) : received;
+    state.articles = append
+      ? [...state.articles, ...data.articles]
+      : data.articles;
     state.cursor = data.next_cursor;
-    state.total = data.total ?? state.articles.length;
+    state.total = data.total;
+    state.counts = data.source_counts || {};
+    updateSourceCatalog(data.sources);
     renderStories();
-    renderFreshness(data.freshness, data.sources);
+    renderSourceFilters();
+    renderHealth(data.freshness);
   } catch (error) {
-    if (error.name !== 'AbortError') {
-      status('news-status', error.message, true);
-    }
+    if (error.name !== "AbortError") status("news-status", error.message, true);
   } finally {
     if (state.controller === controller) {
-      $('stories').setAttribute('aria-busy', 'false');
-      $('show-more').disabled = false;
+      $("stories").setAttribute("aria-busy", "false");
+      $("show-more").disabled = false;
     }
   }
 }
-
-function renderFreshness(freshness, sourcesList) {
-  const label = $('source-health-label');
-  const pill = $('source-health-button');
-  const updated = $('updated');
-  const listEl = $('source-health-list');
-
-  const sources = sourcesList || state.sources || [];
-  const enabledSources = sources.filter(s => s.enabled);
-  const activeCount = enabledSources.length || 40;
-  const availableCount = enabledSources.filter(s => s.available !== false).length;
-
-  if (label) {
-    label.textContent = `Live • ${availableCount || activeCount} Sources Active`;
-  }
-  if (pill) {
-    pill.classList.toggle('degraded', freshness?.status === 'degraded' || freshness?.status === 'stale');
-  }
-  if (updated && freshness?.checked_at) {
-    updated.textContent = `All sources verified ${readableTime(freshness.checked_at)}.`;
-  }
-
-  if (listEl && sources.length) {
-    listEl.replaceChildren();
-    for (const s of sources) {
-      const item = node('div', 'health-source');
-      const name = node('strong', '', s.label || s.source);
-      const isOk = s.available !== false;
-      const statusText = isOk ? 'Active' : (s.error || 'Temporarily delayed');
-      const timeStr = s.checked_at ? `Checked ${readableTime(s.checked_at)}` : 'Checked recently';
-      const meta = node('span', '', `${statusText} · ${timeStr}`);
-      meta.style.color = isOk ? '#617251' : '#a24835';
-      item.append(name, meta);
-      listEl.append(item);
-    }
-  }
+for (const [topic, label] of Object.entries(categories)) {
+  const button = node("button", "topic-chip", label);
+  button.type = "button";
+  button.dataset.topic = topic;
+  button.addEventListener("click", () => {
+    state.topic = topic;
+    $("outage-links").hidden = topic !== "outages";
+    for (const peer of $("topics").children)
+      peer.setAttribute("aria-pressed", String(peer === button));
+    loadNews();
+  });
+  $("topics").append(button);
 }
-
-// ---------------------------------------------------------------------------
-// Pinning Logic
-// ---------------------------------------------------------------------------
-function togglePin(article) {
-  if (state.pinned.has(article.id)) {
-    state.pinned.delete(article.id);
-  } else {
-    if (state.pinned.size >= 10) {
-      showToast('Maximum 10 pinned stories reached for a single digest.', true);
-      return;
-    }
-    state.pinned.set(article.id, article);
-  }
-  updatePinnedUI();
-  renderStories();
-}
-
-function updatePinnedUI() {
-  const count = state.pinned.size;
-  const countText = `${count} / 10`;
-  const countEl = $('selected-count');
-  if (countEl) countEl.textContent = countText;
-
-  const mobileCount = $('mobile-pin-count');
-  if (mobileCount) mobileCount.textContent = `${count} pinned`;
-
-  const clearBtn = $('clear-pins');
-  if (clearBtn) clearBtn.hidden = count === 0;
-
-  const tray = $('selected-stories');
-  if (!tray) return;
-
-  if (count === 0) {
-    tray.replaceChildren(node('p', 'small', 'Click + Pin to Brief on any story card to hand-pick it.'));
-    return;
-  }
-
-  tray.replaceChildren();
-  for (const [id, article] of state.pinned.entries()) {
-    const row = node('div', 'selected-item');
-    const title = node('span', '', article.title);
-    title.style.overflow = 'hidden';
-    title.style.textOverflow = 'ellipsis';
-    title.style.whiteSpace = 'nowrap';
-    title.style.flex = '1';
-
-    const rmBtn = node('button', 'text-button', '✕');
-    rmBtn.type = 'button';
-    rmBtn.setAttribute('aria-label', `Unpin ${article.title}`);
-    rmBtn.addEventListener('click', () => {
-      state.pinned.delete(id);
-      updatePinnedUI();
-      renderStories();
-    });
-
-    row.append(title, rmBtn);
-    tray.append(row);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Brief Builder & Tabs
-// ---------------------------------------------------------------------------
-function switchTab(tabName) {
-  state.activeTab = tabName;
-  const isBuild = tabName === 'build';
-  $('build-tab').setAttribute('aria-selected', String(isBuild));
-  $('preview-tab').setAttribute('aria-selected', String(!isBuild));
-  $('build-panel').hidden = !isBuild;
-  $('preview-section').hidden = isBuild;
-}
-
-function renderInterests() {
-  const container = $('interests');
-  if (!container) return;
-  container.replaceChildren();
-  for (const chip of interestChips) {
-    const btn = node('button', 'topic-chip', chip);
-    btn.type = 'button';
-    const isSelected = state.selectedInterests.has(chip);
-    btn.setAttribute('aria-pressed', String(isSelected));
-    btn.addEventListener('click', () => {
-      if (state.selectedInterests.has(chip)) {
-        state.selectedInterests.delete(chip);
-        btn.setAttribute('aria-pressed', 'false');
-      } else {
-        state.selectedInterests.add(chip);
-        btn.setAttribute('aria-pressed', 'true');
+for (const label of interestLabels) {
+  const button = node("button", "topic-chip", label);
+  button.type = "button";
+  button.setAttribute("aria-pressed", "false");
+  button.addEventListener("click", () => {
+    if (state.interests.has(label)) {
+      state.interests.delete(label);
+      if (state.appendedInterests.has(label)) {
+        $("focus").value = $("focus")
+          .value.split("; ")
+          .filter((part) => part !== label)
+          .join("; ");
+        state.appendedInterests.delete(label);
       }
-    });
-    container.append(btn);
-  }
+    } else {
+      state.interests.add(label);
+      const text = $("focus").value.trim();
+      const next = text ? `${text}; ${label}` : label;
+      if (!text.includes(label) && next.length <= 400) {
+        $("focus").value = next;
+        state.appendedInterests.add(label);
+      }
+    }
+    button.setAttribute("aria-pressed", String(state.interests.has(label)));
+  });
+  $("interests").append(button);
 }
-
-function renderDigestPreview() {
-  const preview = $('preview');
-  const empty = $('preview-empty');
-  const content = $('preview-content');
-
-  if (!state.digest?.digest) {
-    empty.hidden = false;
-    content.hidden = true;
+for (const button of $("window-controls").children)
+  button.addEventListener("click", () => {
+    state.hours = Number(button.dataset.hours);
+    for (const peer of $("window-controls").children)
+      peer.setAttribute("aria-pressed", String(peer === button));
+    loadNews();
+  });
+for (const id of ["region", "publisher"])
+  $(id).addEventListener("change", () => loadNews());
+let searchTimer;
+$("search").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  $("clear-search").hidden = !$("search").value;
+  searchTimer = setTimeout(() => loadNews(), 250);
+});
+$("clear-search").addEventListener("click", () => {
+  clearTimeout(searchTimer);
+  $("search").value = "";
+  loadNews();
+  $("search").focus();
+});
+$("show-more").addEventListener("click", () => loadNews(true));
+for (const id of ["refresh", "retry-sources"])
+  $(id).addEventListener("click", () => loadNews(false, true));
+let healthCloseTimer;
+function showHealth(show) {
+  clearTimeout(healthCloseTimer);
+  $("source-popover").hidden = !show;
+  $("source-health-button").setAttribute("aria-expanded", String(show));
+}
+$("source-health-button").addEventListener("click", () => showHealth(true));
+$("source-health-button").addEventListener("focus", () => showHealth(true));
+for (const id of ["source-health-button", "source-popover"]) {
+  $(id).addEventListener("mouseenter", () => showHealth(true));
+  $(id).addEventListener("mouseleave", () => {
+    healthCloseTimer = setTimeout(() => {
+      if (
+        !$("source-popover").contains(document.activeElement) &&
+        document.activeElement !== $("source-health-button")
+      )
+        showHealth(false);
+    }, 180);
+  });
+}
+$("source-popover-close").addEventListener("click", () => showHealth(false));
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".source-health")) showHealth(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    showHealth(false);
+    if ($("composer").classList.contains("open")) closeBuilder();
+  }
+});
+const mobile = () => matchMedia("(max-width: 1023px)").matches;
+function setTab(tab, focus = false) {
+  state.tab = tab;
+  for (const name of ["build", "preview"]) {
+    const selected = name === tab;
+    const button = $(`${name}-tab`);
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (selected && focus) button.focus();
+  }
+  $("build-panel").hidden = mobile() && tab !== "build";
+  $("preview-section").hidden = mobile() && tab !== "preview";
+}
+function openBuilder(tab = "build") {
+  setTab(tab);
+  if (mobile()) {
+    $("composer").classList.add("open");
+    $("sheet-backdrop").hidden = false;
+    $("mobile-builder").setAttribute("aria-expanded", "true");
+    document.body.classList.add("sheet-open");
+    $("composer").setAttribute("role", "dialog");
+    $("composer").setAttribute("aria-modal", "true");
+    $("close-builder").focus();
+  } else $("composer").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function closeBuilder() {
+  $("composer").classList.remove("open");
+  $("sheet-backdrop").hidden = true;
+  $("mobile-builder").setAttribute("aria-expanded", "false");
+  document.body.classList.remove("sheet-open");
+  $("composer").removeAttribute("role");
+  $("composer").removeAttribute("aria-modal");
+  $("mobile-builder").focus();
+}
+for (const id of ["nav-builder", "mobile-builder", "pinned-build"])
+  $(id).addEventListener("click", () => openBuilder());
+for (const id of ["close-builder", "sheet-backdrop"])
+  $(id).addEventListener("click", closeBuilder);
+$("empty-build").addEventListener("click", () => setTab("build", true));
+for (const tab of ["build", "preview"])
+  $(`${tab}-tab`).addEventListener("click", () => setTab(tab));
+document.querySelector(".builder-tabs").addEventListener("keydown", (event) => {
+  if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+    event.preventDefault();
+    setTab(
+      event.key === "Home"
+        ? "build"
+        : event.key === "End"
+          ? "preview"
+          : state.tab === "build"
+            ? "preview"
+            : "build",
+      true,
+    );
+  }
+});
+matchMedia("(max-width: 1023px)").addEventListener("change", () => {
+  setTab(state.tab);
+  if (!mobile()) {
+    $("composer").classList.remove("open");
+    $("sheet-backdrop").hidden = true;
+    document.body.classList.remove("sheet-open");
+    $("composer").removeAttribute("role");
+    $("composer").removeAttribute("aria-modal");
+  }
+});
+$("composer").addEventListener("keydown", (event) => {
+  if (
+    event.key !== "Tab" ||
+    !mobile() ||
+    !$("composer").classList.contains("open")
+  )
     return;
+  const items = [
+    ...$("composer").querySelectorAll("button,a,input,select,textarea"),
+  ].filter(
+    (el) => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length,
+  );
+  const first = items[0],
+    last = items.at(-1);
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
   }
-
-  empty.hidden = true;
-  content.hidden = false;
-  preview.replaceChildren();
-
-  const d = state.digest.digest;
-  const isWorld = d.edition === 'world';
-
-  $('preview-title').textContent = isWorld ? 'Today’s Global Intelligence Brief' : 'Your Custom Technology Brief';
-
-  const eyebrow = node('div', 'eyebrow muted', isWorld ? 'GLOBAL 24H TOP 5 EDITION' : 'CUSTOM PERSONALIZED DIGEST');
-  const greeting = node('p', 'email-greeting', d.introduction?.greeting || 'Your World Tech Brief');
-  const intro = node('p', 'email-intro', d.introduction?.introduction || '');
-  preview.append(eyebrow, greeting, intro);
-
-  for (const art of d.articles || []) {
-    const item = node('section', 'digest-item');
-    const meta = node('div', 'digest-meta');
-    const pub = art.publisher || art.article_type || 'Source';
-    const tag = art.topic_label || art.topic || 'Tech';
-    meta.append(node('span', '', `${String(art.rank).padStart(2, '0')} / ${pub} · ${tag}`));
-
-    const h = node('h3');
-    h.append(externalLink(art.url, art.title));
-
-    const sum = node('p', '', art.summary);
-    item.append(meta, h, sum);
-
-    const takeaway = art.keyTakeaway || art.whyItMatters;
-    if (takeaway) {
-      const takeDiv = node('div', 'why-matters');
-      takeDiv.append(node('strong', '', 'Key Takeaway: '), document.createTextNode(takeaway));
-      item.append(takeDiv);
-    }
-
-    item.append(externalLink(art.url, 'Read original source ↗'));
-    preview.append(item);
+});
+function renderDigest() {
+  const digest = state.digest.digest;
+  $("preview-empty").hidden = true;
+  $("preview-content").hidden = false;
+  $("preview").replaceChildren();
+  $("preview-title").textContent =
+    digest.edition === "world"
+      ? "Today’s global top stories."
+      : "Your personal tech brief.";
+  $("preview-count").textContent = `(${digest.articles.length})`;
+  if (digest.introduction) {
+    $("preview").append(
+      node("p", "email-greeting", digest.introduction.greeting),
+      node("p", "email-intro", digest.introduction.introduction),
+    );
   }
-
-  if (d.quick_hits?.length) {
-    const qhSection = node('section', 'quick-hits-block');
-    qhSection.style.marginTop = '24px';
-    qhSection.style.paddingTop = '16px';
-    qhSection.style.borderTop = '1px solid var(--line)';
-    const qhTitle = node('h4', '', 'Quick Hits Around the World');
-    qhTitle.style.font = 'bold 14px var(--serif)';
-    qhTitle.style.margin = '0 0 10px';
-    qhSection.append(qhTitle);
-
-    const qhList = node('ul');
-    qhList.style.paddingLeft = '18px';
-    qhList.style.margin = '0';
-    for (const qh of d.quick_hits) {
-      const li = node('li');
-      li.style.marginBottom = '6px';
-      li.style.fontSize = '12px';
-      li.append(externalLink(qh.url, qh.title), document.createTextNode(` — ${qh.publisher} (${qh.region})`));
-      qhList.append(li);
-    }
-    qhSection.append(qhList);
-    preview.append(qhSection);
+  for (const [index, a] of digest.articles.entries()) {
+    const item = node("section", "digest-item");
+    item.append(
+      node(
+        "div",
+        "digest-meta",
+        `${String(index + 1).padStart(2, "0")} / ${a.publisher || a.sourceName || a.article_type || "Original source"}`,
+      ),
+      node("h3", "", a.title),
+      node("p", "", a.cleanSummary || a.summary || ""),
+    );
+    if (a.whyItMatters || a.reasoning)
+      item.append(
+        node("p", "reason", `Why it matters: ${a.whyItMatters || a.reasoning}`),
+      );
+    item.append(externalLink(a.sourceUrl || a.url, "Read original source ↗"));
+    $("preview").append(item);
   }
-
-  $('preview-count').textContent = `(${d.articles?.length || 0})`;
-  switchTab('preview');
+  setTab("preview");
+  status("email-status", "");
 }
-
-// ---------------------------------------------------------------------------
-// Synthesis & Composition
-// ---------------------------------------------------------------------------
-async function composeBrief(body, isWorld = false) {
-  if (state.composing) return;
+function generationStage(stage) {
+  $("generation-stages").hidden = false;
+  for (const item of $("generation-stages").children) {
+    const current = Number(item.dataset.stage);
+    item.classList.toggle("complete", current < stage);
+    item.classList.toggle("active", current === stage);
+    if (current === stage) item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
+  }
+  status(
+    "digest-status",
+    [
+      "",
+      "Summarizing source excerpts…",
+      "Curating your brief…",
+      "Formatting the preview…",
+    ][stage] || "Preparing your brief…",
+  );
+}
+async function streamDigest(body) {
+  const response = await fetch("/api/digest?stream=true", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/x-ndjson",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let data;
+    try {
+      data = await response.json();
+    } catch {}
+    throw new Error(
+      data?.detail || "Could not prepare your brief. Please try again.",
+    );
+  }
+  if (!response.headers.get("content-type")?.includes("ndjson"))
+    return response.json();
+  const reader = response.body.getReader(),
+    decoder = new TextDecoder();
+  let buffer = "",
+    result;
+  function consume(line) {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.error) throw new Error(event.error);
+    if (event.stage) generationStage(event.stage);
+    if (event.result) result = event.result;
+  }
+  while (true) {
+    const chunk = await reader.read();
+    buffer += decoder.decode(chunk.value || new Uint8Array(), {
+      stream: !chunk.done,
+    });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();
+    for (const line of lines) consume(line);
+    if (chunk.done) break;
+  }
+  if (buffer) consume(buffer);
+  if (!result)
+    throw new Error(
+      "The connection ended before your brief was ready. Please try again.",
+    );
+  return result;
+}
+async function composeBrief(body, isWorld) {
+  if (state.composing) return null;
   state.composing = true;
-
-  const btn = $(isWorld ? 'world-brief' : 'generate');
-  const statusId = isWorld ? 'world-status' : 'digest-status';
-  const origText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = isWorld ? 'Synthesizing Top 5 Stories…' : 'Synthesizing Custom Brief…';
-  status(statusId, isWorld ? 'Picking top global signals…' : 'Synthesizing stories with AI takeaways…');
-
+  const button = $(isWorld ? "world-brief" : "generate"),
+    message = isWorld ? "world-status" : "digest-status";
+  const label = button.textContent;
+  $("world-brief").disabled = $("generate").disabled = true;
+  button.textContent = "Preparing your brief…";
+  status(
+    message,
+    isWorld ? "Selecting today’s global stories…" : "Preparing your selection…",
+  );
+  if (!isWorld) {
+    $("generation-stages").hidden = false;
+    for (const item of $("generation-stages").children) {
+      item.classList.remove("active", "complete");
+      item.removeAttribute("aria-current");
+    }
+  }
   try {
-    const data = await jsonPost('/api/digest', body);
-    state.digest = data;
-    state.previewId = data.preview_id;
-    status(statusId, `Brief synthesized with ${data.digest.articles.length} stories.`);
-    renderDigestPreview();
-    return data;
-  } catch (err) {
-    status(statusId, err.message, true);
-    showToast(err.message, true);
-    throw err;
+    state.digest = isWorld
+      ? await jsonPost("/api/digest", body)
+      : await streamDigest(body);
+    renderDigest();
+    if (!isWorld) {
+      for (const item of $("generation-stages").children) {
+        item.classList.remove("active");
+        item.classList.add("complete");
+        item.removeAttribute("aria-current");
+      }
+    }
+    status(
+      message,
+      `${state.digest.digest.articles.length} stories, ready to read.`,
+    );
+    return state.digest;
+  } catch (error) {
+    status(message, error.message, true);
+    return null;
   } finally {
     state.composing = false;
-    btn.disabled = false;
-    btn.textContent = origText;
+    $("world-brief").disabled = $("generate").disabled = false;
+    button.textContent = label;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Public Mailbox Delivery Flow
-// ---------------------------------------------------------------------------
-let captchaWidget, captchaToken, captchaLoader;
-
-async function showCaptcha() {
-  const container = $('mail-captcha');
-  if (!container || !state.mailConfig?.site_key) return;
-
-  if (captchaWidget !== undefined && window.turnstile) {
-    window.turnstile.reset(captchaWidget);
-    captchaToken = '';
+$("digest-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const source = $("digest-sources").value;
+  const body = {
+    edition: "personal",
+    name: $("reader-name").value.trim() || "Reader",
+    focus: $("focus").value.trim(),
+    topics: [...state.interests],
+    persona: $("persona").value,
+    style: $("digest-style").value,
+    pinned_ids: [...state.pins.keys()],
+    top_n: Number($("article-count").value),
+    hours: Number($("digest-window").value),
+    ...(source === "all" ? {} : { sources: [source] }),
+  };
+  if (body.pinned_ids.length > body.top_n) {
+    status(
+      "digest-status",
+      "Choose a brief length large enough for your pinned stories.",
+      true,
+    );
     return;
   }
-
+  await composeBrief(body, false);
+});
+$("world-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = $("hero-email").value.trim(),
+    subscribe = $("hero-subscribe").checked;
+  const digest = await composeBrief(
+    {
+      edition: "world",
+      hours: 24,
+      top_n: 5,
+      persona: "executive",
+      style: "executive",
+    },
+    true,
+  );
+  if (!digest) return;
+  $("preview-email").value = email;
+  $("preview-subscribe").checked = subscribe;
+  await beginDelivery({
+    kind: "email",
+    email,
+    subscribe,
+    statusId: "world-status",
+    preview: digest,
+  });
+});
+function download(content, type, filename) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = node("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$("copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(state.digest.digest.markdown);
+    status("email-status", "Markdown copied to your clipboard.");
+  } catch {
+    status(
+      "email-status",
+      "Clipboard access was unavailable. Download the brief instead.",
+      true,
+    );
+  }
+});
+$("download").addEventListener("click", () => {
+  download(
+    state.digest.digest.html,
+    "text/html;charset=utf-8",
+    "world-tech-brief.html",
+  );
+  status("email-status", "HTML downloaded.");
+});
+$("download-eml").addEventListener("click", () => {
+  const html = state.digest.digest.html;
+  const encoded = btoa(
+    Array.from(new TextEncoder().encode(html), (byte) =>
+      String.fromCharCode(byte),
+    ).join(""),
+  );
+  const eml = `Subject: Your World Tech Brief\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded.match(/.{1,76}/g).join("\r\n")}\r\n`;
+  download(eml, "message/rfc822", "world-tech-brief.eml");
+  status("email-status", "Email file downloaded. Open it in your email app.");
+});
+for (const mode of ["desktop", "mobile"])
+  $(`preview-${mode}`).addEventListener("click", () => {
+    $("preview").classList.toggle("preview-narrow", mode === "mobile");
+    for (const peer of ["desktop", "mobile"])
+      $(`preview-${peer}`).setAttribute("aria-pressed", String(peer === mode));
+  });
+$("preview-theme").addEventListener("click", () => {
+  const dark = $("preview").classList.toggle("preview-dark");
+  $("preview-theme").setAttribute("aria-pressed", String(dark));
+  $("preview-theme").textContent = dark ? "Light preview" : "Dark preview";
+});
+for (const mode of ["email", "webhook"])
+  $(`delivery-${mode}`).addEventListener("click", () => {
+    state.delivery = mode;
+    $("preview-send-form").hidden = mode !== "email";
+    $("webhook-form").hidden = mode !== "webhook";
+    for (const peer of ["email", "webhook"])
+      $(`delivery-${peer}`).setAttribute("aria-pressed", String(peer === mode));
+  });
+let captchaWidget,
+  captchaToken = "",
+  captchaLoader;
+function mailStep(step) {
+  for (const id of ["request-code", "verify-code", "send-brief"])
+    $(id).hidden = id !== step;
+}
+async function showCaptcha() {
+  if (captchaWidget !== undefined) {
+    window.turnstile.reset(captchaWidget);
+    captchaToken = "";
+    return;
+  }
   captchaLoader ??= new Promise((resolve, reject) => {
-    const script = node('script');
-    const timer = setTimeout(() => {
+    const script = node("script");
+    const fail = () => {
+      clearTimeout(timer);
       delete window.onBriefTurnstileLoad;
       script.remove();
       captchaLoader = undefined;
-      reject(new Error('Bot verification check could not load.'));
-    }, 12000);
-
+      reject(new Error("The bot check could not load. Please try again."));
+    };
+    const timer = setTimeout(fail, 12000);
     window.onBriefTurnstileLoad = () => {
       clearTimeout(timer);
       delete window.onBriefTurnstileLoad;
       resolve();
     };
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onBriefTurnstileLoad';
-    script.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error('Cloudflare check script failed to load.'));
-    };
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onBriefTurnstileLoad";
+    script.onerror = fail;
     document.head.append(script);
   });
-
+  await captchaLoader;
+  if (captchaWidget !== undefined) return;
+  captchaWidget = window.turnstile.render("#mail-captcha", {
+    sitekey: state.mail.site_key,
+    action: "verify_email",
+    callback: (token) => {
+      captchaToken = token;
+    },
+    "expired-callback": () => {
+      captchaToken = "";
+    },
+    "error-callback": () => {
+      captchaToken = "";
+    },
+  });
+}
+async function performDelivery() {
+  const pending = state.pending;
+  if (!pending) throw new Error("Prepare a brief before sending.");
+  const result = await jsonPost(
+    pending.kind === "webhook" ? "/api/deliver/webhook" : "/api/mail/send",
+    pending.kind === "webhook"
+      ? { preview_id: pending.preview.preview_id, url: pending.url }
+      : {
+          preview_id: pending.preview.preview_id,
+          email: pending.email,
+          subscribe: pending.subscribe,
+          timezone,
+        },
+  );
+  const message =
+    result.message ||
+    (pending.kind === "webhook"
+      ? "Your webhook accepted the brief."
+      : "Your brief was accepted for delivery.");
+  const schedule = result.subscribed
+    ? ` Daily delivery is enabled for 8 AM (${timezone}).`
+    : "";
+  status(pending.statusId, message + schedule);
+  status("email-status", message + schedule);
+  if ($("mail-dialog").open) $("mail-dialog").close();
+  state.pending = null;
+  return result;
+}
+async function beginDelivery(pending) {
+  if (state.pending?.sending) return;
+  state.pending = pending;
+  status(pending.statusId, "Checking inbox verification…");
   try {
-    await captchaLoader;
-    if (captchaWidget === undefined && window.turnstile) {
-      captchaWidget = window.turnstile.render('#mail-captcha', {
-        sitekey: state.mailConfig.site_key,
-        action: 'verify_email',
-        callback: (token) => { captchaToken = token; },
-        'expired-callback': () => { captchaToken = ''; },
-        'error-callback': () => { captchaToken = ''; },
-      });
+    state.mail = await request("/api/mail/config");
+    if (!state.mail.enabled || !pending.preview?.preview_id) {
+      throw new Error(
+        "Email verification is currently unavailable. You can copy or download your brief.",
+      );
     }
-  } catch (e) {
-    console.warn('Captcha load issue:', e);
-  }
-}
-
-function mailStep(step) {
-  for (const id of ['request-code', 'verify-code', 'send-brief']) {
-    const el = $(id);
-    if (el) el.hidden = (id !== step);
-  }
-}
-
-async function dispatchBriefToInbox(email, subscribe = false) {
-  if (!state.previewId) {
-    showToast('No preview available. Generating brief first…');
-    await composeBrief({ edition: 'world', hours: 24, top_n: 5 }, true);
-  }
-
-  showToast('Sending brief to your mailbox…');
-  try {
-    state.mailConfig = await request('/api/mail/config');
-    if (!state.mailConfig.enabled) {
-      showToast('Mail delivery is offline. Please copy or download your brief.', true);
+    if (
+      state.mail.verified &&
+      normalizeEmail(state.mail.verified_email) ===
+        normalizeEmail(pending.email)
+    ) {
+      pending.sending = true;
+      status(
+        pending.statusId,
+        pending.kind === "webhook"
+          ? "Posting your brief…"
+          : "Sending your brief…",
+      );
+      await performDelivery();
       return;
     }
-
-    state.pendingSend = { email, subscribe, timezone: state.userTimezone };
-
-    // If session already verified for this exact email
-    if (state.mailConfig.verified && state.mailConfig.verified_email === email) {
-      const res = await jsonPost('/api/mail/send', {
-        preview_id: state.previewId,
-        email,
-        subscribe,
-        timezone: state.userTimezone,
-      });
-      showToast('Delivered to your inbox! Check spam if not visible in 30s');
-      status('world-status', res.message);
-      status('email-status', res.message);
-      return;
-    }
-
-    // Otherwise, initiate public 1-click verification modal
-    $('mail-address').value = email;
-    status('mail-status', '');
-    mailStep('request-code');
-    $('mail-dialog').showModal();
+    mailStep("request-code");
+    $("mail-address").value = pending.email;
+    $("mail-explanation").textContent =
+      pending.kind === "webhook"
+        ? "Verify your email once and we’ll post your prepared brief to your webhook automatically."
+        : "Verify your email once and we’ll send your prepared brief automatically. No account or access key needed.";
+    status("mail-status", "");
+    $("mail-dialog").showModal();
     await showCaptcha();
-  } catch (err) {
-    showToast(err.message, true);
-    status('world-status', err.message, true);
-    status('email-status', err.message, true);
+  } catch (error) {
+    pending.sending = false;
+    status(
+      $("mail-dialog").open ? "mail-status" : pending.statusId,
+      error.message,
+      true,
+    );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Downloads & Exports (.eml, .html, markdown)
-// ---------------------------------------------------------------------------
-function downloadBlob(filename, content, type) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = node('a');
-  a.href = url;
-  a.download = filename;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+$("preview-send-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("send").disabled = true;
+  try {
+    await beginDelivery({
+      kind: "email",
+      email: $("preview-email").value.trim(),
+      subscribe: $("preview-subscribe").checked,
+      statusId: "email-status",
+      preview: state.digest,
+    });
+  } finally {
+    $("send").disabled = false;
+  }
+});
+$("webhook-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const url = $("webhook-url").value.trim();
+  if (!url.startsWith("https://")) {
+    status("email-status", "Use an HTTPS webhook URL.", true);
+    return;
+  }
+  $("webhook-send").disabled = true;
+  try {
+    await beginDelivery({
+      kind: "webhook",
+      email: $("webhook-email").value.trim(),
+      url,
+      statusId: "email-status",
+      preview: state.digest,
+    });
+  } finally {
+    $("webhook-send").disabled = false;
+  }
+});
+$("mail-close").addEventListener("click", () => $("mail-dialog").close());
+$("mail-dialog").addEventListener("close", () => {
+  $("mail-code").value = "";
+  $("owner-key").value = "";
+  if (state.pending && !state.pending.sending) {
+    status(
+      state.pending.statusId,
+      "Your brief is ready. Verify your email when you want to send it.",
+    );
+    state.pending = null;
+  }
+});
+async function submitMail(event, task) {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  status("mail-status", "Working…");
+  try {
+    await task();
+  } catch (error) {
+    if (state.pending) state.pending.sending = false;
+    status("mail-status", error.message, true);
+  } finally {
+    button.disabled = false;
+  }
 }
-
-function buildEml(digest) {
-  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-  const dateStr = new Date().toUTCString();
-  const subject = digest.edition === 'world' ? 'Your Daily World Tech Brief' : 'Your Custom World Tech Brief';
-
-  return `From: "World Tech Brief" <brief@ai-news-to-email-generator.vercel.app>
-To: recipient@example.com
-Subject: ${subject}
-Date: ${dateStr}
-MIME-Version: 1.0
-Content-Type: multipart/alternative; boundary="${boundary}"
-
---${boundary}
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: 7bit
-
-${digest.markdown || ''}
-
---${boundary}
-Content-Type: text/html; charset=utf-8
-Content-Transfer-Encoding: 7bit
-
-${digest.html || ''}
-
---${boundary}--
-`;
-}
-
-// ---------------------------------------------------------------------------
-// Event Wireups & Initialization
-// ---------------------------------------------------------------------------
-function initEvents() {
-  // 1. Timezone detection label
-  const tzLabel = $('timezone-label');
-  if (tzLabel) tzLabel.textContent = `(${state.userTimezone})`;
-
-  // 2. Category Filter Pills
-  const topicsContainer = $('topics');
-  if (topicsContainer) {
-    topicsContainer.replaceChildren();
-    for (const cat of categoryMap) {
-      const btn = node('button', 'topic-chip', cat.label);
-      btn.type = 'button';
-      btn.setAttribute('aria-pressed', String(cat.id === state.topic));
-      btn.addEventListener('click', () => {
-        state.topic = cat.id;
-        state.cursor = null;
-        for (const peer of topicsContainer.children) {
-          peer.setAttribute('aria-pressed', String(peer === btn));
-        }
-        loadNews();
+$("request-code").addEventListener("submit", (event) =>
+  submitMail(event, async () => {
+    if (!captchaToken) throw new Error("Complete the bot check first.");
+    const token = captchaToken;
+    captchaToken = "";
+    try {
+      await jsonPost("/api/mail/challenge", {
+        email: $("mail-address").value.trim(),
+        captcha: token,
       });
-      topicsContainer.append(btn);
+      if (state.pending) state.pending.email = $("mail-address").value.trim();
+      mailStep("verify-code");
+      $("mail-code").focus();
+      status(
+        "mail-status",
+        "Check your inbox for the six-digit verification code.",
+      );
+    } catch (error) {
+      await showCaptcha();
+      throw error;
     }
+  }),
+);
+$("verify-code").addEventListener("submit", (event) =>
+  submitMail(event, async () => {
+    await jsonPost("/api/mail/verify", { code: $("mail-code").value });
+    $("mail-code").value = "";
+    mailStep("send-brief");
+    status("mail-status", "Inbox verified. Sending your prepared brief…");
+    if (state.pending) state.pending.sending = true;
+    await performDelivery();
+  }),
+);
+$("send-brief").addEventListener("submit", (event) =>
+  submitMail(event, async () => {
+    if (state.pending) state.pending.sending = true;
+    await performDelivery();
+  }),
+);
+$("different-email").addEventListener("click", async () => {
+  try {
+    await jsonPost("/api/mail/logout", {});
+    $("mail-code").value = "";
+    mailStep("request-code");
+    await showCaptcha();
+    status("mail-status", "");
+  } catch (error) {
+    status("mail-status", error.message, true);
   }
-
-  // 3. Segmented Time Window Controls (24h, 7d, 30d)
-  const windowControls = $('window-controls');
-  if (windowControls) {
-    for (const btn of windowControls.querySelectorAll('button[data-hours]')) {
-      btn.addEventListener('click', () => {
-        state.hours = Number(btn.dataset.hours);
-        state.cursor = null;
-        for (const peer of windowControls.children) {
-          peer.setAttribute('aria-pressed', String(peer === btn));
-        }
-        loadNews();
-      });
-    }
-  }
-
-  // 4. Region & Publisher Selects
-  const regSelect = $('region');
-  if (regSelect) {
-    regSelect.addEventListener('change', () => {
-      state.region = regSelect.value;
-      state.cursor = null;
-      loadNews();
+});
+$("owner-email-form").addEventListener("submit", (event) =>
+  submitMail(event, async () => {
+    const preview = state.pending?.preview || state.digest;
+    if (!preview) throw new Error("Prepare a brief first.");
+    const result = await request("/api/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${$("owner-key").value}`,
+      },
+      body: JSON.stringify({
+        digest: preview.digest,
+        signature: preview.signature,
+        expires: preview.expires,
+      }),
     });
-  }
-
-  const pubSelect = $('publisher');
-  if (pubSelect) {
-    pubSelect.addEventListener('change', () => {
-      state.publisher = pubSelect.value;
-      state.cursor = null;
-      loadNews();
-    });
-  }
-
-  // 5. Search Bar (Debounced 250ms)
-  let searchTimer;
-  const searchInput = $('search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        state.searchQuery = searchInput.value.trim();
-        state.cursor = null;
-        loadNews();
-      }, 250);
-    });
-  }
-
-  // 6. Refresh & Pagination
-  const refreshBtn = $('refresh');
-  if (refreshBtn) refreshBtn.addEventListener('click', () => { state.cursor = null; loadNews(); });
-
-  const showMoreBtn = $('show-more');
-  if (showMoreBtn) showMoreBtn.addEventListener('click', () => loadNews(true));
-
-  // 7. Source Health Pill & Popover
-  const healthBtn = $('source-health-button');
-  const popover = $('source-popover');
-  const popoverClose = $('source-popover-close');
-  if (healthBtn && popover) {
-    const togglePopover = () => {
-      const willOpen = popover.hidden;
-      popover.hidden = !willOpen;
-      healthBtn.setAttribute('aria-expanded', String(willOpen));
-    };
-    healthBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePopover(); });
-    healthBtn.addEventListener('mouseenter', () => { popover.hidden = false; });
-    popover.addEventListener('mouseleave', () => { popover.hidden = true; });
-    if (popoverClose) popoverClose.addEventListener('click', () => { popover.hidden = true; });
-    document.addEventListener('click', (e) => {
-      if (!healthBtn.contains(e.target) && !popover.contains(e.target)) {
-        popover.hidden = true;
-      }
-    });
-  }
-
-  // 8. Hero Instant 1-Click Send Bar
-  const worldForm = $('world-form');
-  if (worldForm) {
-    worldForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = $('hero-email').value.trim();
-      const subscribe = $('hero-subscribe')?.checked || false;
-      if (!email) return;
-
-      try {
-        await composeBrief({ edition: 'world', hours: 24, top_n: 5 }, true);
-        await dispatchBriefToInbox(email, subscribe);
-      } catch (err) {
-        showToast(err.message, true);
-      }
-    });
-  }
-
-  // 9. Builder Tabs
-  const buildTab = $('build-tab');
-  const prevTab = $('preview-tab');
-  if (buildTab) buildTab.addEventListener('click', () => switchTab('build'));
-  if (prevTab) prevTab.addEventListener('click', () => switchTab('preview'));
-  const emptyBuildBtn = $('empty-build');
-  if (emptyBuildBtn) emptyBuildBtn.addEventListener('click', () => switchTab('build'));
-
-  // 10. Interest Chips
-  renderInterests();
-
-  // 11. Clear Pins
-  const clearPinsBtn = $('clear-pins');
-  if (clearPinsBtn) {
-    clearPinsBtn.addEventListener('click', () => {
-      state.pinned.clear();
-      updatePinnedUI();
-      renderStories();
-    });
-  }
-
-  // 12. Custom Brief Form Submission
-  const digestForm = $('digest-form');
-  if (digestForm) {
-    digestForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const count = Number($('article-count')?.value || 5);
-      const style = $('digest-style')?.value || 'executive';
-      const windowHours = Number($('digest-window')?.value || 24);
-      const source = $('digest-sources')?.value;
-      const customFocus = $('focus')?.value.trim();
-
-      const combinedFocus = [
-        ...Array.from(state.selectedInterests),
-        customFocus,
-      ].filter(Boolean).join('; ') || 'Global technology, AI, engineering, and startups';
-
-      const payload = {
-        edition: 'personal',
-        focus: combinedFocus,
-        hours: windowHours,
-        top_n: count,
-        style,
-        pinned_ids: Array.from(state.pinned.keys()),
-        ...(source && source !== 'all' ? { sources: [source] } : {}),
-      };
-
-      try {
-        await composeBrief(payload, false);
-      } catch (err) {
-        console.error('Generation error:', err);
-      }
-    });
-  }
-
-  // 13. Preview Drawer Send Form
-  const previewSendForm = $('preview-send-form');
-  if (previewSendForm) {
-    previewSendForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = $('preview-email').value.trim();
-      const subscribe = $('preview-subscribe')?.checked || false;
-      if (!email) return;
-      await dispatchBriefToInbox(email, subscribe);
-    });
-  }
-
-  // 14. Preview Export Actions (Copy, HTML, EML)
-  const copyBtn = $('copy');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async () => {
-      if (!state.digest?.digest?.markdown) return;
-      try {
-        await navigator.clipboard.writeText(state.digest.digest.markdown);
-        showToast('Brief Markdown copied to clipboard.');
-      } catch {
-        showToast('Clipboard access was blocked.', true);
-      }
-    });
-  }
-
-  const downloadBtn = $('download');
-  if (downloadBtn) {
-    downloadBtn.addEventListener('click', () => {
-      if (!state.digest?.digest?.html) return;
-      downloadBlob('world-tech-brief.html', state.digest.digest.html, 'text/html;charset=utf-8');
-      showToast('HTML brief downloaded.');
-    });
-  }
-
-  const downloadEmlBtn = $('download-eml');
-  if (downloadEmlBtn) {
-    downloadEmlBtn.addEventListener('click', () => {
-      if (!state.digest?.digest) return;
-      const eml = buildEml(state.digest.digest);
-      downloadBlob('world-tech-brief.eml', eml, 'message/rfc822');
-      showToast('Email .eml file downloaded.');
-    });
-  }
-
-  // 15. Mobile Sheet Toggle
-  const mobBtn = $('mobile-builder');
-  const composer = $('composer');
-  const backdrop = $('sheet-backdrop');
-  const closeComposer = $('close-builder');
-  const navBuilder = $('nav-builder');
-
-  const openSheet = () => {
-    if (composer) composer.classList.add('open');
-    if (backdrop) backdrop.hidden = false;
-    document.body.classList.add('sheet-open');
-  };
-  const closeSheet = () => {
-    if (composer) composer.classList.remove('open');
-    if (backdrop) backdrop.hidden = true;
-    document.body.classList.remove('sheet-open');
-  };
-
-  if (mobBtn) mobBtn.addEventListener('click', openSheet);
-  if (navBuilder) navBuilder.addEventListener('click', openSheet);
-  if (closeComposer) closeComposer.addEventListener('click', closeSheet);
-  if (backdrop) backdrop.addEventListener('click', closeSheet);
-
-  // 16. Verification Dialog Forms
-  const mailClose = $('mail-close');
-  if (mailClose) mailClose.addEventListener('click', () => $('mail-dialog')?.close());
-
-  const reqCodeForm = $('request-code');
-  if (reqCodeForm) {
-    reqCodeForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = reqCodeForm.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      status('mail-status', 'Sending verification code…');
-
-      try {
-        const email = $('mail-address').value.trim();
-        const token = captchaToken || 'turnstile-pass';
-        captchaToken = '';
-        await jsonPost('/api/mail/challenge', { email, captcha: token });
-        mailStep('verify-code');
-        $('mail-code')?.focus();
-        status('mail-status', 'Check your inbox for the 6-digit code.');
-      } catch (err) {
-        status('mail-status', err.message, true);
-        await showCaptcha();
-      } finally {
-        submitBtn.disabled = false;
-      }
-    });
-  }
-
-  const verifyCodeForm = $('verify-code');
-  if (verifyCodeForm) {
-    verifyCodeForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = verifyCodeForm.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      status('mail-status', 'Verifying code…');
-
-      try {
-        const code = $('mail-code').value.trim();
-        await jsonPost('/api/mail/verify', { code });
-        $('mail-code').value = '';
-        $('mail-dialog').close();
-
-        // Auto-send now that inbox is verified
-        if (state.pendingSend) {
-          const { email, subscribe, timezone } = state.pendingSend;
-          const res = await jsonPost('/api/mail/send', {
-            preview_id: state.previewId,
-            email,
-            subscribe,
-            timezone,
-          });
-          showToast('Delivered to your inbox! Check spam if not visible in 30s');
-          status('world-status', res.message);
-          status('email-status', res.message);
-        }
-      } catch (err) {
-        status('mail-status', err.message, true);
-      } finally {
-        submitBtn.disabled = false;
-      }
-    });
-  }
-
-  const diffEmailBtn = $('different-email');
-  if (diffEmailBtn) {
-    diffEmailBtn.addEventListener('click', async () => {
-      try {
-        await jsonPost('/api/mail/logout', {});
-        mailStep('request-code');
-        status('mail-status', '');
-        await showCaptcha();
-      } catch (err) {
-        status('mail-status', err.message, true);
-      }
-    });
-  }
-
-  // 17. Load Sources Catalog
-  request('/api/sources').then(({ sources }) => {
-    state.sources = sources || [];
-    const pubDropdown = $('publisher');
-    const digestSources = $('digest-sources');
-    for (const s of state.sources.filter(s => s.enabled)) {
-      if (pubDropdown) {
-        const opt = node('option', '', s.label);
-        opt.value = s.id;
-        pubDropdown.append(opt);
-      }
-      if (digestSources) {
-        const opt = node('option', '', s.label);
-        opt.value = s.id;
-        digestSources.append(opt);
-      }
-    }
-    renderFreshness(null, state.sources);
-  }).catch(() => {});
-
-  // 18. Check Server Health
-  request('/api/health').then(h => {
-    state.health = h;
-    if (h.ai_configured === false) {
-      const genBtn = $('generate');
-      if (genBtn) genBtn.disabled = true;
-      const note = $('config-note');
-      if (note) note.textContent = 'Add OPENAI_API_KEY to server settings to enable personalized AI synthesis.';
-    }
-  }).catch(() => {});
-
-  // 19. Initial Load
+    state.pending = null;
+    $("owner-key").value = "";
+    $("mail-dialog").close();
+    status(
+      "email-status",
+      result.message || "The brief was accepted for delivery.",
+    );
+  }),
+);
+restoreURL();
+for (const button of $("topics").children)
+  button.setAttribute(
+    "aria-pressed",
+    String(button.dataset.topic === state.topic),
+  );
+renderSourceFilters();
+setTab("build");
+request("/api/sources")
+  .then(({ sources }) => {
+    updateSourceCatalog(sources);
+    const publisher = new URLSearchParams(location.search).get("publisher");
+    if (publisher && sources.some((s) => s.id === publisher))
+      $("publisher").value = publisher;
+    loadNews();
+  })
+  .catch(() => loadNews());
+window.addEventListener("popstate", () => {
+  restoreURL();
+  for (const button of $("topics").children)
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.topic === state.topic),
+    );
+  renderSourceFilters();
   loadNews();
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initEvents);
-} else {
-  initEvents();
-}
+});

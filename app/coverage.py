@@ -2,7 +2,7 @@
 from sqlalchemy import case, func, or_
 
 from app.sources import BY_ID
-from app.sanitation import sanitize_article
+from app.sanitation import sanitize_article, sanitize_story_excerpt
 
 TOPICS = {
     "ai": "AI & LLMs",
@@ -91,7 +91,9 @@ def public_article(article):
     url = article.get("url", "")
     published_at = article.get("published_at", "")
     
-    clean_summary = article.get("cleanSummary") or article.get("description") or article.get("summary") or "Read the original source for details."
+    raw_summary = article.get("cleanSummary") or article.get("description") or article.get("summary") or ""
+    clean_summary = sanitize_story_excerpt(raw_summary, article.get("source", ""), article.get("title", ""),
+                                           channel=publisher) or "Read the original source for details."
     if topic == "security":
         clean_summary = "See the source for affected products, impact, and security mitigation advisories."
     
@@ -125,6 +127,10 @@ def public_article(article):
     return result
 
 
+REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"}}
+
+
 def region_matches(article, region):
-    actual = public_article(article)["region"]
-    return region in ("", "all") or actual == region or (region == "APAC" and actual in ("Asia", "India", "APAC")) or (region == "EU" and actual in ("Europe", "EU"))
+    source = BY_ID.get(article.get("source_id") or article.get("source"))
+    actual = source.region if source else "Global"
+    return region in ("", "all") or actual in REGIONS.get(region, {region})

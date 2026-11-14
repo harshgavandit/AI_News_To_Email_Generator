@@ -27,14 +27,18 @@ CODE_TTL = 600
 SESSION_TTL = 7 * 86400
 
 
+def has_transport():
+    sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL")
+    transactional = sender and (os.getenv("RESEND_API_KEY") or os.getenv("POSTMARK_SERVER_TOKEN"))
+    smtp = os.getenv("SMTP_URL") or (os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASS"))
+    return bool(transactional or smtp or (os.getenv("MY_EMAIL") and os.getenv("APP_PASSWORD")))
+
+
 def ready():
-    has_provider = bool(os.getenv("RESEND_API_KEY")) or bool(os.getenv("SMTP_URL")) or bool(os.getenv("POSTMARK_SERVER_TOKEN")) or all(
-        os.getenv(k) for k in ("MY_EMAIL", "APP_PASSWORD")
-    )
     return (
         os.getenv("PUBLIC_EMAIL_ENABLED") == "1"
         and len(os.getenv("MAIL_SESSION_SECRET", "")) >= 32
-        and has_provider
+        and has_transport()
         and all(os.getenv(key) for key in ("TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "PUBLIC_ORIGIN"))
     )
 
@@ -93,6 +97,13 @@ def address_key(request):
     return digest_key("ip:" + client)
 
 
+def verified_recipient(request: Request):
+    if len(os.getenv("MAIL_SESSION_SECRET", "")) < 32:
+        return None
+    recipient = unseal("session", request.cookies.get(SESSION))
+    return recipient if isinstance(recipient, str) and is_pilot_address(recipient) else None
+
+
 def day():
     return datetime.now(UTC).date().isoformat()
 
@@ -133,6 +144,14 @@ def verify_human(token, request):
 
 
 def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kwargs):
+    try:
+        return send_via_transport(recipient, subject, body, html, key, unsubscribe_url)
+    except (httpx.HTTPError, ValueError):
+        # SDK/HTTP exceptions can include request details and recipient data.
+        raise OSError("Mail transport did not confirm acceptance") from None
+
+
+def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
     # 1. Resend API
     if os.getenv("RESEND_API_KEY"):
         sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or "brief@ai-news-to-email-generator.vercel.app"
@@ -148,10 +167,12 @@ def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kw
             "html": html,
             "headers": email_headers,
         }
+        if not html:
+            payload.pop("html")
         resp = httpx.post(
             "https://api.resend.com/emails",
             json=payload,
-            headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY']}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY']}", "Idempotency-Key": key},
             timeout=15,
         )
         resp.raise_for_status()
@@ -172,6 +193,8 @@ def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kw
             "HtmlBody": html,
             "Headers": postmark_headers,
         }
+        if not html:
+            payload.pop("HtmlBody")
         resp = httpx.post(
             "https://api.postmarkapp.com/email",
             json=payload,
@@ -183,9 +206,19 @@ def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kw
 
     # 3. SMTP URL
     smtp_url = os.getenv("SMTP_URL")
+    if not smtp_url and all(os.getenv(k) for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS")):
+        from urllib.parse import quote
+        host = os.environ["SMTP_HOST"]
+        port = int(os.getenv("SMTP_PORT", "587"))
+        username = quote(os.environ["SMTP_USER"], safe="")
+        password = quote(os.environ["SMTP_PASS"], safe="")
+        scheme = "smtps" if port == 465 else "smtp"
+        smtp_url = f"{scheme}://{username}:{password}@{host}:{port}"
     if smtp_url:
         from urllib.parse import urlparse, unquote
         parsed = urlparse(smtp_url)
+        if parsed.scheme not in {"smtp", "smtps"} or not parsed.hostname:
+            raise ValueError("Invalid SMTP configuration")
         sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else "brief@ai-news-to-email-generator.vercel.app")
         msg = EmailMessage()
         msg["From"] = sender
@@ -249,7 +282,7 @@ class SendBody(StrictBody):
     preview_id: str = Field(pattern=r"^[A-Za-z0-9_-]{24,80}$")
     email: str | None = Field(default=None, max_length=254)
     subscribe: bool = False
-    timezone: str | None = None
+    timezone: str | None = Field(default=None, max_length=64)
 
 
 @router.get("/config")
@@ -337,14 +370,15 @@ def send(body: SendBody, request: Request):
     mailbox = digest_key("mailbox:" + recipient)
     identity = digest_key(f"delivery:{mailbox}:{body.preview_id}")
     ip = address_key(request)
-    hour = str(int(time.time()) // 3600)
     state, accepted = store.reserve_delivery(identity, [
         (f"mail:{mailbox}", day(), 3),
         ("outbound", day(), 60),
         ("digests", day(), 45),
-        (f"mail-ip:{ip}", hour, 5),
-    ])
+    ], windows=[(f"dispatch-ip:{ip}", 3600, 5), (f"mailbox-hour:{mailbox}", 3600, 5)])
     if state == "limited":
+        if accepted is not None:
+            raise HTTPException(429, "Delivery is limited to five requests per hour.",
+                                headers={"Retry-After": str(accepted)})
         raise limited("This inbox or IP address has reached its hourly or daily sending limit. Please wait a bit before requesting another brief.")
     if accepted:
         res = {"status": "accepted", "message": "Your brief was accepted for delivery."}
@@ -356,14 +390,12 @@ def send(body: SendBody, request: Request):
     if state != "new":
         raise HTTPException(409, "This brief already has a send attempt. Check your inbox before requesting another.")
     try:
-        from app.mail_schedule import build_unsubscribe_url
-        unsub_url = build_unsubscribe_url(mailbox) if body.subscribe else None
-        import inspect
-        sig = inspect.signature(send_message)
-        if "unsubscribe_url" in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
-            provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity, unsubscribe_url=unsub_url)
-        else:
-            provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity)
+        message_options = {}
+        if body.subscribe:
+            from app.mail_schedule import build_unsubscribe_url, with_unsubscribe
+            message_options["unsubscribe_url"] = build_unsubscribe_url(mailbox)
+            payload = with_unsubscribe(payload, message_options["unsubscribe_url"])
+        provider_id = send_message(recipient, "Your World Tech Brief", payload["markdown"], payload["html"], identity, **message_options)
     except (OSError, smtplib.SMTPException):
         # Transport acceptance can be ambiguous after a timeout. Keep the reservation.
         raise HTTPException(502, "Delivery could not be confirmed. Check your inbox before trying another brief.") from None

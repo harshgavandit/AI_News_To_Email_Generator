@@ -1,7 +1,8 @@
 """Automated daily morning delivery scheduler for subscribed mailboxes."""
 from datetime import UTC, datetime, timedelta
+from html import escape
 import os
-import secrets
+import smtplib
 import time
 import zoneinfo
 
@@ -40,6 +41,13 @@ def build_unsubscribe_url(mailbox: str) -> str:
     return f"{origin}/api/mail/unsubscribe/{token}"
 
 
+def with_unsubscribe(brief, url):
+    link = f'<p><a href="{escape(url, quote=True)}">Unsubscribe from morning briefs</a></p>'
+    html = brief["html"].replace("</body>", f"{link}</body>")
+    return dict(brief, html=html if html != brief["html"] else html + link,
+                markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
+
+
 def run_due_subscriptions(generate_fn):
     """Run due morning briefs for active subscriptions with atomic claiming and retry safety."""
     store = get_store()
@@ -48,13 +56,16 @@ def run_due_subscriptions(generate_fn):
 
     now = time.time()
     due = store.due_subscriptions(now)
+    if not due:
+        return {"sent": 0, "unconfirmed": 0}
+    brief = generate_fn()
     sent = 0
     unconfirmed = 0
 
     for sub in due:
         mailbox = sub["mailbox"]
         # Claim atomically so concurrent workers do not double-send
-        if not store.claim_subscription(mailbox, now, lease_time=180):
+        if not public_mail.is_pilot_address(sub["email"]) or not store.claim_subscription(mailbox, now, lease_time=180):
             continue
 
         email = sub["email"]
@@ -62,22 +73,30 @@ def run_due_subscriptions(generate_fn):
         next_run = next_morning(tz_str, datetime.now(UTC))
         unsub_url = build_unsubscribe_url(mailbox)
 
+        ident = public_mail.digest_key(f"daily:{mailbox}:{sub['next_run']}")
+        state, _ = store.reserve_delivery(ident, [(f"mail:{mailbox}", public_mail.day(), 3),
+                                                   ("outbound", public_mail.day(), 60), ("digests", public_mail.day(), 45)])
+        if state != "new":
+            store.reschedule_subscription(mailbox, next_run)
+            continue
+        # Advance before contacting the provider so a timeout is never replayed.
+        store.reschedule_subscription(mailbox, next_run)
+        if not store.subscription(mailbox)["enabled"]:
+            continue
+        message = with_unsubscribe(brief, unsub_url)
         try:
-            brief = generate_fn()
-            ident = secrets.token_urlsafe(24)
-            public_mail.send_message(
+            accepted = public_mail.send_message(
                 email,
                 "Your Daily World Tech Brief",
-                brief["markdown"],
-                brief["html"],
+                message["markdown"],
+                message["html"],
                 ident,
                 unsubscribe_url=unsub_url,
             )
-            store.reschedule_subscription(mailbox, next_run)
+            store.record_delivery(ident, accepted)
             sent += 1
-        except (OSError, Exception) as exc:
+        except (OSError, smtplib.SMTPException):
             # Ambiguous transport error or failure: prevent duplicate by rescheduling to next morning
             unconfirmed += 1
-            store.reschedule_subscription(mailbox, next_run)
 
     return {"sent": sent, "unconfirmed": unconfirmed}

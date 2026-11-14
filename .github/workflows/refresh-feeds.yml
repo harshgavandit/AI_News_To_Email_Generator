@@ -34,3 +34,11 @@ jobs:
           if [[ $(jq -r '.status' <<< "$ready") == 'degraded' ]]; then
             echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
           fi
+      - name: Process opted-in morning briefs
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail --max-time 105 \
+            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/morning' \
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET" | jq -e \
+            'select(.status == "disabled" or (.sent >= 0 and .unconfirmed == 0))'

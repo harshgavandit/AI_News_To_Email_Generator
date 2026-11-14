@@ -1,4 +1,5 @@
 """Fetch only reviewed RSS/Atom URLs, with bounded downloads and per-feed snapshots."""
+import asyncio
 import hashlib
 import threading
 import time
@@ -10,7 +11,7 @@ import feedparser
 import httpx
 
 from app.sources import DEFAULT_SOURCES, Source
-from app.sanitation import sanitize_text
+from app.sanitation import sanitize_story_excerpt, sanitize_text
 
 # Compatibility for the original read_feed helper and tests.
 ALLOWED_DOMAINS = {s.group: set(s.hosts) for s in DEFAULT_SOURCES}
@@ -35,25 +36,29 @@ def plain_text(value):
 
 
 def fetch_bytes(url):
-    # Pin feed host to the reviewed registry. Do not follow redirects to other destinations.
-    deadline = time.monotonic() + 12
+    return asyncio.run(fetch_with_deadline(url))
+
+
+async def fetch_with_deadline(url):
+    # The deadline covers DNS, connection, redirects and the response body.
     headers = {"User-Agent": "Mozilla/5.0 (compatible; AIBrief/1.0; +https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
-    with httpx.Client(timeout=httpx.Timeout(8, connect=4), follow_redirects=False) as client:
-        for _ in range(3):
-            with client.stream("GET", url, headers=headers) as response:
-                if response.is_redirect:
-                    target = str(response.next_request.url)
-                    if urlsplit(target).netloc != urlsplit(url).netloc or urlsplit(target).scheme != "https":
-                        raise ValueError("Unexpected feed redirect")
-                    url = target
-                    continue
-                response.raise_for_status()
-                body = bytearray()
-                for chunk in response.iter_bytes(65536):
-                    body.extend(chunk)
-                    if len(body) > MAX_BYTES or time.monotonic() > deadline:
-                        raise ValueError("Feed download limit exceeded")
-                return bytes(body)
+    async with asyncio.timeout(8):
+        async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=4), follow_redirects=False) as client:
+            for _ in range(3):
+                async with client.stream("GET", url, headers=headers) as response:
+                    if response.is_redirect:
+                        target = str(response.next_request.url)
+                        if urlsplit(target).netloc != urlsplit(url).netloc or urlsplit(target).scheme != "https":
+                            raise ValueError("Unexpected feed redirect")
+                        url = target
+                        continue
+                    response.raise_for_status()
+                    body = bytearray()
+                    async for chunk in response.aiter_bytes(65536):
+                        body.extend(chunk)
+                        if len(body) > MAX_BYTES:
+                            raise ValueError("Feed download limit exceeded")
+                    return bytes(body)
     raise ValueError("Too many feed redirects")
 
 
@@ -95,7 +100,8 @@ def read_feed(task):
                 if not title:
                     continue
                 media = entry.get("media_description") or ""
-                desc = plain_text(media or entry.get("summary") or entry.get("description") or "")
+                desc = sanitize_story_excerpt(media or entry.get("summary") or entry.get("description") or "",
+                                              s.group, title, channel=s.label)
                 tags = entry.get("tags") or [{}]
                 articles[url] = {
                     "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,

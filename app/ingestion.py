@@ -8,14 +8,19 @@ from app.sources import DEFAULT_SOURCES
 FRESH_FOR = timedelta(minutes=45)
 
 
-def refresh_sources(store, only=None):
+def refresh_sources(store, only=None, *, failed_only=False):
     state = store.source_state()
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
-              and state.get(s.id, {}).get("enabled", s.enabled)]
+              and state.get(s.id, {}).get("enabled", s.enabled)
+              and (not failed_only or state.get(s.id, {}).get("available") is False)]
     with ThreadPoolExecutor(max_workers=10) as pool:
         futures = {pool.submit(read_feed, source): source for source in active}
         for future in as_completed(futures):
-            items, status = future.result()
+            try:
+                items, status = future.result()
+            except Exception:
+                # A malformed feed must not stop the other publishers from updating.
+                items, status = [], {"available": False, "error": "parser_failed"}
             store.ingest(futures[future].id, items, status["available"], status.get("error"))
     store.prune()
     return source_catalog(store)

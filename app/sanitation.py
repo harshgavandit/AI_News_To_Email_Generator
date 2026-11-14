@@ -13,7 +13,7 @@ PROMO_PATTERNS = [
     r"sponsor(?:ed)?\s*:",
     r"this (?:video|episode|post|newsletter) is sponsored",
     r"use (?:my |the )?(?:code|coupon|link)",
-    r"apply for a pass",
+    r"apply for an? (?:[\w-]+ )?pass",
     r"get \d+% off",
     r"affiliate links?",
     r"follow (?:me|us)",
@@ -23,7 +23,9 @@ PROMO_PATTERNS = [
     r"connect with me",
     r"my socials",
     r"social links",
-    r"(?:twitter|x\.com|instagram|discord|spotify|tiktok|linkedin|github|patreon)\.com/[\w./-]+",
+    r"(?:twitter|x|instagram|discord|spotify|tiktok|linkedin|patreon)\.com/[\w./-]+",
+    r"(?:^|\s)(?:x|twitter|instagram|discord|spotify|linkedin|links)\s*:",
+    r"media\s*/\s*sponsorship inquiries|join the frontier|join my newsletter",
     r"discord\.gg/[\w./-]+",
     r"bit\.ly/[\w./-]+",
     r"linktr\.ee/[\w./-]+",
@@ -38,6 +40,8 @@ PROMO_PATTERNS = [
 ]
 
 PROMO_RE = re.compile(r"(?:" + "|".join(PROMO_PATTERNS) + r")", re.I)
+SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
+DIRECTIONAL = "👇👉🔗✅👆➡️⬇️🏼🏻🏽🏾🏿 \t"
 
 
 def sanitize_text(value, limit=4000):
@@ -54,29 +58,31 @@ def sanitize_text(value, limit=4000):
     kept = []
     # Split text into lines or sentences
     for line in re.split(r"[\r\n]+", text):
-        line = line.strip()
+        line = line.strip(DIRECTIONAL)
         if not line:
             continue
-        if PROMO_RE.search(line):
-            continue
-        # Remove timestamps, hashtags, URLs, and handles
-        line = TIMESTAMP.sub("", line)
-        line = HASHTAG.sub("", line)
-        line = URL.sub("", line)
-        line = re.sub(r"(?<!\w)@[\w.-]+", "", line)
-        line = " ".join(line.split()).strip(" |•–—*[]():;\"'")
-        if line and re.search(r"\w", line):
-            # Check sentence level within line
-            sentences = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", line)
-            for sentence in sentences:
-                sentence = sentence.strip(" |•–—*[]():;\"'")
-                if not sentence or PROMO_RE.search(sentence):
-                    continue
-                if len(sentence) > 3 and re.search(r"[a-zA-Z]", sentence):
-                    kept.append(sentence)
+        for sentence in SENTENCES.split(line):
+            if PROMO_RE.search(sentence):
+                continue
+            sentence = TIMESTAMP.sub("", sentence)
+            sentence = HASHTAG.sub("", URL.sub("", sentence))
+            sentence = re.sub(r"(?<!\w)@[\w.-]+", "", sentence)
+            sentence = " ".join(sentence.split()).strip(DIRECTIONAL + "|•–—*[]():;\"'")
+            if any(char.isalpha() for char in sentence):
+                kept.append(sentence)
 
     cleaned = " ".join(kept)[:limit].strip()
     return cleaned
+
+
+def sanitize_story_excerpt(raw_text: str, source: str, title: str = "", *, channel: str = "") -> str:
+    excerpt = " ".join(SENTENCES.split(sanitize_text(raw_text))[:2])
+    if not excerpt and source == "youtube" and title:
+        excerpt = f"Video by {channel or 'a featured creator'} covering {sanitize_text(title, 180)}."
+    if len(excerpt) > 220:
+        head = excerpt[:219]
+        return (head.rsplit(" ", 1)[0] if " " in head else head).rstrip(" ,:;–—") + "…"
+    return excerpt
 
 
 def sanitize_article(article):

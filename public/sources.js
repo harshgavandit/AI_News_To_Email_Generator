@@ -1,36 +1,51 @@
-'use strict';
-const element = id => document.getElementById(id);
-const msg = message => {element('source-status').textContent = message;};
-let key = '';
-async function api(url, method = 'GET', body) {
-  const headers = method === 'GET' ? {} : {'Authorization':'Bearer '+key,'Content-Type':'application/json'};
-  const response = await fetch(url,{method,headers,body:body ? JSON.stringify(body) : undefined});
-  const data = await response.json();
-  if(!response.ok) throw new Error(data.detail || 'The request could not be completed.');
-  return data;
-}
+"use strict";
+const element = (id) => document.getElementById(id);
+const msg = (message) => {
+  element("source-status").textContent = message;
+};
 async function render() {
-  const {sources, topics} = await api('/api/sources');
-  const list = element('source-rows');
+  const response = await fetch("/api/sources");
+  if (!response.ok)
+    throw new Error("Sources could not be loaded. Please try again.");
+  const { sources, topics } = await response.json();
+  const list = element("source-rows");
   list.replaceChildren();
-  for (const s of sources) {
-    const row = document.createElement('article'); row.className = 'source-row';
-    const name = document.createElement('a'); name.href = s.feed_url; name.textContent = s.label; name.target = '_blank'; name.rel = 'noopener noreferrer';
-    const info = document.createElement('span');
-    const type = s.coverage === 'status' ? 'Official status' : s.coverage === 'reporting' ? 'Reporting' : 'Publisher update';
-    const health = !s.enabled ? 'Paused' : s.available === null ? 'Not checked yet' : s.available ? 'Available' : 'Last check failed';
-    info.textContent = [type, s.region, topics[s.topic], health].join(' · ');
-    if(s.last_success) info.textContent += ' · Last fetched '+new Date(s.last_success).toLocaleString();
-    row.append(name,info);
-    if(key) {
-      const button = document.createElement('button'); button.type='button'; button.className='button secondary'; button.textContent=s.enabled?'Pause':'Enable';
-      button.addEventListener('click',async()=>{button.disabled=true;try {await api('/api/admin/sources/'+encodeURIComponent(s.id),'PATCH',{enabled:!s.enabled});await render();} catch(e){msg(e.message);} finally{button.disabled=false;}});
-      row.append(button);
-    }
+  for (const source of sources) {
+    const row = document.createElement("article");
+    row.className = "source-row";
+    const name = document.createElement("a");
+    const url = new URL(source.feed_url);
+    if (["https:", "http:"].includes(url.protocol)) name.href = url.href;
+    name.textContent = source.label;
+    name.target = "_blank";
+    name.rel = "noopener noreferrer";
+    const info = document.createElement("span");
+    const type =
+      source.coverage === "status"
+        ? "Official status"
+        : source.coverage === "reporting"
+          ? "Reporting"
+          : "Publisher update";
+    const health = !source.enabled
+      ? "Paused"
+      : source.available === null
+        ? "Not checked yet"
+        : source.available
+          ? "Available"
+          : "Last check failed";
+    info.textContent = [type, source.region, topics[source.topic], health]
+      .filter(Boolean)
+      .join(" · ");
+    if (source.checked_at)
+      info.textContent +=
+        " · Checked " + new Date(source.checked_at).toLocaleString();
+    if (source.last_success)
+      info.textContent +=
+        " · Last successful fetch " +
+        new Date(source.last_success).toLocaleString();
+    row.append(name, info);
     list.append(row);
   }
-  msg(sources.length+' sources');
+  msg(sources.length + " sources");
 }
-element('source-admin').addEventListener('submit',async e=>{e.preventDefault();key=element('source-key').value;element('source-key').value='';try{await api('/api/admin/sources','POST');element('source-refresh').hidden=false;await render();}catch(err){key='';element('source-refresh').hidden=true;msg(err.message);}});
-element('source-refresh').addEventListener('click',async()=>{element('source-refresh').disabled=true;msg('Checking feeds…');try{await api('/api/admin/refresh','POST');await render();}catch(e){msg(e.message);}finally{element('source-refresh').disabled=false;}});
-render().catch(e=>msg(e.message));
+render().catch((error) => msg(error.message));

@@ -14,7 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from app.coverage import topic_expression
+from app.coverage import REGIONS, topic_expression
+from app.sources import BY_ID
 
 schema = MetaData()
 articles = Table("brief_articles", schema,
@@ -107,22 +108,35 @@ class Store:
         if query:
             q = query.strip().lower()
             stmt = stmt.where(or_(func.lower(articles.c.title).contains(q, autoescape=True),
-                                  func.lower(articles.c.description).contains(q, autoescape=True)))
+                                  func.lower(articles.c.description).contains(q, autoescape=True),
+                                  func.lower(articles.c.publisher).contains(q, autoescape=True)))
         return stmt
 
-    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all"):
-        stmt = self.query(hours, source, query, kind, publisher)
+    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region=""):
+        base = self.query(hours, query=query, kind=kind, publisher=publisher)
         if topic != "all":
-            stmt = stmt.where(topic_expression(articles.c) == topic)
-        fingerprint = hashlib.sha256(json.dumps([hours, source, query, kind, publisher, topic]).encode()).hexdigest()[:16]
+            base = base.where(topic_expression(articles.c) == topic)
+        if region:
+            base = base.where(articles.c.source_id.in_([s.id for s in BY_ID.values() if s.region in REGIONS[region]]))
+        stmt = base if source == "all" else base.where(or_(articles.c.source == source, articles.c.source_id == source))
+        fingerprint = hashlib.sha256(json.dumps([hours, source, query, kind, publisher, topic, region]).encode()).hexdigest()[:16]
         with self.engine.connect() as conn:
-            total = conn.scalar(select(func.count()).select_from(stmt.subquery()))
+            grouped = base.subquery()
+            counts = {group: count for group, count in conn.execute(
+                select(grouped.c.source, func.count()).group_by(grouped.c.source))}
+            total = sum(counts.values()) if source == "all" else conn.scalar(select(func.count()).select_from(stmt.subquery()))
             if cursor:
                 published, ident = decode_cursor(cursor, fingerprint)
                 stmt = stmt.where(or_(articles.c.published_at < published,
                                      and_(articles.c.published_at == published, articles.c.id < ident)))
             rows = [dict(r) for r in conn.execute(stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc()).limit(limit + 1)).mappings()]
-        return page_result(rows, total, limit, fingerprint)
+        return dict(page_result(rows, total, limit, fingerprint), source_counts={**counts, "all": sum(counts.values())})
+
+    def pinned_articles(self, ids):
+        if not ids:
+            return []
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
     def world_candidates(self, hours, source_ids):
         # Cap each topic independently so a burst of posts cannot crowd out the others.
@@ -162,6 +176,29 @@ class Store:
             return True
         except QuotaReached:
             return False
+
+    def _admit_windows(self, conn, policies):
+        now = time.time()
+        for scope, window, maximum in sorted(policies):
+            scope = f"sliding:{scope}"
+            # An upsert serializes requests for this scope before counting recent events.
+            lock = self.insert(limits).values(scope=scope, bucket="lock", used=0, touched=now)
+            conn.execute(lock.on_conflict_do_update(
+                index_elements=[limits.c.scope, limits.c.bucket], set_={"touched": now}))
+            events = and_(limits.c.scope == scope, limits.c.bucket != "lock")
+            conn.execute(delete(limits).where(events, limits.c.touched <= now - window))
+            count, first = conn.execute(select(func.count(), func.min(limits.c.touched)).where(events)).one()
+            if count >= maximum:
+                raise QuotaReached(max(1, int(first + window - now) + 1))
+            conn.execute(limits.insert().values(scope=scope, bucket=os.urandom(12).hex(), used=1, touched=now))
+
+    def admit_windows(self, policies):
+        try:
+            with self.engine.begin() as conn:
+                self._admit_windows(conn, policies)
+        except QuotaReached as exc:
+            return exc.args[0]
+        return None
 
     def claim_refresh(self, *, scheduled=False):
         """Claim one refresh across instances for longer than the function timeout."""
@@ -216,19 +253,22 @@ class Store:
             payload = conn.scalar(select(previews.c.payload).where(previews.c.id == ident, previews.c.expires > time.time()))
         return json.loads(payload) if payload else None
 
-    def reserve_delivery(self, ident, policies):
+    def reserve_delivery(self, ident, policies, *, windows=()):
         """Atomically reserve recipient quota once for a preview and inbox."""
         try:
             with self.engine.begin() as conn:
                 stmt = self.insert(deliveries).values(id=ident, created=time.time())
                 if conn.scalar(stmt.on_conflict_do_nothing(index_elements=[deliveries.c.id]).returning(deliveries.c.id)) is not None:
+                    self._admit_windows(conn, windows)
                     self._admit(conn, policies)
                     return "new", None
                 row = conn.execute(select(deliveries).where(deliveries.c.id == ident)).one()
                 if row.created < time.time() - 3600:
                     return "expired", None
                 return "retry", row.provider_id
-        except QuotaReached:
+        except QuotaReached as exc:
+            if exc.args:
+                return "limited", exc.args[0]
             return "limited", None
 
     def record_delivery(self, ident, provider_id):
@@ -262,7 +302,7 @@ class Store:
                     "timezone": timezone,
                     "next_run": next_run,
                     "enabled": True,
-                    "claimed": 0.0,
+                    "claimed": subscriptions.c.claimed,
                 }
             ))
 
@@ -277,7 +317,7 @@ class Store:
                 subscriptions.c.next_run <= now,
                 subscriptions.c.claimed <= now,
             )
-            return [dict(row._mapping) for row in conn.execute(stmt)]
+            return [dict(row._mapping) for row in conn.execute(stmt.order_by(subscriptions.c.next_run).limit(3))]
 
     def claim_subscription(self, mailbox, now, lease_time=180):
         with self.engine.begin() as conn:

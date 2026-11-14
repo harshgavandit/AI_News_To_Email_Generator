@@ -113,8 +113,10 @@ def test_generated_digest_is_cached_and_signed(client, article, digest, monkeypa
     assert first.json()["signature"] == server.signature(digest, first.json()["expires"])
     assert client.post("/api/digest", json={}).status_code == 200
     assert build.call_count == 1
-    assert client.post("/api/digest", json={}).status_code == 200
-    assert client.post("/api/digest", json={}).status_code == 429
+    for _ in range(8):
+        assert client.post("/api/digest", json={}).status_code == 200
+    blocked = client.post("/api/digest", json={})
+    assert blocked.status_code == 429 and blocked.headers["Retry-After"].isdigit()
 
 
 def test_empty_feed_does_not_call_model(client, monkeypatch):
