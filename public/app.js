@@ -604,21 +604,38 @@ function renderDigest() {
   }
   for (const [index, a] of digest.articles.entries()) {
     const item = node("section", "digest-item");
+    const citation = node("div", "digest-meta");
+    citation.append(
+      node("span", "", `${String(index + 1).padStart(2, "0")} / `),
+      externalLink(a.sourceUrl || a.url, `${a.publisher || a.sourceName || a.article_type || "Source"} ↗`),
+    );
     item.append(
-      node(
-        "div",
-        "digest-meta",
-        `${String(index + 1).padStart(2, "0")} / ${a.publisher || a.sourceName || a.article_type || "Original source"}`,
-      ),
+      citation,
       node("h3", "", a.title),
       node("p", "", a.cleanSummary || a.summary || ""),
     );
     if (a.whyItMatters || a.reasoning)
       item.append(
-        node("p", "reason", `Why it matters: ${a.whyItMatters || a.reasoning}`),
+        node("p", "reason", `${digest.edition === "world" ? "Why it matters" : "Why this matters to you"}: ${a.reasoning || a.whyItMatters}`),
       );
+    if (a.keyTakeaway) {
+      const takeaway = node("p", "reason");
+      takeaway.append(node("strong", "", "Key takeaway. "), document.createTextNode(a.keyTakeaway));
+      item.append(takeaway);
+    }
     item.append(externalLink(a.sourceUrl || a.url, "Read original source ↗"));
     $("preview").append(item);
+  }
+  if (digest.quick_hits?.length) {
+    const section = node("section", "digest-item");
+    const links = node("ul", "quick-hits");
+    for (const hit of digest.quick_hits) {
+      const row = node("li");
+      row.append(externalLink(hit.url, hit.title), document.createTextNode(` · ${hit.publisher}`));
+      links.append(row);
+    }
+    section.append(node("h3", "", "Quick hits"), links);
+    $("preview").append(section);
   }
   setTab("preview");
   status("email-status", "");
@@ -636,8 +653,8 @@ function generationStage(stage) {
     "digest-status",
     [
       "",
-      "Summarizing source excerpts…",
-      "Curating your brief…",
+      "Filtering and deduplicating stories…",
+      "Ranking stories for your persona and interests…",
       "Formatting the preview…",
     ][stage] || "Preparing your brief…",
   );
