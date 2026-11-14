@@ -8,8 +8,8 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 
 from sqlalchemy import (
-    Boolean, Column, Float, Integer, MetaData, String, Table, Text,
-    and_, create_engine, delete, func, or_, select, update,
+    Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
+    and_, bindparam, create_engine, delete, func, or_, select, update,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -47,6 +47,15 @@ subscriptions = Table("brief_subscriptions", schema,
     Column("next_run", Float, nullable=False, index=True),
     Column("enabled", Boolean, nullable=False, default=True),
     Column("claimed", Float, nullable=False, default=0.0))
+mail_batches = Table("brief_mail_batches", schema,
+    Column("id", String(64), primary_key=True),
+    Column("created", Float, nullable=False), Column("retry_at", Float, nullable=False),
+    Column("state", String(24), nullable=False), Column("attempts", Integer, nullable=False),
+    Column("size", Integer, nullable=False), Column("message", Text), Column("recipients", Text))
+Index("brief_mail_batches_due", mail_batches.c.state, mail_batches.c.retry_at)
+mail_suppressions = Table("brief_mail_suppressions", schema, Column("mailbox", String(64), primary_key=True))
+mail_events = Table("brief_mail_events", schema, Column("id", String(64), primary_key=True),
+    Column("kind", String(32), nullable=False), Column("received_at", Float, nullable=False, index=True))
 
 
 class QuotaReached(Exception):
@@ -161,13 +170,107 @@ class Store:
             return [dict(r) for r in recent]
 
     def _admit(self, conn, policies):
-        for scope, bucket, ceiling in sorted(policies):
+        for scope, bucket, ceiling in sorted(policies, key=lambda policy: (policy[0] not in {"digests", "outbound"}, policy)):
             stmt = self.insert(limits).values(scope=scope, bucket=bucket, used=1, touched=time.time())
             admitted = conn.scalar(stmt.on_conflict_do_update(index_elements=[limits.c.scope, limits.c.bucket],
                 set_={"used": limits.c.used + 1, "touched": stmt.excluded.touched}, where=limits.c.used < ceiling)
                 .returning(limits.c.used))
             if admitted is None:
                 raise QuotaReached
+
+    def enqueue_morning_batch(self, ident, now, day, capacity, size, make_message):
+        """Advance schedules, reserve quotas, and save the immutable payload together."""
+        candidates = select(subscriptions).where(
+            subscriptions.c.enabled.is_(True), subscriptions.c.next_run <= now,
+            subscriptions.c.claimed <= now,
+            ~subscriptions.c.mailbox.in_(select(mail_suppressions.c.mailbox)),
+        ).order_by(subscriptions.c.next_run, subscriptions.c.mailbox).limit(size)
+        if self.engine.dialect.name == "postgresql":
+            candidates = candidates.with_for_update(skip_locked=True)
+        recipients, messages = [], []
+        with self.engine.begin() as conn:
+            rows = conn.execute(candidates).mappings().all()
+            pending = [(row["mailbox"], *make_message(row)) for row in rows]
+            pending = [item for item in pending if item[1] is not None]
+            if not pending:
+                return 0
+            remaining = size
+            for scope, bucket, ceiling in capacity.policies(day, "digests")[::-1]:
+                stmt = self.insert(limits).values(scope=scope, bucket=bucket, used=0, touched=now)
+                used = conn.scalar(stmt.on_conflict_do_update(
+                    index_elements=[limits.c.scope, limits.c.bucket], set_={"touched": now}
+                ).returning(limits.c.used))
+                remaining = min(remaining, ceiling - used)
+            if remaining <= 0:
+                return 0
+            pending = pending[:remaining]
+            scopes = [f"mail:{mailbox}" for mailbox, _, _ in pending]
+            stmt = self.insert(limits).values([
+                {"scope": scope, "bucket": day, "used": 1, "touched": now} for scope in sorted(scopes)])
+            eligible = set(conn.scalars(stmt.on_conflict_do_update(
+                index_elements=[limits.c.scope, limits.c.bucket],
+                set_={"used": limits.c.used + 1, "touched": now}, where=limits.c.used < 3
+            ).returning(limits.c.scope)))
+            advance = update(subscriptions).where(subscriptions.c.mailbox == bindparam("recipient_key")).values(
+                next_run=bindparam("next_delivery"), claimed=0)
+            conn.execute(advance, [{"recipient_key": mailbox, "next_delivery": next_run}
+                                   for mailbox, _, next_run in pending])
+            for mailbox, message, _ in pending:
+                if f"mail:{mailbox}" in eligible:
+                    recipients.append(mailbox)
+                    messages.append(message)
+            if messages:
+                conn.execute(update(limits).where(limits.c.scope.in_(["digests", "outbound"]), limits.c.bucket == day)
+                             .values(used=limits.c.used + len(messages)))
+                conn.execute(mail_batches.insert().values(id=ident, created=now, retry_at=now, state="pending",
+                    attempts=0, size=len(messages), message=json.dumps(messages), recipients=json.dumps(recipients)))
+        return len(messages)
+
+    def pending_mail_batch(self):
+        with self.engine.connect() as conn:
+            row = conn.execute(select(mail_batches).where(mail_batches.c.state == "pending")
+                               .order_by(mail_batches.c.created, mail_batches.c.id).limit(1)).mappings().first()
+            return dict(row) if row else None
+
+    def active_batch_mailboxes(self, mailboxes):
+        with self.engine.connect() as conn:
+            return set(conn.scalars(select(subscriptions.c.mailbox).where(
+                subscriptions.c.mailbox.in_(mailboxes), subscriptions.c.enabled.is_(True),
+                ~subscriptions.c.mailbox.in_(select(mail_suppressions.c.mailbox)))))
+
+    def has_due_subscription(self, now):
+        with self.engine.connect() as conn:
+            return conn.scalar(select(subscriptions.c.mailbox).where(subscriptions.c.enabled.is_(True),
+                subscriptions.c.next_run <= now, subscriptions.c.claimed <= now).limit(1)) is not None
+
+    def replace_unattempted_batch(self, ident, messages, mailboxes):
+        with self.engine.begin() as conn:
+            conn.execute(update(mail_batches).where(mail_batches.c.id == ident, mail_batches.c.attempts == 0)
+                         .values(message=json.dumps(messages), recipients=json.dumps(mailboxes), size=len(messages)))
+
+    def update_mail_batch(self, ident, state, attempts, retry_at, *, size=None):
+        values = dict(state=state, attempts=attempts, retry_at=retry_at)
+        if size is not None:
+            values["size"] = size
+        if state != "pending":
+            values.update(message=None, recipients=None)
+        with self.engine.begin() as conn:
+            conn.execute(update(mail_batches).where(mail_batches.c.id == ident).values(**values))
+
+    def mail_backlog(self, now):
+        with self.engine.connect() as conn:
+            due, oldest = conn.execute(select(func.count(), func.min(subscriptions.c.next_run)).where(
+                subscriptions.c.enabled.is_(True), subscriptions.c.next_run <= now)).one()
+            totals = dict((state, size) for state, size in conn.execute(
+                select(mail_batches.c.state, func.sum(mail_batches.c.size)).group_by(mail_batches.c.state)
+                .where(mail_batches.c.created >= now - 86400)))
+            outcomes = dict((kind, count) for kind, count in conn.execute(select(mail_events.c.kind, func.count())
+                .where(mail_events.c.received_at >= now - 86400).group_by(mail_events.c.kind)))
+            queued, first_queued = conn.execute(select(func.sum(mail_batches.c.size), func.min(mail_batches.c.created))
+                .where(mail_batches.c.state == "pending")).one()
+            return {"due": due, "oldest_due_seconds": max(0, round(now - oldest)) if oldest else 0,
+                    "queued": queued or 0, "oldest_queued_seconds": max(0, round(now - first_queued)) if first_queued else 0,
+                    "batches_24h": totals, "provider_events_24h": outcomes}
 
     def admit(self, policies):
         try:
@@ -200,13 +303,13 @@ class Store:
             return exc.args[0]
         return None
 
-    def claim_refresh(self, *, scheduled=False):
+    def claim_refresh(self, *, scheduled=False, scope="feed-refresh-lease"):
         """Claim one refresh across instances for longer than the function timeout."""
         now = time.time()
         expires = now + 180
-        active = and_(limits.c.scope == "feed-refresh-lease", limits.c.bucket == "active")
+        active = and_(limits.c.scope == scope, limits.c.bucket == "active")
         with self.engine.begin() as conn:
-            claim = self.insert(limits).values(scope="feed-refresh-lease", bucket="active", used=1, touched=expires)
+            claim = self.insert(limits).values(scope=scope, bucket="active", used=1, touched=expires)
             acquired = conn.scalar(claim.on_conflict_do_update(
                 index_elements=[limits.c.scope, limits.c.bucket],
                 set_={"touched": claim.excluded.touched}, where=limits.c.touched <= now,
@@ -215,19 +318,19 @@ class Store:
                 return None
             if scheduled:
                 cooldown = conn.scalar(select(limits.c.touched).where(
-                    limits.c.scope == "feed-refresh-lease", limits.c.bucket == "cooldown"))
+                    limits.c.scope == scope, limits.c.bucket == "cooldown"))
                 if cooldown is not None and cooldown > now:
                     conn.execute(delete(limits).where(active))
                     return None
             return acquired
 
-    def finish_refresh(self, lease, *, cooldown=0):
+    def finish_refresh(self, lease, *, cooldown=0, scope="feed-refresh-lease"):
         with self.engine.begin() as conn:
             released = conn.scalar(delete(limits).where(
-                limits.c.scope == "feed-refresh-lease", limits.c.bucket == "active", limits.c.touched == lease,
+                limits.c.scope == scope, limits.c.bucket == "active", limits.c.touched == lease,
             ).returning(limits.c.scope))
             if released is not None and cooldown:
-                stmt = self.insert(limits).values(scope="feed-refresh-lease", bucket="cooldown", used=1,
+                stmt = self.insert(limits).values(scope=scope, bucket="cooldown", used=1,
                                                   touched=time.time() + cooldown)
                 conn.execute(stmt.on_conflict_do_update(index_elements=[limits.c.scope, limits.c.bucket],
                                                        set_={"touched": stmt.excluded.touched}))
@@ -319,6 +422,20 @@ class Store:
             )
             return [dict(row._mapping) for row in conn.execute(stmt.order_by(subscriptions.c.next_run).limit(3))]
 
+    def suppressed(self, mailbox):
+        with self.engine.connect() as conn:
+            return conn.scalar(select(mail_suppressions.c.mailbox).where(mail_suppressions.c.mailbox == mailbox)) is not None
+
+    def record_mail_event(self, ident, kind, mailboxes):
+        with self.engine.begin() as conn:
+            stmt = self.insert(mail_events).values(id=ident, kind=kind, received_at=time.time())
+            inserted = conn.scalar(stmt.on_conflict_do_nothing().returning(mail_events.c.id))
+            if not inserted or not mailboxes:
+                return
+            conn.execute(self.insert(mail_suppressions).values([{"mailbox": value} for value in sorted(mailboxes)])
+                         .on_conflict_do_nothing())
+            conn.execute(update(subscriptions).where(subscriptions.c.mailbox.in_(mailboxes)).values(enabled=False))
+
     def claim_subscription(self, mailbox, now, lease_time=180):
         with self.engine.begin() as conn:
             stmt = update(subscriptions).where(
@@ -344,6 +461,8 @@ class Store:
                 (codes, codes.c.expires < now), (previews, previews.c.expires < now),
                 (limits, limits.c.touched < now - 7 * 86400), (deliveries, deliveries.c.created < now - 30 * 86400),
                 (summaries, summaries.c.created < now - 90 * 86400), (articles, articles.c.published_at < cutoff),
+                (mail_batches, mail_batches.c.created < now - 7 * 86400),
+                (mail_events, mail_events.c.received_at < now - 30 * 86400),
             ):
                 conn.execute(delete(table).where(condition))
 

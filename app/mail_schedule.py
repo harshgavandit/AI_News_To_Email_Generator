@@ -8,6 +8,7 @@ import zoneinfo
 
 from app import public_mail
 from app.launch_store import get_store
+from app.mail_capacity import batch_sender, mail_capacity
 
 
 def next_morning(timezone_str: str, dt: datetime | None = None) -> float:
@@ -53,6 +54,9 @@ def run_due_subscriptions(generate_fn):
     store = get_store()
     if not store:
         return {"sent": 0, "unconfirmed": 0}
+    if batch_sender() and os.getenv("MAIL_PILOT_MODE") != "1":
+        from app.mail_batches import run_batch_worker
+        return run_batch_worker(store, generate_fn)
 
     now = time.time()
     due = store.due_subscriptions(now)
@@ -65,7 +69,7 @@ def run_due_subscriptions(generate_fn):
     for sub in due:
         mailbox = sub["mailbox"]
         # Claim atomically so concurrent workers do not double-send
-        if not public_mail.is_pilot_address(sub["email"]) or not store.claim_subscription(mailbox, now, lease_time=180):
+        if not public_mail.is_pilot_address(sub["email"]) or store.suppressed(mailbox) or not store.claim_subscription(mailbox, now, lease_time=180):
             continue
 
         email = sub["email"]
@@ -74,8 +78,8 @@ def run_due_subscriptions(generate_fn):
         unsub_url = build_unsubscribe_url(mailbox)
 
         ident = public_mail.digest_key(f"daily:{mailbox}:{sub['next_run']}")
-        state, _ = store.reserve_delivery(ident, [(f"mail:{mailbox}", public_mail.day(), 3),
-                                                   ("outbound", public_mail.day(), 60), ("digests", public_mail.day(), 45)])
+        day = public_mail.day()
+        state, _ = store.reserve_delivery(ident, [(f"mail:{mailbox}", day, 3), *mail_capacity().policies(day, "digests")])
         if state != "new":
             store.reschedule_subscription(mailbox, next_run)
             continue

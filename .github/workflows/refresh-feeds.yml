@@ -42,3 +42,12 @@ jobs:
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/morning' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET" | jq -e \
             'select(.status == "disabled" or (.sent >= 0 and .unconfirmed == 0))'
+          health=$(curl --silent --show-error --fail --max-time 15 \
+            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/mail-health' \
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+          jq -e '.mode and (.due >= 0) and (.queued >= 0)' <<< "$health"
+          jq '{mode, sending_enabled, delivery_events_configured, digest_daily_limit, due, queued}' <<< "$health"
+          if jq -e '[.oldest_due_seconds, .oldest_queued_seconds] | max > 900' <<< "$health" > /dev/null; then
+            echo '::error::Morning mail backlog is more than 15 minutes old.'
+            exit 1
+          fi

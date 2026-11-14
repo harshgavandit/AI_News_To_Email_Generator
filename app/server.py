@@ -27,6 +27,8 @@ load_dotenv()
 
 from app.cache import Cache
 from app.mail_schedule import run_due_subscriptions
+from app.mail_capacity import batch_sender, mail_capacity
+from app.mail_events import router as mail_events_router
 from app import public_mail
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
@@ -43,6 +45,7 @@ from app.sources import BY_ID, GROUPS, KINDS
 
 app = FastAPI(title="World Tech Brief", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
+app.include_router(mail_events_router)
 app.include_router(workspace_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
@@ -256,6 +259,8 @@ def morning_job(authorization: str | None = Header(default=None)):
     store = source_store()
 
     def daily_brief():
+        if not feed_freshness(source_catalog(store))["counts"]["fresh"]:
+            raise HTTPException(503, "Sources are stale. Refresh the archive before processing morning briefs.")
         candidates = store.world_candidates(24, GROUPS)
         selected = select_world(candidates, 5, GROUPS)
         if not selected:
@@ -263,6 +268,16 @@ def morning_job(authorization: str | None = Header(default=None)):
         return build_world(selected, 24, all_pool=candidates)
 
     return run_due_subscriptions(daily_brief)
+
+
+@app.get("/api/jobs/mail-health")
+def mail_job_health(authorization: str | None = Header(default=None)):
+    require_job_secret(authorization)
+    capacity = mail_capacity()
+    return {"mode": "batch" if batch_sender() and os.getenv("MAIL_PILOT_MODE") != "1" else "single",
+            "sending_enabled": public_mail.ready(), "delivery_events_configured": bool(os.getenv("RESEND_WEBHOOK_SECRET")),
+            "outbound_daily_limit": capacity.outbound, "digest_daily_limit": capacity.digests,
+            **source_store().mail_backlog(time.time())}
 
 
 @app.get("/api/jobs/refresh")
@@ -279,7 +294,7 @@ def refresh_job(authorization: str | None = Header(default=None)):
         healthy = sum(s["available"] is True for s in active)
         if not healthy:
             raise HTTPException(503, "No enabled feed passed its latest check.")
-        cooldown = 300
+        cooldown = 240
         return {"status": "refreshed", "sources": len(active), "healthy": healthy}
     finally:
         store.finish_refresh(lease, cooldown=cooldown)
@@ -464,7 +479,8 @@ def assemble_digest(body, store, progress=None):
     inputs = body.model_dump()
     inputs.update(name=name, focus=focus.casefold(), sources=sorted(body.sources), topics=[])
     archive = str(store.engine.url) if store else "local"
-    key = hashlib.sha256(json.dumps([archive, inputs, int(time.time()) // 1800, os.getenv("OPENAI_MODEL")],
+    ttl = 300 if world else 1800
+    key = hashlib.sha256(json.dumps([archive, inputs, int(time.time()) // ttl, os.getenv("OPENAI_MODEL")],
                                     sort_keys=True).encode()).hexdigest()
     try:
         digest, _ = _digest_cache.get(key)
@@ -479,7 +495,7 @@ def assemble_digest(body, store, progress=None):
                 hit = digest is not None
                 if not hit:
                     digest = prepare_digest(body, store, name, focus, world, progress)
-                    _digest_cache.put(key, digest, ttl=1800)
+                    _digest_cache.put(key, digest, ttl=ttl)
             finally:
                 lock.release()
     except (ValueError, RuntimeError):

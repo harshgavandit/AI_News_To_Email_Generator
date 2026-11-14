@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from email_validator import EmailNotValidError, validate_email
 
 from app.launch_store import get_store
+from app.mail_capacity import mail_capacity
 
 router = APIRouter(prefix="/api/mail")
 SESSION = "brief_mail"
@@ -312,12 +313,13 @@ def challenge(body: ChallengeBody, request: Request, response: Response):
     if not verify_human(body.captcha, request):
         raise HTTPException(400, "Complete the bot check and try again.")
     mailbox = digest_key("mailbox:" + email)
+    if store.suppressed(mailbox):
+        raise HTTPException(422, "Use a different inbox for verification.")
     if not store.admit([
         (f"code:{mailbox}", str(int(time.time()) // 60), 1),
         (f"code-day:{mailbox}", day(), 3),
         (f"code-ip:{ip}", day(), 8),
-        ("outbound", day(), 60),
-        ("verification", day(), 20),
+        *mail_capacity().policies(day(), "verification"),
     ]):
         raise limited("Verification is limited. Wait a minute or try again tomorrow.")
     ident, code = secrets.token_urlsafe(24), f"{secrets.randbelow(1_000_000):06d}"
@@ -368,12 +370,13 @@ def send(body: SendBody, request: Request):
     if not payload:
         raise HTTPException(404, "This preview expired. Generate a new brief.")
     mailbox = digest_key("mailbox:" + recipient)
+    if store.suppressed(mailbox):
+        raise HTTPException(422, "Use a different verified inbox for delivery.")
     identity = digest_key(f"delivery:{mailbox}:{body.preview_id}")
     ip = address_key(request)
     state, accepted = store.reserve_delivery(identity, [
         (f"mail:{mailbox}", day(), 3),
-        ("outbound", day(), 60),
-        ("digests", day(), 45),
+        *mail_capacity().policies(day(), "digests"),
     ], windows=[(f"dispatch-ip:{ip}", 3600, 5), (f"mailbox-hour:{mailbox}", 3600, 5)])
     if state == "limited":
         if accepted is not None:
