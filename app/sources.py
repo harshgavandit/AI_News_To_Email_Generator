@@ -15,6 +15,9 @@ class Source:
     coverage: str = "publisher"
     region: str = "Global"
     tech_only: bool = False
+    language: str = "en"
+    article_paths: tuple[str, ...] = ()
+    excluded_paths: tuple[str, ...] = ()
 
     def public(self):
         return {
@@ -27,6 +30,7 @@ class Source:
             "topic": self.topic,
             "coverage": self.coverage,
             "region": self.region,
+            "language": self.language,
         }
 
 
@@ -43,8 +47,16 @@ def youtube(slug, name, channel):
     )
 
 
-def reporting(slug, name, url, *hosts, region="Global", topic="industry", tech_only=False):
-    return Source(slug, slug, name, "news", url, hosts, topic=topic, coverage="reporting", region=region, tech_only=tech_only)
+def reporting(slug, name, url, *hosts, region="Global", topic="industry", tech_only=False,
+              language="en", article_paths=(), excluded_paths=()):
+    return Source(
+        slug, slug, name, "news", url, hosts, topic=topic, coverage="reporting", region=region,
+        tech_only=tech_only, language=language, article_paths=article_paths, excluded_paths=excluded_paths,
+    )
+
+
+def advisory(slug, name, url, *hosts, region):
+    return Source(slug, slug, name, "news", url, hosts, topic="security", coverage="advisory", region=region)
 
 
 def status(slug, name, url, *hosts):
@@ -62,7 +74,8 @@ DEFAULT_SOURCES = (
     Source("google-research", "google-research", "Google Research", "research", "https://research.google/blog/rss/", ("research.google", "research.google.com")),
     Source("meta-ai", "meta-ai", "Meta AI Engineering", "research", "https://engineering.fb.com/category/ai-research/feed/", ("engineering.fb.com",)),
     Source("hugging-face", "hugging-face", "Hugging Face Blog", "engineering", "https://huggingface.co/blog/feed.xml", ("huggingface.co",)),
-    Source("arxiv-ai", "arxiv-ai", "arXiv AI", "research", "https://rss.arxiv.org/rss/cs.AI", ("arxiv.org",)),
+    Source("arxiv-ai", "arxiv-ai", "arXiv AI", "research", "https://rss.arxiv.org/rss/cs.AI", ("arxiv.org",),
+           topic="research", coverage="preprint"),
     Source("microsoft-research", "microsoft-research", "Microsoft Research", "research", "https://www.microsoft.com/en-us/research/feed/", ("microsoft.com",)),
     Source("aws-ml", "aws-ml", "AWS Machine Learning", "engineering", "https://aws.amazon.com/blogs/machine-learning/feed/", ("aws.amazon.com",)),
     Source("langchain", "langchain", "LangChain Blog", "engineering", "https://www.langchain.com/blog/rss.xml", ("langchain.com", "blog.langchain.com")),
@@ -79,6 +92,17 @@ DEFAULT_SOURCES = (
     reporting("cbs-tech", "CBS News Technology", "https://www.cbsnews.com/latest/rss/technology", "cbsnews.com"),
     reporting("cnbc-tech", "CNBC Technology", "https://www.cnbc.com/id/19854910/device/rss/rss.html", "cnbc.com", tech_only=True),
     reporting("axios-tech", "Axios Technology Coverage", "https://api.axios.com/feed/", "axios.com", tech_only=True),
+    reporting("the-register", "The Register",
+              "https://api.theregister.com/api/v1/article?orderBy=published&site_id=2&remapper=rss&content=node",
+              "theregister.com"),
+    reporting("ieee-spectrum", "IEEE Spectrum Computing", "https://spectrum.ieee.org/feeds/topic/computing.rss",
+              "spectrum.ieee.org"),
+    Source("apple-newsroom", "apple-newsroom", "Apple Newsroom", "news", "https://www.apple.com/newsroom/rss-feed.rss",
+           ("apple.com",), topic="bigtech"),
+    Source("microsoft-source", "microsoft-source", "Microsoft Source", "news", "https://news.microsoft.com/source/feed/",
+           ("news.microsoft.com", "blogs.microsoft.com", "commandline.microsoft.com", "news.xbox.com"), topic="bigtech"),
+    Source("google-keyword", "google-keyword", "Google The Keyword", "news", "https://blog.google/rss/", ("blog.google",),
+           topic="bigtech"),
 
     # 3. World & Regional Tech
     reporting("rest-of-world", "Rest of World", "https://restofworld.org/feed/latest/", "restofworld.org", region="Global", topic="industry"),
@@ -90,12 +114,34 @@ DEFAULT_SOURCES = (
     reporting("scmp-tech", "SCMP Technology", "https://www.scmp.com/rss/5/feed", "scmp.com", region="Asia"),
     reporting("indian-express-tech", "The Indian Express Technology", "https://indianexpress.com/section/technology/feed/", "indianexpress.com", region="India"),
     reporting("latamlist", "LatamList", "https://latamlist.com/feed/", "latamlist.com", region="Latin America", topic="startups"),
-    reporting("tecnoblog", "Tecnoblog", "https://tecnoblog.net/feed/", "tecnoblog.net", region="Latin America"),
+    reporting("tecnoblog", "Tecnoblog", "https://tecnoblog.net/feed/", "tecnoblog.net", region="Latin America",
+              language="pt-BR", excluded_paths=("/achados/",)),
     reporting("betakit", "BetaKit", "https://betakit.com/feed/", "betakit.com", region="North America", topic="startups"),
     reporting("tech-eu", "Tech.eu", "https://tech.eu/feed/", "tech.eu", region="EU", topic="startups"),
     reporting("itweb", "ITWeb", "https://www.itweb.co.za/rss", "itweb.co.za", region="Africa"),
     reporting("inc42", "Inc42", "https://inc42.com/feed/", "inc42.com", region="India", topic="startups"),
     reporting("itnews-au", "iTnews", "https://www.itnews.com.au/RSS/rss.ashx", "itnews.com.au", region="APAC"),
+    reporting("e27", "e27", "https://e27.co/index_wp.php/feed/", "e27.co", region="APAC", topic="startups"),
+    reporting("tnglobal", "TNGlobal", "https://technode.global/feed/", "technode.global", region="APAC"),
+    reporting("korea-times-tech", "The Korea Times Technology", "https://feed.koreatimes.co.kr/k/business.xml",
+              "koreatimes.co.kr", region="Asia", tech_only=True),
+    reporting("japan-today-tech", "Japan Today Technology", "https://japantoday.com/category/tech/feed",
+              "japantoday.com", region="Asia"),
+    reporting("reseller-nz", "Reseller News New Zealand", "https://www.reseller.co.nz/feed/", "reseller.co.nz", region="APAC"),
+    reporting("heise-online", "heise online", "https://www.heise.de/rss/heise-atom.xml", "heise.de",
+              region="Europe", language="de", article_paths=("/news/",)),
+    reporting("contxto", "Contxto", "https://contxto.com/en/feed/", "contxto.com",
+              region="Latin America", topic="startups"),
+    reporting("xataka-mx", "Xataka México", "https://www.xataka.com.mx/feedburner.xml", "xataka.com.mx",
+              region="Latin America", language="es-MX", excluded_paths=("/seleccion/", "/cine-y-tv/", "/territorio-")),
+    reporting("disrupt-africa", "Disrupt Africa", "https://disruptafrica.com/feed/", "disruptafrica.com",
+              region="Africa", topic="startups"),
+    reporting("techafrica-news", "TechAfrica News", "https://techafricanews.com/feed/", "techafricanews.com", region="Africa"),
+    reporting("the-national-tech", "The National Technology",
+              "https://www.thenationalnews.com/arc/outboundfeeds/rss/category/future/technology/?outputType=xml",
+              "thenationalnews.com", region="Middle East & North Africa"),
+    reporting("entarabi", "entARABI", "https://entarabi.com/en/feed/", "entarabi.com",
+              region="Middle East & North Africa", topic="startups"),
 
     # 4. Engineering & Cloud
     Source("github-blog", "github-blog", "The GitHub Blog", "engineering", "https://github.blog/feed/", ("github.blog",), topic="software"),
@@ -107,7 +153,28 @@ DEFAULT_SOURCES = (
     Source("postgresql", "postgresql", "PostgreSQL News", "engineering", "https://www.postgresql.org/news.rss", ("postgresql.org",), topic="software"),
     Source("nvidia", "nvidia", "NVIDIA Technical Blog", "engineering", "https://developer.nvidia.com/blog/feed/", ("developer.nvidia.com",), topic="chips"),
     Source("nvidia-newsroom", "nvidia", "NVIDIA Newsroom", "news", "https://nvidianews.nvidia.com/releases.xml", ("nvidianews.nvidia.com",), topic="chips"),
+    Source("arm-newsroom", "arm-newsroom", "Arm Newsroom", "news", "https://newsroom.arm.com/feed", ("newsroom.arm.com",),
+           topic="chips"),
+    Source("amd-newsroom", "amd-newsroom", "AMD Newsroom", "news", "https://ir.amd.com/news-events/press-releases/rss",
+           ("ir.amd.com",), topic="chips"),
+    reporting("phoronix", "Phoronix", "https://www.phoronix.com/rss.php", "phoronix.com", topic="software"),
+
+    # Security advisories and independent cybersecurity reporting
     reporting("bleepingcomputer", "BleepingComputer", "https://www.bleepingcomputer.com/feed/", "bleepingcomputer.com", topic="security"),
+    reporting("securityweek", "SecurityWeek", "https://www.securityweek.com/feed/", "securityweek.com", topic="security"),
+    reporting("the-record", "The Record", "https://therecord.media/feed", "therecord.media", topic="security"),
+    advisory("cisa-alerts", "CISA Alerts", "https://www.cisa.gov/cybersecurity-advisories/alerts.xml", "cisa.gov",
+             region="North America"),
+    advisory("cert-eu", "CERT-EU Advisories", "https://cert.europa.eu/publications/security-advisories-rss", "cert.europa.eu",
+             region="Europe"),
+
+    # Research publications and research news
+    Source("nature-computing", "nature-computing", "Nature Portfolio Computer Science", "research",
+           "https://www.nature.com/subjects/computer-science.rss", ("nature.com",), topic="research"),
+    Source("mit-robotics", "mit-robotics", "MIT News Robotics", "research", "https://news.mit.edu/topic/mitrobotics-rss.xml",
+           ("news.mit.edu",), topic="research"),
+    reporting("quanta-computing", "Quanta Magazine Computer Science", "https://www.quantamagazine.org/computer-science/feed/",
+              "quantamagazine.org", topic="research"),
 
     # 5. Creator & Video Insights
     youtube("matthew-berman", "Matthew Berman", "UCawZsQWqfGSbCI5yjkdVkTA"),

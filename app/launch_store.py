@@ -2,19 +2,20 @@
 import hashlib
 import json
 import os
+import threading
 import time
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 
 from sqlalchemy import (
     Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
-    and_, bindparam, case, create_engine, delete, func, or_, select, tuple_, update,
+    and_, bindparam, case, create_engine, delete, func, inspect, literal, or_, select, tuple_, update,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from app.coverage import REGIONS, topic_expression
-from app.discovery import page_fingerprint, page_result, page_window, search_terms
+from app.coverage import topic_for
+from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
 
 schema = MetaData()
@@ -23,10 +24,15 @@ articles = Table("brief_articles", schema,
     Column("title", Text, nullable=False), Column("description", Text, nullable=False),
     Column("source", String(64), nullable=False), Column("source_id", String(64), nullable=False, index=True),
     Column("publisher", String(140), nullable=False), Column("kind", String(24), nullable=False),
-    Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True))
+    Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
+    Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
+    Column("search_publisher", Text))
+discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher)
+source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
     Index("brief_articles_source_page", articles.c.source_id, articles.c.published_at, articles.c.id),
+    Index("brief_articles_topic_page", articles.c.topic, articles.c.published_at, articles.c.id),
 )
 sources = Table("brief_sources", schema,
     Column("id", String(64), primary_key=True), Column("enabled", Boolean, nullable=False, default=True),
@@ -66,6 +72,19 @@ class QuotaReached(Exception):
     pass
 
 
+def discovery_fields(article):
+    return {"topic": topic_for(article), **{f"search_{field}": search_text(article[field])
+                                           for field in ("title", "description", "publisher")}}
+
+
+def backfill_discovery(conn):
+    stmt = select(*(articles.c[key] for key in ("id", "source_id", "source", "title", "description", "publisher",
+                                               "category", "kind"))).where(articles.c.topic.is_(None))
+    patch = update(articles).where(articles.c.id == bindparam("article_id"))
+    while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
+        conn.execute(patch, [{"article_id": row["id"], **discovery_fields(row)} for row in rows])
+
+
 class Store:
     def __init__(self, url):
         if url.startswith(("postgres://", "postgresql://")):
@@ -75,14 +94,42 @@ class Store:
             {"pool_size": 2, "max_overflow": 1, "pool_timeout": 5, "connect_args": {"connect_timeout": 5}}
         ))
         self.insert = pg_insert if self.engine.dialect.name == "postgresql" else sqlite_insert
+        self._discovery_ready = False
+        self._schema_lock = threading.Lock()
         if self.engine.dialect.name == "sqlite":
             schema.create_all(self.engine)
+            self.ensure_discovery_schema()
+
+    def ensure_discovery_schema(self):
+        # Existing deployments can upgrade in place. Old code can still write during rollout.
+        if self._discovery_ready:
+            return
+        with self._schema_lock, self.engine.begin() as conn:
+            if self._discovery_ready:
+                return
+            known = {column["name"] for column in inspect(conn).get_columns(articles.name)}
+            missing = [column for column in discovery_columns if column.name not in known]
+            if missing:
+                if self.engine.dialect.name == "postgresql":
+                    conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
+                    conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+                else:
+                    conn.exec_driver_sql("BEGIN IMMEDIATE")
+                known = {column["name"] for column in inspect(conn).get_columns(articles.name)}
+                for column in missing:
+                    if column.name not in known:
+                        conn.exec_driver_sql(f"ALTER TABLE brief_articles ADD COLUMN {column.name} {column.type.compile(conn.dialect)}")
+                backfill_discovery(conn)
+                article_indexes[-1].create(conn, checkfirst=True)
+        self._discovery_ready = True
 
     def migrate(self):
         schema.create_all(self.engine)
+        self.ensure_discovery_schema()
         with self.engine.begin() as conn:
             for index in article_indexes:
                 index.create(conn, checkfirst=True)
+            backfill_discovery(conn)
 
     def source_state(self):
         with self.engine.connect() as conn:
@@ -94,6 +141,8 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
 
     def ingest(self, source_id, items, available, error=None):
+        if items and available:
+            self.ensure_discovery_schema()
         now = time.time()
         state = {"available": available, "checked": now, "error": error}
         if available:
@@ -104,14 +153,25 @@ class Store:
                 values = [{**{k: a[k] for k in ("id", "url", "title", "description", "source", "publisher",
                                                  "category", "published_at")}, "source_id": source_id,
                            "kind": a.get("kind", "news")} for a in items]
+                for article in values:
+                    article.update(discovery_fields(article))
+                # Registry order owns overlapping publisher feeds regardless of refresh completion order.
                 fields = [c for c in articles.c if c.name != "id"]
+                changed = or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))
+                preferred = source_order[:source_order.index(source_id)] if source_id in BY_ID else source_order
+                if preferred:
+                    paused = select(sources.c.id).where(sources.c.id == articles.c.source_id,
+                                                        sources.c.enabled.is_(False)).exists()
+                    changed &= or_(articles.c.source_id.not_in([literal(ident) for ident in preferred]), paused)
                 conn.execute(stmt.on_conflict_do_update(index_elements=[articles.c.id],
                     set_={c.name: stmt.excluded[c.name] for c in fields},
-                    where=or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))), values)
+                    where=changed), values)
             stmt = self.insert(sources).values(id=source_id, **state)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
 
-    def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None):
+    def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None,
+              topic="all", region="", coverage=""):
+        self.ensure_discovery_schema()
         now = now or datetime.now(UTC)
         cutoff = (now - timedelta(hours=hours)).isoformat()
         stmt = select(articles).outerjoin(sources, articles.c.source_id == sources.c.id).where(
@@ -125,43 +185,42 @@ class Store:
             stmt = stmt.where(articles.c.source_id == publisher)
         if source_ids:
             stmt = stmt.where(or_(articles.c.source.in_(source_ids), articles.c.source_id.in_(source_ids)))
+        if region or coverage:
+            stmt = stmt.where(articles.c.source_id.in_(catalog_filters(region, coverage)))
+        if topic != "all":
+            stmt = stmt.where(articles.c.topic == topic)
         if query:
-            terms = search_terms(query) or (query.lower(),)
-            text_columns = [func.lower(articles.c[key]) for key in ("title", "description", "publisher")]
+            terms = search_terms(query) or (query,)
+            text_columns = [articles.c[f"search_{key}"] for key in ("title", "description", "publisher")]
             stmt = stmt.where(*(or_(*(column.contains(term, autoescape=True) for column in text_columns))
                                 for term in terms))
         return stmt
 
-    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest"):
-        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort)
+    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest", coverage=""):
+        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage)
         ranked = sort == "relevance" and bool(query)
         anchor, marker = page_window(cursor, fingerprint, ranked=ranked)
-        base = self.query(hours, query=query, kind=kind, publisher=publisher, now=anchor)
-        if topic != "all":
-            base = base.where(topic_expression(articles.c) == topic)
-        if region:
-            base = base.where(articles.c.source_id.in_([s.id for s in BY_ID.values() if s.region in REGIONS[region]]))
-        stmt = base if source == "all" else base.where(or_(articles.c.source == source, articles.c.source_id == source))
+        base = self.query(hours, query=query, kind=kind, publisher=publisher, coverage=coverage, now=anchor)
+        stmt = self.query(hours, source, query, kind, publisher, now=anchor, topic=topic, region=region, coverage=coverage)
         columns = (articles.c.published_at, articles.c.id)
         if ranked:
-            title, name = func.lower(articles.c.title), func.lower(articles.c.publisher)
-            score = case((title.contains(query.lower(), autoescape=True), 10), else_=0)
-            for term in search_terms(query) or (query.lower(),):
+            title, name = articles.c.search_title, articles.c.search_publisher
+            score = case((title.contains(query, autoescape=True), 10), else_=0)
+            for term in search_terms(query) or (query,):
                 score += case((title.contains(term, autoescape=True), 3), else_=0)
                 score += case((name.contains(term, autoescape=True), 1), else_=0)
             stmt = stmt.add_columns(score.label("search_score"))
             columns = (score, *columns)
         with self.engine.connect() as conn:
-            grouped = base.subquery()
-            counts = {group: count for group, count in conn.execute(
-                select(grouped.c.source, func.count()).group_by(grouped.c.source))}
-            total = sum(counts.values()) if source == "all" else conn.scalar(select(func.count()).select_from(stmt.subquery()))
+            key = (articles.c.source_id, articles.c.source, articles.c.topic)
+            groups = conn.execute(base.with_only_columns(*key, func.count()).group_by(*key)).all()
+            counts = facet_counts(groups, source=source, topic=topic, region=region)
             if marker:
                 after = tuple_(*marker)
                 stmt = stmt.where(tuple_(*columns) > after if sort == "oldest" else tuple_(*columns) < after)
             order = [column.asc() if sort == "oldest" else column.desc() for column in columns]
             rows = [dict(r) for r in conn.execute(stmt.order_by(*order).limit(limit + 1)).mappings()]
-        return dict(page_result(rows, total, limit, fingerprint, anchor), source_counts={**counts, "all": sum(counts.values())})
+        return {**page_result(rows, counts["total"], limit, fingerprint, anchor), **counts}
 
     def pinned_articles(self, ids):
         if not ids:
@@ -169,13 +228,13 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
-    def world_candidates(self, hours, source_ids):
-        # Cap each topic independently so a burst of posts cannot crowd out the others.
-        rank = func.row_number().over(partition_by=topic_expression(articles.c),
+    def world_candidates(self, hours, source_ids, *, topic="all", region=""):
+        # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
+        rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
-        ranked = self.query(hours, source_ids=source_ids).add_columns(rank).subquery()
+        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region).add_columns(rank).subquery()
         with self.engine.connect() as conn:
-            return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 40)).mappings()]
+            return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
     def headline_candidates(self, hours):
         providers = [s.id for s in BY_ID.values() if s.coverage == "reporting" and s.kind != "video"]
@@ -187,8 +246,8 @@ class Store:
             rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
             return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
 
-    def candidates(self, hours, source_ids, terms):
-        stmt = self.query(hours, source_ids=source_ids)
+    def candidates(self, hours, source_ids, terms, *, topic="all", region=""):
+        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region)
         order = (articles.c.published_at.desc(), articles.c.id.desc())
         with self.engine.connect() as conn:
             recent = conn.execute(stmt.order_by(*order).limit(150)).mappings().all()
@@ -486,9 +545,12 @@ class Store:
             ))
 
     def prune(self):
+        self.ensure_discovery_schema()
         now = time.time()
         cutoff = (datetime.now(UTC) - timedelta(days=90)).isoformat()
         with self.engine.begin() as conn:
+            # Repair any writes completed just before older deployments were drained.
+            backfill_discovery(conn)
             for table, condition in (
                 (codes, codes.c.expires < now), (previews, previews.c.expires < now),
                 (limits, limits.c.touched < now - 7 * 86400), (deliveries, deliveries.c.created < now - 30 * 86400),

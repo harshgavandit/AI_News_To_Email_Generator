@@ -16,6 +16,7 @@ from app.coverage import public_article
 from app.news import canonical_url
 from app.profiles.user_profile import USER_PROFILE
 from app.sanitation import sanitize_text
+from app.selection import words
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,24 @@ SUMMARY_LABELS = {
     "publisher_excerpt": "Publisher excerpt",
     "headline_only": "Headline only",
 }
+COVERAGE_LABELS = {
+    "reporting": "Independent reporting",
+    "publisher": "Publisher update",
+    "preprint": "Research preprint",
+    "advisory": "Security advisory",
+    "status": "Provider status",
+    "discussion": "Community discussion",
+}
+
+
+def story_attribution(article):
+    publisher = article.get("publisher") or article.get("sourceName") or article.get("article_type", "Source")
+    region = article.get("region", "")
+    status = article.get("research_status") or article.get("coverage")
+    return " · ".join(part for part in (
+        publisher, region if region != "Global" else "", (article.get("published_at") or "")[:10],
+        COVERAGE_LABELS.get(status, ""), SUMMARY_LABELS.get(article.get("summary_basis"), ""),
+    ) if part)
 
 
 def safe_href(value):
@@ -58,9 +77,11 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
         excerpt = source["cleanSummary"] if source["has_excerpt"] else ""
         fallback = dict(article, summary=excerpt or "Read the publisher for details.", keyTakeaway="", whyItMatters="",
                         summary_basis="publisher_excerpt" if excerpt else "headline_only")
-        if not article["description"] or article["source"] == "youtube" and not excerpt:
+        if not excerpt:
             return fallback
-        key = hashlib.sha256(json.dumps(["summary-v5", get_openai_model(), article["id"], article["title"],
+        status = source.get("research_status")
+        prompt_version = "summary-preprint-v1" if status == "preprint" else "summary-v5"
+        key = hashlib.sha256(json.dumps([prompt_version, get_openai_model(), article["id"], article["title"],
                                          article["description"][:2500], style, persona], ensure_ascii=False).encode()).hexdigest()
         if store and (cached := store.get_summary(key)):
             return dict(article, **cached)
@@ -71,9 +92,12 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             "skim": "Use one concise sentence that explains the reported change.",
         }.get(style, "Provide a concise 2-sentence editorial summary.")
 
+        research_instruction = (" Describe preprint findings as the authors' claims. Avoid implying peer review."
+                                if status == "preprint" else "")
         result = DigestAgent().generate_digest(
             article["title"],
-            f"Summarize the supplied title and feed excerpt. For security news, describe impact and defenses and omit exploit steps. {style_instruction} {framing}\n"
+            f"Summarize the supplied title and feed excerpt. For security news, describe impact and defenses and omit exploit steps. "
+            f"{style_instruction} {framing}{research_instruction}\n"
             + json.dumps({"title": article["title"], "excerpt": article["description"][:2500]}),
             article["source"],
         )
@@ -119,38 +143,49 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             article_type=item["source"],
             reasoning=sanitize_text(rank.reasoning, 300) if rank else None,
             publisher=item.get("publisher", ""),
+            topic=source["topic"],
             topic_label=source["topic_label"],
+            coverage=source["coverage"],
+            region=source["region"],
+            region_id=source["region_id"],
+            language=source["language"],
+            research_status=source.get("research_status"),
             published_at=item.get("published_at", ""),
             whyItMatters=item.get("whyItMatters", ""),
             keyTakeaway=item.get("keyTakeaway", ""),
             summary_basis=item["summary_basis"],
         ))
 
-    # Pick 3 Quick Hits from remaining stories if available
-    ranked_ids = set(order)
+    # Prefer distinct publisher regions and skip near-duplicates of selected stories.
+    used = set(order)
+    titles = [words(by_id[ident]["title"]) for ident in order]
     quick_candidates = []
     quick_regions = set()
     recent_pool = sorted(all_pool or [], key=lambda article: (article["published_at"], article["id"]), reverse=True)
-    for item in recent_pool:
-        if item["id"] in ranked_ids:
-            continue
-        article = public_article(item)
-        if article["region"] in quick_regions:
-            continue
-        quick_candidates.append(article)
-        quick_regions.add(article["region"])
-        if len(quick_candidates) == 3:
-            break
-    used = ranked_ids | {item["id"] for item in quick_candidates}
-    if len(quick_candidates) < 3:
-        fill = [item for item in recent_pool if item["id"] not in used][:3 - len(quick_candidates)]
-        quick_candidates.extend(public_article(item) for item in fill)
+    for unique_region in (True, False):
+        for item in recent_pool:
+            if len(quick_candidates) == 3:
+                break
+            if item["id"] in used:
+                continue
+            article = public_article(item)
+            if unique_region and article["region_id"] in quick_regions:
+                continue
+            tokens = words(article["title"])
+            if any(tokens and old and len(tokens & old) / len(tokens | old) >= .72 for old in titles):
+                continue
+            quick_candidates.append(article)
+            quick_regions.add(article["region_id"])
+            titles.append(tokens)
+            used.add(article["id"])
     quick_hits = [
         {
             "title": q["title"],
             "url": q["url"],
             "publisher": q.get("publisher", ""),
             "region": q.get("region", "Global"),
+            "region_id": q["region_id"],
+            "topic": q["topic"],
         }
         for q in quick_candidates
     ]
@@ -180,9 +215,8 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
     # Compose rich markdown
     md_lines = [f"# {digest.introduction.greeting}\n", f"{digest.introduction.introduction}\n\n---"]
     for art in details:
-        pub = art.publisher or art.article_type
-        basis = SUMMARY_LABELS.get(art.summary_basis, "")
-        md_lines.append(f"## {art.rank}. {art.title}\n{pub} · {art.topic_label or 'Tech'} · {art.published_at[:10]} · {basis}\n\n{art.summary}\n")
+        attribution = story_attribution(art.model_dump())
+        md_lines.append(f"## {art.rank}. {art.title}\n{art.topic_label or 'Tech'} · {attribution}\n\n{art.summary}\n")
         if art.keyTakeaway:
             md_lines.append(f"* **Key Takeaway:** {art.keyTakeaway}\n")
         elif art.whyItMatters:
@@ -213,13 +247,10 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
         title = escape(article.get("title", ""))
         url = escape(safe_href(article.get("url")), quote=True)
         summary = escape(article.get("summary", ""))
-        publisher = escape(article.get("publisher") or article.get("sourceName") or article.get("article_type", "Source"))
         topic_label = escape(article.get("topic_label") or article.get("category", "Technology"))
-        date = escape(article.get("published_at", "")[:10] if article.get("published_at") else "")
         takeaway = escape(article.get("keyTakeaway") or article.get("whyItMatters") or "")
-
-        basis = SUMMARY_LABELS.get(article.get("summary_basis"), "")
-        attribution = " · ".join(part for part in (publisher, date, basis) if part)
+        attribution = escape(story_attribution(article))
+        language = escape(article.get("language") or "en", quote=True)
 
         card_html = f"""
         <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border:1px solid #dedfd5;border-radius:8px;background-color:#ffffff;padding:20px;">
@@ -229,7 +260,7 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
                 <span style="background-color:#e8eddf;color:#294a3b;padding:3px 7px;border-radius:3px;">{topic_label}</span>
                 <span style="margin-left:8px;">{attribution}</span>
               </div>
-              <h2 class="email-heading" style="font-family:Georgia,serif;font-size:19px;line-height:1.3;margin:8px 0 10px;color:#252e29;">
+              <h2 class="email-heading" lang="{language}" style="font-family:Georgia,serif;font-size:19px;line-height:1.3;margin:8px 0 10px;color:#252e29;">
                 <a class="email-link" href="{url}" style="color:#252e29;text-decoration:none;">{title}</a>
               </h2>
               <p class="email-text" style="font-size:13px;line-height:1.6;color:#4a534e;margin:0 0 12px;">{summary}</p>

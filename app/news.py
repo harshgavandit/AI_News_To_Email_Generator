@@ -20,12 +20,18 @@ _cache = {}
 _lock = threading.Lock()
 _refreshed = 0
 MAX_BYTES = 5_000_000
-TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", ".tsrc", "__source"}
-TECH_SECTION = re.compile(r"\b(?:tech(?:nology)?|artificial intelligence|ai)\b", re.I)
+FEED_WORKERS = 14
+TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", "wt_mc", ".tsrc", "__source"}
+TECH_SECTION = re.compile(r"\b(?:tech(?:nology|-science)?|artificial intelligence|ai)\b", re.I)
 TECH_HEADLINE = re.compile(
     r"\b(?:AI|LLM|NVIDIA|Jensen Huang|ChatGPT|OpenAI|Anthropic|Google|Microsoft|Apple|Meta|Amazon|TikTok|"
-    r"SpaceX|Intel|AMD|semiconductors?|chipmakers?|cyber\w*|ransomware|software|data cent(?:er|re)s?|"
-    r"smartphones?|robots?|robotics|telecom\w*|blockchain|bitcoin|cloud computing|artificial intelligence)\b", re.I
+    r"SpaceX|Intel|AMD|TSMC|Samsung|LG Electronics|SK Hynix|Huawei|ByteDance|Tencent|Alibaba|"
+    r"semiconductors?|chipmakers?|cyber\w*|ransomware|software|data cent(?:er|re)s?|smartphones?|"
+    r"robots?|robotics|telecom\w*|blockchain|bitcoin|cloud computing|artificial intelligence|"
+    r"autonomous (?:cars?|vehicles?|ships?|vessels?)|(?:electric|electrified) vehicles?)\b", re.I
+)
+SPONSORED_TITLE = re.compile(
+    r"^(?:heise-angebot|anzeige|sponsored content|sponsored post|advertisement|partner content)\s*[:|]", re.I
 )
 
 
@@ -43,6 +49,28 @@ def canonical_url(url):
 
 def plain_text(value):
     return sanitize_text(value)
+
+
+def article_in_scope(source, path, title, tags):
+    if source.article_paths and not path.startswith(source.article_paths):
+        return False
+    if path.startswith(source.excluded_paths) or SPONSORED_TITLE.match(title):
+        return False
+    return not source.tech_only or bool(TECH_HEADLINE.search(title)) or any(
+        TECH_SECTION.fullmatch(section) for section in (*tags, *path.split("/"))
+    )
+
+
+def feed_category(tags):
+    category = ""
+    for tag in dict.fromkeys(tags):
+        if not tag:
+            continue
+        combined = f"{category} | {tag}" if category else tag[:100]
+        if len(combined) > 100:
+            break
+        category = combined
+    return category or "News"
 
 
 def fetch_bytes(url):
@@ -90,17 +118,19 @@ def read_feed(task):
                 content = response.content
         if len(content) > MAX_BYTES:
             return [], dict(status, error="feed_too_large")
-        parsed = feedparser.parse(content)
-        if not parsed.version:
+        parsed = feedparser.parse(content, response_headers={"content-location": s.url})
+        if not parsed.get("version"):
             return [], dict(status, error="invalid_feed")
         articles = {}
+        has_valid_entry = False
+        allowed_hosts = {domain.removeprefix("www.") for domain in s.hosts}
         now = datetime.now(timezone.utc)
         for entry in parsed.entries[:200]:
             try:
                 # HN links to arbitrary external sites; retain the reviewed discussion URL.
                 url = canonical_url(entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", ""))
-                host = urlsplit(url).hostname.removeprefix("www.")
-                if host not in {d.removeprefix("www.") for d in s.hosts} or "/shorts/" in url:
+                parts = urlsplit(url)
+                if parts.hostname.removeprefix("www.") not in allowed_hosts or "/shorts/" in parts.path:
                     continue
                 date = entry.get("published_parsed") or entry.get("updated_parsed")
                 if not date:
@@ -111,13 +141,10 @@ def read_feed(task):
                 title = plain_text(entry.get("title", ""))[:500]
                 if not title:
                     continue
-                tags = entry.get("tags") or [{}]
-                if s.tech_only and not (TECH_HEADLINE.search(title) or any(
-                    TECH_SECTION.fullmatch(tag.get("term", "").strip()) for tag in tags
-                )):
+                has_valid_entry = True
+                tags = [plain_text(tag.get("term")) for tag in entry.get("tags", ())[:12]]
+                if not article_in_scope(s, parts.path, title, tags):
                     continue
-                if s.id == "tecnoblog" and urlsplit(url).path.startswith("/achados/"):
-                    continue  # Shopping deals are separate from the publisher's reporting.
                 media = entry.get("media_description") or ""
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
                     media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label,
@@ -126,11 +153,11 @@ def read_feed(task):
                     "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,
                     "description": desc, "url": url, "source": s.group, "source_id": s.id,
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
-                    "category": plain_text(tags[0].get("term", "News"))[:100],
+                    "category": feed_category(tags),
                 }
             except (ValueError, TypeError, OverflowError, AttributeError, IndexError):
                 continue
-        if parsed.entries and not articles:
+        if parsed.entries and not has_valid_entry:
             return [], dict(status, error="no_eligible_entries")
         return list(articles.values()), dict(status, available=True, count=len(articles))
     except (httpx.HTTPError, ValueError, OSError):
@@ -144,7 +171,7 @@ def collect_news(*, force=False):
         cache_age = time.monotonic() - _refreshed
         if not _cache or cache_age >= (30 if force else 300):
             enabled = [s for s in DEFAULT_SOURCES if s.enabled]
-            with ThreadPoolExecutor(max_workers=10) as pool:
+            with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
                 for s, (articles, status) in zip(enabled, pool.map(read_feed, enabled)):
                     checked_at = datetime.now(timezone.utc).isoformat()
                     previous_articles, previous_status = _cache.get(s.id, ([], {}))
@@ -155,7 +182,10 @@ def collect_news(*, force=False):
                         status["count"] = len(articles)
                     _cache[s.id] = (articles, status)
             _refreshed = time.monotonic()
-        unique = {a["url"]: a for articles, _ in _cache.values() for a in articles}
+        unique = {}
+        for items, _ in _cache.values():
+            for article in items:
+                unique.setdefault(article["url"], article)
         return {"articles": sorted(unique.values(), key=lambda a: (a["published_at"], a["id"]), reverse=True),
                 "sources": [status for _, status in _cache.values()],
                 "fetched_at": max((status["checked_at"] for _, status in _cache.values()), default=None)}

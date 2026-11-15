@@ -1,76 +1,166 @@
 """One classification for API filters, archives, and global edition selection."""
 import re
+from unicodedata import normalize
 from urllib.parse import parse_qs, urlsplit
 
-from sqlalchemy import case, func, or_
-
-from app.sources import BY_ID
 from app.sanitation import sanitize_article, sanitize_story_excerpt
+from app.sources import BY_ID
 
 TOPICS = {
-    "ai": "AI & LLMs",
-    "software": "Engineering & Dev",
+    "ai": "AI & Machine Learning",
+    "software": "Software & Cloud",
     "startups": "Startups & Venture",
-    "bigtech": "Big Tech",
-    "industry": "Industry & Policy",
-    "video": "Video Briefs",
+    "security": "Cybersecurity & Privacy",
     "chips": "Chips & Hardware",
-    "security": "Security & Privacy",
-    "outages": "Outages & Service Updates",
+    "bigtech": "Tech Companies",
+    "research": "Research & Science",
+    "industry": "Industry & Policy",
+    "outages": "Service Outages",
+    "video": "Video",
 }
 
-# Only reclassify general reporting; specialist feeds keep their own topic unless
-# a headline clearly describes a service disruption.
-OUTAGE_TERMS = ("outage", "service disruption", "service interruption", "services down", "services go down")
-HEADLINE_RULES = {
-    "startups": ("startup", "start-up", "funding", "series a", "series b", "series c", "seed round", "venture capital", "unicorn", "acquisition"),
-    "bigtech": ("antitrust", "alphabet", "big tech", "doj", "ftc", "apple app store", "google monopoly"),
-    "security": ("data breach", "cyberattack", "cyber attack", "ransomware", "security flaw", "zero-day", "vulnerability", "security update", "privacy"),
-    "chips": ("nvidia", "semiconductor", "chipmaker", "chip maker", "qualcomm", "geforce", "radeon", "gpu", "tsmc", "arm chip", "blackwell", "h100"),
-    "ai": (" ai ", "chatgpt", "openai", "anthropic", "claude", "deepmind", "large language model", "artificial intelligence", "llm", "agent", "transformer", "diffusion model", "gemini"),
-    "software": ("open source", "programming language", "linux kernel", "kubernetes", "developer tools", "postgresql", "fastapi", "react", "compiler", "rust"),
+
+def headline_pattern(pattern):
+    return re.compile(rf"\b(?:{pattern})\b", re.I)
+
+
+HYPHENS = str.maketrans({mark: "-" for mark in "‐‑‒–—−"})
+
+
+# Headline signals take precedence over section names and feed defaults, which
+# often describe a whole publisher.
+STORY_SIGNALS = (
+    ("outages", headline_pattern(
+        r"outages?|service (?:disruptions?|interruptions?)|services? (?:go(?:es)?|went|is|are) down|"
+        r"(?:aws|microsoft 365|azure|cloudflare|github|google cloud) (?:goes|went|is) down|"
+        r"indisponibilidade|panne (?:informatique|majeure)|caída de (?:la plataforma|servicio)"
+    )),
+    ("security", headline_pattern(
+        r"ransomware|cyber[ -]?(?:attacks?|security|incidents?)|data breach(?:es)?|"
+        r"zero[ -]days?|0[ -]days?|vulnerabilit(?:y|ies)|cve[- ]\d{4}[- ]\d+|"
+        r"phishing|malware|spyware|security (?:alerts?|fix(?:es)?|patch(?:es)?|updates?)|"
+        r"privacy (?:law|lawsuit|watchdog|breach)|ciberseguridad|ciber(?:ataques?|segurança)|"
+        r"vazamento de dados|cybersécurité|cyberattaque|sicherheitslücke[n]?|cyberangriff(?:e)?"
+    )),
+    ("startups", headline_pattern(
+        r"start[ -]?ups?|venture capital|seed (?:round|funding)|series[- ](?:a|b|c|d|e) (?:round|funding)|"
+        r"funding round|startup accelerator|venture fund|rodada de investimento|financiación semilla|"
+        r"levée de fonds|finanzierungsrunde"
+    )),
+    ("industry", headline_pattern(
+        r"antitrust|anti[ -]monopoly|export (?:controls?|restrictions?)|"
+        r"(?:digital markets|digital services|ai) act|tech polic(?:y|ies)|"
+        r"(?:digital|internet) regulation|net neutrality|data sovereignty|"
+        r"(?:anti)?monop[oó]lio|regulação digital|soberanía de datos|souveraineté numérique"
+    )),
+    ("research", headline_pattern(
+        r"peer[ -]reviewed|researchers (?:develop|discover|find|introduce|publish|show|unveil)|"
+        r"scientists (?:create|develop|discover|find|unveil)|(?:new )?study (?:finds|shows|suggests)|"
+        r"(?:research|scientific) paper|preprints?|arxiv|quantum (?:computing|computer|network)|"
+        r"pesquisadores (?:criam|descobrem)|chercheurs (?:découvrent|développent)"
+    )),
+)
+COMPANY = headline_pattern(
+    r"alphabet|amazon|amd|anthropic|apple|asml|baidu|broadcom|bytedance|cisco|google|huawei|"
+    r"ibm|intel|meta|microsoft|nvidia|openai|oracle|qualcomm|salesforce|samsung|sap|tencent|"
+    r"tesla|tiktok|tsmc|uber|tech giant(?:s)?|chipmakers?"
+)
+CORPORATE_ACTION = headline_pattern(
+    r"ceo|chief executive|succession|successor|shareholders?|earnings|quarterly (?:profit|revenue)|"
+    r"mergers?|acquisition|acquir(?:e|es|ed|ing)|layoffs?|lay(?:s|ing)? off|laid off|"
+    r"spins? off|spin[ -]?off|ipo|board of directors"
+)
+DOMAIN_SIGNALS = (
+    ("chips", headline_pattern(
+        r"semiconductors?|chip[ -]?makers?|chiplets?|chip (?:foundr(?:y|ies)|manufacturing|shortage)|"
+        r"(?:ai|smartphone|custom) chips?|cpus?|gpus?|"
+        r"processors?|graphics cards?|smartphones?|laptops?|motherboards?|memory chips?|"
+        r"hardware accelerators?|wearables?|foldables?|game consoles?|"
+        r"semicondutores?|procesadores?|processeurs?|halbleiter|grafikkarten?"
+    )),
+    ("ai", headline_pattern(
+        r"ai|gen[ -]?ai|artificial intelligence|machine learning|deep learning|language models?|"
+        r"llms?|chatgpt|openai|anthropic|claude (?:code|models?)|google gemini|deepmind|agentic|diffusion models?|"
+        r"intelig[eê]ncia artificial|intelligence artificielle|künstliche intelligenz"
+    )),
+    ("software", headline_pattern(
+        r"open[ -]source|developer tools?|software|sdk|browser|operating systems?|"
+        r"linux|kubernetes|postgresql|sqlite|databases?|programming languages?|compilers?|rust|"
+        r"react (?:native|\d+)|cloud computing|serverless|infrastructure as code|"
+        r"código abierto|c[oó]digo aberto|logiciel(?:s)?|code source ouvert"
+    )),
+    ("chips", headline_pattern(r"iphone|ipad|macbook|geforce|radeon|snapdragon|ryzen|hardware")),
+)
+SECTION_TOPICS = {
+    "ai": "ai",
+    "artificial intelligence": "ai",
+    "inteligência artificial": "ai",
+    "inteligencia artificial": "ai",
+    "big tech": "bigtech",
+    "tech companies": "bigtech",
+    "cybersecurity": "security",
+    "security": "security",
+    "privacidade": "security",
+    "hardware": "chips",
+    "gadgets": "chips",
+    "semiconductors": "chips",
+    "research": "research",
+    "science": "research",
+    "software": "software",
+    "open source": "software",
+    "apps": "software",
+    "cloud": "software",
+    "startups": "startups",
+    "venture capital": "startups",
+    "tech policy": "industry",
+    "regulation": "industry",
 }
+
+
+def article_source(article):
+    # Earlier callers used only a source group such as OpenAI or Anthropic.
+    source = BY_ID.get(article.get("source_id")) or BY_ID.get(article.get("source"))
+    if source:
+        return source
+    group = article.get("source")
+    return next((source for source in BY_ID.values() if source.group == group), None)
+
 
 def topic_for(article):
-    source = BY_ID.get(article.get("source_id") or article.get("source"))
-    base = source.topic if source else "ai"
-    if article.get("kind") == "video":
+    source = article_source(article)
+    default = source.topic if source else "industry"
+    kind = article.get("kind") or (source.kind if source else "")
+    if kind == "video" or default == "video":
         return "video"
-    text = f" {article.get('title', '').lower()} "
-    if base == "outages" or ((base == "industry" or source and source.coverage == "reporting")
-                             and any(term in text for term in OUTAGE_TERMS)):
+    if kind == "status" or default == "outages":
         return "outages"
-    if base == "industry":
-        for topic, terms in HEADLINE_RULES.items():
-            if any(term in text for term in terms):
-                return topic
-    return base
+    if kind == "research" or default == "research":
+        return "research"
+    if source and source.coverage == "advisory":
+        return default
 
-
-def topic_expression(columns):
-    source = columns.source_id
-    title = " " + func.lower(columns.title) + " "
-    reporting = source.in_([s.id for s in BY_ID.values() if s.coverage == "reporting"])
-    general = source.in_([s.id for s in BY_ID.values() if s.topic == "industry"])
-
-    def matches(terms):
-        return or_(*(title.contains(term, autoescape=True) for term in terms))
-
-    return case(
-        (columns.kind == "video", "video"),
-        (reporting & matches(OUTAGE_TERMS), "outages"),
-        *((general & matches(terms), topic) for topic, terms in HEADLINE_RULES.items()),
-        *((source.in_([s.id for s in BY_ID.values() if s.topic == topic]), topic) for topic in TOPICS if topic != "ai"),
-        else_="ai",
-    )
+    title = normalize("NFKC", article.get("title") or "").translate(HYPHENS)
+    for topic, pattern in STORY_SIGNALS:
+        if pattern.search(title):
+            return topic
+    if COMPANY.search(title) and CORPORATE_ACTION.search(title):
+        return "bigtech"
+    for topic, pattern in DOMAIN_SIGNALS:
+        if pattern.search(title):
+            return topic
+    for tag in (article.get("category") or "").split("|"):
+        if topic := SECTION_TOPICS.get(" ".join(tag.casefold().split())):
+            return topic
+    return default
 
 
 def public_article(article):
+    source = article_source(article)
+    saved_topic = article.get("topic")
+    topic = saved_topic if saved_topic in TOPICS else topic_for(article)
     article = sanitize_article(article)
-    source = BY_ID.get(article.get("source_id") or article.get("source"))
-    topic = topic_for(article)
     publisher = article.get("publisher") or (source.label if source else "")
-    region = article.get("region") or (source.region if source else "Global")
+    region = source.region if source else "Global"
     url = article.get("url", "")
     published_at = article.get("published_at", "")
     
@@ -81,15 +171,14 @@ def public_article(article):
     synthetic_video = article.get("source") == "youtube" and raw_summary.startswith(f"Video by {publisher} covering ")
     clean_summary = sanitize_story_excerpt("" if synthetic_video else raw_summary, article.get("source", ""),
                                            video_fallback=False)
-    has_excerpt = bool(clean_summary) and topic != "security"
-    if topic == "security":
-        clean_summary = "See the source for affected products, impact, and security mitigation advisories."
+    has_excerpt = bool(clean_summary)
     
     why_it_matters = article.get("whyItMatters", "")
     words_count = len(clean_summary.split())
     reading_time = max(1, (words_count + 199) // 200)
 
-    result = dict(article)
+    private_fields = {"search_title", "search_description", "search_publisher", "topic_rank"}
+    result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
         "id": article.get("id", ""),
@@ -98,6 +187,7 @@ def public_article(article):
         "whyItMatters": why_it_matters,
         "category": topic,
         "region": region,
+        "region_id": region_id(region),
         "sourceName": publisher,
         "sourceUrl": url,
         "publishedAt": published_at,
@@ -112,7 +202,10 @@ def public_article(article):
         "url": url,
         "published_at": published_at,
         "coverage": source.coverage if source else "publisher",
+        "language": source.language if source else "en",
     })
+    if source and source.coverage == "preprint":
+        result["research_status"] = "preprint"
     if article.get("kind") == "video" and len(url) <= 2048:
         thumbnail = youtube_thumbnail(url)
         if thumbnail:
@@ -137,11 +230,32 @@ def youtube_thumbnail(url):
         return f"https://i.ytimg.com/vi/{video}/mqdefault.jpg"
 
 
-REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"},
-           "Africa": {"Africa"}, "LatAm": {"Latin America"}, "NA": {"North America"}}
+REGION_LABELS = {
+    "Global": "Global publishers",
+    "NA": "North America",
+    "LatAm": "Latin America & Caribbean",
+    "EU": "Europe",
+    "Africa": "Africa",
+    "MENA": "Middle East & North Africa",
+    "APAC": "Asia-Pacific",
+}
+REGIONS = {
+    "Global": {"Global"},
+    "NA": {"NA", "North America"},
+    "LatAm": {"LatAm", "Latin America", "Latin America & Caribbean"},
+    "EU": {"EU", "Europe"},
+    "Africa": {"Africa", "Sub-Saharan Africa"},
+    "MENA": {"MENA", "Middle East", "North Africa", "Middle East & North Africa"},
+    "APAC": {"APAC", "Asia", "India", "Asia-Pacific", "Oceania", "Australia"},
+}
+REGION_IDS = {label: key for key, labels in REGIONS.items() for label in labels}
+
+
+def region_id(raw_region):
+    return REGION_IDS.get(raw_region, "Global")
 
 
 def region_matches(article, region):
-    source = BY_ID.get(article.get("source_id") or article.get("source"))
+    source = article_source(article)
     actual = source.region if source else "Global"
-    return region in ("", "all") or actual in REGIONS.get(region, {region})
+    return region in ("", "all") or region_id(actual) == region

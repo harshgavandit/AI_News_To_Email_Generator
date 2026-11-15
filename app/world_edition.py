@@ -2,10 +2,10 @@
 import re
 from datetime import UTC, datetime
 
-from app.coverage import TOPICS, public_article
+from app.coverage import TOPICS, public_article, region_id
 from app.selection import words
 from app.sources import BY_ID
-from app.web_digest import SUMMARY_LABELS, safe_email_html, safe_href
+from app.web_digest import safe_email_html, safe_href, story_attribution
 
 PROVIDERS = {
     "microsoft-365": r"\b(microsoft 365|m365|outlook|exchange online|microsoft outage|microsoft teams)\b",
@@ -15,12 +15,63 @@ PROVIDERS = {
     "github": r"\bgithub\b",
     "cloudflare": r"\bcloudflare\b",
 }
+SCHEDULED_WORK = re.compile(r"\b(?:scheduled|planned) (?:maintenance|work)\b", re.I)
+REPORTING_PRIORITY = {"reporting": 2, "publisher": 1, "preprint": 1, "advisory": 1}
 
 
 def incident_key(article):
     if article["topic"] != "outages":
         return None
     return next((name for name, pattern in PROVIDERS.items() if re.search(pattern, article["title"], re.I)), None)
+
+
+def edition_candidate(article):
+    return article["coverage"] != "status" or not SCHEDULED_WORK.search(article["title"])
+
+
+def diverse_stories(candidates, count, *, previous=(), lead_with_incident=False):
+    picked = []
+    ids = {story["id"] for story in previous}
+    topics = {story["topic"] for story in previous}
+    regions = {region_id(story["region"]) for story in previous}
+    publishers = {story["publisher"] for story in previous}
+    incidents = {key for story in previous if (key := incident_key(story))}
+    seen_titles = [words(story["title"]) for story in previous]
+    pool = [(story, incident_key(story), words(story["title"])) for story in candidates
+            if story["id"] not in ids and edition_candidate(story)]
+    now = datetime.now(UTC)
+
+    def priority(row):
+        story, _, _ = row
+        reported_outage = (
+            lead_with_incident and not picked and story["topic"] == "outages" and story["coverage"] == "reporting"
+            and 0 <= (now - datetime.fromisoformat(story["published_at"])).total_seconds() <= 86400
+        )
+        new_region = region_id(story["region"]) not in regions
+        new_topic = story["topic"] not in topics
+        return (reported_outage, story["publisher"] not in publishers, new_topic + new_region, new_region,
+                REPORTING_PRIORITY.get(story["coverage"], 0), story["published_at"], story["id"])
+
+    def is_duplicate(row):
+        story, incident, tokens = row
+        return story["id"] in ids or incident in incidents or any(
+            tokens and old and len(tokens & old) / len(tokens | old) >= .72 for old in seen_titles
+        )
+
+    while pool and len(picked) < count:
+        pool = [row for row in pool if not is_duplicate(row)]
+        if not pool:
+            break
+        story, incident, tokens = max(pool, key=priority)
+        picked.append(story)
+        ids.add(story["id"])
+        topics.add(story["topic"])
+        regions.add(region_id(story["region"]))
+        publishers.add(story["publisher"])
+        if incident:
+            incidents.add(incident)
+        seen_titles.append(tokens)
+    return picked
 
 
 def select_world(articles, count, sources):
@@ -30,38 +81,16 @@ def select_world(articles, count, sources):
         source = BY_ID.get(article.get("source_id"))
         if allowed.intersection((article["source"], article.get("source_id"), source.group if source else None)):
             candidates.append(public_article(article))
-    candidates = [a for a in candidates if a["coverage"] != "status" or not re.search(
-        r"\b(maintenance|scheduled work)\b", a["title"], re.I)]
-    candidates.sort(key=lambda a: (a["published_at"], a["id"]), reverse=True)
-    # Lead with an independently covered outage when it is current enough to lead.
-    incidents = [a for a in candidates if a["topic"] == "outages" and a["coverage"] == "reporting"
-                 and (datetime.now(UTC) - datetime.fromisoformat(a["published_at"])).total_seconds() <= 86400]
-    remaining = [a for a in candidates if a["coverage"] == "reporting"]
-    pool = {a["id"]: a for a in [*incidents, *remaining, *candidates]}
-    picked, topics, publishers, incident_keys, seen = [], set(), set(), set(), []
-    for diverse in (True, False):
-        for a in pool.values():
-            topic, publisher, key, tokens = a["topic"], a["publisher"], incident_key(a), words(a["title"])
-            if a in picked or (diverse and (topic in topics or publisher in publishers)):
-                continue
-            if (key and key in incident_keys) or any(tokens and old and
-                    len(tokens & old) / len(tokens | old) >= .72 for old in seen):
-                continue
-            picked.append(a)
-            topics.add(topic)
-            publishers.add(publisher)
-            incident_keys.add(key)
-            seen.append(tokens)
-            if len(picked) == count:
-                return picked
-    return picked
+    return diverse_stories(candidates, count, lead_with_incident=True)
 
 
-def build_world(articles, hours, all_pool=None):
+def build_world(articles, hours, all_pool=None, *, scope=()):
     window = {24: "24 hours", 168: "7 days", 720: "30 days"}.get(hours, f"{hours} hours")
+    scope_text = f" Archive filters include {', '.join(scope)}." if scope else ""
     intro = {
         "greeting": "Your global brief from Informa AI",
-        "introduction": f"Recent stories across tech from the past {window}. Excerpts come from the linked publishers; check provider status pages for current incident details.",
+        "introduction": f"Recent technology stories from the past {window}.{scope_text} "
+                        "Excerpts come from the linked publishers. Provider status pages carry current incident details.",
     }
     result = {
         "edition": "world",
@@ -69,32 +98,20 @@ def build_world(articles, hours, all_pool=None):
         "articles": [],
         "generated_at": datetime.now(UTC).isoformat(),
         "quick_hits": [],
+        "scope": list(scope),
     }
     markdown = [f"# {intro['greeting']}", intro["introduction"]]
 
     if all_pool:
-        picked_ids = {item["id"] for item in articles}
-        picked_incidents = {key for item in articles if (key := incident_key(item))}
-        quick_candidates = []
-        for item in sorted(all_pool, key=lambda a: (a["published_at"], a["id"]), reverse=True):
-            if item["id"] in picked_ids:
-                continue
-            story = public_article(item)
-            key = incident_key(story)
-            if key in picked_incidents or (story["coverage"] == "status" and re.search(
-                    r"\b(maintenance|scheduled work)\b", story["title"], re.I)):
-                continue
-            quick_candidates.append(story)
-            if key:
-                picked_incidents.add(key)
-            if len(quick_candidates) == 3:
-                break
+        quick_candidates = diverse_stories((public_article(item) for item in all_pool), 3, previous=articles)
         result["quick_hits"] = [
             {
                 "title": q["title"],
                 "url": q["url"],
                 "publisher": q.get("publisher", ""),
                 "region": q.get("region", "Global"),
+                "region_id": q["region_id"],
+                "topic": q["topic"],
             }
             for q in quick_candidates
         ]
@@ -119,14 +136,17 @@ def build_world(articles, hours, all_pool=None):
             "published_at": item["published_at"],
             "coverage": item["coverage"],
             "region": item["region"],
+            "region_id": item["region_id"],
+            "language": item["language"],
             "keyTakeaway": takeaway,
             "whyItMatters": item.get("whyItMatters", ""),
         }
+        if research_status := item.get("research_status"):
+            art_entry["research_status"] = research_status
         result["articles"].append(art_entry)
         
-        basis = SUMMARY_LABELS[art_entry["summary_basis"]]
-        md_part = (f"## {rank}. {item['title']}\n{item['publisher']} · {label} · "
-                   f"{item['published_at'][:10]} · {basis}\n\n{art_entry['summary']}\n")
+        md_part = (f"## {rank}. {item['title']}\n{label} · {story_attribution(art_entry)}"
+                   f"\n\n{art_entry['summary']}\n")
         if takeaway:
             md_part += f"\n* **Key Takeaway:** {takeaway}\n"
         md_part += f"\nSource: {safe_href(item['url'])}"

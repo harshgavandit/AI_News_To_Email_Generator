@@ -21,7 +21,13 @@ class RankedArticleDetail(BaseModel):
     article_type: str
     reasoning: Optional[str] = None
     publisher: str = ""
+    topic: str = ""
     topic_label: str = "Technology"
+    coverage: str = ""
+    region: str = ""
+    region_id: str = ""
+    language: str = ""
+    research_status: str | None = None
     published_at: str = ""
     whyItMatters: str = ""
     keyTakeaway: str = ""

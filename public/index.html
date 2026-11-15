@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="Follow AI, software, research, and infrastructure news from original sources. Build a personalized tech brief or preview the Global Top 5."
+      content="Follow global news on AI, startups, cybersecurity, software, hardware, research, and technology companies. Search original sources and build a personalized brief."
     />
     <meta name="theme-color" content="#f6f4ee" />
     <title>Informa AI | Technology News &amp; Personalized Briefs</title>
     <link rel="canonical" href="https://ai-news-to-email-generator.vercel.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Informa AI | Technology News &amp; Personalized Briefs" />
-    <meta property="og:description" content="Discover technology stories from original sources and build a brief around what you follow." />
+    <meta property="og:description" content="Follow technology news around the world, read original sources, and build a brief around what you follow." />
     <meta property="og:url" content="https://ai-news-to-email-generator.vercel.app/" />
     <meta property="og:image" content="https://ai-news-to-email-generator.vercel.app/edition-city.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -20,7 +20,7 @@
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
-    <script src="/app.js" defer></script>
+    <script type="module" src="/app.js"></script>
   </head>
   <body>
     <a class="skip" href="#reading-room">Skip to stories</a>
@@ -46,9 +46,9 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
           <time id="edition-date" class="edition-date"></time>
-          <h1 id="hero-title">Technology news<br class="edition-break" /> and research</h1>
+          <h1 id="hero-title">Global technology news</h1>
           <p>
-            Browse AI, software, and infrastructure news from original sources. Save what matters and build a brief around your interests.
+            Follow AI, startups, cybersecurity, software, hardware, and research from publishers around the world.
           </p>
           <a class="edition-link" href="#reading-room">Browse stories <span aria-hidden="true">↓</span></a>
         </div>
@@ -182,6 +182,24 @@
                 >GitHub ↗</a
               >
             </aside>
+            <div class="discovery-fields">
+              <div class="reading-search">
+                <label for="search">Search coverage</label>
+                <div class="search-wrap">
+                  <span aria-hidden="true">⌕</span>
+                  <input id="search" type="search" maxlength="150" placeholder="Headlines, companies, technologies…" />
+                  <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
+                </div>
+              </div>
+              <div class="mobile-topic">
+                <label for="topic-mobile">Topic</label>
+                <select id="topic-mobile"><option value="">All topics</option></select>
+              </div>
+              <div>
+                <label for="region">Publisher region</label>
+                <select id="region"><option value="">All regions</option></select>
+              </div>
+            </div>
             <div class="desk-controls">
               <div class="toolbar">
                 <div
@@ -210,44 +228,14 @@
                   ↻ Refresh
                 </button>
               </div>
-              <div class="search-wrap">
-                <span aria-hidden="true">⌕</span
-                ><label class="sr-only" for="search">Search stories</label
-                ><input
-                  id="search"
-                  type="search"
-                  maxlength="150"
-                  placeholder="Search stories, companies, or ideas…"
-                /><button
-                  id="clear-search"
-                  type="button"
-                  class="text-button"
-                  aria-label="Clear search"
-                  hidden
-                >
-                  Clear
-                </button>
-              </div>
             </div>
             <div id="active-filters" class="active-filters" aria-label="Active filters" hidden></div>
             <div id="extra-filters" class="extra-filters" hidden>
               <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="News sources"></div>
               <div class="filter-fields">
                 <div>
-                  <label for="region">Publisher region</label>
-                  <select id="region">
-                    <option value="">All regions</option>
-                    <option value="Global">Global</option>
-                    <option value="APAC">Asia-Pacific</option>
-                    <option value="EU">Europe</option>
-                    <option value="Africa">Africa</option>
-                    <option value="LatAm">Latin America</option>
-                    <option value="NA">North America</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="publisher">Publisher</label>
-                  <select id="publisher"><option value="">All publishers</option></select>
+                  <label for="publisher">Publisher feed</label>
+                  <select id="publisher"><option value="">All publisher feeds</option></select>
                 </div>
                 <div>
                   <label for="kind">Content type</label>
@@ -259,6 +247,10 @@
                     <option value="video">Video</option>
                     <option value="status">Service status</option>
                   </select>
+                </div>
+                <div>
+                  <label for="coverage">Source type</label>
+                  <select id="coverage"><option value="">All source types</option></select>
                 </div>
               </div>
             </div>
@@ -358,10 +350,16 @@
                     Product — users &amp; opportunities
                   </option>
                 </select>
-                <fieldset>
-                  <legend>Topics you follow</legend>
-                  <div id="interests" class="interest-chips"></div>
-                </fieldset>
+                <div class="form-row">
+                  <div>
+                    <label for="digest-topic">Topic</label>
+                    <select id="digest-topic"><option value="">All topics</option></select>
+                  </div>
+                  <div>
+                    <label for="digest-region">Publisher region</label>
+                    <select id="digest-region"><option value="">All regions</option></select>
+                  </div>
+                </div>
                 <label for="focus"
                   >Specific interests
                   <span class="optional">Optional</span></label
@@ -369,7 +367,7 @@
                   id="focus"
                   rows="2"
                   maxlength="400"
-                  placeholder="e.g. AI tools for small engineering teams"
+                  placeholder="e.g. chip manufacturing, cloud security, or climate tech"
                 ></textarea>
                 <div class="selected-heading">
                   <strong
@@ -386,7 +384,7 @@
                 </div>
                 <div id="selected-stories">
                   <p class="small">
-                    Pin stories in the Reading Room to include them.
+                    Pinned stories are included even if they fall outside your filters.
                   </p>
                 </div>
                 <p
@@ -488,7 +486,7 @@
               <div id="preview-empty" class="preview-empty">
                 <span aria-hidden="true">✉</span>
                 <h3>No brief yet</h3>
-                <p>Choose your interests to preview a personalized edition.</p>
+                <p>Choose a topic, region, or specific interest to preview a personalized edition.</p>
                 <button id="empty-build" type="button" class="button secondary">
                   Build a brief
                 </button>

@@ -1,4 +1,5 @@
 /* Reading Room */
+:root:has(#reading-room:target) { scroll-behavior: auto; }
 .topbar { height: 66px; }
 .brand { gap: 9px; font-size: 24px; font-weight: 600; white-space: nowrap; }
 .brand-icon { display: block; border-radius: 7px; }
@@ -67,11 +68,32 @@
 .reading-views button[aria-pressed="true"] { border-bottom-color: var(--green); color: var(--green); }
 #saved-count { font-variant-numeric: tabular-nums; margin-left: 4px; }
 .health-pill { font-size: 11px; min-height: 36px; }
-#topics { margin-bottom: 14px; }
-.desk-controls { display: flex; align-items: center; gap: 12px; }
-.desk-controls .toolbar { padding: 0; flex-wrap: nowrap; flex-shrink: 0; }
+#topics { margin-bottom: 14px; gap: 6px; }
+#topics .topic-chip {
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 35px;
+  font-size: 12px;
+}
+#topics .topic-chip:hover { background: var(--sage); }
+#topics .topic-chip[aria-pressed="true"] { background: var(--green); }
+.discovery-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(185px, .45fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.discovery-fields > div { min-width: 0; }
+.discovery-fields label { margin-bottom: 5px; }
+.discovery-fields :is(select, .search-wrap) { min-height: 42px; }
+.discovery-fields select { font-size: 13px; }
+.search-wrap:focus-within { border-color: var(--green); }
+.search-wrap input { min-width: 0; }
+.search-wrap .text-button { padding-inline: 8px; min-height: 40px; }
+.mobile-topic { display: none; }
+.desk-controls .toolbar { padding: 0; gap: 10px; }
 .desk-controls .toolbar > .text-button { width: auto; padding: 6px 2px; white-space: nowrap; }
-.desk-controls .search-wrap { flex: 1; min-width: 0; min-height: 40px; }
 .filter-button {
   display: inline-flex;
   align-items: center;
@@ -130,6 +152,10 @@
 .story-skeleton span:first-child { width: 28%; }
 .story-skeleton span:last-child { width: 53%; }
 .news-empty { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.reading-empty { overflow-wrap: anywhere; }
+.reading-empty strong { color: var(--ink); font-size: 15px; }
+.reading-empty p { margin: 6px 0 0; }
+.reading-empty .button { margin-top: 14px; }
 .preview-basis { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
 #digest-source-selection { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
 .digest-meta, .digest-source-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -152,7 +178,7 @@ footer > div { flex-wrap: wrap; }
   .theme-select { min-height: 40px; }
   .hero { grid-template-columns: minmax(0, 1fr); padding: 17px 0; gap: 14px; }
   .hero h1 { font-size: clamp(31px, 8.5vw, 42px); margin-bottom: 6px; }
-  .edition-break, .edition-link { display: none; }
+  .edition-link { display: none; }
   .headlines-content.with-coverage:has(.headline-list), .headline-list { grid-template-columns: minmax(0, 1fr); }
   .coverage-lead { padding: 14px; }
   .headline-list li:nth-child(even) { border-left: 0; }
@@ -165,16 +191,13 @@ footer > div { flex-wrap: wrap; }
   .email-action input { font-size: 16px; height: 44px; }
   .email-action .button { min-height: 44px; padding-inline: 10px; }
   .check-label { margin-top: 10px; }
-  .desk-controls { flex-direction: column; align-items: stretch; gap: 8px; }
-  .desk-controls .toolbar { justify-content: space-between; }
-  #topics {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 3px 4px 6px;
-    margin: 0 -4px 7px;
-    scrollbar-width: thin;
-  }
-  #topics .topic-chip { flex-shrink: 0; min-height: 35px; font-size: 11px; }
+  #topics { display: none; }
+  .mobile-topic { display: block; }
+  .discovery-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .reading-search { grid-column: 1 / -1; }
+  .reading-search input { font-size: 16px; }
+  .discovery-fields :is(select, .search-wrap) { min-height: 44px; }
+  .desk-controls .toolbar { justify-content: space-between; gap: 6px; }
   .stories { grid-template-columns: minmax(0, 1fr); }
   .story-list > .story { display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 12px; }
   .story-list .story-bottom { padding-top: 5px; }
@@ -204,8 +227,10 @@ footer > div { flex-wrap: wrap; }
 .directory-heading { padding: 22px 0 14px; border-bottom: 1px solid var(--line); }
 .directory-heading h1 { color: var(--ink); font: normal clamp(32px, 4vw, 47px)/1.08 var(--serif); margin: 0 0 7px; letter-spacing: -.03em; }
 .directory-heading p { color: var(--muted); margin: 0; }
-.directory-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(155px, .34fr); gap: 12px; margin-top: 18px; }
+.directory-controls { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 .directory-controls label { display: grid; gap: 6px; margin: 0; }
+.directory-results { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 12px; color: var(--muted); }
+.directory-results p { margin: 0; }
 .source-table {
   display: grid;
   margin: 12px 0 32px;
@@ -213,6 +238,7 @@ footer > div { flex-wrap: wrap; }
   border-radius: 8px;
   background: var(--paper);
 }
+.source-table:empty { display: none; }
 .source-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(205px, .55fr) auto;
@@ -229,8 +255,12 @@ footer > div { flex-wrap: wrap; }
 .source-state-stale, .source-state-failed { background: var(--warning-surface); color: var(--warning-text); }
 .directory-actions { display: flex; gap: 11px; align-items: center; flex-wrap: wrap; }
 .directory-actions > .button { min-height: 36px; padding: 7px 11px; }
+@media (max-width: 899px) {
+  .directory-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .directory-controls > label:first-child { grid-column: 1 / -1; }
+}
 @media (max-width: 699px) {
-  .directory-controls { grid-template-columns: minmax(0, 1fr); }
+  .directory-controls :is(select, input) { min-height: 44px; }
   .source-row { grid-template-columns: minmax(0, 1fr); gap: 9px; }
   .source-timing { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
 }

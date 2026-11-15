@@ -9,14 +9,15 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
 - `hours` accepts `12`, `24`, `168`, or `720`.
-- `topic`, `source`, `publisher`, `kind`, and `region` narrow the result. Get source IDs and categories from `GET /api/sources`.
-- `sort` accepts `latest`, `oldest`, or `relevance`. Relevance requires search terms and gives more weight to headline matches. Relevance without a query uses newest-first order.
+- `topic`, `source`, `publisher`, `kind`, `region`, and `coverage` can be combined. `GET /api/sources` returns the `topics`, `regions`, and `coverage_types` ID-to-label maps, plus `region_id`, `language`, provenance, and freshness for each feed. `region` describes the publisher's coverage, so the location mentioned in a story may differ. Use `coverage=reporting` for independent reporting or `coverage=advisory` for official cybersecurity advisories.
+- `facets.topics` and `facets.regions` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
+- `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, or feed excerpts. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Relevance without a query uses newest-first order.
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
 - `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
 
 ## Build and deliver a brief
 
-Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1–10). A personal edition can also specify `name`, `focus`, `topics`, `persona`, `style`, `sources`, and ordered `pinned_ids`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key.
+Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1–10). Both editions accept `topic`, `region`, `sources`, and ordered `pinned_ids`. Topic and region apply to automatic story selection. Explicit pins can include stories outside that scope. A personal edition can also specify `name`, `focus`, free-text `topics`, `persona`, and `style`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key.
 
 Add `?stream=true` to receive newline-delimited JSON. Events contain a numbered `stage`, a final `result`, or an `error` with a `status` and optional `retry_after`. Errors emitted after streaming starts are carried in the stream rather than the HTTP status.
 

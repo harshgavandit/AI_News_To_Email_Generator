@@ -2,8 +2,8 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta
 
-from app.coverage import REGIONS
-from app.news import read_feed
+from app.coverage import region_id
+from app.news import FEED_WORKERS, read_feed
 from app.sources import DEFAULT_SOURCES
 
 FRESH_FOR = timedelta(minutes=45)
@@ -14,7 +14,7 @@ def refresh_sources(store, only=None, *, source_ids=None):
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)
               and (source_ids is None or s.id in source_ids)]
-    with ThreadPoolExecutor(max_workers=10) as pool:
+    with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
         futures = {pool.submit(read_feed, source): source for source in active}
         for future in as_completed(futures):
             try:
@@ -34,7 +34,7 @@ def source_catalog(store=None):
     result = []
     for s in DEFAULT_SOURCES:
         state = states.get(s.id, {})
-        feed = {**s.public(), "enabled": state.get("enabled", s.enabled),
+        feed = {**s.public(), "region_id": region_id(s.region), "enabled": state.get("enabled", s.enabled),
                 "available": state.get("available"), "last_success": timestamp(state.get("last_success")),
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
@@ -54,10 +54,11 @@ def source_freshness(feed, cutoff):
     return "stale" if feed["last_success"] < cutoff else "fresh"
 
 
-def selected_feeds(catalog, *, source="all", publisher="", kind="all", region=""):
+def selected_feeds(catalog, *, source="all", publisher="", kind="all", region="", coverage=""):
     return [feed for feed in catalog if feed["enabled"] and (source == "all" or source in (feed["id"], feed["source"]))
             and (not publisher or feed["id"] == publisher) and (kind == "all" or feed["kind"] == kind)
-            and (not region or feed.get("region", "Global") in REGIONS[region])]
+            and (not region or region_id(feed.get("region", "Global")) == region)
+            and (not coverage or feed.get("coverage") == coverage)]
 
 
 def feed_freshness(catalog, **filters):

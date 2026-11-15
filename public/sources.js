@@ -1,4 +1,5 @@
 "use strict";
+import { coverageLabels, fillOptions, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
 
 const element = (id) => document.getElementById(id);
 const statusLabels = {
@@ -8,7 +9,8 @@ const statusLabels = {
   pending: "Awaiting first check",
   paused: "Paused",
 };
-const sourceTypes = { status: "Official status", reporting: "Reporting", discussion: "Community discussion" };
+const filters = ["source-search", "source-region", "source-topic", "source-coverage", "source-filter"];
+const normalize = (value) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 let catalog = null;
 
 function node(tag, className, label) {
@@ -20,15 +22,23 @@ function node(tag, className, label) {
 
 function render() {
   if (!catalog) return;
-  const query = element("source-search").value.trim().toLowerCase();
-  const filter = element("source-filter").value;
-  const { sources, topics } = catalog;
+  const query = normalize(element("source-search").value.trim());
+  const status = element("source-filter").value;
+  const region = element("source-region").value;
+  const topic = element("source-topic").value;
+  const coverage = element("source-coverage").value;
+  const { sources, topics, regions, coverageTypes } = catalog;
   const rows = [];
   for (const source of sources) {
     const flag = Object.hasOwn(statusLabels, source.freshness) ? source.freshness : "pending";
-    const meta = [sourceTypes[source.coverage] || "Publisher update", source.region, topics[source.topic]];
-    if (filter !== "all" && filter !== flag) continue;
-    if (![source.label, ...meta].join(" ").toLowerCase().includes(query)) continue;
+    const sourceRegion = regionId(source);
+    const regionLabel = sourceRegion === "Global" ? "Global" :
+      source.region && source.region !== sourceRegion ? source.region : regions[sourceRegion] || sourceRegion;
+    const sourceType = source.kind === "video" ? "Creator video" : coverageTypes[source.coverage];
+    const meta = [sourceType, regionLabel, topics[source.topic], originalLanguage(source.language)];
+    if ((status && status !== flag) || (region && region !== sourceRegion) ||
+        (topic && topic !== source.topic) || (coverage && coverage !== source.coverage)) continue;
+    if (!normalize([source.label, regions[sourceRegion], ...meta].join(" ")).includes(query)) continue;
 
     const row = node("article", "source-row");
     const identity = node("div", "source-identity");
@@ -45,14 +55,15 @@ function render() {
     if (source.enabled) {
       const stories = node("a", "button secondary", "View stories");
       stories.href = `/?${new URLSearchParams({ publisher: source.id, window: "7d" })}#reading-room`;
+      stories.setAttribute("aria-label", `View stories from ${source.label}`);
       actions.append(stories);
     }
-    const feed = node("a", "text-button", "RSS ↗");
+    const feed = node("a", "text-button", "Feed ↗");
     try {
       const url = new URL(source.feed_url);
-      if (url.protocol === "https:") {
+      if (url.protocol === "https:" && !url.username && !url.password) {
         feed.href = url.href;
-        feed.title = `${source.label} feed`;
+        feed.setAttribute("aria-label", `Open ${source.label} feed`);
         feed.target = "_blank";
         feed.rel = "noopener noreferrer";
         actions.append(feed);
@@ -61,26 +72,44 @@ function render() {
     row.append(identity, timing, actions);
     rows.push(row);
   }
-  const status = rows.length ? `${rows.length} of ${sources.length} sources` : "No sources match your search.";
-  element("source-status").textContent = status;
+  element("source-status").textContent = rows.length ?
+    `${rows.length} of ${sources.length} sources` : "No sources match these filters.";
+  element("source-reset").hidden = !query && !status && !region && !topic && !coverage;
   element("source-rows").replaceChildren(...rows);
 }
 
 async function loadSources() {
   element("source-retry").hidden = true;
   element("source-status").textContent = "Loading sources…";
+  element("source-rows").setAttribute("aria-busy", "true");
   try {
     const response = await fetch("/api/sources", { signal: AbortSignal.timeout(20_000) });
     if (!response.ok) throw new Error();
-    catalog = await response.json();
+    const data = await response.json();
+    catalog = {
+      sources: data.sources.sort((a, b) => a.label.localeCompare(b.label)),
+      topics: topicOptions(data.topics),
+      regions: regionOptions(data.regions),
+      coverageTypes: data.coverage_types || coverageLabels,
+    };
+    fillOptions(element("source-region"), catalog.regions, "All regions");
+    fillOptions(element("source-topic"), catalog.topics, "All topics");
+    fillOptions(element("source-coverage"), catalog.coverageTypes, "All source types");
     render();
   } catch {
     element("source-status").textContent = "Sources could not be loaded.";
     element("source-retry").hidden = false;
+  } finally {
+    element("source-rows").setAttribute("aria-busy", "false");
   }
 }
 
-element("source-search").addEventListener("input", render);
-element("source-filter").addEventListener("change", render);
+for (const [index, id] of filters.entries())
+  element(id).addEventListener(index ? "change" : "input", render);
+element("source-reset").addEventListener("click", () => {
+  for (const id of filters) element(id).value = "";
+  render();
+  element("source-search").focus();
+});
 element("source-retry").addEventListener("click", loadSources);
 loadSources();

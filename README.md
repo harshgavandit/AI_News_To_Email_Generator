@@ -1,8 +1,8 @@
 # Informa AI
 
-Browse recent technology news, research, service outages, and videos from publishers around the world. Search by keyword, sort by relevance or publication date, and filter by topic, region, format, publisher, or time. Share a filtered Reading Room link, save stories in your browser, or pin them for your next brief.
+Browse AI, startups, security, software and cloud, chips and hardware, tech companies, research, industry policy, and service outages. The Reading Room draws on 83 reviewed RSS and Atom feeds, including local publishers in Africa, Asia-Pacific, Europe, Latin America, the Middle East and North Africa, and North America. Filter by topic, publisher region, source type, format, and time. Search titles, publisher names, and excerpts in their original language, and share a link to the filtered view.
 
-Get the Global Top 5 or build a brief around your interests, reader perspective, and pinned stories. Each story links to its source and indicates whether it uses an AI summary of the feed, a publisher excerpt, or a headline. Preview at full width or 375 pixels, switch the email preview to dark mode, and copy Markdown or download HTML or an email file.
+Get the Global Top 5 or build a brief around a topic, publisher region, reader perspective, and pinned stories. Each story links to its source and distinguishes independent reporting, official announcements, security advisories, preprints, and other source types. Briefs label AI summaries, publisher excerpts, and headline-only stories. Copy Markdown or download HTML or an email file.
 
 Verify an inbox to send up to three briefs per UTC day. Readers can opt in to a daily global brief around 8 AM in their local timezone. Verified readers can also send a brief to a Slack or Microsoft Teams webhook.
 
