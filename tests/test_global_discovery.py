@@ -91,6 +91,7 @@ def test_native_language_search_facets_and_brief(with_archive, monkeypatch, tmp_
         story("itmedia-news", "jp-gpu", "日本の半導体メーカーが新しいＧＰＵを発表"),
         story("itmedia-news", "jp-review", "新型ＧＰＵと半導体市場", hours=2),
         story("le-monde-pixels", "fr-gpu", "Les GPU en Europe"),
+        story("etnews-tech", "ko-gpu", "한국 반도체 시장과 차세대 GPU"),
     ]
     store = Store(f"sqlite:///{tmp_path / 'language.db'}") if with_archive else None
     monkeypatch.setattr(server, "get_store", lambda: store)
@@ -109,6 +110,8 @@ def test_native_language_search_facets_and_brief(with_archive, monkeypatch, tmp_
         assert client.get("/api/news", params={**params, "language": "fr", "cursor": page["next_cursor"]}).status_code == 400
         result = client.get("/api/news", params={"q": "半導体", "language": "ja", "topic": "chips"}).json()
         assert {row["id"] for row in result["articles"]} == {"jp-gpu", "jp-review"}
+        korean = client.get("/api/news", params={"q": "반도체", "language": "ko", "topic": "chips"}).json()
+        assert [row["id"] for row in korean["articles"]] == ["ko-gpu"]
         response = client.post("/api/digest", json={"edition": "world", "language": "ja", "topic": "chips"})
         assert response.status_code == 200
         digest = response.json()["digest"]

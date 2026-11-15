@@ -26,6 +26,7 @@ export const languageOptions = {
   fr: "French",
   de: "German",
   ja: "Japanese",
+  ko: "Korean",
   "pt-BR": "Portuguese (Brazil)",
   "es-MX": "Spanish (Mexico)",
 };

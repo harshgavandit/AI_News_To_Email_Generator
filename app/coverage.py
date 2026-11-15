@@ -125,6 +125,17 @@ JAPANESE_SIGNALS = (
     ("ai", re.compile(r"生成AI|人工知能|大規模言語モデル", re.I)),
     ("software", re.compile(r"オープンソース|クラウド|ソフトウェア")),
 )
+KOREAN_SIGNALS = (
+    ("outages", re.compile(r"접속 장애|서비스 장애|먹통")),
+    ("security", re.compile(r"취약점|랜섬웨어|사이버\s*공격|개인정보\s*유출")),
+    ("startups", re.compile(r"스타트업|투자\s*유치")),
+    ("industry", re.compile(r"독점금지|수출\s*규제")),
+    ("research", re.compile(r"연구진|논문|양자컴퓨터")),
+    ("chips", re.compile(r"반도체|스마트폰|그래픽카드")),
+    ("ai", re.compile(r"인공지능|생성형\s*AI|거대언어모델", re.I)),
+    ("software", re.compile(r"오픈소스|클라우드|소프트웨어")),
+)
+LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS}
 
 
 def article_source(article):
@@ -150,8 +161,8 @@ def topic_for(article):
         return default
 
     title = normalize("NFKC", article.get("title") or "").translate(HYPHENS)
-    if source and source.language == "ja":
-        for topic, pattern in JAPANESE_SIGNALS:
+    if source:
+        for topic, pattern in LOCAL_SIGNALS.get(source.language, ()):
             if pattern.search(title):
                 return topic
     for topic, pattern in STORY_SIGNALS:

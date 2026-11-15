@@ -125,6 +125,8 @@ DEFAULT_SOURCES = (
     reporting("tnglobal", "TNGlobal", "https://technode.global/feed/", "technode.global", region="APAC"),
     reporting("korea-times-tech", "The Korea Times Technology", "https://feed.koreatimes.co.kr/k/business.xml",
               "koreatimes.co.kr", region="Asia", tech_only=True),
+    reporting("etnews-tech", "ETNews Technology", "https://rss.etnews.com/03.xml", "etnews.com",
+              region="Asia", language="ko"),
     reporting("japan-today-tech", "Japan Today Technology", "https://japantoday.com/category/tech/feed",
               "japantoday.com", region="Asia"),
     reporting("reseller-nz", "Reseller News New Zealand", "https://www.reseller.co.nz/feed/", "reseller.co.nz", region="APAC"),
@@ -209,6 +211,6 @@ BY_ID = {source.id: source for source in DEFAULT_SOURCES}
 GROUPS = tuple(dict.fromkeys(s.group for s in DEFAULT_SOURCES))
 KINDS = ("all", "news", "research", "engineering", "video", "status")
 LANGUAGES = {code: label for code, label in (
-    ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"),
+    ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"), ("ko", "Korean"),
     ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}
