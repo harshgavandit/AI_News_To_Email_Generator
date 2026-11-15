@@ -40,7 +40,7 @@ PROMO_PATTERNS = [
 ]
 
 PROMO_RE = re.compile(r"(?:" + "|".join(PROMO_PATTERNS) + r")", re.I)
-SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
+SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[^\W_])|(?<=[。！？])\s*(?=\w)")
 DIRECTIONAL = "👇👉🔗✅👆➡️⬇️🏼🏻🏽🏾🏿 \t"
 
 
@@ -82,7 +82,8 @@ def sanitize_story_excerpt(raw_text: str, source: str, title: str = "", *, chann
         excerpt = f"Video by {channel or 'a featured creator'} covering {sanitize_text(title, 180)}."
     if len(excerpt) > 220:
         head = excerpt[:219]
-        return (head.rsplit(" ", 1)[0] if " " in head else head).rstrip(" ,:;–—") + "…"
+        boundary = head.rfind(" ")
+        return (head[:boundary] if boundary > 189 else head).rstrip(" ,:;–—") + "…"
     return excerpt
 
 

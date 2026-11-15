@@ -115,6 +115,16 @@ SECTION_TOPICS = {
     "tech policy": "industry",
     "regulation": "industry",
 }
+JAPANESE_SIGNALS = (
+    ("outages", re.compile(r"障害|接続できない")),
+    ("security", re.compile(r"脆弱性|ランサムウェア|サイバー攻撃|情報漏えい")),
+    ("startups", re.compile(r"スタートアップ|資金調達")),
+    ("industry", re.compile(r"独占禁止|輸出規制")),
+    ("research", re.compile(r"研究チーム|論文|量子コンピュータ")),
+    ("chips", re.compile(r"半導体|スマートフォン|グラフィックスカード")),
+    ("ai", re.compile(r"生成AI|人工知能|大規模言語モデル", re.I)),
+    ("software", re.compile(r"オープンソース|クラウド|ソフトウェア")),
+)
 
 
 def article_source(article):
@@ -140,6 +150,10 @@ def topic_for(article):
         return default
 
     title = normalize("NFKC", article.get("title") or "").translate(HYPHENS)
+    if source and source.language == "ja":
+        for topic, pattern in JAPANESE_SIGNALS:
+            if pattern.search(title):
+                return topic
     for topic, pattern in STORY_SIGNALS:
         if pattern.search(title):
             return topic

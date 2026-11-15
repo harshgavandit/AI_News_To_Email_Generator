@@ -2,6 +2,8 @@
 import re
 from collections import Counter
 
+from app.discovery import search_terms, search_text
+
 STOP = frozenset("a an and about with in on the for to of or my i ai latest want how is are what more using use".split())
 
 
@@ -10,16 +12,16 @@ def words(text):
 
 
 def select_candidates(articles, focus, count, sources):
-    topics = words(focus)
+    topics = [term for term in search_terms(focus) if term not in STOP]
     allowed = set(sources)
     rows = []
     for article in articles:
         if article["source"] not in allowed and article.get("source_id") not in allowed:
             continue
         title = words(article["title"])
-        excerpt = words(article["description"])
-        # Normalize title match weight without giving very long excerpts an advantage.
-        score = 3 * len(topics & title) + len(topics & excerpt)
+        normalized_title = search_text(article["title"])
+        excerpt = search_text(article["description"])
+        score = sum(3 * (term in normalized_title) + (term in excerpt) for term in topics)
         rows.append((score, article["published_at"], article["id"], title, article))
     rows.sort(key=lambda row: row[:3], reverse=True)
     picked, deferred, seen_titles = [], [], []

@@ -118,7 +118,7 @@
 .active-filters .topic-chip { background: var(--sage); color: var(--green); border-color: var(--accent-line); }
 .news-update { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; padding: 5px 12px; background: var(--sage); color: var(--green); border: 1px solid var(--accent-line); border-radius: 6px; font-size: 12px; }
 .news-update .text-button { color: inherit; min-height: 34px; font-weight: 650; white-space: nowrap; }
-.filter-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.filter-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .filter-fields label { margin-bottom: 4px; }
 .results-line { justify-content: flex-start; align-items: center; gap: 12px; font-size: 12px; min-height: 32px; margin: 10px 0; }
 #sort { width: auto; margin-left: auto; padding: 5px 7px; font-size: 12px; }
@@ -227,7 +227,7 @@ footer > div { flex-wrap: wrap; }
 .directory-heading { padding: 22px 0 14px; border-bottom: 1px solid var(--line); }
 .directory-heading h1 { color: var(--ink); font: normal clamp(32px, 4vw, 47px)/1.08 var(--serif); margin: 0 0 7px; letter-spacing: -.03em; }
 .directory-heading p { color: var(--muted); margin: 0; }
-.directory-controls { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.directory-controls { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 .directory-controls label { display: grid; gap: 6px; margin: 0; }
 .directory-results { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 12px; color: var(--muted); }
 .directory-results p { margin: 0; }

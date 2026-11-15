@@ -54,11 +54,12 @@ def source_freshness(feed, cutoff):
     return "stale" if feed["last_success"] < cutoff else "fresh"
 
 
-def selected_feeds(catalog, *, source="all", publisher="", kind="all", region="", coverage=""):
+def selected_feeds(catalog, *, source="all", publisher="", kind="all", region="", coverage="", language=""):
     return [feed for feed in catalog if feed["enabled"] and (source == "all" or source in (feed["id"], feed["source"]))
             and (not publisher or feed["id"] == publisher) and (kind == "all" or feed["kind"] == kind)
             and (not region or region_id(feed.get("region", "Global")) == region)
-            and (not coverage or feed.get("coverage") == coverage)]
+            and (not coverage or feed.get("coverage") == coverage)
+            and (not language or feed.get("language") == language)]
 
 
 def feed_freshness(catalog, **filters):

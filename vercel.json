@@ -45,9 +45,29 @@
     }
   ],
   "crons": [
-    {
-      "path": "/api/jobs/refresh",
-      "schedule": "0 2 * * *"
-    }
+    { "path": "/api/jobs/refresh?slot=00", "schedule": "0 0 * * *" },
+    { "path": "/api/jobs/refresh?slot=01", "schedule": "0 1 * * *" },
+    { "path": "/api/jobs/refresh?slot=02", "schedule": "0 2 * * *" },
+    { "path": "/api/jobs/refresh?slot=03", "schedule": "0 3 * * *" },
+    { "path": "/api/jobs/refresh?slot=04", "schedule": "0 4 * * *" },
+    { "path": "/api/jobs/refresh?slot=05", "schedule": "0 5 * * *" },
+    { "path": "/api/jobs/refresh?slot=06", "schedule": "0 6 * * *" },
+    { "path": "/api/jobs/refresh?slot=07", "schedule": "0 7 * * *" },
+    { "path": "/api/jobs/refresh?slot=08", "schedule": "0 8 * * *" },
+    { "path": "/api/jobs/refresh?slot=09", "schedule": "0 9 * * *" },
+    { "path": "/api/jobs/refresh?slot=10", "schedule": "0 10 * * *" },
+    { "path": "/api/jobs/refresh?slot=11", "schedule": "0 11 * * *" },
+    { "path": "/api/jobs/refresh?slot=12", "schedule": "0 12 * * *" },
+    { "path": "/api/jobs/refresh?slot=13", "schedule": "0 13 * * *" },
+    { "path": "/api/jobs/refresh?slot=14", "schedule": "0 14 * * *" },
+    { "path": "/api/jobs/refresh?slot=15", "schedule": "0 15 * * *" },
+    { "path": "/api/jobs/refresh?slot=16", "schedule": "0 16 * * *" },
+    { "path": "/api/jobs/refresh?slot=17", "schedule": "0 17 * * *" },
+    { "path": "/api/jobs/refresh?slot=18", "schedule": "0 18 * * *" },
+    { "path": "/api/jobs/refresh?slot=19", "schedule": "0 19 * * *" },
+    { "path": "/api/jobs/refresh?slot=20", "schedule": "0 20 * * *" },
+    { "path": "/api/jobs/refresh?slot=21", "schedule": "0 21 * * *" },
+    { "path": "/api/jobs/refresh?slot=22", "schedule": "0 22 * * *" },
+    { "path": "/api/jobs/refresh?slot=23", "schedule": "0 23 * * *" }
   ]
 }

@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
+    inputs:
+      feeds_only:
+        description: Refresh publisher feeds without sending morning mail
+        type: boolean
+        default: true
 
 permissions: {}
 concurrency:
@@ -35,6 +40,7 @@ jobs:
             echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
           fi
       - name: Process opted-in morning briefs
+        if: github.event_name != 'workflow_dispatch' || !inputs.feeds_only
         shell: bash
         run: |
           set -euo pipefail

@@ -257,6 +257,10 @@
                   <label for="coverage">Source type</label>
                   <select id="coverage"><option value="">All source types</option></select>
                 </div>
+                <div>
+                  <label for="language">Story language</label>
+                  <select id="language"><option value="">All languages</option></select>
+                </div>
               </div>
             </div>
             <div id="failed-alert" class="failed-alert" hidden>
@@ -275,6 +279,7 @@
               Finding fresh stories…
             </p>
             <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
+            <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief from these filters ↗</button>
             <label for="sort" class="sr-only">Sort stories</label>
             <select id="sort">
               <option value="latest">Newest first</option>
@@ -374,6 +379,8 @@
                   maxlength="400"
                   placeholder="e.g. chip manufacturing, cloud security, or climate tech"
                 ></textarea>
+                <label for="digest-language">Source language</label>
+                <select id="digest-language"><option value="">All languages</option></select>
                 <div class="selected-heading">
                   <strong
                     >Pinned stories

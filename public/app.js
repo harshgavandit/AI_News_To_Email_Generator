@@ -1,5 +1,5 @@
 "use strict";
-import { coverageLabels, fillOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
+import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -12,6 +12,7 @@ const state = {
   counts: {},
   topics: topicOptions(),
   regions: regionOptions(),
+  languages: languageOptions,
   coverageTypes: coverageLabels,
   facets: {},
   controller: null,
@@ -236,6 +237,7 @@ function syncURL() {
     publisher: state.publisher,
     kind: $("kind").value,
     coverage: $("coverage").value,
+    language: $("language").value,
     sort: $("sort").value === defaultSort(state.searching) ? "" : $("sort").value,
   })) {
     if (!value || value === "all") url.searchParams.delete(key);
@@ -244,7 +246,7 @@ function syncURL() {
   history.replaceState(null, "", url);
   $("clear-search").hidden = !$("search").value;
   const count = Number(state.source !== "all") + Number(Boolean(state.publisher)) +
-    Number($("kind").value !== "all") + Number(Boolean($("coverage").value));
+    Number($("kind").value !== "all") + Number(Boolean($("coverage").value)) + Number(Boolean($("language").value));
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
   $("reset-filters").hidden = state.view !== "feed" ||
@@ -263,6 +265,7 @@ function renderActiveFilters() {
     [state.publisher && publisher, () => { state.publisher = $("publisher").value = ""; }],
     [$("kind").value !== "all" && selectLabel("kind"), () => { $("kind").value = "all"; }],
     [$("coverage").value && selectLabel("coverage"), () => { $("coverage").value = ""; }],
+    [$("language").value && selectLabel("language"), () => { $("language").value = ""; }],
   ].filter(([label]) => label);
   filters.replaceChildren();
   filters.hidden = !active.length;
@@ -291,8 +294,10 @@ function restoreURL() {
   $("region").value = params.get("region") || "";
   $("kind").value = params.get("kind") || "all";
   $("coverage").value = params.get("coverage") || "";
+  $("language").value = params.get("language") || "";
   if ($("kind").selectedIndex === -1) $("kind").value = "all";
   if ($("coverage").selectedIndex === -1) $("coverage").value = "";
+  if ($("language").selectedIndex === -1) $("language").value = "";
   $("sort").value = params.get("sort") || defaultSort(state.searching);
   if ($("sort").selectedIndex === -1) $("sort").value = defaultSort(state.searching);
   if ($("region").selectedIndex === -1) $("region").value = "";
@@ -308,6 +313,7 @@ function renderCoverageControls(data = {}) {
   if (data.topics) state.topics = topicOptions(data.topics);
   if (data.regions) state.regions = regionOptions(data.regions);
   if (data.coverage_types) state.coverageTypes = data.coverage_types;
+  if (data.languages) state.languages = data.languages;
   state.facets = data.facets || {};
   const counts = state.facets.topics;
   const topics = { all: "All topics", ...state.topics };
@@ -327,6 +333,8 @@ function renderCoverageControls(data = {}) {
   }
   fillOptions($("topic-mobile"), state.topics, "All topics", counts, state.topic);
   fillOptions($("region"), state.regions, "All regions", state.facets.regions);
+  fillOptions($("language"), state.languages, "All languages", state.facets.languages);
+  fillOptions($("digest-language"), state.languages, "All languages");
   fillOptions($("coverage"), state.coverageTypes, "All source types");
   fillOptions($("digest-topic"), state.topics, "All topics");
   fillOptions($("digest-region"), state.regions, "All regions");
@@ -479,12 +487,15 @@ function renderStories() {
     container.append(card);
   }
   $("show-more").hidden = isSaved || !state.cursor;
+  $("brief-from-view").hidden = isSaved || !state.articles.length || !(state.topic !== "all" ||
+    $("region").value || $("language").value || state.publisher || state.searching);
   $("stories").classList.toggle("has-lead", !isSaved && state.source === "all" && state.topic === "all" && state.hours <= 24 &&
-    !state.searching && !$("region").value && !state.publisher && !$("coverage").value && $("kind").value === "all" &&
+    !state.searching && !$("region").value && !state.publisher && !$("coverage").value && !$("language").value && $("kind").value === "all" &&
     state.articles.length >= 3);
   const context = [
     state.topics[state.topic],
     $("region").value && state.regions[$("region").value],
+    $("language").value && state.languages[$("language").value],
   ].filter(Boolean);
   status(
     "news-status",
@@ -600,6 +611,7 @@ function renderHealth(freshness, catalog = state.sources) {
     (state.source === "all" || state.source === source.source || state.source === source.id) &&
     (!state.publisher || state.publisher === source.id) &&
     (!$("region").value || $("region").value === regionId(source)) &&
+    (!$("language").value || $("language").value === source.language) &&
     ($("kind").value === "all" || $("kind").value === source.kind) &&
     (!$("coverage").value || $("coverage").value === source.coverage));
   const { enabled = 0, fresh = 0, failed = 0, stale = 0 } = freshness?.counts || {};
@@ -645,6 +657,7 @@ function newsParams() {
     limit: "12",
   });
   if ($("coverage").value) params.set("coverage", $("coverage").value);
+  if ($("language").value) params.set("language", $("language").value);
   return params;
 }
 
@@ -770,7 +783,7 @@ for (const button of $("window-controls").children)
       peer.setAttribute("aria-pressed", String(peer === button));
     loadNews();
   });
-for (const id of ["region", "kind", "coverage"]) $(id).addEventListener("change", () => loadNews());
+for (const id of ["region", "kind", "coverage", "language"]) $(id).addEventListener("change", () => loadNews());
 $("sort").addEventListener("change", () => {
   state.searching = Boolean($("search").value.trim());
   loadNews();
@@ -806,7 +819,7 @@ $("reset-filters").addEventListener("click", () => {
   state.publisher = "";
   state.hours = 12;
   state.searching = false;
-  for (const id of ["search", "region", "publisher", "coverage"]) $(id).value = "";
+  for (const id of ["search", "region", "publisher", "coverage", "language"]) $(id).value = "";
   $("kind").value = "all";
   $("sort").value = "latest";
   reflectFilters();
@@ -825,6 +838,15 @@ $("clear-search").addEventListener("click", () => {
   $("search").focus();
 });
 $("show-more").addEventListener("click", () => loadNews(true));
+$("brief-from-view").addEventListener("click", () => {
+  $("digest-topic").value = state.topic === "all" ? "" : state.topic;
+  $("digest-region").value = $("region").value;
+  $("digest-language").value = $("language").value;
+  $("digest-window").value = String(state.hours);
+  $("digest-sources").value = state.publisher || "all";
+  if (!$("focus").value.trim()) $("focus").value = $("search").value.trim();
+  openBuilder();
+});
 $("show-updates").addEventListener("click", async () => {
   await loadNews();
   ($("stories").querySelector("h3 a") || $("search")).focus();
@@ -1133,6 +1155,7 @@ $("digest-form").addEventListener("submit", async (event) => {
     focus: $("focus").value.trim(),
     ...($("digest-topic").value ? { topic: $("digest-topic").value } : {}),
     ...($("digest-region").value ? { region: $("digest-region").value } : {}),
+    ...($("digest-language").value ? { language: $("digest-language").value } : {}),
     persona: $("persona").value,
     style: $("digest-style").value,
     pinned_ids: [...state.pins.keys()],

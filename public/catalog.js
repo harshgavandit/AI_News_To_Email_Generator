@@ -21,6 +21,15 @@ const regionLabels = {
   NA: "North America",
 };
 
+export const languageOptions = {
+  en: "English",
+  fr: "French",
+  de: "German",
+  ja: "Japanese",
+  "pt-BR": "Portuguese (Brazil)",
+  "es-MX": "Spanish (Mexico)",
+};
+
 export const coverageLabels = {
   reporting: "Independent reporting",
   publisher: "Publisher update",

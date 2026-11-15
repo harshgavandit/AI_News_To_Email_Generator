@@ -130,6 +130,12 @@ DEFAULT_SOURCES = (
     reporting("reseller-nz", "Reseller News New Zealand", "https://www.reseller.co.nz/feed/", "reseller.co.nz", region="APAC"),
     reporting("heise-online", "heise online", "https://www.heise.de/rss/heise-atom.xml", "heise.de",
               region="Europe", language="de", article_paths=("/news/",)),
+    reporting("le-monde-pixels", "Le Monde Pixels", "https://www.lemonde.fr/pixels/rss_full.xml", "lemonde.fr",
+              region="Europe", language="fr"),
+    reporting("golem-de", "Golem.de", "https://rss.golem.de/rss.php?feed=RSS2.0", "golem.de",
+              region="Europe", language="de"),
+    reporting("itmedia-news", "ITmedia NEWS", "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml", "itmedia.co.jp",
+              region="Asia", language="ja"),
     reporting("contxto", "Contxto", "https://contxto.com/en/feed/", "contxto.com",
               region="Latin America", topic="startups"),
     reporting("xataka-mx", "Xataka México", "https://www.xataka.com.mx/feedburner.xml", "xataka.com.mx",
@@ -141,6 +147,8 @@ DEFAULT_SOURCES = (
               "https://www.thenationalnews.com/arc/outboundfeeds/rss/category/future/technology/?outputType=xml",
               "thenationalnews.com", region="Middle East & North Africa"),
     reporting("entarabi", "entARABI", "https://entarabi.com/en/feed/", "entarabi.com",
+              region="Middle East & North Africa", topic="startups"),
+    reporting("wamda", "Wamda", "https://www.wamda.com/feed", "wamda.com",
               region="Middle East & North Africa", topic="startups"),
 
     # 4. Engineering & Cloud
@@ -158,11 +166,16 @@ DEFAULT_SOURCES = (
     Source("amd-newsroom", "amd-newsroom", "AMD Newsroom", "news", "https://ir.amd.com/news-events/press-releases/rss",
            ("ir.amd.com",), topic="chips"),
     reporting("phoronix", "Phoronix", "https://www.phoronix.com/rss.php", "phoronix.com", topic="software"),
+    reporting("techpowerup", "TechPowerUp", "https://www.techpowerup.com/rss/news", "techpowerup.com", topic="chips"),
+    reporting("smashing-magazine", "Smashing Magazine", "https://www.smashingmagazine.com/feed/", "smashingmagazine.com",
+              topic="software", region="Europe"),
 
     # Security advisories and independent cybersecurity reporting
     reporting("bleepingcomputer", "BleepingComputer", "https://www.bleepingcomputer.com/feed/", "bleepingcomputer.com", topic="security"),
     reporting("securityweek", "SecurityWeek", "https://www.securityweek.com/feed/", "securityweek.com", topic="security"),
     reporting("the-record", "The Record", "https://therecord.media/feed", "therecord.media", topic="security"),
+    reporting("krebs-on-security", "KrebsOnSecurity", "https://krebsonsecurity.com/feed/", "krebsonsecurity.com",
+              topic="security", region="North America"),
     advisory("cisa-alerts", "CISA Alerts", "https://www.cisa.gov/cybersecurity-advisories/alerts.xml", "cisa.gov",
              region="North America"),
     advisory("cert-eu", "CERT-EU Advisories", "https://cert.europa.eu/publications/security-advisories-rss", "cert.europa.eu",
@@ -175,6 +188,8 @@ DEFAULT_SOURCES = (
            ("news.mit.edu",), topic="research"),
     reporting("quanta-computing", "Quanta Magazine Computer Science", "https://www.quantamagazine.org/computer-science/feed/",
               "quantamagazine.org", topic="research"),
+    reporting("stat-health-tech", "STAT Health Tech", "https://www.statnews.com/category/health-tech/feed/", "statnews.com",
+              region="North America"),
 
     # 5. Creator & Video Insights
     youtube("matthew-berman", "Matthew Berman", "UCawZsQWqfGSbCI5yjkdVkTA"),
@@ -193,3 +208,7 @@ DEFAULT_SOURCES = (
 BY_ID = {source.id: source for source in DEFAULT_SOURCES}
 GROUPS = tuple(dict.fromkeys(s.group for s in DEFAULT_SOURCES))
 KINDS = ("all", "news", "research", "engineering", "video", "status")
+LANGUAGES = {code: label for code, label in (
+    ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"),
+    ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"),
+) if any(source.language == code for source in DEFAULT_SOURCES)}

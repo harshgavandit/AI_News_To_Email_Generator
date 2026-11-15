@@ -46,8 +46,8 @@ from app.ingestion import feed_freshness, refresh_sources, selected_feeds, sourc
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.launch_store import get_store
 from app.public_mail import router as mail_router
-from app.selection import select_candidates, words
-from app.sources import BY_ID, GROUPS, KINDS
+from app.selection import select_candidates
+from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 
 app = FastAPI(title="Informa AI", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
@@ -59,12 +59,13 @@ MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v6")
-_news_cache = Cache("news-v8")
-_headline_cache = Cache("headlines-v3")
+_digest_cache = Cache("digest-v7")
+_news_cache = Cache("news-v9")
+_headline_cache = Cache("headlines-v4")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
+FEED_FILTERS = ("source", "publisher", "kind", "region", "coverage", "language")
 
 
 class LimitRequestBody:
@@ -127,14 +128,15 @@ class DigestRequest(BaseModel):
     topics: list[Annotated[str, Field(min_length=1, max_length=80)]] = Field(default_factory=list, max_length=12)
     topic: str = Field(default="all", max_length=32)
     region: str = Field(default="", max_length=16)
+    language: str = Field(default="", max_length=16)
 
-    @field_validator("topic", "region")
+    @field_validator("topic", "region", "language")
     @classmethod
     def known_coverage(cls, value, info):
-        choices = TOPICS if info.field_name == "topic" else REGION_LABELS
+        choices = {"topic": TOPICS, "region": REGION_LABELS, "language": LANGUAGES}[info.field_name]
         if value not in ("", "all") and value not in choices:
-            raise ValueError("Choose a supported topic or publisher region.")
-        return ("" if info.field_name == "region" else "all") if value in ("", "all") else value
+            raise ValueError("Choose a supported topic, publisher region, or language.")
+        return ("all" if info.field_name == "topic" else "") if value in ("", "all") else value
 
     @model_validator(mode="after")
     def fit_pins(self):
@@ -291,7 +293,7 @@ def sources():
 
 
 def discovery_options():
-    return {"topics": TOPICS, "regions": REGION_LABELS, "coverage_types": COVERAGE_TYPES}
+    return {"topics": TOPICS, "regions": REGION_LABELS, "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
 
 
 @app.get("/api/headlines")
@@ -422,19 +424,22 @@ def news(request: Request, response: Response, background: BackgroundTasks,
          force: bool = False, region: Annotated[str, Query(max_length=16)] = "",
          q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
          sort: SortOrder = "latest", coverage: Annotated[str, Query(max_length=24)] = "",
+         language: Annotated[str, Query(max_length=16)] = "",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
         raise HTTPException(422, "Choose a supported source or content type.")
     if topic != "all" and topic not in TOPICS:
         raise HTTPException(422, "Choose a supported topic.")
-    if region not in ("", "all", *REGION_LABELS) or coverage not in ("", "all", *COVERAGE_TYPES):
-        raise HTTPException(422, "Choose a supported publisher region or source type.")
+    if (region not in ("", "all", *REGION_LABELS) or coverage not in ("", "all", *COVERAGE_TYPES)
+            or language not in ("", "all", *LANGUAGES)):
+        raise HTTPException(422, "Choose a supported publisher region, source type, or language.")
     phrase = search_text(q)
     if q.strip() and not search_terms(phrase):
         raise HTTPException(422, "Enter at least one letter or number to search.")
     q = phrase
     region = "" if region == "all" else region
     coverage = "" if coverage == "all" else coverage
+    language = "" if language == "all" else language
     store = get_store()
     if force:
         admit_expensive(store, request, "force", 3, 300)
@@ -442,12 +447,13 @@ def news(request: Request, response: Response, background: BackgroundTasks,
     try:
         if store:
             filters = dict(hours=hours, source=source, query=q, kind=kind, publisher=publisher,
-                           limit=limit, cursor=cursor, topic=topic, region=region, sort=sort, coverage=coverage)
+                           limit=limit, cursor=cursor, topic=topic, region=region, sort=sort, coverage=coverage,
+                           language=language)
             key = hashlib.sha256(json.dumps([str(store.engine.url), filters], sort_keys=True).encode()).hexdigest()
             # Reuse common views. Arbitrary search terms and cursors stay out of shared Redis.
             cacheable = not q and not cursor
             edge_cacheable = (cacheable and not force and source == "all" and kind == "all" and not publisher
-                              and not region and not coverage and sort == "latest" and limit in (12, 24)
+                              and not region and not coverage and not language and sort == "latest" and limit in (12, 24)
                               and not request.headers.get("authorization"))
             cached, stale = _news_cache.get(key) if cacheable and not force else (None, False)
             if cached is not None:
@@ -464,7 +470,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
                 response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
 
-        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort, coverage)
+        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort, coverage, language)
         ranked = sort == "relevance" and bool(q)
         now, marker = page_window(cursor, fingerprint, ranked=ranked)
         payload = collect_news(force=True) if force else collect_news()
@@ -482,9 +488,11 @@ def news(request: Request, response: Response, background: BackgroundTasks,
                         if (score := relevance_score(a, q, terms)) is not None]
         matching = [dict(a, topic=topic_for(a)) for a in matching]
         groups = Counter((a.get("source_id"), a["source"], a["topic"]) for a in matching)
-        counts = facet_counts(((*key, count) for key, count in groups.items()), source=source, topic=topic, region=region)
+        counts = facet_counts(((*key, count) for key, count in groups.items()), source=source, topic=topic, region=region,
+                              language=language)
         articles = [a for a in matching if source in ("all", a["source"], a.get("source_id"))
-                    and topic in ("all", a["topic"]) and region_matches(a, region)]
+                    and topic in ("all", a["topic"]) and region_matches(a, region)
+                    and (not language or BY_ID.get(a.get("source_id")) and BY_ID[a["source_id"]].language == language)]
 
         def sort_key(article):
             date_key = (article["published_at"], article["id"])
@@ -498,7 +506,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
         return {**payload, **discovery_options(), **counts, "sources": catalog,
                 **page_result([public_article(a) for a in articles[:limit + 1]], counts["total"], limit, fingerprint, now),
                 "freshness": feed_freshness(catalog, source=source, publisher=publisher, kind=kind, region=region,
-                                            coverage=coverage)}
+                                            coverage=coverage, language=language)}
     except InvalidCursor:
         raise HTTPException(400, "This page cursor has expired or changed. Reload stories to start again.") from None
 
@@ -520,7 +528,7 @@ def reader_refresh_scope(catalog, filters, *, force):
     active = [feed for feed in catalog if feed["enabled"]]
     checked = {feed["id"] for feed in active if feed["checked_at"]}
     overdue = {feed["id"] for feed in active if (feed["checked_at"] or "") <= cutoff}
-    scoped_filters = {name: filters[name] for name in ("source", "publisher", "kind", "region", "coverage")}
+    scoped_filters = {name: filters[name] for name in FEED_FILTERS}
     scoped = selected_feeds(active, **scoped_filters)
     if force and len(scoped) < len(active):
         return {feed["id"] for feed in scoped if feed["id"] in overdue or feed["available"] is False}
@@ -567,7 +575,7 @@ def refresh_from_reader(store, filters, key, *, force):
 def load_archive_page(store, filters):
     catalog = source_catalog(store)
     page = store.page(**filters)
-    freshness = feed_freshness(catalog, **{name: filters[name] for name in ("source", "publisher", "kind", "region", "coverage")})
+    freshness = feed_freshness(catalog, **{name: filters[name] for name in FEED_FILTERS})
     active = [item for item in catalog if item["enabled"]]
     return dict(page, **discovery_options(), articles=[public_article(article) for article in page["articles"]], sources=catalog,
                 freshness=freshness,
@@ -667,13 +675,13 @@ def assemble_digest(body, store, progress=None):
 def prepare_digest(body, store, name, focus, world, progress):
     if progress:
         progress(1)
-    scope = [label for label in (TOPICS.get(body.topic), REGION_LABELS.get(body.region)) if label]
+    scope = [label for label in (TOPICS.get(body.topic), REGION_LABELS.get(body.region), LANGUAGES.get(body.language)) if label]
     if not world and not focus:
         focus = ", ".join(scope)
     if store:
-        filters = {"topic": body.topic, "region": body.region}
+        filters = {"topic": body.topic, "region": body.region, "language": body.language}
         available = (store.world_candidates(body.hours, body.sources, **filters) if world else
-                     store.candidates(body.hours, body.sources, words(focus), **filters))
+                     store.candidates(body.hours, body.sources, search_terms(focus), **filters))
         pins = store.pinned_articles(body.pinned_ids)
     else:
         archive = collect_news()["articles"]
@@ -681,7 +689,9 @@ def prepare_digest(body, store, name, focus, world, progress):
         cutoff = now - timedelta(hours=body.hours)
         available = [article for article in archive if cutoff <= datetime.fromisoformat(article["published_at"]) <= now
                      and (body.topic == "all" or topic_for(article) == body.topic)
-                     and region_matches(article, body.region)]
+                     and region_matches(article, body.region)
+                     and (not body.language or BY_ID.get(article.get("source_id"))
+                          and BY_ID[article["source_id"]].language == body.language)]
         pins = [article for article in archive if article["id"] in body.pinned_ids]
     pin_map = {article["id"]: article for article in pins}
     if any(ident not in pin_map for ident in body.pinned_ids):

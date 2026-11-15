@@ -7,7 +7,7 @@ import unicodedata
 from typing import Literal
 
 from app.coverage import REGIONS, TOPICS, region_id
-from app.sources import BY_ID
+from app.sources import BY_ID, LANGUAGES
 
 SortOrder = Literal["latest", "oldest", "relevance"]
 MAX_SEARCH_TERMS = 12
@@ -99,20 +99,25 @@ def relevance_score(article, query, terms):
     return 10 * int(query in title) + sum(3 * int(term in title) + int(term in publisher) for term in terms)
 
 
-def page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage=""):
-    return hashlib.sha256(json.dumps([hours, source, query, kind, publisher, topic, region, sort, coverage]).encode()).hexdigest()[:16]
+def page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage="", language=""):
+    filters = [hours, source, query, kind, publisher, topic, region, sort, coverage]
+    if language:
+        filters.append(language)
+    return hashlib.sha256(json.dumps(filters).encode()).hexdigest()[:16]
 
 
-def catalog_filters(region="", coverage=""):
+def catalog_filters(region="", coverage="", language=""):
     """Translate publisher coverage filters to reviewed source IDs."""
     return tuple(source.id for source in BY_ID.values()
                  if (not region or region_id(source.region) == region)
-                 and (not coverage or source.coverage == coverage))
+                 and (not coverage or source.coverage == coverage)
+                 and (not language or source.language == language))
 
 
-def facet_counts(groups, *, source, topic, region):
+def facet_counts(groups, *, source, topic, region, language=""):
     topics = dict.fromkeys(TOPICS, 0)
     regions = dict.fromkeys(REGIONS, 0)
+    languages = dict.fromkeys(LANGUAGES, 0)
     sources = {"all": 0}
     total = 0
     for source_id, group, category, count in groups:
@@ -123,10 +128,16 @@ def facet_counts(groups, *, source, topic, region):
             category = "all"  # Until the next refresh backfills it, include it in unfiltered totals only.
         in_region = not region or bucket == region
         in_topic = topic in ("all", category)
-        if in_region and in_topic:
+        code = entry.language if entry else "en"
+        in_language = not language or code == language
+        if in_region and in_topic and in_language:
             sources["all"] += count
             sources[group] = sources.get(group, 0) + count
         if source not in ("all", group, source_id):
+            continue
+        if in_region and in_topic and code in languages:
+            languages[code] += count
+        if not in_language:
             continue
         if in_region and category in topics:
             topics[category] += count
@@ -136,4 +147,5 @@ def facet_counts(groups, *, source, topic, region):
             total += count
     return {"total": total, "source_counts": sources,
             "facets": {"topics": {"all": sum(topics.values()), **topics},
-                       "regions": {"all": sum(regions.values()), **regions}}}
+                       "regions": {"all": sum(regions.values()), **regions},
+                       "languages": {"all": sum(languages.values()), **languages}}}

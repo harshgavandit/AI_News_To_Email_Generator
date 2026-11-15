@@ -85,6 +85,37 @@ def test_scoped_brief_filters_automatic_stories_and_keeps_outside_pin(with_archi
     assert client.post("/api/digest", json={**payload, "topic": "video", "pinned_ids": []}).status_code == 404
 
 
+@pytest.mark.parametrize("with_archive", [True, False])
+def test_native_language_search_facets_and_brief(with_archive, monkeypatch, tmp_path):
+    articles = [
+        story("itmedia-news", "jp-gpu", "日本の半導体メーカーが新しいＧＰＵを発表"),
+        story("itmedia-news", "jp-review", "新型ＧＰＵと半導体市場", hours=2),
+        story("le-monde-pixels", "fr-gpu", "Les GPU en Europe"),
+    ]
+    store = Store(f"sqlite:///{tmp_path / 'language.db'}") if with_archive else None
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
+    if store:
+        for article in articles:
+            store.ingest(article["source_id"], [article], True)
+    else:
+        monkeypatch.setattr(server, "collect_news", lambda: {"articles": articles, "sources": []})
+
+    with TestClient(server.app) as client:
+        params = {"hours": 24, "q": "gpu", "language": "ja", "limit": 1}
+        page = client.get("/api/news", params=params).json()
+        assert page["total"] == 2 and page["facets"]["languages"]["fr"] == 1
+        assert page["articles"][0]["topic"] == "chips"
+        assert client.get("/api/news", params={**params, "language": "fr", "cursor": page["next_cursor"]}).status_code == 400
+        result = client.get("/api/news", params={"q": "半導体", "language": "ja", "topic": "chips"}).json()
+        assert {row["id"] for row in result["articles"]} == {"jp-gpu", "jp-review"}
+        response = client.post("/api/digest", json={"edition": "world", "language": "ja", "topic": "chips"})
+        assert response.status_code == 200
+        digest = response.json()["digest"]
+        assert {row["language"] for row in digest["articles"]} == {"ja"}
+        assert "Japanese" in digest["markdown"] and "半導体" in digest["html"]
+
+
 @pytest.fixture(params=["sqlite", "postgresql"])
 def legacy_archive(request, tmp_path):
     db_url = f"sqlite:///{tmp_path / 'legacy.db'}"

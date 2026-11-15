@@ -170,7 +170,7 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
 
     def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None,
-              topic="all", region="", coverage=""):
+              topic="all", region="", coverage="", language=""):
         self.ensure_discovery_schema()
         now = now or datetime.now(UTC)
         cutoff = (now - timedelta(hours=hours)).isoformat()
@@ -185,8 +185,8 @@ class Store:
             stmt = stmt.where(articles.c.source_id == publisher)
         if source_ids:
             stmt = stmt.where(or_(articles.c.source.in_(source_ids), articles.c.source_id.in_(source_ids)))
-        if region or coverage:
-            stmt = stmt.where(articles.c.source_id.in_(catalog_filters(region, coverage)))
+        if region or coverage or language:
+            stmt = stmt.where(articles.c.source_id.in_(catalog_filters(region, coverage, language)))
         if topic != "all":
             stmt = stmt.where(articles.c.topic == topic)
         if query:
@@ -196,12 +196,14 @@ class Store:
                                 for term in terms))
         return stmt
 
-    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest", coverage=""):
-        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage)
+    def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest",
+             coverage="", language=""):
+        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage, language)
         ranked = sort == "relevance" and bool(query)
         anchor, marker = page_window(cursor, fingerprint, ranked=ranked)
         base = self.query(hours, query=query, kind=kind, publisher=publisher, coverage=coverage, now=anchor)
-        stmt = self.query(hours, source, query, kind, publisher, now=anchor, topic=topic, region=region, coverage=coverage)
+        stmt = self.query(hours, source, query, kind, publisher, now=anchor, topic=topic, region=region,
+                          coverage=coverage, language=language)
         columns = (articles.c.published_at, articles.c.id)
         if ranked:
             title, name = articles.c.search_title, articles.c.search_publisher
@@ -214,7 +216,7 @@ class Store:
         with self.engine.connect() as conn:
             key = (articles.c.source_id, articles.c.source, articles.c.topic)
             groups = conn.execute(base.with_only_columns(*key, func.count()).group_by(*key)).all()
-            counts = facet_counts(groups, source=source, topic=topic, region=region)
+            counts = facet_counts(groups, source=source, topic=topic, region=region, language=language)
             if marker:
                 after = tuple_(*marker)
                 stmt = stmt.where(tuple_(*columns) > after if sort == "oldest" else tuple_(*columns) < after)
@@ -228,11 +230,11 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
-    def world_candidates(self, hours, source_ids, *, topic="all", region=""):
+    def world_candidates(self, hours, source_ids, *, topic="all", region="", language=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
-        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region).add_columns(rank).subquery()
+        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language).add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
@@ -246,17 +248,17 @@ class Store:
             rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
             return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
 
-    def candidates(self, hours, source_ids, terms, *, topic="all", region=""):
-        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region)
+    def candidates(self, hours, source_ids, terms, *, topic="all", region="", language=""):
+        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language)
         order = (articles.c.published_at.desc(), articles.c.id.desc())
         with self.engine.connect() as conn:
             recent = conn.execute(stmt.order_by(*order).limit(150)).mappings().all()
             if terms:
                 # Include older matches; rank the bounded union in Python.
                 ranked = conn.execute(stmt.where(or_(*(or_(
-                    func.lower(articles.c.title).contains(term, autoescape=True),
-                    func.lower(articles.c.description).contains(term, autoescape=True),
-                ) for term in sorted(terms)[:16]))).order_by(*order).limit(300)).mappings().all()
+                    articles.c.search_title.contains(term, autoescape=True),
+                    articles.c.search_description.contains(term, autoescape=True),
+                ) for term in terms))).order_by(*order).limit(300)).mappings().all()
                 return list({r["id"]: dict(r) for r in [*recent, *ranked]}.values())
             return [dict(r) for r in recent]
 

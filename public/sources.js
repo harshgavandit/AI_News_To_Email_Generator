@@ -1,5 +1,5 @@
 "use strict";
-import { coverageLabels, fillOptions, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
+import { coverageLabels, fillOptions, languageOptions, regionId, regionOptions, topicOptions } from "./catalog.js";
 
 const element = (id) => document.getElementById(id);
 const statusLabels = {
@@ -9,8 +9,8 @@ const statusLabels = {
   pending: "Awaiting first check",
   paused: "Paused",
 };
-const filters = ["source-search", "source-region", "source-topic", "source-coverage", "source-filter"];
-const normalize = (value) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+const filters = ["source-search", "source-region", "source-topic", "source-coverage", "source-filter", "source-language"];
+const normalize = (value) => value.normalize("NFKD").replace(/(\p{Script=Latin})\p{Mark}+/gu, "$1").toLowerCase();
 let catalog = null;
 
 function node(tag, className, label) {
@@ -27,7 +27,8 @@ function render() {
   const region = element("source-region").value;
   const topic = element("source-topic").value;
   const coverage = element("source-coverage").value;
-  const { sources, topics, regions, coverageTypes } = catalog;
+  const language = element("source-language").value;
+  const { sources, topics, regions, coverageTypes, languages } = catalog;
   const rows = [];
   for (const source of sources) {
     const flag = Object.hasOwn(statusLabels, source.freshness) ? source.freshness : "pending";
@@ -35,9 +36,10 @@ function render() {
     const regionLabel = sourceRegion === "Global" ? "Global" :
       source.region && source.region !== sourceRegion ? source.region : regions[sourceRegion] || sourceRegion;
     const sourceType = source.kind === "video" ? "Creator video" : coverageTypes[source.coverage];
-    const meta = [sourceType, regionLabel, topics[source.topic], originalLanguage(source.language)];
+    const meta = [sourceType, regionLabel, topics[source.topic], languages[source.language]];
     if ((status && status !== flag) || (region && region !== sourceRegion) ||
-        (topic && topic !== source.topic) || (coverage && coverage !== source.coverage)) continue;
+        (topic && topic !== source.topic) || (coverage && coverage !== source.coverage) ||
+        (language && language !== source.language)) continue;
     if (!normalize([source.label, regions[sourceRegion], ...meta].join(" ")).includes(query)) continue;
 
     const row = node("article", "source-row");
@@ -74,7 +76,7 @@ function render() {
   }
   element("source-status").textContent = rows.length ?
     `${rows.length} of ${sources.length} sources` : "No sources match these filters.";
-  element("source-reset").hidden = !query && !status && !region && !topic && !coverage;
+  element("source-reset").hidden = !query && !status && !region && !topic && !coverage && !language;
   element("source-rows").replaceChildren(...rows);
 }
 
@@ -91,10 +93,12 @@ async function loadSources() {
       topics: topicOptions(data.topics),
       regions: regionOptions(data.regions),
       coverageTypes: data.coverage_types || coverageLabels,
+      languages: data.languages || languageOptions,
     };
     fillOptions(element("source-region"), catalog.regions, "All regions");
     fillOptions(element("source-topic"), catalog.topics, "All topics");
     fillOptions(element("source-coverage"), catalog.coverageTypes, "All source types");
+    fillOptions(element("source-language"), catalog.languages, "All languages");
     render();
   } catch {
     element("source-status").textContent = "Sources could not be loaded.";
