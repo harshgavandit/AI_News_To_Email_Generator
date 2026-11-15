@@ -182,6 +182,54 @@ const jsonPost = (url, data) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+
+async function loadHeadlines() {
+  try {
+    const { coverage, articles } = await request("/api/headlines");
+    if (!coverage.length && !articles.length) return;
+    const container = $("headlines-content");
+    container.classList.toggle("with-coverage", coverage.length > 0);
+    container.replaceChildren();
+    for (const story of coverage) {
+      const feature = node("article", "coverage-lead");
+      const updated = node("time", "muted", `Updated ${readableTime(story.updated_at)}`);
+      updated.dateTime = story.updated_at;
+      const meta = node("div", "coverage-meta");
+      meta.append(node("span", "source-badge chips", story.topic), updated);
+      const links = node("ul", "coverage-links");
+      for (const source of story.sources) {
+        const item = node("li");
+        const link = externalLink(source.url, source.publisher);
+        link.setAttribute("aria-label", `${source.publisher} — ${source.label}`);
+        item.append(link, node("span", "muted", source.label));
+        links.append(item);
+      }
+      const search = node("a", "coverage-search", `Browse ${story.query} coverage →`);
+      search.href = `/?${new URLSearchParams({ q: story.query, window: "7d", sort: "relevance" })}#reading-room`;
+      feature.append(meta, node("h3", "", story.title), node("p", "", story.summary), links, search);
+      container.append(feature);
+    }
+    if (articles.length) {
+      const list = node("ul", "headline-list");
+      for (const article of articles) {
+        const item = node("li");
+        const heading = node("h3");
+        heading.append(externalLink(article.url, article.title));
+        const date = node("time", "", relativeTime(article.published_at));
+        date.dateTime = article.published_at;
+        date.title = readableTime(article.published_at);
+        const attribution = node("p", "muted", `${article.publisher} · `);
+        attribution.append(date);
+        item.append(node("span", "headline-topic", article.topic_label), heading, attribution);
+        list.append(item);
+      }
+      container.append(list);
+    }
+    $("headlines").hidden = false;
+  } catch {
+    // Browsing and search still work when the optional headlines request fails.
+  }
+}
 function syncURL() {
   const url = new URL(location.href);
   for (const [key, value] of Object.entries({
@@ -1416,6 +1464,7 @@ reflectFilters();
 reflectSavedCount();
 setTab("build");
 loadNews();
+loadHeadlines();
 window.addEventListener("popstate", () => {
   clearTimeout(searchTimer);
   restoreURL();

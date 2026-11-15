@@ -1,6 +1,7 @@
 """Fetch only reviewed RSS/Atom URLs, with bounded downloads and per-feed snapshots."""
 import asyncio
 import hashlib
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -19,7 +20,13 @@ _cache = {}
 _lock = threading.Lock()
 _refreshed = 0
 MAX_BYTES = 5_000_000
-TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid"}
+TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", ".tsrc", "__source"}
+TECH_SECTION = re.compile(r"\b(?:tech(?:nology)?|artificial intelligence|ai)\b", re.I)
+TECH_HEADLINE = re.compile(
+    r"\b(?:AI|LLM|NVIDIA|Jensen Huang|ChatGPT|OpenAI|Anthropic|Google|Microsoft|Apple|Meta|Amazon|TikTok|"
+    r"SpaceX|Intel|AMD|semiconductors?|chipmakers?|cyber\w*|ransomware|software|data cent(?:er|re)s?|"
+    r"smartphones?|robots?|robotics|telecom\w*|blockchain|bitcoin|cloud computing|artificial intelligence)\b", re.I
+)
 
 
 def canonical_url(url):
@@ -104,11 +111,17 @@ def read_feed(task):
                 title = plain_text(entry.get("title", ""))[:500]
                 if not title:
                     continue
+                tags = entry.get("tags") or [{}]
+                if s.tech_only and not (TECH_HEADLINE.search(title) or any(
+                    TECH_SECTION.fullmatch(tag.get("term", "").strip()) for tag in tags
+                )):
+                    continue
+                if s.id == "tecnoblog" and urlsplit(url).path.startswith("/achados/"):
+                    continue  # Shopping deals are separate from the publisher's reporting.
                 media = entry.get("media_description") or ""
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
                     media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label,
                     video_fallback=False)
-                tags = entry.get("tags") or [{}]
                 articles[url] = {
                     "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,
                     "description": desc, "url": url, "source": s.group, "source_id": s.id,

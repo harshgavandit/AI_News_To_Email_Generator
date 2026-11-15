@@ -40,6 +40,7 @@ from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
 from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
+from app.headlines import HEADLINE_HOURS, build_headlines
 from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates, words
@@ -55,8 +56,9 @@ MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v4")
-_news_cache = Cache("news-v6")
+_digest_cache = Cache("digest-v5")
+_news_cache = Cache("news-v7")
+_headline_cache = Cache("headlines-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -272,6 +274,25 @@ def sources():
     return {"sources": source_catalog(get_store()), "topics": TOPICS}
 
 
+@app.get("/api/headlines")
+def headlines(response: Response):
+    store = get_store()
+    key = hashlib.sha256(str(store.engine.url if store else "rss").encode()).hexdigest()
+    data, _ = _headline_cache.get(key)
+    if data is None:
+        with _headline_cache.key_lock(key):
+            data, _ = _headline_cache.get(key)
+            if data is None:
+                rows = store.headline_candidates(HEADLINE_HOURS) if store else collect_news()["articles"]
+                data = build_headlines(rows)
+                if data["articles"]:
+                    _headline_cache.put(key, data, ttl=60)
+    response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    if data["articles"]:
+        response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30"
+    return data
+
+
 def source_store():
     store = get_store()
     if not store:
@@ -378,7 +399,7 @@ def refresh_admin(source: str | None = None, authorization: str | None = Header(
 @app.get("/api/news")
 def news(request: Request, response: Response, background: BackgroundTasks,
          hours: TimeWindow = TimeWindow.week, source: str = "all",
-         force: bool = False, region: Literal["", "all", "Global", "APAC", "EU", "Africa", "LatAm"] = "",
+         force: bool = False, region: Literal["", "all", "Global", "APAC", "EU", "Africa", "LatAm", "NA"] = "",
          q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
          sort: SortOrder = "latest",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):

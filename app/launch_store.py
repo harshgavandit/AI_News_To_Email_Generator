@@ -177,6 +177,16 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 40)).mappings()]
 
+    def headline_candidates(self, hours):
+        providers = [s.id for s in BY_ID.values() if s.coverage == "reporting" and s.kind != "video"]
+        rank = func.row_number().over(partition_by=articles.c.source_id,
+            order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("publisher_rank")
+        ranked = self.query(hours).where(articles.c.source_id.in_(providers)).add_columns(rank).subquery()
+        # A high-volume publisher cannot crowd quieter regional sources out of selection.
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
+            return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
+
     def candidates(self, hours, source_ids, terms):
         stmt = self.query(hours, source_ids=source_ids)
         order = (articles.c.published_at.desc(), articles.c.id.desc())

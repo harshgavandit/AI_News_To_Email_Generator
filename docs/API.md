@@ -4,6 +4,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 ## Discover stories
 
+`GET /api/headlines` returns reviewed developing coverage and a ranked selection of recent articles from enabled reporting feeds. The homepage uses it independently of the Reading Room’s time window and sort.
+
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
 - `hours` accepts `12`, `24`, `168`, or `720`.

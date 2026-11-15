@@ -14,6 +14,7 @@ class Source:
     topic: str = "ai"
     coverage: str = "publisher"
     region: str = "Global"
+    tech_only: bool = False
 
     def public(self):
         return {
@@ -42,8 +43,8 @@ def youtube(slug, name, channel):
     )
 
 
-def reporting(slug, name, url, *hosts, region="Global", topic="industry"):
-    return Source(slug, slug, name, "news", url, hosts, topic=topic, coverage="reporting", region=region)
+def reporting(slug, name, url, *hosts, region="Global", topic="industry", tech_only=False):
+    return Source(slug, slug, name, "news", url, hosts, topic=topic, coverage="reporting", region=region, tech_only=tech_only)
 
 
 def status(slug, name, url, *hosts):
@@ -75,6 +76,9 @@ DEFAULT_SOURCES = (
     reporting("mit-tech-review", "MIT Technology Review", "https://www.technologyreview.com/feed/", "technologyreview.com", topic="ai"),
     reporting("bbc-tech", "BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml", "bbc.com", "bbc.co.uk"),
     reporting("guardian-tech", "The Guardian Technology", "https://www.theguardian.com/technology/rss", "theguardian.com"),
+    reporting("cbs-tech", "CBS News Technology", "https://www.cbsnews.com/latest/rss/technology", "cbsnews.com"),
+    reporting("cnbc-tech", "CNBC Technology", "https://www.cnbc.com/id/19854910/device/rss/rss.html", "cnbc.com", tech_only=True),
+    reporting("axios-tech", "Axios Technology Coverage", "https://api.axios.com/feed/", "axios.com", tech_only=True),
 
     # 3. World & Regional Tech
     reporting("rest-of-world", "Rest of World", "https://restofworld.org/feed/latest/", "restofworld.org", region="Global", topic="industry"),
@@ -86,6 +90,12 @@ DEFAULT_SOURCES = (
     reporting("scmp-tech", "SCMP Technology", "https://www.scmp.com/rss/5/feed", "scmp.com", region="Asia"),
     reporting("indian-express-tech", "The Indian Express Technology", "https://indianexpress.com/section/technology/feed/", "indianexpress.com", region="India"),
     reporting("latamlist", "LatamList", "https://latamlist.com/feed/", "latamlist.com", region="Latin America", topic="startups"),
+    reporting("tecnoblog", "Tecnoblog", "https://tecnoblog.net/feed/", "tecnoblog.net", region="Latin America"),
+    reporting("betakit", "BetaKit", "https://betakit.com/feed/", "betakit.com", region="North America", topic="startups"),
+    reporting("tech-eu", "Tech.eu", "https://tech.eu/feed/", "tech.eu", region="EU", topic="startups"),
+    reporting("itweb", "ITWeb", "https://www.itweb.co.za/rss", "itweb.co.za", region="Africa"),
+    reporting("inc42", "Inc42", "https://inc42.com/feed/", "inc42.com", region="India", topic="startups"),
+    reporting("itnews-au", "iTnews", "https://www.itnews.com.au/RSS/rss.ashx", "itnews.com.au", region="APAC"),
 
     # 4. Engineering & Cloud
     Source("github-blog", "github-blog", "The GitHub Blog", "engineering", "https://github.blog/feed/", ("github.blog",), topic="software"),

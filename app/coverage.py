@@ -138,7 +138,7 @@ def youtube_thumbnail(url):
 
 
 REGIONS = {"APAC": {"Asia", "India", "APAC"}, "EU": {"Europe", "EU"}, "Global": {"Global"},
-           "Africa": {"Africa"}, "LatAm": {"Latin America"}}
+           "Africa": {"Africa"}, "LatAm": {"Latin America"}, "NA": {"North America"}}
 
 
 def region_matches(article, region):
