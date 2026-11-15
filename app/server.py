@@ -58,7 +58,7 @@ _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v5")
 _news_cache = Cache("news-v7")
-_headline_cache = Cache("headlines-v1")
+_headline_cache = Cache("headlines-v2")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)

@@ -2,7 +2,7 @@
 import re
 from datetime import UTC, datetime, timedelta
 
-from app.coverage import public_article
+from app.coverage import REGIONS, public_article
 from app.selection import words
 from app.sources import BY_ID
 
@@ -15,6 +15,7 @@ IMPACT = re.compile(
 )
 COMMERCE = re.compile(r"\b(?:black friday|coupon|buying guide|best deals|prime day|hands.on review)\b", re.I)
 EARNINGS = re.compile(r"\b(?:Q[1-4]|first.quarter|second.quarter|third.quarter|fourth.quarter)\b.*\b(?:revenue|profit|loss|earnings)\b", re.I)
+REGION_BUCKET = {label: code for code, labels in REGIONS.items() for label in labels}
 
 # Review each update against the links before changing the summary or extending its end date.
 COVERAGE = ({
@@ -78,14 +79,15 @@ def build_headlines(rows, *, now=None, limit=4):
     eligible.sort(key=lambda article: headline_score(article, now), reverse=True)
     coverage = active_coverage(now)
     picked, publishers, used_regions, used_topics, seen_titles = [], set(), set(), set(), []
-    for diverse in (True, False):
+    for unique_topic, unique_region in ((True, True), (False, True), (False, False)):
         for candidate in eligible:
             if candidate["publisher"] in publishers:
                 continue
             if any(item["query"].casefold() in candidate["title"].casefold() for item in coverage):
                 continue
             article = public_article(candidate)
-            if diverse and (article["topic"] in used_topics or article["region"] in used_regions):
+            region = REGION_BUCKET.get(article["region"], article["region"])
+            if (unique_topic and article["topic"] in used_topics) or (unique_region and region in used_regions):
                 continue
             tokens = words(article["title"])
             if any(tokens and len(tokens & old) / len(tokens | old) >= .67 for old in seen_titles):
@@ -93,7 +95,7 @@ def build_headlines(rows, *, now=None, limit=4):
             picked.append(article)
             publishers.add(article["publisher"])
             used_topics.add(article["topic"])
-            used_regions.add(article["region"])
+            used_regions.add(region)
             seen_titles.append(tokens)
             if len(picked) == limit:
                 return {"coverage": coverage, "articles": picked}

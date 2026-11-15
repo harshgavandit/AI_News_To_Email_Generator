@@ -46,6 +46,16 @@ def test_headlines_endpoint_uses_enabled_archive_sources(tmp_path, monkeypatch):
     assert response.headers["Vercel-CDN-Cache-Control"] == "public, s-maxage=30"
 
 
+def test_headlines_leave_room_for_other_regions_during_an_apac_news_spike():
+    now = datetime(2026, 11, 15, 12, tzinfo=UTC)
+    rows = [article("asia", "scmp-tech", "Chipmaker CEO resigns", 1, now),
+            article("india", "inc42", "Indian software group appoints new CEO", 2, now),
+            article("australia", "itnews-au", "Australian provider searches for a CEO successor", 3, now),
+            article("europe", "tech-eu", "A European startup secures a customer", 10, now),
+            article("africa", "itweb", "South African telecom operator expands network", 16, now)]
+    assert {a["id"] for a in build_headlines(rows, now=now, limit=3)["articles"]} == {"asia", "europe", "africa"}
+
+
 def test_general_publisher_feed_keeps_only_tech_and_original_links(monkeypatch):
     feed = b"""<rss version="2.0"><channel><title>Fixture</title>
     <item><title>Nvidia begins CEO search</title><link>https://www.axios.com/tech-story?utm_source=rss</link>
