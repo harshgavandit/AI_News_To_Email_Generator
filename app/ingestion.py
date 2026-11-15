@@ -2,17 +2,18 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta
 
+from app.coverage import REGIONS
 from app.news import read_feed
 from app.sources import DEFAULT_SOURCES
 
 FRESH_FOR = timedelta(minutes=45)
 
 
-def refresh_sources(store, only=None, *, failed_only=False):
+def refresh_sources(store, only=None, *, source_ids=None):
     state = store.source_state()
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)
-              and (not failed_only or state.get(s.id, {}).get("available") is False)]
+              and (source_ids is None or s.id in source_ids)]
     with ThreadPoolExecutor(max_workers=10) as pool:
         futures = {pool.submit(read_feed, source): source for source in active}
         for future in as_completed(futures):
@@ -22,7 +23,8 @@ def refresh_sources(store, only=None, *, failed_only=False):
                 # A malformed feed must not stop the other publishers from updating.
                 items, status = [], {"available": False, "error": "parser_failed"}
             store.ingest(futures[future].id, items, status["available"], status.get("error"))
-    store.prune()
+    if only is None and source_ids is None:
+        store.prune()
     return source_catalog(store)
 
 
@@ -52,9 +54,14 @@ def source_freshness(feed, cutoff):
     return "stale" if feed["last_success"] < cutoff else "fresh"
 
 
-def feed_freshness(catalog, *, source="all", publisher="", kind="all"):
-    active = [s for s in catalog if s["enabled"] and (source == "all" or source in (s["id"], s["source"]))
-              and (not publisher or s["id"] == publisher) and (kind == "all" or s["kind"] == kind)]
+def selected_feeds(catalog, *, source="all", publisher="", kind="all", region=""):
+    return [feed for feed in catalog if feed["enabled"] and (source == "all" or source in (feed["id"], feed["source"]))
+            and (not publisher or feed["id"] == publisher) and (kind == "all" or feed["kind"] == kind)
+            and (not region or feed.get("region", "Global") in REGIONS[region])]
+
+
+def feed_freshness(catalog, **filters):
+    active = selected_feeds(catalog, **filters)
     cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
     counts = dict(enabled=len(active), fresh=0, stale=0, failed=0, pending=0)
     for feed in active:

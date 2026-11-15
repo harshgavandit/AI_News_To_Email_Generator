@@ -26,14 +26,28 @@
         </select>
       </nav>
     </header>
-    <main class="wrap">
-      <h1>Sources</h1>
-      <p>
-        Independent reporting, regional publications, company updates, videos,
-        and official service-status feeds. An available status feed may have no
-        recent incident notices.
-      </p>
+    <main class="wrap directory">
+      <div class="directory-heading">
+        <h1>Source directory</h1>
+        <p>Browse the publishers, researchers, creators, and official status feeds behind the Reading Room.</p>
+      </div>
+      <div class="directory-controls">
+        <label for="source-search">Find a source
+          <input id="source-search" type="search" maxlength="120" placeholder="Publisher, topic, or region">
+        </label>
+        <label for="source-filter">Feed status
+          <select id="source-filter">
+            <option value="all">Any status</option>
+            <option value="fresh">Up to date</option>
+            <option value="stale">Check overdue</option>
+            <option value="failed">Last check failed</option>
+            <option value="pending">Awaiting first check</option>
+            <option value="paused">Paused</option>
+          </select>
+        </label>
+      </div>
       <p id="source-status" role="status" aria-live="polite"></p>
+      <button id="source-retry" class="button secondary" type="button" hidden>Try again</button>
       <div id="source-rows" class="source-table"></div>
     </main>
   </body>

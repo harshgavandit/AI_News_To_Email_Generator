@@ -1,5 +1,4 @@
 """Shared article, quota, verification and delivery state for the web app."""
-import base64
 import hashlib
 import json
 import os
@@ -15,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.coverage import REGIONS, topic_expression
-from app.discovery import page_fingerprint, search_terms
+from app.discovery import page_fingerprint, page_result, page_window, search_terms
 from app.sources import BY_ID
 
 schema = MetaData()
@@ -105,13 +104,15 @@ class Store:
                 values = [{**{k: a[k] for k in ("id", "url", "title", "description", "source", "publisher",
                                                  "category", "published_at")}, "source_id": source_id,
                            "kind": a.get("kind", "news")} for a in items]
+                fields = [c for c in articles.c if c.name != "id"]
                 conn.execute(stmt.on_conflict_do_update(index_elements=[articles.c.id],
-                    set_={c.name: stmt.excluded[c.name] for c in articles.c if c.name != "id"}), values)
+                    set_={c.name: stmt.excluded[c.name] for c in fields},
+                    where=or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))), values)
             stmt = self.insert(sources).values(id=source_id, **state)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
 
-    def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=()):
-        now = datetime.now(UTC)
+    def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None):
+        now = now or datetime.now(UTC)
         cutoff = (now - timedelta(hours=hours)).isoformat()
         stmt = select(articles).outerjoin(sources, articles.c.source_id == sources.c.id).where(
             articles.c.published_at.between(cutoff, now.isoformat()),
@@ -132,15 +133,16 @@ class Store:
         return stmt
 
     def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest"):
-        base = self.query(hours, query=query, kind=kind, publisher=publisher)
+        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort)
+        ranked = sort == "relevance" and bool(query)
+        anchor, marker = page_window(cursor, fingerprint, ranked=ranked)
+        base = self.query(hours, query=query, kind=kind, publisher=publisher, now=anchor)
         if topic != "all":
             base = base.where(topic_expression(articles.c) == topic)
         if region:
             base = base.where(articles.c.source_id.in_([s.id for s in BY_ID.values() if s.region in REGIONS[region]]))
         stmt = base if source == "all" else base.where(or_(articles.c.source == source, articles.c.source_id == source))
-        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort)
         columns = (articles.c.published_at, articles.c.id)
-        ranked = sort == "relevance" and bool(query)
         if ranked:
             title, name = func.lower(articles.c.title), func.lower(articles.c.publisher)
             score = case((title.contains(query.lower(), autoescape=True), 10), else_=0)
@@ -154,12 +156,12 @@ class Store:
             counts = {group: count for group, count in conn.execute(
                 select(grouped.c.source, func.count()).group_by(grouped.c.source))}
             total = sum(counts.values()) if source == "all" else conn.scalar(select(func.count()).select_from(stmt.subquery()))
-            if cursor:
-                after = tuple_(*decode_cursor(cursor, fingerprint, ranked=ranked))
+            if marker:
+                after = tuple_(*marker)
                 stmt = stmt.where(tuple_(*columns) > after if sort == "oldest" else tuple_(*columns) < after)
             order = [column.asc() if sort == "oldest" else column.desc() for column in columns]
             rows = [dict(r) for r in conn.execute(stmt.order_by(*order).limit(limit + 1)).mappings()]
-        return dict(page_result(rows, total, limit, fingerprint), source_counts={**counts, "all": sum(counts.values())})
+        return dict(page_result(rows, total, limit, fingerprint, anchor), source_counts={**counts, "all": sum(counts.values())})
 
     def pinned_articles(self, ids):
         if not ids:
@@ -485,32 +487,6 @@ class Store:
                 (mail_events, mail_events.c.received_at < now - 30 * 86400),
             ):
                 conn.execute(delete(table).where(condition))
-
-
-def decode_cursor(cursor, fingerprint, *, ranked=False):
-    try:
-        value = json.loads(base64.urlsafe_b64decode(cursor).decode())
-        if (not isinstance(value, list) or len(value) != (4 if ranked else 3) or value[-1] != fingerprint or
-                not all(isinstance(v, str) for v in value[-3:-1]) or
-                (ranked and (type(value[0]) is not int or not 0 <= value[0] <= 58))):
-            raise ValueError
-        datetime.fromisoformat(value[-3])
-        return value[:-1]
-    except (TypeError, ValueError, UnicodeError) as exc:
-        raise ValueError("Invalid page cursor") from exc
-
-
-def page_result(rows, total, limit, fingerprint):
-    shown = rows[:limit]
-    cursor = None
-    if len(rows) > limit:
-        last = shown[-1]
-        marker = [last["published_at"], last["id"], fingerprint]
-        if "search_score" in last:
-            marker.insert(0, last["search_score"])
-        cursor = base64.urlsafe_b64encode(json.dumps(marker).encode()).decode()
-    return {"articles": [{k: v for k, v in row.items() if k != "search_score"} for row in shown],
-            "total": total, "next_cursor": cursor}
 
 
 @lru_cache(maxsize=2)

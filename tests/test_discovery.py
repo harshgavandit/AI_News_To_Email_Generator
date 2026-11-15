@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import news, server
+from app import discovery
 from app.agent import openai_client
 from app.launch_store import Store
 from app.web_digest import build_digest, safe_email_html
@@ -16,6 +17,31 @@ def story(ident, title, hours_ago, description="", **extra):
     return dict(id=ident, title=title, description=description, source="openai", source_id="openai-news",
                 publisher="OpenAI News", kind="news", category="News", url=f"https://openai.com/news/{ident}",
                 published_at=(datetime.now(UTC) - timedelta(hours=hours_ago)).isoformat(), **extra)
+
+
+@pytest.mark.parametrize("with_archive", [True, False])
+def test_second_page_keeps_its_publication_window(monkeypatch, tmp_path, with_archive):
+    now = datetime.now(UTC)
+    clock = Mock(wraps=datetime)
+    clock.now.return_value = now
+    rows = [story("recent", "Recent story", 1), story("edge", "Near the 12 hour cutoff", 11.99)]
+    store = Store(f"sqlite:///{tmp_path / 'rolling-window.db'}") if with_archive else None
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(discovery, "datetime", clock)
+    if store:
+        store.ingest("openai-news", rows, True)
+    else:
+        monkeypatch.setattr(server, "collect_news", lambda: {"articles": rows, "sources": []})
+        monkeypatch.setattr(server, "datetime", clock)
+    client = TestClient(server.app)
+    first = client.get("/api/news?hours=12&limit=1").json()
+    assert first["window_ends_at"] == now.isoformat()
+    assert first["next_cursor"]
+    clock.now.return_value = now + timedelta(minutes=5)
+    second = client.get("/api/news", params={"hours": 12, "limit": 1, "cursor": first["next_cursor"]}).json()
+    assert second["window_ends_at"] == first["window_ends_at"]
+    assert second["total"] == 2
+    assert [row["id"] for row in second["articles"]] == ["edge"]
 
 
 @pytest.mark.parametrize("with_archive", [True, False])

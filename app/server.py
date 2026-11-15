@@ -35,12 +35,12 @@ from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.news import collect_news
 from app.coverage import TOPICS, public_article, region_matches, topic_for
-from app.discovery import SortOrder, page_fingerprint, relevance_score, search_terms
+from app.discovery import InvalidCursor, SortOrder, page_fingerprint, page_result, page_window, relevance_score, search_terms
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import feed_freshness, refresh_sources, source_catalog
-from app.launch_store import decode_cursor, get_store, page_result
+from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
+from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates, words
 from app.sources import BY_ID, GROUPS, KINDS
@@ -56,7 +56,7 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v4")
-_news_cache = Cache("news-v5")
+_news_cache = Cache("news-v6")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -416,42 +416,43 @@ def news(request: Request, response: Response, background: BackgroundTasks,
                 response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
 
+        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort)
+        ranked = sort == "relevance" and bool(q)
+        now, marker = page_window(cursor, fingerprint, ranked=ranked)
         payload = collect_news(force=True) if force else collect_news()
-        now = datetime.now(timezone.utc)
+        # A first request can refresh providers before the publication window begins.
+        if cursor is None:
+            now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=hours)
         matching = [a for a in payload["articles"] if cutoff <= datetime.fromisoformat(a["published_at"]) <= now
                     and (kind == "all" or a.get("kind") == kind)
                     and (topic == "all" or topic_for(a) == topic)
                     and region_matches(a, region)
                     and (not publisher or a.get("source_id") == publisher)]
-        ranked = sort == "relevance" and bool(q)
         if q:
             terms = search_terms(q) or (q.lower(),)
             matching = [dict(a, **({"search_score": score} if ranked else {})) for a in matching
                         if (score := relevance_score(a, q, terms)) is not None]
         articles = [a for a in matching if source == "all" or source in (a["source"], a.get("source_id"))]
-        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort)
         total = len(articles)
 
         def sort_key(article):
             date_key = (article["published_at"], article["id"])
             return (article["search_score"], *date_key) if ranked else date_key
 
-        if cursor:
-            after = tuple(decode_cursor(cursor, fingerprint, ranked=ranked))
+        if marker:
+            after = tuple(marker)
             articles = [a for a in articles if sort_key(a) > after] if sort == "oldest" else [a for a in articles if sort_key(a) < after]
         articles.sort(key=sort_key, reverse=sort != "oldest")
         counts = {"all": len(matching)}
         for article in matching:
             group = article["source"]
             counts[group] = counts.get(group, 0) + 1
-        return {**payload, **page_result([public_article(a) for a in articles[:limit + 1]], total, limit, fingerprint),
+        return {**payload, **page_result([public_article(a) for a in articles[:limit + 1]], total, limit, fingerprint, now),
                 "source_counts": counts,
-                "freshness": feed_freshness(payload.get("sources", []), source=source, publisher=publisher, kind=kind)}
-    except ValueError:
-        if cursor is None:
-            raise
-        raise HTTPException(400, "Invalid page cursor.") from None
+                "freshness": feed_freshness(payload.get("sources", []), source=source, publisher=publisher, kind=kind, region=region)}
+    except InvalidCursor:
+        raise HTTPException(400, "This page cursor has expired or changed. Reload stories to start again.") from None
 
 
 def refresh_cached_page(store, filters, key, *, force=False):
@@ -466,31 +467,42 @@ def refresh_cached_page(store, filters, key, *, force=False):
     return load_archive_page(store, filters)
 
 
+def reader_refresh_scope(catalog, filters, *, force):
+    cutoff = (datetime.now(timezone.utc) - ARCHIVE_REFRESH_INTERVAL).isoformat()
+    active = [feed for feed in catalog if feed["enabled"]]
+    checked = [feed for feed in active if feed["checked_at"]]
+    overdue = {feed["id"] for feed in active if (feed["checked_at"] or "") <= cutoff}
+    scoped_filters = {name: filters[name] for name in ("source", "publisher", "kind", "region")}
+    scoped = selected_feeds(active, **scoped_filters)
+    if force and len(scoped) < len(active):
+        return {feed["id"] for feed in scoped if feed["id"] in overdue or feed["available"] is False}
+    if active and (not checked or sum(feed["id"] in overdue for feed in checked) * 2 > len(checked)):
+        return None
+    if not force:
+        return set()
+    return {feed["id"] for feed in scoped if feed["id"] in overdue or feed["available"] is False}
+
+
 def queue_archive_refresh(background, store, filters, key, page, *, force=False):
-    checked_at = page["fetched_at"]
-    archive_is_due = not checked_at or datetime.now(timezone.utc) - datetime.fromisoformat(checked_at) >= ARCHIVE_REFRESH_INTERVAL
-    retry_failed = force and any(source["enabled"] and source["available"] is False for source in page["sources"])
-    if archive_is_due or retry_failed:
-        background.add_task(refresh_from_reader, store, filters, key, failed_only=not archive_is_due)
+    if not filters["cursor"] and reader_refresh_scope(page["sources"], filters, force=force) != set():
+        background.add_task(refresh_from_reader, store, filters, key, force=force)
         page = dict(page, refresh_requested=True)
     return page
 
 
-def refresh_from_reader(store, filters, key, *, failed_only):
+def refresh_from_reader(store, filters, key, *, force):
     try:
         lease = store.claim_refresh(scheduled=True)
         if lease is None:
             return
         cooldown = 0
         try:
-            # A different instance can finish the same refresh while this page is cached.
-            if not failed_only:
-                active = [source for source in source_catalog(store) if source["enabled"] and source["checked_at"]]
-                latest = max((source["checked_at"] for source in active), default=None)
-                if latest and datetime.now(timezone.utc) - datetime.fromisoformat(latest) < ARCHIVE_REFRESH_INTERVAL:
-                    return
+            # Recheck after claiming the lease. Another instance may have updated the archive.
+            scope = reader_refresh_scope(source_catalog(store), filters, force=force)
+            if scope == set():
+                return
             cooldown = 300
-            refresh_sources(store, failed_only=failed_only)
+            refresh_sources(store, source_ids=scope)
             if key:
                 refresh_cached_page(store, filters, key, force=True)
         finally:
@@ -502,7 +514,7 @@ def refresh_from_reader(store, filters, key, *, failed_only):
 def load_archive_page(store, filters):
     catalog = source_catalog(store)
     page = store.page(**filters)
-    freshness = feed_freshness(catalog, source=filters["source"], publisher=filters["publisher"], kind=filters["kind"])
+    freshness = feed_freshness(catalog, **{name: filters[name] for name in ("source", "publisher", "kind", "region")})
     active = [item for item in catalog if item["enabled"]]
     return dict(page, articles=[public_article(article) for article in page["articles"]], sources=catalog,
                 freshness=freshness,

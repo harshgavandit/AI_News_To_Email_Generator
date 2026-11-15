@@ -9,8 +9,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 - `hours` accepts `12`, `24`, `168`, or `720`.
 - `topic`, `source`, `publisher`, `kind`, and `region` narrow the result. Get source IDs and categories from `GET /api/sources`.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Relevance requires search terms and gives more weight to headline matches. Relevance without a query uses newest-first order.
-- `limit` ranges from 1 to 50. Pass the previous page’s `next_cursor` with the same query, filters, and sort. Pages reflect the rolling publication window. If the underlying archive changes while paging, results can move.
-- `freshness` reports the selected feeds’ last check, last success, and counts. `force=true` bypasses the archive page cache and can request a background refresh. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a refresh task was requested, and the response still represents the current archive.
+- `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
+- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
 
 ## Build and deliver a brief
 

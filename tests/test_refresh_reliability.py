@@ -86,6 +86,28 @@ def test_readiness_fails_when_no_feed_has_succeeded(archive):
     assert client.get("/api/health").status_code == 200
 
 
+def test_region_freshness_and_retry_target_matching_feeds(archive, monkeypatch):
+    store, client = archive
+    ids = {"tech-in-asia", "sifted", "bbc-tech"}
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id in ids))
+    store.ingest("bbc-tech", [], True)
+    store.ingest("sifted", [], False, "fetch_failed")
+    store.ingest("tech-in-asia", [], False, "fetch_failed")
+    refreshed = []
+
+    def fetch(source):
+        refreshed.append(source.id)
+        return [], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    previous = client.get("/api/news?region=EU&force=true").json()
+    assert previous["freshness"]["counts"] == {"enabled": 1, "fresh": 0, "stale": 0, "failed": 1, "pending": 0}
+    assert previous["refresh_requested"] is True
+    result = client.get("/api/news?region=EU").json()
+    assert result["freshness"]["status"] == "fresh"
+    assert refreshed == ["sifted"]
+
+
 def test_first_reader_can_start_an_empty_archive(archive, monkeypatch):
     _, client = archive
     source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")

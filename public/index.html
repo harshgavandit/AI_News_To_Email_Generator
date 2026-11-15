@@ -17,7 +17,6 @@
     <meta property="og:image" content="https://ai-news-to-email-generator.vercel.app/edition-city.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
-    <link rel="preload" as="image" href="/edition-city.jpg" />
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
@@ -47,10 +46,11 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
           <time id="edition-date" class="edition-date"></time>
-          <h1 id="hero-title">Your technology<br />news desk.</h1>
+          <h1 id="hero-title">Technology news<br class="edition-break" /> and research</h1>
           <p>
-            Follow AI, software, and infrastructure news from original sources. Turn the stories you care about into a brief.
+            Browse AI, software, and infrastructure news from original sources. Save what matters and build a brief around your interests.
           </p>
+          <a class="edition-link" href="#reading-room">Browse stories <span aria-hidden="true">↓</span></a>
         </div>
         <form id="world-form" class="quick-send">
           <h2>The Global Top 5</h2>
@@ -222,6 +222,7 @@
                 </button>
               </div>
             </div>
+            <div id="active-filters" class="active-filters" aria-label="Active filters" hidden></div>
             <div id="extra-filters" class="extra-filters" hidden>
               <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="News sources"></div>
               <div class="filter-fields">
@@ -259,6 +260,10 @@
                 Retry ↻
               </button>
             </div>
+            <div id="news-update" class="news-update" hidden>
+              <span id="news-update-text" role="status">New stories are available.</span>
+              <button id="show-updates" class="text-button" type="button">Show updates <span aria-hidden="true">↑</span></button>
+            </div>
           </div>
           <div class="results-line">
             <p id="news-status" role="status" aria-live="polite">
@@ -271,6 +276,10 @@
               <option value="oldest">Oldest first</option>
               <option value="relevance">Most relevant</option>
             </select>
+            <div class="segmented layout-controls" role="group" aria-label="Story layout">
+              <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
+              <button id="layout-list" type="button" aria-pressed="false">List</button>
+            </div>
           </div>
           <div id="stories" class="stories" aria-busy="true"></div>
           <button

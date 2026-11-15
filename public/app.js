@@ -8,6 +8,8 @@ const state = {
   sources: [],
   counts: {},
   controller: null,
+  updateCheck: null,
+  feedKey: "",
   topic: "all",
   source: "all",
   publisher: "",
@@ -104,12 +106,27 @@ $("edition-date").dateTime = date.toLocaleDateString("sv-SE");
 $("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(date);
 
 const savedKey = "informa-saved-v1";
+const layoutKey = "informa-story-layout";
 const saved = new Map();
 try {
   const stored = JSON.parse(localStorage.getItem(savedKey) || "[]");
   for (const item of stored.slice(0, 100)) {
     if (typeof item.id === "string" && typeof item.title === "string" && typeof item.url === "string") saved.set(item.id, item);
   }
+} catch {}
+
+function setLayout(layout, persist = false) {
+  $("stories").classList.toggle("story-list", layout === "list");
+  for (const option of ["cards", "list"])
+    $(`layout-${option}`).setAttribute("aria-pressed", String(option === layout));
+  if (persist) {
+    try { localStorage.setItem(layoutKey, layout); } catch {}
+  }
+}
+for (const option of ["cards", "list"])
+  $(`layout-${option}`).addEventListener("click", () => setLayout(option, true));
+try {
+  setLayout(localStorage.getItem(layoutKey) === "list" ? "list" : "cards");
 } catch {}
 
 function reflectSavedCount() {
@@ -139,19 +156,24 @@ function toggleSaved(article) {
     persisted ? `Story saved. ${saved.size} saved on this browser.` : "Story saved for this session. Browser storage is unavailable.");
 }
 async function request(url, options = {}) {
-  const response = await fetch(url, options);
+  const timeout = AbortSignal.timeout(65_000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+  const response = await fetch(url, { ...options, signal });
   let data;
   try {
     data = await response.json();
   } catch {
     throw new Error("The server is temporarily unavailable. Please try again.");
   }
-  if (!response.ok)
-    throw new Error(
+  if (!response.ok) {
+    const error = new Error(
       typeof data.detail === "string"
         ? data.detail
         : "This request could not be completed. Check your settings and try again.",
     );
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 const jsonPost = (url, data) =>
@@ -181,6 +203,34 @@ function syncURL() {
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
   $("reset-filters").hidden = state.view !== "feed" || (!count && state.topic === "all" && state.hours === 12 && !$("search").value && $("sort").value === "latest");
+  renderActiveFilters();
+}
+
+function renderActiveFilters() {
+  const filters = $("active-filters");
+  const selectLabel = (id) => $(id).selectedOptions[0]?.textContent;
+  const publisher = state.sources.find((source) => source.id === state.publisher)?.label || state.publisher;
+  const group = state.sources.find((source) => source.id === state.source)?.label ||
+    ({ openai: "OpenAI", anthropic: "Anthropic", youtube: "YouTube" })[state.source] || state.source;
+  const active = [
+    [state.source !== "all" && group, () => { state.source = "all"; }],
+    [state.publisher && publisher, () => { state.publisher = $("publisher").value = ""; }],
+    [$("region").value && selectLabel("region"), () => { $("region").value = ""; }],
+    [$("kind").value !== "all" && selectLabel("kind"), () => { $("kind").value = "all"; }],
+  ].filter(([label]) => label);
+  filters.replaceChildren();
+  filters.hidden = !active.length;
+  for (const [label, reset] of active) {
+    const button = node("button", "topic-chip", `${label} ×`);
+    button.type = "button";
+    button.setAttribute("aria-label", `Remove ${label} filter`);
+    button.addEventListener("click", () => {
+      reset();
+      $("filter-toggle").focus();
+      loadNews();
+    });
+    filters.append(button);
+  }
 }
 function restoreURL() {
   const params = new URLSearchParams(location.search);
@@ -251,6 +301,7 @@ function renderStories() {
       "article",
       `story${state.pins.has(String(article.id)) ? " pinned" : ""}`,
     );
+    const main = node("div", "story-main");
     const top = node("div", "story-top");
     const timestamp = article.publishedAt || article.published_at;
     const date = node("time", "", relativeTime(timestamp));
@@ -310,9 +361,10 @@ function renderStories() {
     const actions = node("div", "story-actions");
     actions.append(save, pin);
     bottom.append(actions);
-    card.append(top, heading);
+    main.append(top, heading);
+    card.append(main);
     const summary = article.cleanSummary || article.description || article.summary;
-    if (summary) card.append(node("p", "story-summary", summary));
+    if (summary) main.append(node("p", "story-summary", summary));
     if (article.thumbnail_url && /^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/.test(article.thumbnail_url)) {
       const image = node("img", "story-thumbnail");
       image.alt = "";
@@ -323,12 +375,12 @@ function renderStories() {
       image.referrerPolicy = "no-referrer";
       image.addEventListener("error", () => image.remove(), { once: true });
       image.src = article.thumbnail_url;
-      card.insertBefore(image, heading);
+      card.append(image);
     }
     if (article.whyItMatters) {
       const why = node("p", "why-matters");
       why.append(node("strong", "", "Why it matters. "), document.createTextNode(article.whyItMatters));
-      card.append(why);
+      main.append(why);
     }
     card.append(bottom);
     container.append(card);
@@ -445,17 +497,13 @@ $("digest-sources").addEventListener("change", (event) => {
   event.target.value = "all";
   renderDigestSources();
 });
-function renderHealth(freshness) {
-  const sources = state.sources.filter((s) => s.enabled);
-  const scoped = sources.filter((s) => (state.source === "all" || [s.id, s.source].includes(state.source)) &&
-    (!state.publisher || s.id === state.publisher) && ($("kind").value === "all" || s.kind === $("kind").value));
-  const failed = scoped.filter((s) => s.available === false);
-  const fresh = sources.filter((s) => s.freshness === "fresh" || (!s.freshness && s.available === true)).length;
-  const delayed = sources.some((s) => s.checked_at) && fresh === 0;
-  $("source-health-label").textContent = fresh
-    ? `${fresh} of ${sources.length} sources fresh`
-    : delayed ? "Updates delayed" : "Sources awaiting check";
-  $("source-health-button").classList.toggle("degraded", fresh < sources.length);
+function renderHealth(freshness, catalog = state.sources) {
+  const sources = catalog.filter((s) => s.enabled);
+  const { enabled = 0, fresh = 0, failed = 0, stale = 0 } = freshness?.counts || {};
+  const checkedLabel = fresh === enabled ? `${fresh} ${fresh === 1 ? "feed" : "feeds"}` : `${fresh} of ${enabled} feeds`;
+  $("source-health-label").textContent = fresh ? `${checkedLabel} up to date` :
+    failed || stale ? "Updates delayed" : enabled ? "Awaiting source checks" : "No feeds selected";
+  $("source-health-button").classList.toggle("degraded", fresh < enabled);
   $("updated").textContent = freshness?.checked_at
     ? `Selected feeds checked ${readableTime(freshness.checked_at)}`
     : "Individual source check times below.";
@@ -473,19 +521,61 @@ function renderHealth(freshness) {
     );
     $("source-health-list").append(row);
   }
-  $("failed-alert").hidden = !failed.length && freshness?.status !== "stale";
-  $("failed-message").textContent = failed.length
-    ? `${failed.map((s) => s.label).join(", ")} ${failed.length === 1 ? "is" : "are"} temporarily unavailable. Saved stories remain readable.`
-    : "Source checks are delayed. Showing the latest stories in the archive.";
+  $("failed-alert").hidden = freshness?.status !== "stale";
+  $("failed-message").textContent = "Feed updates are delayed. Showing the latest stories in the archive.";
 }
-async function loadNews(append = false, force = false, quiet = false) {
+
+function newsParams() {
+  return new URLSearchParams({
+    hours: String(state.hours),
+    source: state.source,
+    topic: state.topic,
+    region: $("region").value,
+    publisher: state.publisher,
+    q: $("search").value.trim(),
+    kind: $("kind").value,
+    sort: $("sort").value,
+    limit: "12",
+  });
+}
+
+async function checkForUpdates() {
+  if (state.view !== "feed" || document.hidden || $("mail-dialog").open || state.updateCheck ||
+      $("stories").getAttribute("aria-busy") === "true" || !state.feedKey) return;
+  const params = newsParams();
+  if (state.feedKey !== params.toString()) return;
+  const controller = new AbortController();
+  state.updateCheck = controller;
+  try {
+    const data = await request(`/api/news?${params}`, { signal: controller.signal });
+    if (controller.signal.aborted || state.view !== "feed" || state.feedKey !== newsParams().toString()) return;
+    if ($("source-popover").hidden) renderHealth(data.freshness, data.sources);
+    const visible = new Set(state.articles.map((story) => story.id));
+    const currentIds = new Set(state.articles.slice(0, 12).map((story) => story.id));
+    const different = data.articles.length !== currentIds.size || data.articles.some((story) => !currentIds.has(story.id));
+    const unseen = data.articles.filter((story) => !visible.has(story.id)).length;
+    $("news-update").hidden = !different;
+    $("news-update-text").textContent = unseen ? "New stories are available." : "The story list has been updated.";
+  } catch {
+    // A background check must not replace the stories already on screen.
+  } finally {
+    if (state.updateCheck === controller) state.updateCheck = null;
+  }
+}
+
+async function loadNews(append = false, force = false) {
   if (state.view !== "feed") return;
   state.controller?.abort();
+  state.updateCheck?.abort();
   const controller = new AbortController();
   state.controller = controller;
   $("stories").setAttribute("aria-busy", "true");
   $("show-more").disabled = $("refresh").disabled = true;
-  if (!quiet) status("news-status", "Loading stories…");
+  status("news-status", append ? "Loading more stories…" : "Loading stories…");
+  if (!append) {
+    $("news-update").hidden = true;
+    $("show-more").hidden = true;
+  }
   if (!state.articles.length) {
     $("stories").classList.remove("has-lead");
     $("stories").replaceChildren(...Array.from({ length: 3 }, () => {
@@ -497,46 +587,38 @@ async function loadNews(append = false, force = false, quiet = false) {
   }
   syncURL();
   try {
-    const params = new URLSearchParams({
-      hours: String(state.hours),
-      source: state.source,
-      topic: state.topic,
-      region: $("region").value,
-      publisher: state.publisher,
-      q: $("search").value.trim(),
-      kind: $("kind").value,
-      sort: $("sort").value,
-      limit: "12",
-    });
+    const params = newsParams();
+    const feedKey = params.toString();
     if (append && state.cursor) params.set("cursor", state.cursor);
     if (force) params.set("force", "true");
     const data = await request(`/api/news?${params}`, {
       signal: controller.signal,
     });
     if (state.controller !== controller || state.view !== "feed") return;
-    if (quiet && $("reading-room").contains(document.activeElement)) return;
-    const focusMore = append && document.activeElement === $("show-more");
+    const focusMore = append && (document.activeElement === $("show-more") || document.activeElement === document.body);
     const previousSize = append ? state.articles.length : 0;
     if (append) {
       const known = new Set(state.articles.map((article) => article.id));
       state.articles.push(...data.articles.filter((article) => !known.has(article.id)));
     } else state.articles = data.articles;
     state.cursor = data.next_cursor;
+    state.feedKey = feedKey;
     state.total = data.total;
     state.counts = data.source_counts || {};
     updateSourceCatalog(data.sources);
     renderStories();
     renderSourceFilters();
+    renderActiveFilters();
     renderHealth(data.freshness);
     if (data.refresh_requested) {
-      status("news-status", "Showing the archive while source checks are requested.");
       if (force) setTimeout(() => {
-        if (state.controller === controller && state.view === "feed") loadNews(false, false, true);
+        if (state.controller === controller) checkForUpdates();
       }, 9000);
     }
     if (focusMore) $("stories").children[previousSize]?.querySelector("h3 a")?.focus();
   } catch (error) {
-    if (!quiet && error.name !== "AbortError") {
+    if (error.name !== "AbortError") {
+      if (!append && force && state.articles.length) $("show-more").hidden = !state.cursor;
       if (!append && (!force || !state.articles.length)) {
         const retry = node("button", "button secondary", "Try again");
         retry.type = "button";
@@ -547,8 +629,16 @@ async function loadNews(append = false, force = false, quiet = false) {
         $("show-more").hidden = true;
         state.articles = [];
         state.cursor = null;
+        state.feedKey = "";
       }
-      status("news-status", error.message, true);
+      if (append && error.status === 400) {
+        state.cursor = null;
+        $("show-more").hidden = true;
+        $("news-update").hidden = false;
+        $("news-update-text").textContent = "This page expired. Reload the story list to continue.";
+        $("show-updates").focus();
+      }
+      status("news-status", error.name === "TimeoutError" ? "Stories took too long to load. Try again." : error.message, true);
     }
   } finally {
     if (state.controller === controller) {
@@ -604,6 +694,7 @@ for (const view of ["feed", "saved"]) {
     if (state.view === view) return;
     clearTimeout(searchTimer);
     state.controller?.abort();
+    state.updateCheck?.abort();
     state.view = view;
     for (const peer of ["feed", "saved"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
@@ -638,43 +729,30 @@ $("clear-search").addEventListener("click", () => {
   $("search").focus();
 });
 $("show-more").addEventListener("click", () => loadNews(true));
-setInterval(() => {
-  // Avoid replacing an expanded page, interrupting a filter, or polling a hidden tab.
-  if (state.view === "feed" && !document.hidden && state.articles.length <= 12 &&
-      $("stories").getAttribute("aria-busy") === "false" &&
-      !$("reading-room").contains(document.activeElement) && !$("mail-dialog").open) {
-    loadNews(false, false, true);
-  }
-}, 60_000);
+$("show-updates").addEventListener("click", async () => {
+  await loadNews();
+  ($("stories").querySelector("h3 a") || $("search")).focus();
+});
+setInterval(checkForUpdates, 60_000);
 for (const id of ["refresh", "retry-sources"])
   $(id).addEventListener("click", () => loadNews(false, true));
-let healthCloseTimer;
 function showHealth(show) {
-  clearTimeout(healthCloseTimer);
   $("source-popover").hidden = !show;
   $("source-health-button").setAttribute("aria-expanded", String(show));
 }
-$("source-health-button").addEventListener("click", () => showHealth(true));
-$("source-health-button").addEventListener("focus", () => showHealth(true));
-for (const id of ["source-health-button", "source-popover"]) {
-  $(id).addEventListener("mouseenter", () => showHealth(true));
-  $(id).addEventListener("mouseleave", () => {
-    healthCloseTimer = setTimeout(() => {
-      if (
-        !$("source-popover").contains(document.activeElement) &&
-        document.activeElement !== $("source-health-button")
-      )
-        showHealth(false);
-    }, 180);
-  });
-}
-$("source-popover-close").addEventListener("click", () => showHealth(false));
+$("source-health-button").addEventListener("click", () => showHealth($("source-popover").hidden));
+$("source-popover-close").addEventListener("click", () => {
+  showHealth(false);
+  $("source-health-button").focus();
+});
 document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".source-health")) showHealth(false);
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    const restoreHealthFocus = $("source-popover").contains(document.activeElement);
     showHealth(false);
+    if (restoreHealthFocus) $("source-health-button").focus();
     if ($("composer").classList.contains("open")) closeBuilder();
   }
 });
@@ -742,6 +820,7 @@ matchMedia("(max-width: 1023px)").addEventListener("change", () => {
   if (!mobile()) {
     $("composer").classList.remove("open");
     $("sheet-backdrop").hidden = true;
+    $("mobile-builder").setAttribute("aria-expanded", "false");
     document.body.classList.remove("sheet-open");
     $("composer").removeAttribute("role");
     $("composer").removeAttribute("aria-modal");
