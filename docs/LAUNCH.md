@@ -6,6 +6,8 @@ Add the production URL as a URL-prefix property in Google Search Console using t
 
 The production homepage uses the Google HTML meta-tag verification method. Keep its `google-site-verification` tag in `public/index.html` while this Search Console property needs verification.
 
+Vercel Web Analytics is enabled for the linked Hobby project, and both public HTML pages load the Vercel insights script. Hobby includes up to 50,000 events monthly. Collection pauses at the limit rather than charging for extra events. Vercel anonymizes Web Analytics visitor data and does not use cookies. See [Vercel Analytics pricing and limits](https://vercel.com/docs/analytics/limits-and-pricing).
+
 The sitemap lists the two canonical public pages. API responses carry `X-Robots-Tag: noindex` while remaining available to crawlers that render the Reading Room. If the production domain changes, update both pages' canonical URLs, `public/robots.txt`, and `public/sitemap.xml` together.
 
 The Vercel project serves static HTML, CSS, and JavaScript from `public/` and routes API requests to FastAPI in `app/server.py`. Run `npm run build` and `npm run lint` to validate the static assets. Run `uv sync --frozen`, `uv run ruff check app tests scripts main.py`, and `uv run pytest -q` for Python. Start a local server with `uv run uvicorn app.server:app`. The existing deployment config sets `maxDuration` to 120 seconds. Confirm the target project supports this duration before promoting a deployment. [Vercel function duration](https://vercel.com/docs/functions/configuring-functions/duration)

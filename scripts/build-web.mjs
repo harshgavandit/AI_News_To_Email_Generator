@@ -14,6 +14,7 @@ for (const filename of readdirSync('public')) {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(ids).size !== ids.length) throw new Error(`Duplicate element IDs in ${filename}`);
   for (const match of html.matchAll(/(?:src|href)="(\/[^"?#]+\.(?:js|css|svg|jpg|png))"/g)) {
+    if (match[1].startsWith('/_vercel/')) continue;
     if (!existsSync(resolve('public', match[1].slice(1)))) {
       throw new Error(`Missing static asset ${match[1]} in ${filename}`);
     }
