@@ -1,5 +1,11 @@
 # Informa AI release operations
 
+## Google Search
+
+Add the production URL as a URL-prefix property in Google Search Console using the site owner's Google account. If using HTML file verification, publish Google's supplied file unchanged under `public/` and keep it served after verification. Submit `sitemap.xml` in the property's Sitemaps report. Use URL Inspection to test and request indexing of the homepage and source directory.
+
+The sitemap lists the two canonical public pages. API responses carry `X-Robots-Tag: noindex` while remaining available to crawlers that render the Reading Room. If the production domain changes, update both pages' canonical URLs, `public/robots.txt`, and `public/sitemap.xml` together.
+
 The Vercel project serves static HTML, CSS, and JavaScript from `public/` and routes API requests to FastAPI in `app/server.py`. Run `npm run build` and `npm run lint` to validate the static assets. Run `uv sync --frozen`, `uv run ruff check app tests scripts main.py`, and `uv run pytest -q` for Python. Start a local server with `uv run uvicorn app.server:app`. The existing deployment config sets `maxDuration` to 120 seconds. Confirm the target project supports this duration before promoting a deployment. [Vercel function duration](https://vercel.com/docs/functions/configuring-functions/duration)
 
 Set `NEWS_DATABASE_URL` to a pooled PostgreSQL connection with TLS. For a new database, run the owner-authenticated `POST /api/admin/setup` before promotion. On an existing archive the discovery upgrade adds nullable topic and search columns, backfills retained stories, and builds the topic and publication-time index in one transaction. A PostgreSQL advisory lock serializes competing cold starts during the upgrade. The archive role needs permission to alter and index the articles table. Run setup before opening traffic where possible, since the backfill holds a table lock during the first upgrade. The public mail flow uses a verified inbox session. `ADMIN_TOKEN` protects owner tools and the fixed-recipient send route.

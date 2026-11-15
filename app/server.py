@@ -247,6 +247,8 @@ async def response_headers(request: Request, call_next):
         response = JSONResponse({"detail": "The service could not complete this request. Try again shortly."}, status_code=500)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
+    if request.url.path.startswith("/api/") or request.url.path == "/openapi.json":
+        response.headers["X-Robots-Tag"] = "noindex"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https://i.ytimg.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
