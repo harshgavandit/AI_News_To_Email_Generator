@@ -82,8 +82,8 @@ def fetch_bytes(url):
 async def fetch_with_deadline(url):
     # The deadline covers DNS, connection, redirects and the response body.
     headers = {"User-Agent": "Mozilla/5.0 (compatible; InformaAI/1.0; +https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
-    async with asyncio.timeout(8):
-        async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=4), follow_redirects=False, trust_env=False) as client:
+    async with asyncio.timeout(10):
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10, connect=6), follow_redirects=False, trust_env=False) as client:
             for _ in range(3):
                 async with client.stream("GET", url, headers=headers) as response:
                     if response.is_redirect:
