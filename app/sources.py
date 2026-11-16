@@ -19,6 +19,8 @@ class Source:
     article_paths: tuple[str, ...] = ()
     excluded_paths: tuple[str, ...] = ()
     integration: str = "rss"
+    author_name: str = ""
+    author_url: str = ""
 
     def public(self):
         return {
@@ -34,6 +36,8 @@ class Source:
             "language": self.language,
             "integration": self.integration,
             "reading_policy": "excerpt",
+            "author_name": self.author_name,
+            "author_url": self.author_url,
         }
 
 
@@ -66,10 +70,11 @@ def status(slug, name, url, *hosts):
     return Source(slug, slug, name, "status", url, hosts, topic="outages", coverage="status")
 
 
-def article_feed(slug, name, url, *hosts, group=None, topic="software"):
+def article_feed(slug, name, url, *hosts, group=None, topic="software", author_name="", author_url=""):
     if group == "medium":
         hosts = ("medium.com", *hosts)
-    return Source(slug, group or slug, name, "engineering", url, hosts, topic=topic, coverage="article")
+    return Source(slug, group or slug, name, "engineering", url, hosts, topic=topic, coverage="article",
+                  author_name=author_name, author_url=author_url)
 
 
 # Global Multi-Category Feed Matrix
@@ -208,7 +213,8 @@ DEFAULT_SOURCES = (
 
     # Articles, tutorials, and practitioner write-ups
     article_feed("netflix-techblog", "Netflix TechBlog on Medium", "https://medium.com/feed/netflix-techblog",
-                 "netflixtechblog.com", group="medium"),
+                 "netflixtechblog.com", group="medium", author_name="Netflix Technology Blog",
+                 author_url="https://medium.com/@NetflixTechBlog"),
     article_feed("airbnb-engineering", "Airbnb Engineering on Medium", "https://medium.com/feed/airbnb-engineering",
                  "airbnb.io", group="medium"),
     article_feed("ux-collective", "UX Collective on Medium", "https://uxdesign.cc/feed", "uxdesign.cc", group="medium"),
@@ -220,13 +226,20 @@ DEFAULT_SOURCES = (
     article_feed("medium-security", "Medium Cybersecurity", "https://medium.com/feed/tag/cybersecurity",
                  group="medium", topic="security"),
     article_feed("medium-open-source", "Medium Open Source", "https://medium.com/feed/tag/open-source", group="medium"),
+    article_feed("medium-software-engineering", "Medium Software Engineering", "https://medium.com/feed/tag/software-engineering", group="medium"),
+    article_feed("medium-system-design", "Medium System Design", "https://medium.com/feed/tag/system-design", group="medium"),
+    article_feed("medium-data-engineering", "Medium Data Engineering", "https://medium.com/feed/tag/data-engineering", group="medium"),
+    article_feed("medium-devops", "Medium DevOps", "https://medium.com/feed/tag/devops", group="medium"),
+    article_feed("medium-machine-learning", "Medium Machine Learning", "https://medium.com/feed/tag/machine-learning", group="medium", topic="ai"),
     Source("dev-community", "dev", "DEV Community", "engineering", "https://dev.to/api/articles?per_page=80",
            ("dev.to",), topic="software", coverage="article", integration="dev-api"),
     Source("dev-latest", "dev", "DEV Community Latest", "engineering", "https://dev.to/api/articles/latest?per_page=60",
            ("dev.to",), topic="software", coverage="article", integration="dev-api"),
     article_feed("dev-architecture", "DEV Community Architecture", "https://dev.to/feed/tag/architecture", "dev.to", group="dev"),
     article_feed("dev-security", "DEV Community Security", "https://dev.to/feed/tag/security", "dev.to", group="dev", topic="security"),
-    article_feed("hashnode", "Hashnode Community", "https://townhall.hashnode.com/rss.xml", "townhall.hashnode.com", group="hashnode", topic="software"),
+    Source("hashnode-discover", "hashnode", "Hashnode Global Technology Feed", "engineering", "https://gql-beta.hashnode.com/",
+           ("hashnode.com", "hashnode.dev"), topic="software", coverage="article", integration="hashnode-api", language="und"),
+    article_feed("hashnode", "Hashnode Community Publication", "https://townhall.hashnode.com/rss.xml", "townhall.hashnode.com", group="hashnode", topic="software"),
     article_feed("freecodecamp", "freeCodeCamp", "https://www.freecodecamp.org/news/rss/", "freecodecamp.org"),
     article_feed("towards-data-science", "Towards Data Science", "https://towardsdatascience.com/feed/", "towardsdatascience.com", topic="ai"),
     article_feed("martin-fowler", "Martin Fowler", "https://martinfowler.com/feed.atom", "martinfowler.com"),
@@ -286,4 +299,5 @@ KINDS = ("all", "news", "research", "engineering", "video", "status")
 LANGUAGES = {code: label for code, label in (
     ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"), ("ko", "Korean"),
     ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"),
+    ("und", "Not specified"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}

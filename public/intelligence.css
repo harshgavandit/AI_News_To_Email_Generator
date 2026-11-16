@@ -27,6 +27,12 @@
 .related-story:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .card-original-link { font-size: 12px; color: var(--green); min-height: 44px; display: inline-flex; align-items: center; padding-inline: 6px; }
 .for-you-badge { max-width: 100%; white-space: normal; }
+.dossier-contribute-link { display: block; margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.65; }
+.dossier-full-body { line-height: 1.85; font-size: 16px; color: var(--ink); }
+.dossier-full-body pre { background: var(--subtle); padding: 16px; overflow: auto; border-radius: 6px; font-size: 13px; line-height: 1.7; }
+.dossier-full-body table { display: block; overflow-x: auto; border-collapse: collapse; }
+.dossier-full-body td, .dossier-full-body th { border: 1px solid var(--line); padding: 8px; }
+.dossier-full-body h2, .dossier-full-body h3 { margin-top: 26px; }
 .cmd-pill {
   display: inline-flex;
   align-items: center;

@@ -51,11 +51,13 @@ from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 from app.intelligence import SUBJECTS, recommend, related_articles, subjects_for
+from app.syndication import router as syndication_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
 app.include_router(mail_events_router)
 app.include_router(workspace_router)
+app.include_router(syndication_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -63,7 +65,7 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v8")
-_news_cache = Cache("news-v12")
+_news_cache = Cache("news-v13")
 _headline_cache = Cache("headlines-v5")
 _trending_cache = Cache("trending-v2")
 _mail_history = OrderedDict()
@@ -308,7 +310,8 @@ class RecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     topics: list[str] = Field(default_factory=list, max_length=10)
     subjects: list[str] = Field(default_factory=list, max_length=12)
-    sources: list[str] = Field(default_factory=list, max_length=20)
+    sources: list[str] = Field(default_factory=list, max_length=50)
+    authors: list[Annotated[str, Field(pattern=r"^author-[a-f0-9]{32}$")]] = Field(default_factory=list, max_length=30)
     exclude_ids: list[str] = Field(default_factory=list, max_length=100)
     q: str = Field(default="", max_length=150)
     limit: int = Field(default=24, ge=1, le=50)
@@ -324,7 +327,7 @@ class RecommendationRequest(BaseModel):
 
 def intelligence_candidates(store, hours=168):
     if store:
-        return store.world_candidates(hours, ())
+        return store.with_reading_access(store.world_candidates(hours, ()))
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=hours)
     result = []
@@ -343,7 +346,26 @@ def recommendations(body: RecommendationRequest, request: Request, response: Res
     rate_limit(request, "recommendations", 60)
     response.headers["Cache-Control"] = "no-store"
     return recommend(intelligence_candidates(store), topics=body.topics, subjects=body.subjects,
-                     preferred_sources=body.sources, exclude_ids=body.exclude_ids, query=body.q, limit=body.limit)
+                     preferred_sources=body.sources, authors=body.authors, exclude_ids=body.exclude_ids, query=body.q, limit=body.limit)
+
+
+@app.get("/api/authors")
+def author_catalog(response: Response, q: Annotated[str, Query(max_length=80)] = "",
+                   limit: Annotated[int, Query(ge=1, le=100)] = 80):
+    phrase = search_text(q)
+    authors = {}
+    for row in intelligence_candidates(get_store()):
+        article = public_article(row)
+        key = article["author_key"]
+        if not key or phrase and phrase not in search_text(article.get("author", "")):
+            continue
+        if key not in authors:
+            authors[key] = {"id": key, "name": article["author"], "source": article["source"],
+                "publisher": article["publisher"], "profile_url": article.get("author_url"), "articles": 0}
+        authors[key]["articles"] += 1
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return {"authors": sorted(authors.values(), key=lambda row: (-row["articles"], row["name"].casefold()))[:limit],
+            "basis": "Authors observed in the recent discovery sample. RSS names are scoped to their source feed."}
 
 
 @app.get("/api/articles/{article_id}")
@@ -357,9 +379,12 @@ def article_details(article_id: str, response: Response):
         raise HTTPException(404, "This story is no longer in the archive. Open its original source if you saved the link.")
     article = public_article(raw)
     candidates = intelligence_candidates(store) if rows is None else rows
-    response.headers["Cache-Control"] = "public, max-age=30"
+    response.headers["Cache-Control"] = "no-store"
     return {"article": article, "related": related_articles(article, candidates),
-            "reading_notice": "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content.",
+            "reading": raw.get("_reading_content"),
+            "reading_notice": ("Full text shared with permission from the rights holder. Original source and attribution are preserved."
+                if raw.get("_reading_content") else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
+                if article["has_excerpt"] else "Headline and source link only. The article body has not been retrieved or summarized."),
             "summary": {"text": article["cleanSummary"], "basis": article["summary_basis"],
                         "limited_source": True}}
 

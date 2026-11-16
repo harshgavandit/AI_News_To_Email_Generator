@@ -26,6 +26,7 @@ def workspace(tmp_path, monkeypatch):
     store = Store(f"sqlite:///{tmp_path / 'enterprise.db'}")
     monkeypatch.setattr(server, "get_store", lambda: store)
     monkeypatch.setattr(workspace_delivery, "get_store", lambda: store)
+    monkeypatch.setattr("app.ingestion.read_feed", lambda _: ([], {"available": True}))
     monkeypatch.setenv("MAIL_SESSION_SECRET", "long-test-secret-only-for-enterprise-tests")
     monkeypatch.delenv("MAIL_PILOT_MODE", raising=False)
     monkeypatch.delenv("UPSTASH_REDIS_REST_URL", raising=False)

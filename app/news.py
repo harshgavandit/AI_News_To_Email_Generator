@@ -105,6 +105,9 @@ async def fetch_with_deadline(url):
 
 
 def read_feed(task):
+    if isinstance(task, Source) and task.integration == "hashnode-api":
+        from app.hashnode import read_hashnode
+        return read_hashnode(task)
     if isinstance(task, Source) and task.integration != "rss":
         from app.community import read_community
         items, status = read_community(task, fetch_bytes)
@@ -179,7 +182,9 @@ def read_feed(task):
                 }
                 media_items = entry.get("media_thumbnail") or entry.get("media_content") or []
                 image = next((item.get("url", "") for item in media_items if isinstance(item, dict)), "")
-                story_record.update(metadata_for({"author": entry.get("author"), "tags": tags,
+                story_record.update(metadata_for({"tags": tags,
+                    "author_url": s.author_url if not entry.get("author") or entry.get("author") == s.author_name else None,
+                    "author": entry.get("author") or s.author_name,
                     "thumbnail_url": image, "original_url": entry.get("link") if s.id == "hacker-news" else None,
                     "discussion_url": url if s.id == "hacker-news" else None}))
                 articles[article_id] = story_record

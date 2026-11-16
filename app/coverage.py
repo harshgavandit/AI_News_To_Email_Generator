@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from app.sanitation import sanitize_article, sanitize_story_excerpt
 from app.sources import BY_ID
-from app.article_metadata import restore_metadata
+from app.article_metadata import restore_metadata, author_identity
 
 TOPICS = {
     "ai": "AI & Machine Learning",
@@ -233,7 +233,8 @@ def public_article(article):
     words_count = len(clean_summary.split())
     reading_time = article.get("reading_time_minutes") or max(1, (words_count + 199) // 200)
 
-    private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys"}
+    private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
+                      "_reading_access", "_reading_content"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
@@ -250,7 +251,13 @@ def public_article(article):
         "readingTimeMinutes": reading_time,
         "reading_time_basis": "publisher" if article.get("reading_time_minutes") else "excerpt",
         "summary_basis": article.get("summary_basis") or ("publisher_excerpt" if has_excerpt else "headline_only"),
-        "reading_policy": "excerpt",
+        "reading_policy": "full_text" if article.get("_reading_access", {}).get("mode") == "full_text" else "excerpt",
+        "author_key": author_identity(article),
+        "reading_access": article.get("_reading_access") or {
+            "mode": "excerpt" if has_excerpt else "headline_only",
+            "label": "Publisher excerpt" if has_excerpt else "Headline & link",
+            "source_required": True,
+        },
         "subjects": subjects_for(article),
         "has_excerpt": has_excerpt,
         # Backward compatibility properties:

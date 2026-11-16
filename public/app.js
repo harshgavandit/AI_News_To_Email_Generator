@@ -2,6 +2,7 @@
 import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions, subjectLabels } from "./catalog.js";
 import { initSavedViews } from "./saved-views.js";
 import { createPreferences } from "./preferences.js";
+import { readingContent } from "./reading-content.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -116,7 +117,10 @@ $("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 
 const savedKey = "informa-saved-v1";
 const readKey = "informa-read-v1";
 const layoutKey = "informa-story-layout";
-const preferences = createPreferences($("personalization"), () => loadNews());
+const preferences = createPreferences($("personalization"), () => {
+  if (state.view === "for-you") loadNews();
+  syncFollowActions();
+});
 const saved = new Map();
 const readStories = new Set();
 try {
@@ -530,7 +534,8 @@ function renderStories() {
         state.topics[topic] || article.topic_label || "Technology",
       ),
       node("span", "meta-pill region-pill", publisherRegion(article)),
-      node("span", "meta-pill read-time-pill", article.reading_time_basis === "publisher" ? `${readingTime} min read` : "Excerpt"),
+      node("span", "meta-pill read-time-pill", article.reading_access?.mode === "full_text" ? "Full article · permitted" :
+        article.reading_time_basis === "publisher" ? `${readingTime} min read · excerpt` : article.has_excerpt ? "Excerpt" : "Headline & link"),
     );
     top.append(badges, date);
     const heading = node("h3");
@@ -880,6 +885,11 @@ async function loadRecommendations() {
       renderCoverageControls(catalog);
       updateSourceCatalog(catalog.sources);
     }
+    try {
+      const authors = await request("/api/authors", { signal: controller.signal });
+      if (state.controller !== controller) return;
+      preferences.update(authors);
+    } catch (error) { if (error.name === "AbortError") throw error; }
     const selected = preferences.request();
     const data = await request("/api/recommendations", { method: "POST",
       headers: { "Content-Type": "application/json" }, signal: controller.signal,
@@ -2021,6 +2031,18 @@ $("pin-all-saved").addEventListener("click", () => {
 
 const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "", controller: null };
 
+function syncFollowActions() {
+  if (!dossier.article) return;
+  const article = dossier.article;
+  const followed = preferences.follows("authors", article.author_key);
+  $("dossier-follow-author").hidden = !article.author_key;
+  $("dossier-follow-author").textContent = followed ? "Following author" : "Follow author";
+  $("dossier-follow-author").setAttribute("aria-pressed", String(followed));
+  const publication = preferences.follows("sources", article.source_id || article.source);
+  $("dossier-follow-publication").textContent = publication ? "Following publication" : "Follow publication";
+  $("dossier-follow-publication").setAttribute("aria-pressed", String(publication));
+}
+
 async function loadArticleDetails(article) {
   dossier.controller?.abort();
   const controller = dossier.controller = new AbortController();
@@ -2029,6 +2051,20 @@ async function loadArticleDetails(article) {
   try {
     const data = await request(`/api/articles/${encodeURIComponent(article.id)}`, { signal: controller.signal });
     if (dossier.controller !== controller || dossier.article?.id !== article.id) return;
+    Object.assign(article, { author: data.article.author, author_key: data.article.author_key,
+      author_url: data.article.author_url, reading_access: data.article.reading_access });
+    preferences.update({ articles: [data.article] });
+    syncFollowActions();
+    $("dossier-reading-access").textContent = data.article.reading_access?.label || "Publisher excerpt";
+    $("dossier-reading-notice").textContent = data.reading_notice;
+    const body = $("dossier-full-body");
+    body.replaceChildren();
+    body.hidden = !data.reading?.html;
+    if (data.reading?.html) {
+      body.append(node("h3", "dossier-section-title", "Full article"),
+        node("p", "dossier-reading-notice", `Shared with permission · ${data.reading.attribution}`),
+        ...readingContent(data.reading.html));
+    }
     const container = $("dossier-related");
     for (const related of data.related || []) {
       const button = node("button", "related-story");
@@ -2098,6 +2134,9 @@ function renderDossier() {
   $("dossier-topic").className = `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`;
   $("dossier-coverage").textContent = coverage || "";
   $("dossier-coverage").hidden = !coverage;
+  $("dossier-reading-access").textContent = article.reading_access?.label || (article.has_excerpt ? "Publisher excerpt" : "Headline & link");
+  $("dossier-contribute").href = `/contribute.html?article=${encodeURIComponent(article.id)}`;
+  syncFollowActions();
 
   $("dossier-title").textContent = article.title;
   $("dossier-title").lang = article.language || "";
@@ -2190,6 +2229,14 @@ $("dossier-drawer").addEventListener("keydown", (event) => {
 });
 $("dossier-prev").addEventListener("click", () => moveDossier(-1));
 $("dossier-next").addEventListener("click", () => moveDossier(1));
+$("dossier-follow-author").addEventListener("click", () => {
+  status("dossier-feedback", preferences.toggleAuthor(dossier.article));
+  syncFollowActions();
+});
+$("dossier-follow-publication").addEventListener("click", () => {
+  status("dossier-feedback", preferences.togglePublication(dossier.article));
+  syncFollowActions();
+});
 $("dossier-summarize").addEventListener("click", async () => {
   const article = dossier.article;
   if (!article || state.composing) return;

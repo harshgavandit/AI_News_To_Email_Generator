@@ -4,6 +4,7 @@ Links are displayed, never fetched. Public API article bodies are not a licence
 to republish full articles, so the reader uses only short supplied excerpts.
 """
 import ipaddress
+import hashlib
 import json
 from urllib.parse import urlsplit
 
@@ -12,7 +13,7 @@ from app.sanitation import sanitize_text
 IMAGE_HOSTS = ("i.ytimg.com", "media.dev.to", "media2.dev.to", "cdn.hashnode.com",
                "images.unsplash.com", "techcrunch.com", "theverge.com", "arstechnica.com",
                "cdn.arstechnica.net", "media.wired.com", "cdn.vox-cdn.com", "platform.theverge.com")
-METADATA_FIELDS = ("author", "tags", "original_url", "discussion_url", "thumbnail_url", "points", "comments_count",
+METADATA_FIELDS = ("author", "author_url", "tags", "original_url", "discussion_url", "thumbnail_url", "points", "comments_count",
                    "reading_time_minutes")
 
 
@@ -51,7 +52,7 @@ def metadata_for(article):
     if isinstance(tags, (tuple, list)):
         cleaned = [sanitize_text(tag, limit=48).casefold() for tag in tags[:12] if isinstance(tag, str)]
         metadata["tags"] = list(dict.fromkeys(tag for tag in cleaned if tag))
-    for field in ("original_url", "discussion_url"):
+    for field in ("original_url", "discussion_url", "author_url"):
         if url := public_link(article.get(field)):
             metadata[field] = url
     if thumbnail := safe_thumbnail(article.get("thumbnail_url")):
@@ -80,3 +81,14 @@ def restore_metadata(article):
     result.update(clean)
     result.pop("full_text", None)
     return result
+
+
+def author_identity(article):
+    """Profiles identify API authors; RSS names are scoped to their reviewed feed."""
+    author = sanitize_text(article.get("author"), 140)
+    if not author:
+        return ""
+    profile = public_link(article.get("author_url"))
+    identity = profile.rstrip("/").casefold() if profile else ":".join([
+        str(article.get("source_id") or article.get("source") or ""), author.casefold()])
+    return "author-" + hashlib.sha256(identity.encode()).hexdigest()[:32]

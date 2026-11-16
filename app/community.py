@@ -40,11 +40,14 @@ def read_dev(source, fetch):
             if not isinstance(item, dict) or not str(item.get("url", "")).startswith("https://dev.to/"):
                 continue
             user = item.get("user") or {}
+            username = user.get("username", "") if isinstance(user, dict) else ""
+            import re
+            profile = f"https://dev.to/{username}" if re.fullmatch(r"[A-Za-z0-9_-]{1,80}", username) else ""
             tags = item.get("tag_list") or []
             if not isinstance(tags, list):
                 tags = []
             records.append(record(source, item["title"], item["url"], item["published_at"], item.get("description", ""),
-                author=user.get("name", "") if isinstance(user, dict) else "", tags=tags,
+                author=user.get("name", "") if isinstance(user, dict) else "", author_url=profile, tags=tags,
                 original_url=item.get("canonical_url"), thumbnail_url=item.get("cover_image"),
                 points=item.get("public_reactions_count"), comments_count=item.get("comments_count"),
                 reading_time_minutes=item.get("reading_time_minutes")))

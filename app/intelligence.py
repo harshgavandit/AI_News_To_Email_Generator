@@ -61,7 +61,7 @@ def deduplicate(articles):
     return result
 
 
-def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), exclude_ids=(), query="", limit=24):
+def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors=(), exclude_ids=(), query="", limit=24):
     from app.coverage import public_article
     now = datetime.now(UTC)
     excluded = set(exclude_ids)
@@ -84,6 +84,9 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), exclude
         age_hours = (now - published).total_seconds() / 3600
         score = 3 / (1 + age_hours / 24)
         reasons = []
+        if article["author_key"] and article["author_key"] in authors:
+            score += 7
+            reasons.append("From an author you follow")
         if article["topic"] in topics:
             score += 5
             reasons.append(f"Matches {article['topic_label']}")
@@ -115,8 +118,8 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), exclude
         ranked.append(article)
         counts[article["source"]] += 1
     return {"articles": ranked, "total_candidates": len(candidates), "updated_at": now.isoformat(),
-            "personalized": bool(topics or preferred_sources or subjects),
-            "basis": "Selected interests and followed sources; ranked by freshness with source diversity."}
+            "personalized": bool(topics or preferred_sources or subjects or authors),
+            "basis": "Selected interests, followed authors and publications; ranked by freshness with source diversity."}
 
 
 def related_articles(article, candidates, limit=5):

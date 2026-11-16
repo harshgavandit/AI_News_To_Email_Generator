@@ -68,6 +68,20 @@ Index("brief_mail_batches_due", mail_batches.c.state, mail_batches.c.retry_at)
 mail_suppressions = Table("brief_mail_suppressions", schema, Column("mailbox", String(64), primary_key=True))
 mail_events = Table("brief_mail_events", schema, Column("id", String(64), primary_key=True),
     Column("kind", String(32), nullable=False), Column("received_at", Float, nullable=False, index=True))
+contributions = Table("brief_contributions", schema,
+    Column("id", String(40), primary_key=True), Column("mailbox", String(64), nullable=False, index=True),
+    Column("email", String(254), nullable=False), Column("article_id", String(40), nullable=False, index=True),
+    Column("article_url", Text, nullable=False), Column("author_name", String(140), nullable=False),
+    Column("body_markdown", Text, nullable=False), Column("permission_evidence", Text, nullable=False),
+    Column("terms_version", String(40), nullable=False), Column("state", String(24), nullable=False, index=True),
+    Column("created", Float, nullable=False), Column("updated", Float, nullable=False), Column("review_note", Text),
+    Column("events", Text, nullable=False))
+Index("brief_contributions_review", contributions.c.state, contributions.c.created, contributions.c.id)
+reading_permissions = Table("brief_reading_permissions", schema,
+    Column("article_id", String(40), primary_key=True), Column("submission_id", String(40), nullable=False),
+    Column("author_name", String(140), nullable=False), Column("body_markdown", Text, nullable=False),
+    Column("body_html", Text, nullable=False), Column("article_url", Text, nullable=False),
+    Column("active", Boolean, nullable=False), Column("approved_at", Float, nullable=False))
 
 
 class QuotaReached(Exception):
@@ -102,6 +116,7 @@ class Store:
         ))
         self.insert = pg_insert if self.engine.dialect.name == "postgresql" else sqlite_insert
         self._discovery_ready = False
+        self._syndication_ready = False
         self._schema_lock = threading.Lock()
         if self.engine.dialect.name == "sqlite":
             schema.create_all(self.engine)
@@ -145,6 +160,23 @@ class Store:
                           func.max(articles.c.published_at).label("latest_published_at"),
                           func.count().label("retained_count")).group_by(articles.c.source_id))}
             return {row.id: {**dict(row._mapping), **latest.get(row.id, {})} for row in conn.execute(select(sources))}
+
+    def ensure_syndication_schema(self):
+        if self._syndication_ready:
+            return
+        with self._schema_lock, self.engine.begin() as conn:
+            if self._syndication_ready:
+                return
+            if self.engine.dialect.name == "postgresql":
+                conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
+                conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+            contributions.create(conn, checkfirst=True)
+            reading_permissions.create(conn, checkfirst=True)
+        self._syndication_ready = True
+
+    def with_reading_access(self, rows, *, include_body=False):
+        from app.syndication import annotate_reading
+        return annotate_reading(self, rows, include_body=include_body)
 
     def enable(self, source_id, enabled):
         with self.engine.begin() as conn:
@@ -238,7 +270,7 @@ class Store:
                 stmt = stmt.where(tuple_(*columns) > after if sort == "oldest" else tuple_(*columns) < after)
             order = [column.asc() if sort == "oldest" else column.desc() for column in columns]
             rows = [dict(r) for r in conn.execute(stmt.order_by(*order).limit(limit + 1)).mappings()]
-        return {**page_result(rows, counts["total"], limit, fingerprint, anchor), **counts}
+        return {**page_result(self.with_reading_access(rows), counts["total"], limit, fingerprint, anchor), **counts}
 
     def pinned_articles(self, ids):
         if not ids:
@@ -249,7 +281,8 @@ class Store:
     def article(self, ident):
         with self.engine.connect() as conn:
             row = conn.execute(self.query(90 * 24).where(articles.c.id == ident)).mappings().first()
-            return dict(row) if row else None
+            result = dict(row) if row else None
+        return self.with_reading_access([result], include_body=True)[0] if result else None
 
     def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.

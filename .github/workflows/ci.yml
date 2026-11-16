@@ -18,6 +18,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install frontend test dependencies
+        run: npm ci
       - name: Install locked dependencies
         run: |
           python -m pip install uv
@@ -28,6 +34,7 @@ jobs:
           uv run python -m compileall -q app main.py
           npm run lint
           npm run build
+          npm test
       - name: Test API, feed handling, and delivery controls
         run: uv run python -m pytest -q
   mail-capacity:
@@ -63,4 +70,4 @@ jobs:
         env:
           UV_PYTHON: '3.12'
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
-        run: uv run pytest -q tests/test_global_discovery.py
+        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py

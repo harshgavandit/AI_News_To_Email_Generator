@@ -44,6 +44,7 @@
         <nav class="site-nav" aria-label="Main navigation">
           <a href="#reading-room" aria-current="page">Reading Room</a>
           <a href="/sources.html">Sources</a>
+          <a href="/contribute.html">For authors</a>
         </nav>
         <div class="site-tools">
           <button id="cmd-palette-btn" class="cmd-pill" type="button" aria-label="Quick search" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
@@ -202,7 +203,8 @@
               <form>
                 <fieldset><legend>Topics</legend><div class="preference-options" data-preferences="topics"></div></fieldset>
                 <fieldset><legend>Explore deeper</legend><div class="preference-options" data-preferences="subjects"></div></fieldset>
-                <fieldset><legend>Follow sources <span class="muted">(up to 20)</span></legend><div class="preference-options preference-sources" data-preferences="sources"></div></fieldset>
+                <fieldset><legend>Follow publications &amp; topic feeds <span class="muted">(up to 50)</span></legend><label for="preference-source-search">Find a publication</label><input id="preference-source-search" type="search" data-search-preferences="sources" placeholder="Medium, Netflix, Hashnode…" /><div class="preference-options preference-sources" data-preferences="sources"></div></fieldset>
+                <fieldset><legend>Follow authors <span class="muted">(up to 30)</span></legend><label for="preference-author-search">Find an author</label><input id="preference-author-search" type="search" data-search-preferences="authors" placeholder="Search authors in recent coverage" /><p class="small">You can also follow an author from any article. RSS author names are scoped to their publication feed.</p><div class="preference-options preference-sources" data-preferences="authors"></div></fieldset>
                 <div class="preference-actions"><button class="button primary" type="submit">Update recommendations</button><button class="text-button" type="button" data-clear-preferences>Reset interests</button></div>
                 <p class="status" role="status" aria-live="polite">Your interests stay in this browser. Selected preferences are sent to rank stories when you open For You.</p>
               </form>
@@ -716,6 +718,7 @@
       </header>
       <div class="dossier-body">
         <div class="dossier-badges">
+          <span id="dossier-reading-access" class="meta-pill"></span>
           <span id="dossier-topic" class="source-badge"></span>
           <span id="dossier-coverage" class="meta-pill"></span>
         </div>
@@ -731,6 +734,8 @@
         <p id="dossier-author" class="dossier-author" hidden></p>
         <div id="dossier-tags" class="dossier-tags" aria-label="Article subjects"></div>
         <div class="dossier-actions-bar">
+          <button id="dossier-follow-author" class="button secondary" type="button" aria-pressed="false" hidden>Follow author</button>
+          <button id="dossier-follow-publication" class="button secondary" type="button" aria-pressed="false">Follow publication</button>
           <a id="dossier-external-link" class="button primary" target="_blank" rel="noopener noreferrer">
             Read original <span aria-hidden="true">↗</span>
           </a>
@@ -781,6 +786,7 @@
               <div><dt>Publisher region</dt><dd id="dossier-audit-region"></dd></div>
             </dl>
             <a id="dossier-topic-link" hidden>Browse more on this topic <span aria-hidden="true">→</span></a>
+            <a id="dossier-contribute" class="dossier-contribute-link">Own this article? Offer full-text reading permission →</a>
           </section>
         </div>
       </div>

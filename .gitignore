@@ -95,6 +95,7 @@ target/
 
 # Virtual environment
 .venv/
+node_modules/
 
 # Alembic migrations
 app/alembic/versions/*

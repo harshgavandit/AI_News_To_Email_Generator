@@ -14,7 +14,8 @@ for (const filename of readdirSync('public')) {
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
   if (new Set(ids).size !== ids.length) throw new Error(`Duplicate element IDs in ${filename}`);
   const entry = filename === 'index.html' ? ['app.js', /\$\("([^"\n]+)"\)/g] :
-    filename === 'sources.html' ? ['sources.js', /element\("([^"\n]+)"\)/g] : null;
+    filename === 'sources.html' ? ['sources.js', /element\("([^"\n]+)"\)/g] :
+    filename === 'contribute.html' ? ['contribute.js', /byId\("([^"\n]+)"\)/g] : null;
   if (entry) {
     const script = readFileSync(resolve('public', entry[0]), 'utf8');
     for (const match of script.matchAll(entry[1])) {

@@ -1,0 +1,38 @@
+.contribution-main { max-width: 1180px; padding-block: 36px; }
+.contribution-intro { max-width: 740px; margin-bottom: 28px; }
+.contribution-intro h1 { font-size: clamp(29px, 4vw, 43px); letter-spacing: -.035em; line-height: 1.15; margin: 8px 0 15px; }
+.contribution-intro p { color: var(--muted); font-size: 15px; line-height: 1.75; }
+.contribution-intro .eyebrow { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .1em; }
+.contribution-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 22px; align-items: start; }
+.contribution-panel { border: 1px solid var(--line); border-radius: 10px; padding: clamp(17px, 2.5vw, 26px); background: var(--paper); margin-bottom: 22px; min-width: 0; }
+.contribution-panel h2 { font-size: 20px; letter-spacing: -.025em; line-height: 1.4; margin: 0 0 14px; }
+.contribution-panel p { font-size: 14px; line-height: 1.7; }
+.contribution-panel .small { font-size: 12px; color: var(--muted); }
+.contribution-panel form, .contribution-panel fieldset { display: grid; gap: 11px; }
+.contribution-panel fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.contribution-panel label { font-size: 13px; font-weight: 600; margin-top: 8px; }
+.contribution-panel input:not([type=checkbox]), .contribution-panel textarea, .contribution-panel select { width: 100%; min-height: 44px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font: inherit; box-sizing: border-box; }
+.contribution-panel textarea { resize: vertical; font-size: 13px; line-height: 1.7; }
+.contribution-panel fieldset:disabled { opacity: .65; }
+.lookup-entry { display: flex; gap: 10px; align-items: start; }
+.lookup-entry input { flex: 1; min-width: 0; }
+.lookup-entry button { flex-shrink: 0; }
+.contribution-selected { display: grid; gap: 8px; padding: 13px; margin-top: 18px; background: var(--sage); border-radius: 6px; overflow-wrap: anywhere; }
+.contribution-selected strong { font-size: 16px; line-height: 1.5; }
+.permission-check { display: flex; gap: 12px; align-items: start; font-weight: 400 !important; line-height: 1.7; }
+.permission-check input { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 3px; accent-color: var(--green); }
+.contribution-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+.contribution-list { display: grid; gap: 15px; }
+.submission-card { padding: 17px; border: 1px solid var(--line); border-radius: 7px; overflow-wrap: anywhere; }
+.submission-card h3 { margin: 0 0 8px; font-size: 16px; }
+.submission-card .submission-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.submission-card pre { max-height: 300px; overflow: auto; padding: 14px; background: var(--subtle); border-radius: 6px; font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+.submission-preview { line-height: 1.85; font-size: 15px; padding: 14px 0; border-top: 1px solid var(--line); }
+.submission-preview h2, .submission-preview h3 { margin-top: 24px; }
+.submission-preview table { display: block; overflow-x: auto; border-collapse: collapse; }
+.submission-preview td, .submission-preview th { border: 1px solid var(--line); padding: 8px; }
+.editorial-workspace summary { cursor: pointer; font-size: 16px; font-weight: 650; padding-block: 5px; }
+#editor-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-block: 20px; }
+#editor-controls select { width: auto; }
+.contribution-panel [hidden] { display: none !important; }
+@media (max-width: 760px) { .contribution-layout { grid-template-columns: minmax(0, 1fr); gap: 0; } .contribution-layout aside { grid-row: 1; } .lookup-entry { flex-wrap: wrap; } .lookup-entry button { width: 100%; } .contribution-main { padding-top: 22px; } }

@@ -36,6 +36,7 @@ export const languageOptions = {
   ko: "Korean",
   "pt-BR": "Portuguese (Brazil)",
   "es-MX": "Spanish (Mexico)",
+  und: "Not specified",
 };
 
 export const coverageLabels = {
@@ -76,6 +77,7 @@ export function regionId(record) {
 const languageNames = new Intl.DisplayNames(undefined, { type: "language" });
 
 export function originalLanguage(language) {
+  if (language === "und") return "Language not supplied";
   if (typeof language !== "string" || /^en(?:-|$)/i.test(language)) return "";
   try {
     return languageNames.of(language);
