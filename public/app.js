@@ -368,6 +368,7 @@ function syncURL() {
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
+  $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("reset-filters").hidden = state.view !== "feed" ||
     (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
@@ -378,7 +379,7 @@ function renderActiveFilters() {
   const selectLabel = (id) => $(id).selectedOptions[0]?.textContent;
   const publisher = state.sources.find((source) => source.id === state.publisher)?.label || state.publisher;
   const group = state.sources.find((source) => source.id === state.source)?.label ||
-    ({ openai: "OpenAI", anthropic: "Anthropic", youtube: "YouTube" })[state.source] || state.source;
+    ({ openai: "OpenAI", anthropic: "Anthropic", youtube: "YouTube", medium: "Medium", dev: "DEV Community" })[state.source] || state.source;
   const active = [
     [state.source !== "all" && group, () => { state.source = "all"; }],
     [state.publisher && publisher, () => { state.publisher = $("publisher").value = ""; }],
@@ -462,6 +463,7 @@ function renderCoverageControls(data = {}) {
   fillOptions($("language"), state.languages, "All languages", state.facets.languages);
   fillOptions($("digest-language"), state.languages, "All languages");
   fillOptions($("coverage"), state.coverageTypes, "All source types");
+  fillOptions($("digest-coverage"), state.coverageTypes, "All source types");
   fillOptions($("digest-topic"), state.topics, "All topics");
   fillOptions($("digest-region"), state.regions, "All regions");
   reflectTopic();
@@ -472,6 +474,8 @@ function renderSourceFilters() {
     openai: "OpenAI",
     anthropic: "Anthropic",
     youtube: "YouTube",
+    medium: "Medium",
+    dev: "DEV Community",
   };
   for (const [id, label] of Object.entries(names)) {
     const count = state.counts[id] ?? (Object.hasOwn(state.counts, "all") ? 0 : null);
@@ -502,6 +506,7 @@ function renderStories() {
   $("pin-all-saved").hidden = !isSaved || !saved.size;
   const articles = visibleStories();
   $("filter-high-signal").hidden = isSaved;
+  $("filter-articles").hidden = isSaved;
   $("mark-all-read").hidden = isSaved || !articles.length;
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
@@ -687,7 +692,7 @@ function renderStories() {
   }
   $("show-more").hidden = isSaved || !state.cursor;
   $("brief-from-view").hidden = isSaved || !state.articles.length || !(state.topic !== "all" ||
-    $("region").value || $("language").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
+    $("region").value || $("language").value || $("coverage").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
   const context = [
     state.topics[state.topic],
     $("region").value && state.regions[$("region").value],
@@ -1061,6 +1066,7 @@ $("brief-from-view").addEventListener("click", () => {
   $("digest-topic").value = state.topic === "all" ? "" : state.topic;
   $("digest-region").value = $("region").value;
   $("digest-language").value = $("language").value;
+  $("digest-coverage").value = $("coverage").value;
   $("digest-window").value = String(state.hours);
   const source = state.publisher || (state.source !== "all" ? state.source : "");
   state.digestSources.clear();
@@ -1068,7 +1074,7 @@ $("brief-from-view").addEventListener("click", () => {
   renderDigestSources();
   const query = $("search").value.trim();
   if (query) $("focus").value = query;
-  if (source || query || $("language").value) $("coverage-options").open = true;
+  if (source || query || $("language").value || $("coverage").value) $("coverage-options").open = true;
   openBuilder();
 });
 $("show-updates").addEventListener("click", async () => {
@@ -1411,6 +1417,7 @@ $("digest-form").addEventListener("submit", async (event) => {
     ...($("digest-topic").value ? { topic: $("digest-topic").value } : {}),
     ...($("digest-region").value ? { region: $("digest-region").value } : {}),
     ...($("digest-language").value ? { language: $("digest-language").value } : {}),
+    ...($("digest-coverage").value ? { coverage: $("digest-coverage").value } : {}),
     persona: $("persona").value,
     style: $("digest-style").value,
     pinned_ids: [...state.pins.keys()],
@@ -1887,10 +1894,12 @@ window.addEventListener("popstate", () => {
   loadNews();
 });
 
-$("filter-high-signal").addEventListener("click", () => {
-  $("coverage").value = $("coverage").value === "reporting" ? "" : "reporting";
-  loadNews();
-});
+for (const [id, type] of [["filter-high-signal", "reporting"], ["filter-articles", "article"]]) {
+  $(id).addEventListener("click", () => {
+    $("coverage").value = $("coverage").value === type ? "" : type;
+    loadNews();
+  });
+}
 
 $("mark-all-read").addEventListener("click", () => {
   const page = visibleStories();

@@ -35,6 +35,7 @@ export const coverageLabels = {
   reporting: "Independent reporting",
   publisher: "Publisher update",
   discussion: "Community discussion",
+  article: "Articles & tutorials",
   advisory: "Security advisory",
   preprint: "Research preprint",
   status: "Official status",

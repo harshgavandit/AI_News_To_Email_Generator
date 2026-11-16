@@ -35,6 +35,7 @@ PROMO_PATTERNS = [
     r"sign up (?:at|for|here)",
     r"all rights reserved",
     r"leave a comment",
+    r"continue reading (?:on medium|on dev community)",
     r"smash that like button",
     r"bell icon",
 ]

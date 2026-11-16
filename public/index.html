@@ -342,6 +342,9 @@
               <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false">
                 Independent reporting
               </button>
+              <button id="filter-articles" class="signal-filter-button" type="button" aria-pressed="false">
+                Articles &amp; tutorials
+              </button>
               <button id="mark-all-read" class="text-button read-action-btn" type="button">
                 Mark page read
               </button>
@@ -429,6 +432,10 @@
                 <details id="coverage-options" class="brief-details">
                   <summary>Interests and sources</summary>
                   <div class="details-fields">
+                    <div>
+                      <label for="digest-coverage">Source type</label>
+                      <select id="digest-coverage"><option value="">All source types</option></select>
+                    </div>
                     <div>
                       <label for="focus">Specific interests <span class="optional">Optional</span></label>
                       <textarea id="focus" rows="2" maxlength="400" placeholder="e.g. chip manufacturing or cloud security"></textarea>

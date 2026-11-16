@@ -59,3 +59,27 @@ def test_valid_empty_feed_and_html_response_have_different_health(monkeypatch):
         monkeypatch.setattr(news, "fetch_bytes", lambda _, body=invalid_response: body)
         rows, status = news.read_feed(source)
         assert rows == [] and not status["available"] and status["error"] == "invalid_feed"
+
+
+def test_medium_uses_the_same_id_across_feeds_without_losing_publisher_link(monkeypatch):
+    def fixture(url):
+        return feed(("Understanding distributed transactions", url, ("software",))).replace(
+            b"</item>", b"<guid>https://medium.com/p/abc123def456</guid>"
+            b"<description>Compare isolation levels. Continue reading on Medium.</description></item>",
+        )
+
+    responses = iter([
+        fixture("https://medium.com/codex/transactions-abc123def456?source=rss-a"),
+        fixture("https://author.medium.com/transactions-abc123def456?source=rss-b&sk=private"),
+    ])
+    monkeypatch.setattr(news, "fetch_bytes", lambda _: next(responses))
+    (first,), _ = news.read_feed(BY_ID["medium-codex"])
+    (second,), _ = news.read_feed(BY_ID["medium-programming"])
+    assert first["id"] == second["id"]
+    assert first["url"] == "https://medium.com/codex/transactions-abc123def456"
+    assert second["url"] == "https://author.medium.com/transactions-abc123def456"
+    assert second["description"] == "Compare isolation levels."
+
+    monkeypatch.setattr(news, "fetch_bytes", lambda _: fixture("https://medium.com.evil.example/abc123def456"))
+    rows, status = news.read_feed(BY_ID["medium-programming"])
+    assert rows == [] and not status["available"]

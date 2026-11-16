@@ -34,6 +34,7 @@ COVERAGE_LABELS = {
     "advisory": "Security advisory",
     "status": "Provider status",
     "discussion": "Community discussion",
+    "article": "Article or tutorial",
 }
 
 

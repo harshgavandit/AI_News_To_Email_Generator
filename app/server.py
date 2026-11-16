@@ -35,7 +35,7 @@ from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.news import collect_news
 from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, TAGLINE
-from app.coverage import REGION_LABELS, TOPICS, public_article, region_id, region_matches, topic_for
+from app.coverage import REGION_LABELS, TOPICS, article_source, public_article, region_id, region_matches, topic_for
 from app.discovery import (
     COVERAGE_TYPES, InvalidCursor, SortOrder, facet_counts, page_fingerprint, page_result, page_window,
     relevance_score, search_terms, search_text,
@@ -61,7 +61,7 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v8")
-_news_cache = Cache("news-v10")
+_news_cache = Cache("news-v11")
 _headline_cache = Cache("headlines-v5")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
@@ -130,13 +130,15 @@ class DigestRequest(BaseModel):
     topic: str = Field(default="all", max_length=32)
     region: str = Field(default="", max_length=16)
     language: str = Field(default="", max_length=16)
+    coverage: str = Field(default="", max_length=24)
 
-    @field_validator("topic", "region", "language")
+    @field_validator("topic", "region", "language", "coverage")
     @classmethod
     def known_coverage(cls, value, info):
-        choices = {"topic": TOPICS, "region": REGION_LABELS, "language": LANGUAGES}[info.field_name]
+        choices = {"topic": TOPICS, "region": REGION_LABELS, "language": LANGUAGES,
+                   "coverage": COVERAGE_TYPES}[info.field_name]
         if value not in ("", "all") and value not in choices:
-            raise ValueError("Choose a supported topic, publisher region, or language.")
+            raise ValueError("Choose a supported topic, publisher region, language, or source type.")
         return ("all" if info.field_name == "topic" else "") if value in ("", "all") else value
 
     @model_validator(mode="after")
@@ -676,11 +678,12 @@ def assemble_digest(body, store, progress=None):
 def prepare_digest(body, store, name, focus, world, progress):
     if progress:
         progress(1)
-    scope = [label for label in (TOPICS.get(body.topic), REGION_LABELS.get(body.region), LANGUAGES.get(body.language)) if label]
+    scope = [label for label in (TOPICS.get(body.topic), REGION_LABELS.get(body.region), LANGUAGES.get(body.language),
+                                 COVERAGE_TYPES.get(body.coverage)) if label]
     if not world and not focus:
         focus = ", ".join(scope)
     if store:
-        filters = {"topic": body.topic, "region": body.region, "language": body.language}
+        filters = {"topic": body.topic, "region": body.region, "language": body.language, "coverage": body.coverage}
         available = (store.world_candidates(body.hours, body.sources, **filters) if world else
                      store.candidates(body.hours, body.sources, search_terms(focus), **filters))
         pins = store.pinned_articles(body.pinned_ids)
@@ -692,7 +695,8 @@ def prepare_digest(body, store, name, focus, world, progress):
                      and (body.topic == "all" or topic_for(article) == body.topic)
                      and region_matches(article, body.region)
                      and (not body.language or BY_ID.get(article.get("source_id"))
-                          and BY_ID[article["source_id"]].language == body.language)]
+                          and BY_ID[article["source_id"]].language == body.language)
+                     and (not body.coverage or (source := article_source(article)) and source.coverage == body.coverage)]
         pins = [article for article in archive if article["id"] in body.pinned_ids]
     pin_map = {article["id"]: article for article in pins}
     if any(ident not in pin_map for ident in body.pinned_ids):

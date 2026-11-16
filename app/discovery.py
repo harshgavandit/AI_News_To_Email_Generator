@@ -18,6 +18,7 @@ COVERAGE_TYPES = {
     "preprint": "Research preprints",
     "status": "Service status",
     "discussion": "Community discussion",
+    "article": "Articles & tutorials",
 }
 
 

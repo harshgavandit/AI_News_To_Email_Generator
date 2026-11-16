@@ -33,9 +33,10 @@ TECH_HEADLINE = re.compile(
 SPONSORED_TITLE = re.compile(
     r"^(?:heise-angebot|anzeige|sponsored content|sponsored post|advertisement|partner content)\s*[:|]", re.I
 )
+MEDIUM_POST = re.compile(r"https://medium\.com/p/([a-f0-9]{8,16})\Z")
 
 
-def canonical_url(url):
+def canonical_url(url, *, medium=False):
     if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() or ord(c) < 32 for c in url) or "\\" in url:
         raise ValueError("Invalid article link")
     parts = urlsplit(url)
@@ -43,7 +44,8 @@ def canonical_url(url):
             parts.port not in (443, None) or not parts.hostname.isascii() or ":" in parts.hostname):
         raise ValueError("Invalid article link")
     query = urlencode(sorted((k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True, max_num_fields=64)
-                             if not k.lower().startswith("utm_") and k.lower() not in TRACKERS))
+                             if not k.lower().startswith("utm_") and k.lower() not in TRACKERS
+                             and not (medium and (k.lower() == "sk" or k.lower() == "source" and v.startswith("rss-")))))
     return urlunsplit(("https", parts.hostname.lower(), parts.path.rstrip("/") or "/", query, ""))
 
 
@@ -123,14 +125,17 @@ def read_feed(task):
             return [], dict(status, error="invalid_feed")
         articles = {}
         has_valid_entry = False
+        medium = s.group == "medium"
         allowed_hosts = {domain.removeprefix("www.") for domain in s.hosts}
         now = datetime.now(timezone.utc)
         for entry in parsed.entries[:200]:
             try:
                 # HN links to arbitrary external sites; retain the reviewed discussion URL.
-                url = canonical_url(entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", ""))
+                url = canonical_url(entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", ""), medium=medium)
                 parts = urlsplit(url)
-                if parts.hostname.removeprefix("www.") not in allowed_hosts or "/shorts/" in parts.path:
+                host = parts.hostname.removeprefix("www.")
+                allowed_link = host in allowed_hosts or (medium and host.endswith(".medium.com"))
+                if not allowed_link or "/shorts/" in parts.path:
                     continue
                 date = entry.get("published_parsed") or entry.get("updated_parsed")
                 if not date:
@@ -149,8 +154,12 @@ def read_feed(task):
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
                     media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label,
                     video_fallback=False)
-                articles[url] = {
-                    "id": hashlib.sha256(url.encode()).hexdigest()[:20], "title": title,
+                post = MEDIUM_POST.fullmatch(entry.get("id", "")) if medium else None
+                # Require the permalink and feed GUID to agree before using the shared Medium ID.
+                identity = post[0] if post and parts.path.rsplit("/", 1)[-1].split("-")[-1] == post[1] else url
+                article_id = hashlib.sha256(identity.encode()).hexdigest()[:20]
+                articles[article_id] = {
+                    "id": article_id, "title": title,
                     "description": desc, "url": url, "source": s.group, "source_id": s.id,
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
                     "category": feed_category(tags),
@@ -185,7 +194,7 @@ def collect_news(*, force=False):
         unique = {}
         for items, _ in _cache.values():
             for article in items:
-                unique.setdefault(article["url"], article)
+                unique.setdefault(article["id"], article)
         return {"articles": sorted(unique.values(), key=lambda a: (a["published_at"], a["id"]), reverse=True),
                 "sources": [status for _, status in _cache.values()],
                 "fetched_at": max((status["checked_at"] for _, status in _cache.values()), default=None)}

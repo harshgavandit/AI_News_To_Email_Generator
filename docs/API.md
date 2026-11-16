@@ -9,7 +9,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
 - `hours` accepts `12`, `24`, `168`, or `720`.
-- `topic`, `source`, `publisher`, `kind`, `region`, `language`, and `coverage` can be combined. `GET /api/sources` returns the `topics`, `regions`, `languages`, and `coverage_types` ID-to-label maps, plus `region_id`, `language`, provenance, and freshness for each feed. `region` describes the publisher's coverage. Use `language=ja` for Japanese-language feeds, `coverage=reporting` for independent reporting, or `coverage=advisory` for official cybersecurity advisories.
+- `topic`, `source`, `publisher`, `kind`, `region`, `language`, and `coverage` can be combined. `GET /api/sources` returns the `topics`, `regions`, `languages`, and `coverage_types` ID-to-label maps, plus `region_id`, `language`, provenance, and freshness for each feed. `region` describes the publisher's coverage. Use `coverage=article` for articles and tutorials, and `source=medium` for the selected Medium feeds.
 - `facets.topics`, `facets.regions`, and `facets.languages` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, or feed excerpts. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Relevance without a query uses newest-first order.
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
@@ -17,7 +17,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 ## Build and deliver a brief
 
-Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1–10). Both editions accept `topic`, `region`, `language`, `sources`, and ordered `pinned_ids`. The language setting filters sources for automatic story selection. Explicit pins can include stories outside that scope. A personal edition can also specify `name`, `focus`, free-text `topics`, `persona`, and `style`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key.
+Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1–10). Both editions accept `topic`, `region`, `language`, `coverage`, `sources`, and ordered `pinned_ids`. The coverage setting filters sources for automatic story selection. Explicit pins can include stories outside that scope. A personal edition can also specify `name`, `focus`, free-text `topics`, `persona`, and `style`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key.
 
 Add `?stream=true` to receive newline-delimited JSON. Events contain a numbered `stage`, a final `result`, or an `error` with a `status` and optional `retry_after`. Errors emitted after streaming starts are carried in the stream rather than the HTTP status.
 

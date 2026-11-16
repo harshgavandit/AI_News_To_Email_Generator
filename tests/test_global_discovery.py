@@ -119,6 +119,34 @@ def test_native_language_search_facets_and_brief(with_archive, monkeypatch, tmp_
         assert "Japanese" in digest["markdown"] and "半導体" in digest["html"]
 
 
+@pytest.mark.parametrize("with_archive", [True, False])
+def test_article_source_filters_search_and_brief(with_archive, monkeypatch, tmp_path):
+    articles = [
+        story("medium-codex", "medium-article", "A practical guide to message queues"),
+        story("dev-architecture", "dev-article", "How to monitor message queues"),
+        story("the-register", "report", "Message queues are down in London"),
+    ]
+    store = Store(f"sqlite:///{tmp_path / 'articles.db'}") if with_archive else None
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
+    if store:
+        for article in articles:
+            store.ingest(article["source_id"], [article], True)
+    else:
+        monkeypatch.setattr(server, "collect_news", lambda: {"articles": articles, "sources": []})
+
+    with TestClient(server.app) as client:
+        view = client.get("/api/news", params={"q": "message queues", "source": "medium", "coverage": "article"}).json()
+        assert [article["id"] for article in view["articles"]] == ["medium-article"]
+        assert view["source_counts"]["dev"] == 1
+        response = client.post("/api/digest", json={"edition": "world", "coverage": "article", "top_n": 3,
+                                                    "sources": ["medium", "dev"]})
+        assert response.status_code == 200
+        digest = response.json()["digest"]
+        assert {article["digest_id"] for article in digest["articles"]} == {"medium-article", "dev-article"}
+        assert "Article or tutorial" in digest["html"]
+
+
 @pytest.fixture(params=["sqlite", "postgresql"])
 def legacy_archive(request, tmp_path):
     db_url = f"sqlite:///{tmp_path / 'legacy.db'}"

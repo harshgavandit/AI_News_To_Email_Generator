@@ -8,7 +8,7 @@ Discover what matters. Understand why it matters. Stay ahead without information
 
 [Open Informa AI](https://ai-news-to-email-generator.vercel.app/)
 
-Browse technology news, research, and security advisories from publishers around the world. Search and filter by topic, publisher, region, language, and time. Open a story to see its available excerpt and source. Save articles or keep a named view of your filters in this browser.
+Browse technology news, research, security advisories, and tutorials from publishers around the world, including Medium, DEV Community, and freeCodeCamp. Search and filter by topic, publisher, region, language, and time. Open a story to read its available excerpt and follow the link to the full article. Save articles or keep a named view of your filters in this browser.
 
 Preview the Global Top 5 or tailor a brief by coverage and reader perspective. Pin articles to include them and export the result as Markdown, HTML, or an email file. Briefs identify whether each summary comes from a publisher excerpt, a headline, or AI synthesis. Verified inboxes can receive a brief or opt in to the scheduled Global Top 5 when email delivery is configured.
 

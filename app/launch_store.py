@@ -230,11 +230,12 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
-    def world_candidates(self, hours, source_ids, *, topic="all", region="", language=""):
+    def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
-        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language).add_columns(rank).subquery()
+        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region,
+                            language=language, coverage=coverage).add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
@@ -248,8 +249,8 @@ class Store:
             rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
             return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
 
-    def candidates(self, hours, source_ids, terms, *, topic="all", region="", language=""):
-        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language)
+    def candidates(self, hours, source_ids, terms, *, topic="all", region="", language="", coverage=""):
+        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language, coverage=coverage)
         order = (articles.c.published_at.desc(), articles.c.id.desc())
         with self.engine.connect() as conn:
             recent = conn.execute(stmt.order_by(*order).limit(150)).mappings().all()
