@@ -198,7 +198,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
 .headline-header { margin-bottom: 12px; align-items: center; }
 .headline-header h2 { font: 675 clamp(23px, 2.3vw, 30px)/1.2 var(--font-ui); letter-spacing: -.035em; }
 .headline-header > a { color: var(--green); font-size: 13px; font-weight: 650; }
-.headlines-content.with-coverage:has(.headline-list) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.16fr); }
 .coverage-lead, .headline-list { border-radius: var(--radius); }
 .coverage-lead { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--green); padding: 17px 20px; }
 .coverage-lead h3 { font-size: clamp(24px, 2.7vw, 36px); margin: 10px 0; text-wrap: pretty; }
@@ -260,8 +259,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
   .hero .quick-send { padding: 14px; }
   .quick-send .brief-description { margin-bottom: 10px; }
   .headlines { margin-top: 22px; }
-  .headlines-content.with-coverage:has(.headline-list), .headline-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .headlines-content.with-coverage { row-gap: 10px; }
+  .headline-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .coverage-lead, .headline-list li { padding: 13px; }
   .site-footer nav { gap: 3px 13px; }
 }
