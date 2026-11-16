@@ -21,6 +21,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 Article records may include `author`, `author_url`, `author_key`, `tags`, `original_url`, `discussion_url`, `points`, `comments_count`, and a reviewed `thumbnail_url`. These fields are bounded and sanitized before storage and on read. Images are loaded directly from reviewed hosts with no referrer. `reading_time_basis` distinguishes a publisher-provided article estimate from the excerpt. `reading_access.mode` is `excerpt`, `headline_only`, or `full_text`; full text requires a separate reviewed permission record and cannot be enabled by upstream metadata. List badges can retain their one-minute cache, while reading details always recheck permission. AI briefs continue to use publisher excerpts even when licensed text is available for reading.
 
+Related results come from the last 30 days, using at most 200 archive candidates. Each result's `related_reason` identifies shared headline terms or a matching CVE/GHSA identifier. Canonical copies and alternate versions of the same arXiv preprint are excluded from suggestions and automatically selected briefs. Use `coverage=release` on the news and digest endpoints to select reviewed official release feeds.
+
 `GET /api/authors?q=writer&limit=80` returns bounded, observed author identities from the recent discovery sample. API profile URLs identify authors when supplied; RSS names without profiles are scoped to their source feed, preventing namesakes from being merged. The returned `id` can be used in recommendations. This is not an exhaustive directory of either external platform.
 
 `POST /api/recommendations` accepts a JSON object:

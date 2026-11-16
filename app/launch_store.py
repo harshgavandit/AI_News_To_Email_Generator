@@ -118,6 +118,9 @@ class Store:
         self._discovery_ready = False
         self._syndication_ready = False
         self._schema_lock = threading.Lock()
+        self._source_stats_lock = threading.Lock()
+        self._source_stats = {}
+        self._source_stats_until = 0.0
         if self.engine.dialect.name == "sqlite":
             schema.create_all(self.engine)
             self.ensure_discovery_schema()
@@ -153,12 +156,23 @@ class Store:
                 index.create(conn, checkfirst=True)
             backfill_discovery(conn)
 
-    def source_state(self):
+    def source_archive_stats(self):
+        # Reuse the retained-article count across search requests. Availability
+        # and last check times are read separately on every request.
+        with self._source_stats_lock:
+            if time.monotonic() >= self._source_stats_until:
+                stmt = select(articles.c.source_id,
+                              func.max(articles.c.published_at).label("latest_published_at"),
+                              func.count().label("retained_count")).group_by(articles.c.source_id)
+                with self.engine.connect() as conn:
+                    self._source_stats = {row.source_id: {"latest_published_at": row.latest_published_at,
+                        "retained_count": row.retained_count} for row in conn.execute(stmt)}
+                self._source_stats_until = time.monotonic() + 60
+            return self._source_stats
+
+    def source_state(self, *, include_archive=True):
+        latest = self.source_archive_stats() if include_archive else {}
         with self.engine.connect() as conn:
-            latest = {row.source_id: {"latest_published_at": row.latest_published_at, "retained_count": row.retained_count}
-                      for row in conn.execute(select(articles.c.source_id,
-                          func.max(articles.c.published_at).label("latest_published_at"),
-                          func.count().label("retained_count")).group_by(articles.c.source_id))}
             return {row.id: {**dict(row._mapping), **latest.get(row.id, {})} for row in conn.execute(select(sources))}
 
     def ensure_syndication_schema(self):
@@ -283,6 +297,17 @@ class Store:
             row = conn.execute(self.query(90 * 24).where(articles.c.id == ident)).mappings().first()
             result = dict(row) if row else None
         return self.with_reading_access([result], include_body=True)[0] if result else None
+
+    def related_candidates(self, ident, terms):
+        if not terms:
+            return []
+        stmt = self.query(30 * 24).where(articles.c.id != ident)
+        matches = [or_(articles.c.search_title.contains(term, autoescape=True),
+                       articles.c.search_description.contains(term, autoescape=True)) for term in terms]
+        score = sum(case((match, 1), else_=0) for match in matches)
+        stmt = stmt.where(or_(*matches)).order_by(score.desc(), articles.c.published_at.desc(), articles.c.id.desc()).limit(200)
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(stmt).mappings()]
 
     def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.

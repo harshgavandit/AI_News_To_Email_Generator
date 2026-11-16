@@ -10,7 +10,7 @@ FRESH_FOR = timedelta(minutes=45)
 
 
 def refresh_sources(store, only=None, *, source_ids=None):
-    state = store.source_state()
+    state = store.source_state(include_archive=False)
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)
               and (source_ids is None or s.id in source_ids)]
@@ -28,8 +28,8 @@ def refresh_sources(store, only=None, *, source_ids=None):
     return source_catalog(store)
 
 
-def source_catalog(store=None):
-    states = store.source_state() if store else {}
+def source_catalog(store=None, *, include_archive=True):
+    states = store.source_state(include_archive=include_archive) if store else {}
     cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
     result = []
     for s in DEFAULT_SOURCES:
@@ -39,6 +39,8 @@ def source_catalog(store=None):
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
         feed["retained_count"] = state.get("retained_count", 0)
+        if state.get("error"):
+            feed["error"] = state["error"]
         feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
         result.append(feed)
     return result

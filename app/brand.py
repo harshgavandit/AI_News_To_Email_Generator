@@ -1,8 +1,8 @@
 """Brand copy shared by the brief and delivery channels."""
 
 NAME = "Informa AI"
-HEADLINE = "Your Personal AI News Intelligence Agent."
-TAGLINE = "Discover what matters. Understand why it matters. Stay ahead without information overload."
+HEADLINE = "Global technology news, in one place."
+TAGLINE = "Follow reporting, research, and developer releases. Read the sources or get a brief in your inbox."
 PILLARS = "Discover · Analyze · Personalize · Automate"
 PUBLIC_SITE = "https://ai-news-to-email-generator.vercel.app"
 

@@ -70,11 +70,17 @@ def status(slug, name, url, *hosts):
     return Source(slug, slug, name, "status", url, hosts, topic="outages", coverage="status")
 
 
-def article_feed(slug, name, url, *hosts, group=None, topic="software", author_name="", author_url=""):
+def releases(slug, name, url, host, *, article_paths=()):
+    return Source(slug, slug, name, "engineering", url, (host,), topic="software", coverage="release",
+                  article_paths=article_paths)
+
+
+def article_feed(slug, name, url, *hosts, group=None, topic="software", author_name="", author_url="",
+                 region="Global", language="en"):
     if group == "medium":
         hosts = ("medium.com", *hosts)
     return Source(slug, group or slug, name, "engineering", url, hosts, topic=topic, coverage="article",
-                  author_name=author_name, author_url=author_url)
+                  author_name=author_name, author_url=author_url, region=region, language=language)
 
 
 # Global Multi-Category Feed Matrix
@@ -249,6 +255,30 @@ DEFAULT_SOURCES = (
     article_feed("freecodecamp", "freeCodeCamp", "https://www.freecodecamp.org/news/rss/", "freecodecamp.org"),
     article_feed("towards-data-science", "Towards Data Science", "https://towardsdatascience.com/feed/", "towardsdatascience.com", topic="ai"),
     article_feed("martin-fowler", "Martin Fowler", "https://martinfowler.com/feed.atom", "martinfowler.com"),
+    article_feed("zenn", "Zenn", "https://zenn.dev/feed", "zenn.dev", region="Asia-Pacific", language="ja"),
+    article_feed("linuxfr", "LinuxFr", "https://linuxfr.org/news.atom", "linuxfr.org", region="Europe", language="fr"),
+    reporting("medianama", "MediaNama", "https://www.medianama.com/feed/", "medianama.com",
+              region="Asia-Pacific"),
+    reporting("manual-do-usuario", "Manual do Usuário", "https://manualdousuario.net/feed/", "manualdousuario.net",
+              region="Latin America", language="pt-BR"),
+    article_feed("kubernetes-zh", "Kubernetes Blog (Chinese)", "https://kubernetes.io/zh-cn/feed.xml",
+                 "kubernetes.io", language="zh-CN"),
+
+    # Official change logs and project release notes
+    releases("github-changelog", "GitHub Changelog", "https://github.blog/changelog/feed/", "github.blog",
+             article_paths=("/changelog/",)),
+    releases("node-releases", "Node.js Releases", "https://nodejs.org/en/feed/blog.xml", "nodejs.org",
+             article_paths=("/en/blog/release/",)),
+    releases("uv-releases", "uv Releases", "https://github.com/astral-sh/uv/releases.atom", "github.com",
+             article_paths=("/astral-sh/uv/releases/tag/",)),
+    releases("rust-releases", "Rust Releases", "https://github.com/rust-lang/rust/releases.atom", "github.com",
+             article_paths=("/rust-lang/rust/releases/tag/",)),
+    Source("kubernetes-blog", "kubernetes-blog", "Kubernetes Blog", "engineering",
+           "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software", article_paths=("/blog/",)),
+    Source("python-blog", "python-blog", "Python Insider", "engineering",
+           "https://blog.python.org/feeds/posts/default", ("blog.python.org",), topic="software"),
+    Source("go-blog", "go-blog", "The Go Blog", "engineering",
+           "https://go.dev/blog/feed.atom", ("go.dev",), topic="software"),
 
     # Security advisories and independent cybersecurity reporting
     reporting("the-hacker-news", "The Hacker News", "https://feeds.feedburner.com/TheHackersNews",
@@ -268,6 +298,9 @@ DEFAULT_SOURCES = (
              region="North America"),
     advisory("cert-eu", "CERT-EU Advisories", "https://cert.europa.eu/publications/security-advisories-rss", "cert.europa.eu",
              region="Europe"),
+    Source("kubernetes-advisories", "kubernetes-advisories", "Kubernetes Security Advisories", "news",
+           "https://kubernetes.io/docs/reference/issues-security/official-cve-feed/feed.xml", ("github.com",),
+           topic="security", coverage="advisory", article_paths=("/kubernetes/kubernetes/issues/",)),
     Source("arxiv-crypto", "arxiv-crypto", "arXiv Cryptography & Security", "research",
            "https://rss.arxiv.org/rss/cs.CR", ("arxiv.org",), topic="security", coverage="preprint"),
 
@@ -284,6 +317,8 @@ DEFAULT_SOURCES = (
               "quantamagazine.org", topic="research"),
     reporting("stat-health-tech", "STAT Health Tech", "https://www.statnews.com/category/health-tech/feed/", "statnews.com",
               region="North America"),
+    Source("w3c-news", "w3c-news", "W3C News", "engineering", "https://www.w3.org/news/feed/", ("w3.org",),
+           topic="software", article_paths=("/news/",)),
 
     # 5. Creator & Video Insights
     youtube("matthew-berman", "Matthew Berman", "UCawZsQWqfGSbCI5yjkdVkTA"),
@@ -305,5 +340,6 @@ KINDS = ("all", "news", "research", "engineering", "video", "status")
 LANGUAGES = {code: label for code, label in (
     ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"), ("ko", "Korean"),
     ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"),
+    ("zh-CN", "Chinese (Simplified)"),
     ("und", "Not specified"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}

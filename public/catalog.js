@@ -36,6 +36,7 @@ export const languageOptions = {
   ko: "Korean",
   "pt-BR": "Portuguese (Brazil)",
   "es-MX": "Spanish (Mexico)",
+  "zh-CN": "Chinese (Simplified)",
   und: "Not specified",
 };
 
@@ -44,6 +45,7 @@ export const coverageLabels = {
   publisher: "Publisher update",
   discussion: "Community discussion",
   article: "Articles & tutorials",
+  release: "Release notes",
   advisory: "Security advisory",
   preprint: "Research preprint",
   status: "Official status",

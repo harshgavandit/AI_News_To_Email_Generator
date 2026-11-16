@@ -35,6 +35,7 @@ COVERAGE_LABELS = {
     "status": "Provider status",
     "discussion": "Community discussion",
     "article": "Article or tutorial",
+    "release": "Official release notes",
 }
 
 

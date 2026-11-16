@@ -9,7 +9,7 @@ import math
 import re
 
 from app.article_metadata import restore_metadata
-from app.discovery import search_terms, search_text
+from app.discovery import relevance_score, search_terms, search_text
 
 SUBJECTS = {
     "programming": "Programming", "cloud": "Cloud & infrastructure", "open-source": "Open source",
@@ -33,6 +33,11 @@ SUBJECT_PATTERNS = {
     "climate": r"climate tech|clean[ -]tech|renewable energy|battery|batteries|solar power|nuclear fusion|energy storage",
 }
 MATCHERS = {key: re.compile(rf"(?<!\w)(?:{value})(?!\w)", re.I) for key, value in SUBJECT_PATTERNS.items()}
+REFERENCE = re.compile(r"\b(?:CVE-\d{4}-\d{4,}|GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4})\b", re.I)
+GENERIC_TERMS = frozenset(
+    "about after analysis article best build cloud developer explains first from guide how latest learn makes news "
+    "release research software startup technology their these this tools tutorial update using what which with your".split()
+)
 
 
 def subjects_for(article):
@@ -42,18 +47,30 @@ def subjects_for(article):
     return [key for key, matcher in MATCHERS.items() if matcher.search(text)]
 
 
-def deduplicate(articles):
-    """Collapse exact canonical duplicates; keep different reporting on an event."""
+def story_identity(article):
     from app.news import canonical_url
+    from urllib.parse import urlsplit
+
+    link = article.get("original_url") or article.get("url") or ""
+    try:
+        canonical = canonical_url(link)
+    except ValueError:
+        return ("id", article.get("id"))
+    parts = urlsplit(canonical)
+    if parts.hostname in {"arxiv.org", "www.arxiv.org"}:
+        paper = re.fullmatch(r"/(?:abs|pdf)/((?:\d{4}\.\d{4,5}|[a-z.-]+/\d{7}))(?:v\d+)?(?:\.pdf)?", parts.path)
+        if paper:
+            return ("arxiv", paper.group(1))
+    return ("url", canonical)
+
+
+def deduplicate(articles):
+    """Collapse canonical copies and alternate preprint links."""
     seen = set()
     result = []
     for raw in articles:
         article = restore_metadata(raw)
-        try:
-            link = article.get("original_url") or article.get("url") or ""
-            identity = canonical_url(link)
-        except ValueError:
-            identity = article.get("id")
+        identity = story_identity(article)
         if identity in seen:
             continue
         seen.add(identity)
@@ -65,7 +82,8 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
     from app.coverage import public_article
     now = datetime.now(UTC)
     excluded = set(exclude_ids)
-    terms = search_terms(query)
+    phrase = search_text(query)
+    terms = search_terms(phrase)
     candidates = []
     for raw in articles:
         article = public_article(raw)
@@ -77,12 +95,11 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
                 continue
         except (ValueError, TypeError):
             continue
-        haystack = search_text(" ".join([article["title"], article["description"], article["publisher"],
-                                        article.get("author", ""), *article.get("tags", [])]))
-        if terms and not all(term in haystack for term in terms):
+        match = relevance_score(article, phrase, terms) if terms else 0
+        if match is None:
             continue
         age_hours = (now - published).total_seconds() / 3600
-        score = 3 / (1 + age_hours / 24)
+        score = 3 / (1 + age_hours / 24) + match / 4
         reasons = []
         if article["author_key"] and article["author_key"] in authors:
             score += 7
@@ -122,8 +139,51 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
             "basis": "Selected interests, followed authors and publications; ranked by freshness with source diversity."}
 
 
+def references(article):
+    text = f"{article['title']} {article.get('description', '')}"
+    return {match.upper() for match in REFERENCE.findall(text)}
+
+
+def related_terms(article):
+    title_terms = [term for term in search_terms(article["title"])
+                   if len(term) >= 3 and not term.isdigit() and term not in GENERIC_TERMS]
+    return (*sorted(search_text(ref) for ref in references(article))[:3], *title_terms[:8])
+
+
 def related_articles(article, candidates, limit=5):
-    ranked = recommend(candidates, topics=[article["topic"]], subjects=article.get("subjects", []),
-                       exclude_ids=[article["id"]], limit=limit + 5)["articles"]
-    return [item for item in ranked if item["topic"] == article["topic"]
-            or set(item["subjects"]) & set(article.get("subjects", []))][:limit]
+    """Rank by shared identifiers or distinct headline terms, with source diversity."""
+    ref_ids = references(article)
+    anchor_title = set(related_terms(article))
+    ranked = []
+    now = datetime.now(UTC)
+    for raw in candidates:
+        try:
+            if not now - timedelta(days=30) <= datetime.fromisoformat(raw["published_at"]) <= now:
+                continue
+        except (ValueError, KeyError, TypeError):
+            continue
+        if raw["id"] == article["id"]:
+            continue
+        raw = restore_metadata(raw)
+        item_refs = ref_ids & references(raw)
+        candidate_terms = set(related_terms(raw))
+        overlap = anchor_title & candidate_terms
+        if not item_refs and len(overlap) < 2:
+            continue
+        confidence = 2 * len(overlap) / max(1, len(anchor_title) + len(candidate_terms))
+        ranked.append((len(item_refs), confidence, raw.get("source") != article["source"],
+                       raw["published_at"], raw["id"], raw, item_refs, overlap))
+    ranked.sort(key=lambda item: item[:5], reverse=True)
+    selected, identities, publishers = [], {story_identity(article)}, Counter()
+    for _, _, _, _, _, raw, item_refs, overlap in ranked:
+        identity = story_identity(raw)
+        if identity in identities or publishers[raw["source"]] >= 2:
+            continue
+        reason = ("Shared reference " + sorted(item_refs)[0] if item_refs else
+                  "Shared headline terms: " + ", ".join(sorted(overlap)[:3]))
+        selected.append(dict(raw, related_reason=reason))
+        identities.add(identity)
+        publishers[raw["source"]] += 1
+        if len(selected) >= limit:
+            break
+    return selected

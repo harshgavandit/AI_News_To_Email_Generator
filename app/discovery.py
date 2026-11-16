@@ -19,6 +19,7 @@ COVERAGE_TYPES = {
     "status": "Service status",
     "discussion": "Community discussion",
     "article": "Articles & tutorials",
+    "release": "Release notes",
 }
 
 

@@ -10,7 +10,7 @@ from sqlalchemy import inspect, text
 from app import community, news, server
 from app.article_metadata import metadata_for, public_link, restore_metadata
 from app.coverage import public_article
-from app.intelligence import recommend, subjects_for
+from app.intelligence import deduplicate, recommend, subjects_for
 from app.launch_store import Store
 from app.sources import BY_ID
 from app.trending import extract_trending
@@ -124,7 +124,11 @@ def discovery_client(request, monkeypatch, tmp_path):
     rows = [story("python", author="Ada Lovelace", tags=["programming", "python"]),
             story("cloud", title="Kubernetes adds cloud observability", tags=["cloud"], author="Grace Hopper"),
             story("research", source_id="arxiv-programming", title="An empirical study of compiler correctness"),
-            story("acquisition", source_id="techcrunch", title="A startup acquires a database company")]
+            story("acquisition", source_id="techcrunch", title="A startup acquires a database company"),
+            story("advisory", source_id="kubernetes-advisories", title="CVE-2026-12345: Restricted workloads"),
+            story("cross-report", source_id="the-hacker-news", title="Privilege escalation fixed in a container runtime",
+                  age=200, description="The publisher identifies this issue as CVE-2026-12345."),
+            story("release", source_id="uv-releases", title="uv 0.13.8")]
     store = Store(f"sqlite:///{tmp_path / 'journey.db'}") if request.param else None
     if store:
         for item in rows:
@@ -180,6 +184,18 @@ def test_subject_filtered_brief_preserves_selection(discovery_client):
     assert discovery_client.post("/api/digest", json={"edition": "world", "subject": "arbitrary"}).status_code == 422
 
 
+def test_release_filter_and_related_reference_journey(discovery_client):
+    page = discovery_client.get("/api/news?coverage=release").json()
+    assert [item["id"] for item in page["articles"]] == ["release"]
+    assert page["coverage_types"]["release"] == "Release notes"
+    preview = discovery_client.post("/api/digest", json={"edition": "world", "coverage": "release", "top_n": 3})
+    assert preview.status_code == 200
+    assert "Official release notes" in preview.json()["digest"]["html"]
+    detail = discovery_client.get("/api/articles/advisory").json()
+    assert [item["id"] for item in detail["related"]] == ["cross-report"]
+    assert "CVE-2026-12345" in detail["related"][0]["related_reason"]
+
+
 def test_recommendation_freshness_diversity_duplicates_and_exclusions():
     rows = [story(f"dev-{index}", title=f"Python programming lesson {index}") for index in range(8)]
     rows += [story("other", source_id="github-blog", title="Python programming tools"),
@@ -211,6 +227,19 @@ def test_trending_is_source_based_searchable_and_excludes_future_records():
     assert result["total_analyzed"] == 1
     trend = next(row for row in result["trending"] if row["category"] == "startups")
     assert trend["query"] == "seed round" and trend["count"] == 1
+
+
+def test_cross_publisher_advisory_trend_and_preprint_deduplication():
+    first = dict(story("v1"), url="https://arxiv.org/abs/2611.12345v1")
+    second = dict(story("v2"), url="https://arxiv.org/pdf/2611.12345v2.pdf")
+    assert deduplicate([first, second]) == [first]
+    title = "Patch available for CVE-2026-12345"
+    result = extract_trending([
+        story("vendor", source_id="kubernetes-advisories", title=title),
+        story("report", source_id="the-hacker-news", title=title),
+    ])
+    assert {"tag": "CVE-2026-12345", "query": "cve 2026 12345", "category": "security",
+            "count": 2, "source_count": 2} in result["trending"]
 
 
 def test_subject_classification_preserves_multidisciplinary_context():

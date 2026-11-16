@@ -36,6 +36,17 @@ SPONSORED_TITLE = re.compile(
     r"^(?:heise-angebot|anzeige|sponsored content|sponsored post|advertisement|partner content)\s*[:|]", re.I
 )
 MEDIUM_POST = re.compile(r"https://medium\.com/p/([a-f0-9]{8,16})\Z")
+BARE_VERSION = re.compile(r"\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", re.ASCII)
+
+
+def feed_failure(status_code):
+    if status_code == 429:
+        return "rate_limited"
+    if status_code in (401, 403):
+        return "access_denied"
+    if status_code >= 500:
+        return "upstream_unavailable"
+    return "fetch_failed"
 
 
 def canonical_url(url, *, medium=False):
@@ -159,7 +170,10 @@ def read_feed(task):
                 published = datetime(*date[:6], tzinfo=timezone.utc)
                 if published > now + timedelta(days=1):
                     continue
-                title = plain_text(entry.get("title", ""))[:500]
+                raw_title = entry.get("title", "")
+                title = plain_text(raw_title)[:500]
+                if not title and s.coverage == "release" and BARE_VERSION.fullmatch(raw_title):
+                    title = f"{s.label.removesuffix(' Releases')} {raw_title}"
                 if not title:
                     continue
                 has_valid_entry = True
@@ -194,8 +208,17 @@ def read_feed(task):
             return [], dict(status, error="no_eligible_entries")
         return list(articles.values()), dict(status, available=True, count=len(articles),
             latest_published_at=max((article["published_at"] for article in articles.values()), default=None))
+    except httpx.HTTPStatusError as error:
+        return [], dict(status, error=feed_failure(error.response.status_code))
     except (httpx.HTTPError, ValueError, OSError):
         return [], dict(status, error="fetch_failed")
+
+
+def safe_read_feed(source):
+    try:
+        return read_feed(source)
+    except Exception:
+        return [], dict(source.public(), available=False, count=0, error="parser_failed")
 
 
 def collect_news(*, force=False):
@@ -206,7 +229,7 @@ def collect_news(*, force=False):
         if not _cache or cache_age >= (30 if force else 300):
             enabled = [s for s in DEFAULT_SOURCES if s.enabled]
             with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
-                for s, (articles, status) in zip(enabled, pool.map(read_feed, enabled)):
+                for s, (articles, status) in zip(enabled, pool.map(safe_read_feed, enabled)):
                     checked_at = datetime.now(timezone.utc).isoformat()
                     previous_articles, previous_status = _cache.get(s.id, ([], {}))
                     status["checked_at"] = checked_at

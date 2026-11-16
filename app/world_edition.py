@@ -3,6 +3,7 @@ import re
 from datetime import UTC, datetime
 
 from app.coverage import TOPICS, public_article, region_id
+from app.intelligence import story_identity
 from app.selection import words
 from app.sources import BY_ID
 from app.web_digest import digest_markdown, safe_email_html
@@ -32,17 +33,18 @@ def edition_candidate(article):
 def diverse_stories(candidates, count, *, previous=(), lead_with_incident=False):
     picked = []
     ids = {story["id"] for story in previous}
+    links = {story_identity(story) for story in previous}
     topics = {story["topic"] for story in previous}
     regions = {region_id(story["region"]) for story in previous}
     publishers = {story["publisher"] for story in previous}
     incidents = {key for story in previous if (key := incident_key(story))}
     seen_titles = [words(story["title"]) for story in previous]
-    pool = [(story, incident_key(story), words(story["title"])) for story in candidates
+    pool = [(story, incident_key(story), words(story["title"]), story_identity(story)) for story in candidates
             if story["id"] not in ids and edition_candidate(story)]
     now = datetime.now(UTC)
 
     def priority(row):
-        story, _, _ = row
+        story, _, _, _ = row
         reported_outage = (
             lead_with_incident and not picked and story["topic"] == "outages" and story["coverage"] == "reporting"
             and 0 <= (now - datetime.fromisoformat(story["published_at"])).total_seconds() <= 86400
@@ -53,8 +55,8 @@ def diverse_stories(candidates, count, *, previous=(), lead_with_incident=False)
                 REPORTING_PRIORITY.get(story["coverage"], 0), story["published_at"], story["id"])
 
     def is_duplicate(row):
-        story, incident, tokens = row
-        return story["id"] in ids or incident in incidents or any(
+        story, incident, tokens, identity = row
+        return story["id"] in ids or identity in links or incident in incidents or any(
             tokens and old and len(tokens & old) / len(tokens | old) >= .72 for old in seen_titles
         )
 
@@ -62,9 +64,10 @@ def diverse_stories(candidates, count, *, previous=(), lead_with_incident=False)
         pool = [row for row in pool if not is_duplicate(row)]
         if not pool:
             break
-        story, incident, tokens = max(pool, key=priority)
+        story, incident, tokens, identity = max(pool, key=priority)
         picked.append(story)
         ids.add(story["id"])
+        links.add(identity)
         topics.add(story["topic"])
         regions.add(region_id(story["region"]))
         publishers.add(story["publisher"])

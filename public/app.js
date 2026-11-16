@@ -313,6 +313,7 @@ function syncURL() {
   $("filter-count").textContent = count;
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
+  $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
   $("reset-filters").hidden = state.view !== "feed" ||
     (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
@@ -468,6 +469,7 @@ function renderStories() {
   const articles = visibleStories();
   $("filter-high-signal").hidden = isSaved || isForYou;
   $("filter-articles").hidden = isSaved || isForYou;
+  $("filter-releases").hidden = isSaved || isForYou;
   $("mark-all-read").hidden = isSaved || !articles.length;
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
@@ -1971,7 +1973,7 @@ window.addEventListener("popstate", () => {
   loadNews().then(() => openLinkedArticle());
 });
 
-for (const [id, type] of [["filter-high-signal", "reporting"], ["filter-articles", "article"]]) {
+for (const [id, type] of [["filter-high-signal", "reporting"], ["filter-articles", "article"], ["filter-releases", "release"]]) {
   $(id).addEventListener("click", () => {
     $("coverage").value = $("coverage").value === type ? "" : type;
     loadNews();
@@ -2070,6 +2072,7 @@ async function loadArticleDetails(article) {
       const button = node("button", "related-story");
       button.type = "button";
       button.append(node("strong", "", related.title), node("span", "", `${related.publisher} · ${relativeTime(related.published_at)}`));
+      if (related.related_reason) button.append(node("span", "related-reason", related.related_reason));
       button.addEventListener("click", () => {
         const existing = dossier.articles.findIndex((item) => item.id === related.id);
         if (existing < 0) dossier.articles.push(related);

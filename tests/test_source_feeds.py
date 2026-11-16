@@ -61,6 +61,17 @@ def test_valid_empty_feed_and_html_response_have_different_health(monkeypatch):
         assert rows == [] and not status["available"] and status["error"] == "invalid_feed"
 
 
+def test_official_release_feed_keeps_version_only_titles_and_restricts_repository_paths(monkeypatch):
+    source = BY_ID["uv-releases"]
+    monkeypatch.setattr(news, "fetch_bytes", lambda _: feed(
+        ("0.13.8", "https://github.com/astral-sh/uv/releases/tag/0.13.8", ()),
+        ("Other project", "https://github.com/unreviewed/other/releases/tag/0.13.8", ()),
+    ))
+    rows, status = news.read_feed(source)
+    assert status["available"] and status["coverage"] == "release"
+    assert [item["title"] for item in rows] == ["uv 0.13.8"]
+
+
 def test_medium_uses_the_same_id_across_feeds_without_losing_publisher_link(monkeypatch):
     def fixture(url):
         return feed(("Understanding distributed transactions", url, ("software",))).replace(

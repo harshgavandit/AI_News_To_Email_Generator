@@ -12,6 +12,8 @@ def words(text):
 
 
 def select_candidates(articles, focus, count, sources):
+    from app.intelligence import story_identity
+
     topics = [term for term in search_terms(focus) if term not in STOP]
     allowed = set(sources)
     rows = []
@@ -25,10 +27,15 @@ def select_candidates(articles, focus, count, sources):
         rows.append((score, article["published_at"], article["id"], title, article))
     rows.sort(key=lambda row: row[:3], reverse=True)
     picked, deferred, seen_titles = [], [], []
+    seen_links = set()
     publishers = Counter()
     for _, _, _, tokens, article in rows:
+        identity = story_identity(article)
+        if identity in seen_links:
+            continue
         if tokens and any(tokens == old or (len(tokens & old) >= 4 and len(tokens & old) / len(tokens | old) >= .8) for old in seen_titles):
             continue
+        seen_links.add(identity)
         seen_titles.append(tokens)
         publisher = article["publisher"]
         if publishers[publisher] >= max(1, (count + 1) // 2):

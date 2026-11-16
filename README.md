@@ -1,16 +1,10 @@
 # Informa AI
 
-**Your Personal AI News Intelligence Agent.**
-
-Discover what matters. Understand why it matters. Stay ahead without information overload.
-
-**Discover · Analyze · Personalize · Automate**
-
 [Open Informa AI](https://ai-news-to-email-generator.vercel.app/)
 
-Browse technology news, research, security advisories, and developer articles from publishers around the world. Coverage includes TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, reviewed Medium publication and topic feeds, and official public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags. Filter by topic, subject, publisher, region, language, and time.
+Browse global technology news, research, security advisories, developer articles, and official release notes. Sources include TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, selected Medium feeds, and public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags. Filter by topic, subject, publisher, region, language, source type, and time.
 
-Open a story inside the Reading Room to read its supplied excerpt, find related coverage, or create a source-linked AI brief. Original articles and Hacker News discussions remain one click away. Save articles, share a story link, or keep a named view of your filters in this browser. In **For You**, follow individual publications, topic feeds, and identified authors alongside your interests. Each recommendation explains its match.
+Open a story in the Reading Room to read its supplied excerpt, find related coverage, or create a brief with links to the sources. Save articles, share a story link, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. The reader explains matches using shared headline terms or exact references such as CVE identifiers.
 
 Preview the Global Top 5 or tailor a brief by coverage and reader perspective. Pin articles to include them and export the result as Markdown, HTML, or an email file. Briefs identify whether each summary comes from a publisher excerpt, a headline, or AI synthesis. Verified inboxes can receive a brief or opt in to the scheduled Global Top 5 when email delivery is configured.
 

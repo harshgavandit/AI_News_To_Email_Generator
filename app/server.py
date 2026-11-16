@@ -50,7 +50,7 @@ from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
-from app.intelligence import SUBJECTS, recommend, related_articles, subjects_for
+from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, subjects_for
 from app.syndication import router as syndication_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
@@ -64,10 +64,10 @@ MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v8")
-_news_cache = Cache("news-v13")
+_digest_cache = Cache("digest-v9")
+_news_cache = Cache("news-v14")
 _headline_cache = Cache("headlines-v5")
-_trending_cache = Cache("trending-v2")
+_trending_cache = Cache("trending-v3")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -291,7 +291,7 @@ def readiness():
     if not store:
         return JSONResponse({"status": "unavailable", "reason": "archive_not_configured"}, status_code=503)
     store.ensure_discovery_schema()
-    freshness = feed_freshness(source_catalog(store))
+    freshness = feed_freshness(source_catalog(store, include_archive=False))
     available = freshness["counts"]["fresh"] > 0
     return JSONResponse({"status": freshness["status"], "freshness": freshness}, status_code=200 if available else 503)
 
@@ -378,9 +378,12 @@ def article_details(article_id: str, response: Response):
     if not raw:
         raise HTTPException(404, "This story is no longer in the archive. Open its original source if you saved the link.")
     article = public_article(raw)
-    candidates = intelligence_candidates(store) if rows is None else rows
+    candidates = store.related_candidates(article_id, related_terms(article)) if store else rows
+    related = related_articles(article, candidates)
+    if store:
+        related = store.with_reading_access(related)
     response.headers["Cache-Control"] = "no-store"
-    return {"article": article, "related": related_articles(article, candidates),
+    return {"article": article, "related": [public_article(item) for item in related],
             "reading": raw.get("_reading_content"),
             "reading_notice": ("Full text shared with permission from the rights holder. Original source and attribution are preserved."
                 if raw.get("_reading_content") else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
@@ -472,7 +475,7 @@ def morning_job(authorization: str | None = Header(default=None)):
     store = source_store()
 
     def daily_brief():
-        if not feed_freshness(source_catalog(store))["counts"]["fresh"]:
+        if not feed_freshness(source_catalog(store, include_archive=False))["counts"]["fresh"]:
             raise HTTPException(503, "Sources are stale. Refresh the archive before processing morning briefs.")
         candidates = store.world_candidates(24, GROUPS)
         selected = select_world(candidates, 5, GROUPS)
@@ -675,7 +678,7 @@ def refresh_from_reader(store, filters, key, *, force):
         cooldown = 0
         try:
             # Recheck after claiming the lease. Another instance may have updated the archive.
-            scope = reader_refresh_scope(source_catalog(store), filters, force=force)
+            scope = reader_refresh_scope(source_catalog(store, include_archive=False), filters, force=force)
             if scope == set():
                 return
             cooldown = 300
