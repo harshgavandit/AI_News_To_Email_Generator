@@ -361,6 +361,8 @@ function syncURL() {
     if (!value || value === "all") url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
+  if (state.view !== "feed") url.searchParams.set("view", state.view);
+  else url.searchParams.delete("view");
   history.replaceState(null, "", url);
   $("clear-search").hidden = !$("search").value;
   const count = Number(state.source !== "all") + Number(Boolean(state.publisher)) +
@@ -369,7 +371,7 @@ function syncURL() {
   $("filter-count").textContent = count;
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
-  $("reset-filters").hidden = state.view !== "feed" ||
+  $("reset-filters").hidden = state.view === "saved" ||
     (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
@@ -422,6 +424,13 @@ function restoreURL() {
   if ($("sort").selectedIndex === -1) $("sort").value = defaultSort(state.searching);
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
+  const viewParam = params.get("view");
+  if (viewParam === "saved" || viewParam === "for-you") {
+    state.view = viewParam;
+    for (const peer of ["feed", "for-you", "saved"])
+      $(`view-${peer}`).setAttribute("aria-pressed", String(peer === viewParam));
+    $("feed-controls").hidden = $("sort").hidden = $("refresh").hidden = viewParam === "saved";
+  }
 }
 function chooseTopic(topic) {
   state.topic = topic;
@@ -495,13 +504,71 @@ function renderSourceFilters() {
     button.setAttribute("aria-pressed", String(state.source === id));
   }
 }
-const visibleStories = () => state.view === "saved" ? [...saved.values()].reverse() : state.articles;
+function getForYouStories() {
+  if (!state.articles.length) return [];
+  const topicWeights = {};
+  const publisherWeights = {};
+
+  for (const item of saved.values()) {
+    const t = item.category || item.topic || "technology";
+    topicWeights[t] = (topicWeights[t] || 0) + 3;
+    const pub = item.publisher || item.publisher_name || item.source_name;
+    if (pub) publisherWeights[pub.toLowerCase()] = (publisherWeights[pub.toLowerCase()] || 0) + 3;
+  }
+
+  for (const art of state.articles) {
+    if (readStories.has(String(art.id))) {
+      const t = art.category || art.topic || "technology";
+      topicWeights[t] = (topicWeights[t] || 0) + 1.5;
+      const pub = art.publisher || art.publisher_name || art.source_name;
+      if (pub) publisherWeights[pub.toLowerCase()] = (publisherWeights[pub.toLowerCase()] || 0) + 1.5;
+    }
+  }
+
+  const hasHistory = Object.keys(topicWeights).length > 0 || Object.keys(publisherWeights).length > 0;
+
+  const scored = state.articles.map((art, idx) => {
+    let score = 0;
+    const t = art.category || art.topic || "technology";
+    const pub = (art.publisher || art.publisher_name || art.source_name || "").toLowerCase();
+    const isRead = readStories.has(String(art.id));
+    const isSaved = saved.has(String(art.id));
+
+    if (!isRead) score += 2.0;
+    if (isSaved) score += 1.0;
+    if (topicWeights[t]) score += topicWeights[t];
+    if (publisherWeights[pub]) score += publisherWeights[pub];
+    if (art.coverage === "reporting" || art.source_type === "reporting") score += 1.5;
+
+    if (!hasHistory) {
+      if (["ai", "software", "security", "research"].includes(t)) score += 2.0;
+      if (art.coverage === "reporting") score += 1.5;
+    }
+
+    score -= idx * 0.05;
+    const isPersonalized = hasHistory && (Boolean(topicWeights[t]) || Boolean(publisherWeights[pub]));
+    return { article: art, score, isPersonalized };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => {
+    s.article._forYouRecommended = s.isPersonalized;
+    return s.article;
+  });
+}
+
+const visibleStories = () => {
+  if (state.view === "saved") return [...saved.values()].reverse();
+  if (state.view === "for-you") return getForYouStories();
+  return state.articles;
+};
 
 function renderStories() {
   $("outage-links").hidden = state.topic !== "outages";
   const container = $("stories");
   container.replaceChildren();
   const isSaved = state.view === "saved";
+  const isForYou = state.view === "for-you";
   $("export-saved-md").hidden = !isSaved || !saved.size;
   $("pin-all-saved").hidden = !isSaved || !saved.size;
   const articles = visibleStories();
@@ -511,8 +578,9 @@ function renderStories() {
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
-    empty.append(node("strong", "", isSaved ? "No saved stories" : "No matching stories"));
+    empty.append(node("strong", "", isSaved ? "No saved stories" : (isForYou ? "No stories in your personalized feed" : "No matching stories")));
     empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
+      isForYou ? "Read and save articles to train your personal AI news intelligence feed, or adjust your filters." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
@@ -562,6 +630,9 @@ function renderStories() {
     const readingTime = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
 
     const badges = node("div", "story-meta-badges");
+    if (state.view === "for-you" && article._forYouRecommended) {
+      badges.append(node("span", "for-you-badge", "✦ For You"));
+    }
     badges.append(
       node(
         "span",
@@ -872,7 +943,7 @@ function newsParams() {
 }
 
 async function checkForUpdates() {
-  if (state.view !== "feed" || document.hidden || $("mail-dialog").open || state.updateCheck ||
+  if (state.view === "saved" || document.hidden || $("mail-dialog").open || state.updateCheck ||
       $("stories").getAttribute("aria-busy") === "true" || !state.feedKey) return;
   const params = newsParams();
   if (state.feedKey !== params.toString()) return;
@@ -880,7 +951,7 @@ async function checkForUpdates() {
   state.updateCheck = controller;
   try {
     const data = await request(`/api/news?${params}`, { signal: controller.signal });
-    if (controller.signal.aborted || state.view !== "feed" || state.feedKey !== newsParams().toString()) return;
+    if (controller.signal.aborted || state.view === "saved" || state.feedKey !== newsParams().toString()) return;
     if ($("source-popover").hidden) renderHealth(data.freshness, data.sources);
     const visible = new Set(state.articles.map((story) => story.id));
     const currentIds = new Set(state.articles.slice(0, 12).map((story) => story.id));
@@ -896,7 +967,7 @@ async function checkForUpdates() {
 }
 
 async function loadNews(append = false, force = false) {
-  if (state.view !== "feed") return;
+  if (state.view === "saved") return;
   clearTimeout(searchTimer);
   const searching = Boolean($("search").value.trim());
   if ($("sort").value === defaultSort(state.searching)) $("sort").value = defaultSort(searching);
@@ -933,7 +1004,7 @@ async function loadNews(append = false, force = false) {
     const data = await request(`/api/news?${params}`, {
       signal: controller.signal,
     });
-    if (state.controller !== controller || state.view !== "feed") return;
+    if (state.controller !== controller || state.view === "saved") return;
     const focusMore = append && (document.activeElement === $("show-more") || document.activeElement === document.body);
     const previousSize = append ? state.articles.length : 0;
     if (append) {
@@ -957,7 +1028,7 @@ async function loadNews(append = false, force = false) {
     }
     if (focusMore) $("stories").children[previousSize]?.querySelector("h3 a")?.focus();
   } catch (error) {
-    if (state.controller === controller && error.name !== "AbortError" && state.view === "feed") {
+    if (state.controller === controller && error.name !== "AbortError" && state.view !== "saved") {
       if (!append && force && state.articles.length) $("show-more").hidden = !state.cursor;
       if (!append && (!force || !state.articles.length)) {
         const retry = node("button", "button secondary", "Try again");
@@ -1017,20 +1088,20 @@ $("filter-toggle").addEventListener("click", () => {
   $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
 });
 let searchTimer;
-for (const view of ["feed", "saved"]) {
+for (const view of ["feed", "for-you", "saved"]) {
   $(`view-${view}`).addEventListener("click", () => {
     if (state.view === view) return;
     clearTimeout(searchTimer);
     state.controller?.abort();
     state.updateCheck?.abort();
     state.view = view;
-    for (const peer of ["feed", "saved"])
+    for (const peer of ["feed", "for-you", "saved"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
     $("feed-controls").hidden = $("sort").hidden = $("refresh").hidden = view === "saved";
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
-    if (view === "feed") loadNews();
+    if ((view === "feed" || view === "for-you") && !state.articles.length) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
@@ -1081,9 +1152,57 @@ $("show-updates").addEventListener("click", async () => {
   await loadNews();
   ($("stories").querySelector("h3 a") || $("search")).focus();
 });
+async function loadTrending() {
+  try {
+    const res = await fetch("/api/trending");
+    if (!res.ok) return;
+    const data = await res.json();
+    const items = data?.trending || [];
+    if (!items.length) {
+      $("trending-bar").hidden = true;
+      return;
+    }
+    const container = $("trending-chips");
+    container.replaceChildren();
+    for (const item of items) {
+      const chip = node("button", "trending-chip", item.tag);
+      chip.type = "button";
+      chip.dataset.query = item.query || item.tag;
+      chip.dataset.topic = item.category || "";
+      chip.setAttribute("aria-pressed", String($("search").value.toLowerCase() === (item.query || item.tag).toLowerCase()));
+      const countSpan = node("span", "trending-count", String(item.count));
+      chip.append(countSpan);
+      chip.addEventListener("click", () => {
+        const query = item.query || item.tag;
+        const isActive = $("search").value.toLowerCase() === query.toLowerCase();
+        if (isActive) {
+          $("search").value = "";
+          $("clear-search").hidden = true;
+          chip.setAttribute("aria-pressed", "false");
+        } else {
+          $("search").value = query;
+          $("clear-search").hidden = false;
+          for (const c of container.children) c.setAttribute("aria-pressed", "false");
+          chip.setAttribute("aria-pressed", "true");
+        }
+        state.searching = Boolean($("search").value.trim());
+        if (state.view === "saved") $("view-feed").click();
+        loadNews();
+      });
+      container.append(chip);
+    }
+    $("trending-bar").hidden = false;
+  } catch {
+    // Optional enhancement
+  }
+}
+
 setInterval(checkForUpdates, 60_000);
 for (const id of ["refresh", "retry-sources"])
-  $(id).addEventListener("click", () => loadNews(false, true));
+  $(id).addEventListener("click", () => {
+    loadNews(false, true);
+    loadTrending();
+  });
 function showHealth(show) {
   $("source-popover").hidden = !show;
   $("source-health-button").setAttribute("aria-expanded", String(show));
@@ -1884,6 +2003,7 @@ if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
 loadNews();
 loadHeadlines();
+loadTrending();
 window.addEventListener("hashchange", () => {
   if (location.hash === "#composer") openBuilder("build", $("nav-builder"));
 });
@@ -2079,6 +2199,33 @@ $("dossier-copy-btn").addEventListener("click", async () => {
     if (dossier.article === article) status("dossier-feedback", "Clipboard access was unavailable.", true);
   }
 });
+$("dossier-share-btn")?.addEventListener("click", async () => {
+  const article = dossier.article;
+  if (!article) return;
+  const href = article.url || article.link || article.sourceUrl;
+  const title = article.title;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, url: href });
+      if (dossier.article === article) status("dossier-feedback", "Story shared.");
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(href);
+    if (dossier.article === article) status("dossier-feedback", "Story link copied to clipboard.");
+  } catch {
+    if (dossier.article === article) status("dossier-feedback", "Clipboard access was unavailable.", true);
+  }
+});
+$("dossier-font-btn")?.addEventListener("click", () => {
+  const isLarge = $("dossier-summary").classList.toggle("large-reading-text");
+  $("dossier-why-text")?.classList.toggle("large-reading-text", isLarge);
+  $("dossier-font-btn").setAttribute("aria-pressed", String(isLarge));
+  status("dossier-feedback", isLarge ? "Reading font enlarged." : "Standard font size.");
+});
 
 const audio = { playlist: [], index: 0, origin: null, utterance: null, timer: null, status: "", generation: 0 };
 const speechAvailable = Boolean(window.speechSynthesis) && typeof window.SpeechSynthesisUtterance === "function";
@@ -2249,6 +2396,11 @@ function listCommands() {
     { label: "Build a personalized brief", run: () => $("nav-builder").click() },
     { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
     { label: "Email the Global Top 5", run: () => $("hero-email").focus() },
+    { label: "Switch to For You recommendations", run: () => {
+      $("view-for-you").click();
+      $("view-for-you").focus({ preventScroll: true });
+      $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
+    }},
     { label: "Browse saved stories", run: () => {
       $("view-saved").click();
       $("view-saved").focus({ preventScroll: true });

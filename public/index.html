@@ -181,6 +181,7 @@
           <div class="reading-stream">
             <div class="reading-views" role="group" aria-label="Reading Room view">
               <button id="view-feed" type="button" aria-pressed="true">Latest stories</button>
+              <button id="view-for-you" type="button" aria-pressed="false">For You ✦</button>
               <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
             </div>
             <div class="reading-stream-actions">
@@ -189,6 +190,10 @@
                 <span aria-hidden="true">↻</span> Refresh
               </button>
             </div>
+          </div>
+          <div id="trending-bar" class="trending-bar" aria-label="Trending Topics" hidden>
+            <span class="trending-title">✦ Trending:</span>
+            <div id="trending-chips" class="trending-chips" role="group"></div>
           </div>
           <div id="feed-controls">
             <div class="reading-discovery">
@@ -708,6 +713,12 @@
           </a>
           <button id="dossier-listen-btn" class="button secondary" type="button">Listen</button>
           <button id="dossier-stop-btn" class="button secondary" type="button" hidden>Stop</button>
+          <button id="dossier-share-btn" class="button secondary" type="button" aria-label="Share story">
+            Share ↗
+          </button>
+          <button id="dossier-font-btn" class="button secondary" type="button" aria-label="Toggle reading font size" aria-pressed="false">
+            A / A+
+          </button>
           <button id="dossier-pin-btn" class="button secondary" type="button" aria-pressed="false">
             Pin to brief
           </button>
