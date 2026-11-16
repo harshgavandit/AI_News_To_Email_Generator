@@ -6,6 +6,7 @@ import threading
 import time
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from sqlalchemy import (
     Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
@@ -30,9 +31,10 @@ articles = Table("brief_articles", schema,
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
     Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
-    Column("community_relevant", Boolean))
+    Column("community_relevant", Boolean), Column("source_eligible", Boolean))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
-                     articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant)
+                     articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
+                     articles.c.source_eligible)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -103,18 +105,23 @@ class QuotaReached(Exception):
 
 def discovery_fields(article):
     from app.intelligence import subjects_for
+    from app.news import article_in_scope
     metadata = metadata_for(article)
+    source = BY_ID.get(article["source_id"])
+    path = urlsplit(article.get("url", "")).path
+    eligible = not source or article_in_scope(source, path, article["title"], metadata.get("tags", []))
     publisher = " ".join([article["publisher"], metadata.get("author", ""), *metadata.get("tags", [])])
     return {"topic": topic_for(article), "search_title": search_text(article["title"]),
             "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
             "subject_keys": "|" + "|".join(subjects_for(article)) + "|",
+            "source_eligible": eligible,
             "community_relevant": (dev_article_in_scope(article) if article["source_id"] in GENERAL_DEV_FEEDS else None)}
 
 
 def backfill_discovery(conn):
-    stmt = select(*(articles.c[key] for key in ("id", "source_id", "source", "title", "description", "publisher",
+    stmt = select(*(articles.c[key] for key in ("id", "url", "source_id", "source", "title", "description", "publisher",
                                                "category", "kind", "metadata_json"))).where(or_(
-        articles.c.topic.is_(None), articles.c.subject_keys.is_(None),
+        articles.c.topic.is_(None), articles.c.subject_keys.is_(None), articles.c.source_eligible.is_(None),
         and_(articles.c.source_id.in_(GENERAL_DEV_FEEDS), articles.c.community_relevant.is_(None))))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
@@ -325,6 +332,7 @@ class Store:
         stmt = select(articles).outerjoin(sources, articles.c.source_id == sources.c.id).where(
             articles.c.published_at.between(cutoff, now.isoformat()),
             articles.c.community_relevant.is_not(False),
+            articles.c.source_eligible.is_not(False),
             or_(sources.c.enabled.is_(True), sources.c.enabled.is_(None)))
         if source != "all":
             stmt = stmt.where(or_(articles.c.source == source, articles.c.source_id == source))

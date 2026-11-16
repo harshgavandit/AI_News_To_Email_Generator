@@ -169,6 +169,75 @@ test('opening the Saved view directly renders bookmarks from browser storage', a
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
+test('daily briefing navigation, read state and modal brief pins work together', async () => {
+  const env = mount();
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const articles = [1, 2].map(index => ({ id: `brief-${index}`, title: `An attributed technology update ${index}`,
+    description: 'The publisher supplied this excerpt.', cleanSummary: 'The publisher supplied this excerpt.',
+    publisher: 'Original publisher', source: 'medium', source_id: 'medium-codex', topic: 'software', category: 'software',
+    published_at: new Date().toISOString(), url: `https://example.org/update-${index}`, has_excerpt: true,
+    coverage_count: 2, coverage_publishers: ['Original publisher', 'Other publisher'] }));
+  globalThis.fetch = async url => {
+    const path = String(url);
+    const data = path === '/api/briefing' ? { articles, publishers: 8 } : path.startsWith('/api/news') ?
+      { ...catalog, articles, total: 2, sources: catalog.sources, facets: {} } : {};
+    return new Response(JSON.stringify(data), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?briefing=${Date.now()}`);
+    await until(() => document.querySelector('#stories .story'));
+    document.querySelector('[data-workspace-view="briefing"]').click();
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    assert.equal(document.getElementById('reading-title').textContent, 'Daily briefing');
+    assert.equal(document.getElementById('briefing-intro').hidden, false);
+    assert.equal(new URL(location.href).searchParams.get('view'), 'briefing');
+    assert.equal(document.querySelector('#stories .coverage-count').textContent, '2 publishers');
+    document.getElementById('briefing-pin').click();
+    assert.equal(document.querySelectorAll('#selected-stories .selected-item').length, 2);
+    assert.equal(document.getElementById('composer').getAttribute('aria-modal'), 'true');
+    assert.equal(document.getElementById('workspace-navigation').inert, true);
+    document.getElementById('composer').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert.equal(document.getElementById('composer').classList.contains('open'), false);
+    assert.equal(document.getElementById('workspace-navigation').inert, false);
+    document.getElementById('hide-read').click();
+    document.getElementById('mark-all-read').click();
+    assert.equal(document.querySelectorAll('#stories .story').length, 0);
+    assert(document.getElementById('stories').textContent.includes('up to date'));
+    assert.equal(localStorage.getItem('informa-hide-read'), 'true');
+    document.getElementById('hide-read').click();
+    assert.equal(document.querySelectorAll('#stories .story').length, 2);
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
+test('monitoring views appear in the workspace and restore their search', async () => {
+  const env = mount(html, 'https://informa.test/?q=kubernetes&window=7d');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const requests = [];
+  globalThis.fetch = async url => {
+    const path = String(url);
+    requests.push(path);
+    const data = path.startsWith('/api/news') ? { ...catalog, articles: [], total: 0, facets: {} } : {};
+    return new Response(JSON.stringify(data), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?monitoring=${Date.now()}`);
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    document.getElementById('sidebar-save-view').click();
+    document.getElementById('saved-view-name').value = 'Cloud watch';
+    document.getElementById('saved-view-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+    const monitor = document.querySelector('#sidebar-saved-views button');
+    assert.equal(monitor.textContent, 'Cloud watch');
+    document.getElementById('search').value = 'something else';
+    monitor.click();
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    assert.equal(document.getElementById('search').value, 'kubernetes');
+    assert(requests.at(-1).includes('q=kubernetes'));
+    assert.equal(JSON.parse(localStorage.getItem('informa-saved-views-v1'))[0].name, 'Cloud watch');
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
 test('author workspace submits privately and owner review requires an explicit permission check', async () => {
   const page = readFileSync(new URL('../../public/contribute.html', import.meta.url), 'utf8');
   const env = mount(page, 'https://informa.test/contribute.html?article=listed-article');

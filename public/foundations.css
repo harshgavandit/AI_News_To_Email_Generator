@@ -1,0 +1,46 @@
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("/fonts/instrument-sans-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("/fonts/instrument-serif-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+:root {
+  --font-ui: "Instrument Sans", "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, serif;
+  --light-background: #f6f7f4;
+  --light-paper: #ffffff;
+  --light-ink: #1c2b25;
+  --light-muted: #58675f;
+  --light-line: #dce3dc;
+  --light-green: #20583f;
+  --light-sage: #e9f0e8;
+  --subtle: #f0f3ed;
+  --lead: #edf3e9;
+  --radius: 12px;
+}
+:root[data-theme="dark"] {
+  --bg: #131b17;
+  --paper: #1b251f;
+  --ink: #ebf0e8;
+  --muted: #adbcaf;
+  --line: #36443a;
+  --green: #b1d5a6;
+  --sage: #293d2e;
+  --subtle: #223027;
+  --lead: #26392b;
+}
+body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; }
+.site-header .brand { letter-spacing: -.055em; }
+.site-header .brand-icon { border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

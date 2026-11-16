@@ -5,6 +5,14 @@ import { resolve } from 'node:path';
 // Vercel serves these static assets directly alongside the Python application.
 // Validate the deployable files without copying private repository files.
 for (const filename of readdirSync('public')) {
+  if (filename.endsWith('.css')) {
+    const css = readFileSync(resolve('public', filename), 'utf8');
+    for (const match of css.matchAll(/url\(["']?(\/[^)"'?#]+)["']?\)/g)) {
+      if (!existsSync(resolve('public', match[1].slice(1)))) {
+        throw new Error(`Missing stylesheet asset ${match[1]} in ${filename}`);
+      }
+    }
+  }
   if (filename.endsWith('.js')) {
     const result = spawnSync(process.execPath, ['--check', resolve('public', filename)], { stdio: 'inherit' });
     if (result.status !== 0) process.exit(result.status || 1);

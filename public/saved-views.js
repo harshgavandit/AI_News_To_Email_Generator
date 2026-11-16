@@ -22,7 +22,7 @@ function readStoredViews() {
   return views;
 }
 
-export function initSavedViews(root, { readView, applyView }) {
+export function initSavedViews(root, { readView, applyView, onChange = () => {} }) {
   const form = root.querySelector("#saved-view-form");
   const nameInput = root.querySelector("#saved-view-name");
   const list = root.querySelector("#saved-views-list");
@@ -98,6 +98,7 @@ export function initSavedViews(root, { readView, applyView }) {
       return row;
     });
     list.replaceChildren(...rows);
+    onChange(views.map(view => ({ ...view })));
   }
 
   form.addEventListener("submit", (event) => {

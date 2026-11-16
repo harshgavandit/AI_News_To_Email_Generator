@@ -6,6 +6,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 `GET /api/headlines` returns reviewed developing coverage and a ranked selection of recent articles from enabled reporting feeds. The homepage uses it independently of the Reading Room’s time window and sort.
 
+`GET /api/briefing` returns up to five current publisher records for the Daily briefing view. Optional `hours` ranges from 12 to 168 and defaults to 24. Selection uses a bounded archive sample, includes reporting, official publications, advisories, journals and preprints, and diversifies topics and publishers. It reduces closely matching headline coverage. Each article retains its supplied excerpt, original link and summary basis, plus `coverage_count` and `coverage_publishers` from matching records in the sample. The response includes `total_candidates`, `publishers`, `latest_published_at`, `updated_at` and source `freshness`. Publisher counts describe the observed sample. The endpoint uses a one-minute application cache and a 30-second CDN cache when it has stories. An empty archive returns an empty selection with its source status.
+
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
 - `hours` accepts `12`, `24`, `168`, or `720`.
@@ -16,6 +18,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 - `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. A source record includes `retry_at` while it is waiting for its next eligible check. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
 
 The two broad DEV streams require a technical title, excerpt, or topic tag. The archive applies the same rule to previously retained posts, so search totals, recommendations, and reading details exclude out-of-scope records.
+
+Reviewed source path and title constraints also apply to retained articles through the additive `source_eligible` field. SCMP Technology uses the publisher's technology feed and requires its technology article paths. Existing out-of-section records stay retained while discovery excludes them.
 
 ## Reading and recommendations
 

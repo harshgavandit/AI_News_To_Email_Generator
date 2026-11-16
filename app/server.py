@@ -45,6 +45,7 @@ from app.world_edition import build_world, select_world
 from app.services.email import send_email
 from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
+from app.briefing import build_briefing
 from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
@@ -65,10 +66,11 @@ MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v10")
-_news_cache = Cache("news-v15")
-_headline_cache = Cache("headlines-v6")
-_trending_cache = Cache("trending-v4")
+_digest_cache = Cache("digest-v11")
+_news_cache = Cache("news-v16")
+_headline_cache = Cache("headlines-v7")
+_trending_cache = Cache("trending-v5")
+_briefing_cache = Cache("briefing-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -481,6 +483,24 @@ def trending(response: Response):
     if data and data.get("trending"):
         response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=60"
     return data
+
+
+@app.get("/api/briefing")
+def daily_briefing(response: Response, hours: Annotated[int, Query(ge=12, le=168)] = 24):
+    store = get_store()
+    key = hashlib.sha256(json.dumps([str(store.engine.url) if store else "rss", hours]).encode()).hexdigest()
+    data, _ = _briefing_cache.get(key)
+    if data is None:
+        with _briefing_cache.key_lock(key):
+            data, _ = _briefing_cache.get(key)
+            if data is None:
+                data = build_briefing(intelligence_candidates(store, hours), hours=hours)
+                if data["articles"]:
+                    _briefing_cache.put(key, data, ttl=60)
+    response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    if data["articles"]:
+        response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30"
+    return {**data, "freshness": feed_freshness(source_catalog(store, include_archive=False))}
 
 
 def source_store():

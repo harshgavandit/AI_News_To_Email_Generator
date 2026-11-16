@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 const state = {
   articles: [],
   recommendations: [],
+  briefing: [],
   recommendationCandidates: 0,
   total: 0,
   cursor: null,
@@ -164,6 +165,7 @@ try {
 function reflectSavedCount() {
   $("saved-count").textContent = saved.size;
   $("saved-count").hidden = !saved.size;
+  $("sidebar-saved-count").textContent = saved.size || "";
 }
 
 function toggleSaved(article) {
@@ -302,6 +304,7 @@ function syncURL() {
   if (state.view !== "feed") url.searchParams.set("view", state.view);
   else url.searchParams.delete("view");
   history.replaceState(null, "", url);
+  reflectWorkspace();
   $("clear-search").hidden = !$("search").value;
   const currentQuery = $("search").value.trim().toLowerCase();
   for (const chip of $("trending-chips")?.children || []) {
@@ -315,7 +318,7 @@ function syncURL() {
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
   const baseHours = state.view === "for-you" ? 168 : 12;
-  $("reset-filters").hidden = state.view === "saved" ||
+  $("reset-filters").hidden = ["saved", "briefing"].includes(state.view) ||
     (!count && !$("region").value && state.topic === "all" && state.hours === baseHours && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
@@ -372,14 +375,77 @@ function restoreURL() {
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
   const viewParam = params.get("view");
-  state.view = ["saved", "for-you"].includes(viewParam) ? viewParam : "feed";
-  for (const peer of ["feed", "for-you", "saved"])
+  state.view = ["saved", "for-you", "briefing"].includes(viewParam) ? viewParam : "feed";
+  for (const peer of ["feed", "for-you", "saved", "briefing"])
     $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
-  $("feed-controls").hidden = state.view === "saved";
+  $("feed-controls").hidden = ["saved", "briefing"].includes(state.view);
   $("sort").hidden = state.view !== "feed";
-  $("refresh").hidden = state.view === "saved";
+  $("refresh").hidden = ["saved", "briefing"].includes(state.view);
   $("personalization").hidden = state.view !== "for-you";
+  $("briefing-intro").hidden = state.view !== "briefing";
+  reflectWorkspace();
 }
+
+function reflectWorkspace() {
+  const labels = { feed: "All stories", "briefing": "Daily briefing", "for-you": "For you", saved: "Saved stories" };
+  $("reading-title").textContent = labels[state.view];
+  for (const button of document.querySelectorAll("[data-workspace-view]")) {
+    if (button.dataset.workspaceView === state.view) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
+  for (const button of $("sidebar-topics").children)
+    button.setAttribute("aria-pressed", String(state.view === "feed" && state.topic === button.dataset.topic));
+}
+
+function renderWorkspaceTopics() {
+  $("sidebar-topics").replaceChildren(...Object.entries(state.topics).filter(([id]) => id !== "video").map(([id, label]) => {
+    const button = node("button", "", label);
+    button.type = "button";
+    button.dataset.topic = id;
+    button.addEventListener("click", () => {
+      state.topic = id;
+      if (state.view !== "feed") $("view-feed").click();
+      else chooseTopic(id);
+      closeWorkspaceMenu();
+      $("reading-title").focus({ preventScroll: true });
+      $("reading-title").scrollIntoView({ block: "start" });
+    });
+    return button;
+  }));
+  reflectWorkspace();
+}
+
+function closeWorkspaceMenu() {
+  document.body.classList.remove("workspace-menu-open");
+  $("workspace-menu").setAttribute("aria-expanded", "false");
+}
+
+$("workspace-menu").addEventListener("click", () => {
+  const open = !document.body.classList.contains("workspace-menu-open");
+  document.body.classList.toggle("workspace-menu-open", open);
+  $("workspace-menu").setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && document.body.classList.contains("workspace-menu-open")) {
+    closeWorkspaceMenu();
+    $("workspace-menu").focus();
+  }
+});
+for (const button of document.querySelectorAll("[data-workspace-view]")) {
+  button.addEventListener("click", () => {
+    $(`view-${button.dataset.workspaceView}`).click();
+    closeWorkspaceMenu();
+    $("reading-title").focus({ preventScroll: true });
+  });
+}
+$("masthead-briefing").addEventListener("click", () => $("view-briefing").click());
+$("sidebar-save-view").addEventListener("click", () => {
+  if (["saved", "briefing"].includes(state.view)) $("view-feed").click();
+  closeWorkspaceMenu();
+  $("saved-views").open = true;
+  $("saved-view-name").focus();
+});
+
 function chooseTopic(topic) {
   state.topic = topic;
   reflectFilters();
@@ -457,6 +523,7 @@ function renderSourceFilters() {
 }
 const visibleStories = () => {
   if (state.view === "saved") return [...saved.values()].reverse();
+  if (state.view === "briefing") return state.briefing;
   if (state.view === "for-you") return state.recommendations;
   return state.articles;
 };
@@ -467,23 +534,37 @@ function renderStories() {
   container.replaceChildren();
   const isSaved = state.view === "saved";
   const isForYou = state.view === "for-you";
+  const isBriefing = state.view === "briefing";
   $("export-saved-md").hidden = !isSaved || !saved.size;
   $("pin-all-saved").hidden = !isSaved || !saved.size;
-  const articles = visibleStories();
-  $("filter-high-signal").hidden = isSaved || isForYou;
-  $("filter-articles").hidden = isSaved || isForYou;
-  $("filter-releases").hidden = isSaved || isForYou;
+  const allArticles = visibleStories();
+  const hideRead = $("hide-read").getAttribute("aria-pressed") === "true" && !isSaved;
+  const articles = hideRead ? allArticles.filter(article => !readStories.has(String(article.id))) : allArticles;
+  $("hide-read").hidden = isSaved;
+  $("filter-high-signal").hidden = state.view !== "feed";
+  $("filter-articles").hidden = state.view !== "feed";
+  $("filter-releases").hidden = state.view !== "feed";
   $("mark-all-read").hidden = isSaved || !articles.length;
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
-    empty.append(node("strong", "", isSaved ? "No saved stories" : (isForYou ? "No stories in your personalized feed" : "No matching stories")));
-    empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
+    empty.append(node("strong", "", hideRead && allArticles.length ? "You’re up to date with this selection" :
+      isSaved ? "No saved stories" : isBriefing ? "Your briefing is waiting for recent coverage" :
+        (isForYou ? "No stories in your personalized feed" : "No matching stories")));
+    if (hideRead && allArticles.length) {
+      const showRead = node("button", "button secondary", "Show read stories");
+      showRead.type = "button";
+      showRead.addEventListener("click", () => $("hide-read").click());
+      empty.append(showRead);
+    }
+    empty.append(node("p", "", hideRead && allArticles.length ? "Show read stories to revisit this selection." :
+      isBriefing ? "Browse all stories to explore other time windows and source types." :
+      isSaved ? "Save an article to keep it in this browser." :
       isForYou ? "Try a different search or widen your filters. For You also skips stories you have already opened." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
-    if (isSaved || (isForYou && !nextWindow)) {
+    if (isSaved || isBriefing || (isForYou && !nextWindow)) {
       const browse = node("button", "button secondary", "Browse latest stories");
       browse.type = "button";
       browse.addEventListener("click", () => {
@@ -545,6 +626,13 @@ function renderStories() {
         article.reading_time_basis === "publisher" ? `${readingTime} min read · excerpt` : article.has_excerpt ? "Excerpt" : "Headline & link"),
     );
     top.append(badges, date);
+    if (article.coverage_count > 1) {
+      const coverage = node("button", "coverage-count", `${article.coverage_count} publishers`);
+      coverage.type = "button";
+      coverage.title = (article.coverage_publishers || []).join(" · ");
+      coverage.addEventListener("click", () => openDossier(article, coverage));
+      badges.append(coverage);
+    }
     const heading = node("h3");
     heading.dir = titleDirection;
     if (article.language) heading.lang = article.language;
@@ -671,8 +759,8 @@ function renderStories() {
     card.append(bottom);
     container.append(card);
   }
-  $("show-more").hidden = isSaved || isForYou || !state.cursor;
-  $("brief-from-view").hidden = isSaved || isForYou || !state.articles.length || !(state.topic !== "all" ||
+  $("show-more").hidden = state.view !== "feed" || !state.cursor;
+  $("brief-from-view").hidden = state.view !== "feed" || !state.articles.length || !(state.topic !== "all" ||
     $("region").value || $("language").value || $("coverage").value || $("subject").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
   const context = [
     state.topics[state.topic],
@@ -681,9 +769,11 @@ function renderStories() {
   ].filter(Boolean);
   status(
     "news-status",
+    state.view === "briefing" ? `${articles.length} stories to catch up on${hideRead ? " · Read stories hidden" : ""}` :
     isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
       isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} matching candidates · Last ${windows[state.hours]}` :
-      [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context].join(" · "),
+      [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context,
+        hideRead ? `${allArticles.length - articles.length} read stories hidden on this page` : ""].filter(Boolean).join(" · "),
   );
 }
 function togglePin(article) {
@@ -800,12 +890,12 @@ $("digest-sources").addEventListener("change", (event) => {
 });
 function renderHealth(freshness, catalog = state.sources) {
   state.healthSources = catalog.filter((source) => source.enabled &&
-    (state.source === "all" || state.source === source.source || state.source === source.id) &&
+    (state.view === "briefing" || (state.source === "all" || state.source === source.source || state.source === source.id) &&
     (!state.publisher || state.publisher === source.id) &&
     (!$("region").value || $("region").value === regionId(source)) &&
     (!$("language").value || $("language").value === source.language) &&
     ($("kind").value === "all" || $("kind").value === source.kind) &&
-    (!$("coverage").value || $("coverage").value === source.coverage));
+    (!$("coverage").value || $("coverage").value === source.coverage)));
   const { enabled = 0, fresh = 0, failed = 0, stale = 0 } = freshness?.counts || {};
   const checkedLabel = fresh === enabled ? `${fresh} ${fresh === 1 ? "feed" : "feeds"}` : `${fresh} of ${enabled} feeds`;
   $("source-health-label").textContent = fresh ? `${checkedLabel} up to date` :
@@ -879,6 +969,68 @@ async function checkForUpdates() {
 }
 
 let authorCatalogLoaded = false;
+async function loadBriefing() {
+  state.controller?.abort();
+  state.updateCheck?.abort();
+  const controller = state.controller = new AbortController();
+  $("stories").setAttribute("aria-busy", "true");
+  $("briefing-pin").hidden = true;
+  status("news-status", "Preparing your daily briefing…");
+  syncURL();
+  try {
+    const [data, catalog] = await Promise.all([
+      request("/api/briefing", { signal: controller.signal }),
+      state.sources.length ? null : request("/api/sources", { signal: controller.signal }),
+    ]);
+    if (state.controller !== controller || state.view !== "briefing") return;
+    if (catalog) {
+      renderCoverageControls(catalog);
+      updateSourceCatalog(catalog.sources);
+    }
+    state.briefing = data.articles;
+    if (data.freshness) renderHealth(data.freshness);
+    $("briefing-context").textContent = data.articles.length ?
+      `${data.articles.length} stories selected from ${data.publishers} publishers. Based on source headlines and excerpts.` :
+      "There is no recent publisher reporting in this window. Browse all stories or check source status.";
+    $("briefing-pin").hidden = !data.articles.length;
+    renderStories();
+  } catch (error) {
+    if (state.controller !== controller || error.name === "AbortError") return;
+    state.briefing = [];
+    const retry = node("button", "button secondary", "Try again");
+    retry.type = "button";
+    retry.addEventListener("click", loadBriefing);
+    const empty = node("div", "empty reading-empty");
+    empty.append(node("strong", "", "The briefing is temporarily unavailable"), retry);
+    $("stories").replaceChildren(empty);
+    status("news-status", error.message, true);
+  } finally {
+    if (state.controller === controller) $("stories").setAttribute("aria-busy", "false");
+  }
+}
+
+$("briefing-pin").addEventListener("click", () => {
+  const candidates = state.briefing.filter(article => !state.pins.has(String(article.id)));
+  if (candidates.length + state.pins.size > 10) {
+    status("story-action-status", "Free up pin slots to include the entire briefing.", true);
+    return;
+  }
+  for (const article of candidates) state.pins.set(String(article.id), article);
+  if (state.pins.size > Number($("article-count").value))
+    $("article-count").value = state.pins.size <= 5 ? "5" : "10";
+  renderPins();
+  renderStories();
+  openBuilder("build", $("briefing-pin"));
+});
+
+$("hide-read").addEventListener("click", () => {
+  const active = $("hide-read").getAttribute("aria-pressed") !== "true";
+  $("hide-read").setAttribute("aria-pressed", String(active));
+  try { localStorage.setItem("informa-hide-read", String(active)); } catch {}
+  renderStories();
+});
+try { $("hide-read").setAttribute("aria-pressed", String(localStorage.getItem("informa-hide-read") === "true")); } catch {}
+
 async function loadRecommendations() {
   state.controller?.abort();
   state.updateCheck?.abort();
@@ -929,6 +1081,7 @@ async function loadRecommendations() {
 }
 
 async function loadNews(append = false, force = false) {
+  if (state.view === "briefing") return loadBriefing();
   if (state.view === "saved") {
     state.controller?.abort();
     state.updateCheck?.abort();
@@ -1057,23 +1210,24 @@ $("filter-toggle").addEventListener("click", () => {
   $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
 });
 let searchTimer;
-for (const view of ["feed", "for-you", "saved"]) {
+for (const view of ["feed", "for-you", "saved", "briefing"]) {
   $(`view-${view}`).addEventListener("click", () => {
     if (state.view === view) return;
     clearTimeout(searchTimer);
     state.controller?.abort();
     state.updateCheck?.abort();
     state.view = view;
-    for (const peer of ["feed", "for-you", "saved"])
+    for (const peer of ["feed", "for-you", "saved", "briefing"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = view === "saved";
+    $("feed-controls").hidden = ["saved", "briefing"].includes(view);
     $("sort").hidden = view !== "feed";
-    $("refresh").hidden = view === "saved";
+    $("refresh").hidden = ["saved", "briefing"].includes(view);
     $("personalization").hidden = view !== "for-you";
+    $("briefing-intro").hidden = view !== "briefing";
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
-    if (view !== "saved" && (view === "for-you" || state.feedKey !== newsParams().toString())) loadNews();
+    if (view !== "saved" && (view === "for-you" || view === "briefing" || state.feedKey !== newsParams().toString())) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
@@ -1226,24 +1380,19 @@ function setTab(tab, focus = false) {
 }
 function openBuilder(tab = "build", trigger = document.activeElement) {
   setTab(tab);
-  if (mobile()) {
-    if (!$("composer").classList.contains("open")) {
-      drawerOpener = trigger;
-      $("composer").scrollTop = 0;
-    }
-    $("composer").classList.add("open");
-    $("sheet-backdrop").hidden = false;
-    for (const id of ["mobile-builder", "nav-builder"])
-      $(id).setAttribute("aria-expanded", "true");
-    document.body.classList.add("sheet-open");
-    $("composer").setAttribute("role", "dialog");
-    $("composer").setAttribute("aria-modal", "true");
-    isolateBuilder();
-    $("close-builder").focus({ preventScroll: true });
-  } else {
-    $("composer-title").focus({ preventScroll: true });
-    $("composer").scrollIntoView({ block: "start" });
+  if (!$("composer").classList.contains("open")) {
+    drawerOpener = trigger;
+    $("composer").scrollTop = 0;
   }
+  $("composer").classList.add("open");
+  $("sheet-backdrop").hidden = false;
+  for (const id of ["mobile-builder", "nav-builder"])
+    $(id).setAttribute("aria-expanded", "true");
+  document.body.classList.add("sheet-open");
+  $("composer").setAttribute("role", "dialog");
+  $("composer").setAttribute("aria-modal", "true");
+  isolateBuilder();
+  $("close-builder").focus({ preventScroll: true });
 }
 function closeBuilder(restoreFocus = true) {
   if (!$("composer").classList.contains("open")) return;
@@ -1262,6 +1411,11 @@ function closeBuilder(restoreFocus = true) {
 }
 for (const id of ["nav-builder", "mobile-builder", "pinned-build"])
   $(id).addEventListener("click", (event) => openBuilder("build", event.currentTarget));
+for (const link of document.querySelectorAll('a[href="#composer"]'))
+  link.addEventListener("click", event => {
+    event.preventDefault();
+    openBuilder("build", link);
+  });
 for (const id of ["close-builder", "sheet-backdrop"])
   $(id).addEventListener("click", () => closeBuilder());
 $("empty-build").addEventListener("click", () => {
@@ -1287,10 +1441,9 @@ document.querySelector(".builder-tabs").addEventListener("keydown", (event) => {
 });
 builderMedia.addEventListener("change", () => {
   setTab(state.tab);
-  if (!mobile()) closeBuilder(false);
 });
 $("composer").addEventListener("keydown", (event) => {
-  if (!mobile() || !$("composer").classList.contains("open") || $("mail-dialog").open) return;
+  if (!$("composer").classList.contains("open") || $("mail-dialog").open) return;
   if (event.key === "Escape") {
     event.preventDefault();
     closeBuilder();
@@ -1941,15 +2094,32 @@ function reflectTopic() {
 }
 function reflectFilters() {
   reflectTopic();
+  reflectWorkspace();
   for (const button of $("window-controls").children)
     button.setAttribute("aria-pressed", String(Number(button.dataset.hours) === state.hours));
   renderSourceFilters();
 }
 renderCoverageControls();
+renderWorkspaceTopics();
 restoreURL();
 reflectFilters();
 reflectSavedCount();
 initSavedViews($("saved-views"), {
+  onChange(views) {
+    $("sidebar-saved-views").replaceChildren(...views.map((view, index) => {
+      const button = node("button", "", view.name);
+      button.type = "button";
+      button.title = view.name;
+      button.addEventListener("click", () => {
+        if (state.view !== "feed") $("view-feed").click();
+        $("saved-views-list").querySelectorAll(".saved-view-open")[index]?.click();
+        closeWorkspaceMenu();
+        $("reading-title").focus({ preventScroll: true });
+      });
+      return button;
+    }));
+    $("sidebar-save-view").textContent = views.length ? "+ Save current view" : "+ Create a monitoring view";
+  },
   readView() {
     return new URLSearchParams(Object.entries(readingFilters()).filter(([, value]) => value && value !== "all"));
   },
@@ -2241,6 +2411,7 @@ function moveDossier(offset) {
 $("dossier-close").addEventListener("click", () => $("dossier-drawer").close());
 $("dossier-drawer").addEventListener("close", () => {
   dossier.controller?.abort();
+  if ($("hide-read").getAttribute("aria-pressed") === "true" && state.view !== "saved") renderStories();
   const url = new URL(location.href);
   url.searchParams.delete("article");
   history.replaceState(null, "", url);
@@ -2515,16 +2686,20 @@ function openFeedCommand(configure) {
 function listCommands() {
   const actions = [
     { label: "Build a personalized brief", run: () => $("nav-builder").click() },
+    { label: "Read the daily briefing", run: () => $("view-briefing").click() },
     { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
-    { label: "Email the Global Top 5", run: () => $("hero-email").focus() },
+    { label: "Email the Global Top 5", run: () => {
+      $("world-form").closest("details").open = true;
+      $("hero-email").focus();
+    } },
     { label: "Switch to For You recommendations", run: () => {
       $("view-for-you").click();
-      $("view-for-you").focus({ preventScroll: true });
+      $("reading-title").focus({ preventScroll: true });
       $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
     }},
     { label: "Browse saved stories", run: () => {
       $("view-saved").click();
-      $("view-saved").focus({ preventScroll: true });
+      $("reading-title").focus({ preventScroll: true });
       $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
     }},
     { label: "Browse sources", run: () => { location.href = "/sources.html"; } },

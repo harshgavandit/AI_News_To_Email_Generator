@@ -19,7 +19,8 @@ from app.trending import extract_trending
 def story(ident, *, source_id="dev-community", title="A programming guide to Python", age=1, **extra):
     source = BY_ID[source_id]
     return {"id": ident, "title": title, "description": "An author explains the available implementation.",
-            "url": f"https://{source.hosts[0]}/{ident}", "source_id": source.id, "source": source.group,
+            "url": f"https://{source.hosts[0]}{source.article_paths[0] if source.article_paths else '/'}{ident}",
+            "source_id": source.id, "source": source.group,
             "publisher": source.label, "kind": source.kind, "category": "Software",
             "published_at": (datetime.now(UTC) - timedelta(hours=age)).isoformat(), **extra}
 

@@ -1,5 +1,13 @@
 # Informa AI verification
 
+## Workspace and daily briefing update — November 16, 2026
+
+- The competitive review used public Particle, Trace and Feedly pages, published stylesheets, first-party documentation, and public product images. Computer Use stopped because it could not verify the browser URL on Windows. The redesigned desktop and mobile layouts therefore still need direct visual browser validation.
+- Python 3.12 and 3.14 passed 215 tests each, including the disposable PostgreSQL archive cases. All eight client tests passed in jsdom. They exercise the actual Reading Room module, daily briefing navigation, source counts, read-state filtering, persistent monitoring views, modal pin selection, keyboard dismissal, focus isolation, licensed text, recommendations and author review.
+- Ruff, Python compilation, JavaScript syntax, asset checks, and the static build passed. All nine linked stylesheets parsed in jsdom, producing 859 rules with zero stylesheet errors. This is a parsing check. Font files are served locally and their OFL license files are included.
+- A live public-feed refresh into the disposable PostgreSQL archive reported all 165 integrations fresh. The corrected SCMP technology endpoint returned 34 eligible records. The briefing API selected five current stories from 654 sampled eligible records across 88 publishers. Reading details resolved for every selection, and the pinned selection generated a five-story global brief with HTML export.
+- The live-fed archive check also exercised ranked search and non-overlapping cursor pages, and confirmed successful responses for the three HTML pages, new stylesheets, and self-hosted fonts through the FastAPI test client. Production publication, live OpenAI generation, and actual email delivery remain unverified in this pass.
+
 ## Coverage comparison and archive reliability — November 16, 2026
 
 - The enabled integrations returned 5,518 source records from 165 public RSS and API endpoints in one audit. The seven added feeds returned 104 eligible records. A separate ingest into a disposable PostgreSQL archive retained 4,234 stories after canonical replacement and pruning. All 165 sources passed the archive readiness check.

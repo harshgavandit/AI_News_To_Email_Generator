@@ -269,3 +269,23 @@ def test_archive_relevance_upgrade_hides_non_technical_community_posts(legacy_ar
     with store.engine.connect() as conn:
         assert conn.scalar(text("SELECT COUNT(*) FROM brief_articles")) == 2
     store.engine.dispose()
+
+
+def test_source_scope_upgrade_hides_old_out_of_section_stories(legacy_archive):
+    store = Store(legacy_archive)
+    store.migrate()
+    rows = [dict(story("scmp-tech", "tech-story", "A cloud computing expansion"),
+                 url="https://www.scmp.com/tech/tech-trends/article/123/expansion"),
+            dict(story("scmp-tech", "world-story", "An unrelated public affairs story"),
+                 url="https://www.scmp.com/news/world/article/124/affairs")]
+    store.ingest("scmp-tech", rows, True)
+    with store.engine.begin() as conn:
+        conn.execute(text("ALTER TABLE brief_articles DROP COLUMN source_eligible"))
+    store._discovery_ready = False
+    store.ensure_discovery_schema()
+    page = store.page(hours=24, source="all", query="", kind="all", publisher="", limit=10, cursor=None)
+    assert [row["id"] for row in page["articles"]] == ["tech-story"]
+    assert store.article("world-story") is None
+    with store.engine.connect() as conn:
+        assert conn.scalar(text("SELECT COUNT(*) FROM brief_articles")) == 2
+    store.engine.dispose()
