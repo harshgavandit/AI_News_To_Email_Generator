@@ -3,9 +3,11 @@ from datetime import UTC, datetime, timedelta
 from threading import Barrier
 
 import pytest
+import httpx
 from fastapi.testclient import TestClient
 
-from app import ingestion, launch_store, server
+from app import ingestion, launch_store, news, server
+from app.sources import BY_ID
 
 
 @pytest.fixture
@@ -47,7 +49,7 @@ def test_failed_refresh_can_retry_and_preserves_successful_snapshot(archive, mon
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech"))
     outcomes = iter([(False, "fetch_failed"), (True, None)])
 
-    def fetch(_):
+    def fetch(_, **kwargs):
         available, error = next(outcomes)
         return [], {"available": available, "error": error}
 
@@ -86,6 +88,40 @@ def test_readiness_fails_when_no_feed_has_succeeded(archive):
     assert client.get("/api/health").status_code == 200
 
 
+def test_conditional_refresh_preserves_articles_through_not_modified_and_outage(archive, monkeypatch):
+    store, _ = archive
+    source = BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    date = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    target = source.url.rsplit("/", 1)[0] + "/conditional-fixture.xml"
+    feed = f"""<rss version="2.0"><channel><title>Technology</title><item>
+        <title>A trusted software update</title><link>https://www.bbc.com/news/technology-12345</link>
+        <pubDate>{date}</pubDate><description>Publisher excerpt.</description>
+        </item></channel></rss>"""
+    modes = iter([200, 304, 503, 200])
+    requests = []
+
+    def handle(request):
+        tag = request.headers.get("If-None-Match")
+        requests.append((str(request.url), tag))
+        if str(request.url) == source.url:
+            return httpx.Response(301, headers={"Location": target})
+        status = next(modes)
+        return httpx.Response(status, text=feed if status == 200 else "", headers={"ETag": 'W/"rss-v1"'})
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(news.httpx, "AsyncClient", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(handle)))
+    for expected_available in (True, True, False):
+        ingestion.refresh_sources(store)
+        state = store.source_state()[source.id]
+        assert state["available"] == expected_available and state["count"] == 1 and state["retained_count"] == 1
+        assert store.current_feed_validators()[source.id]["resource_url"] == target
+    ingestion.refresh_sources(store, only=source.id)
+    assert requests == [(source.url, None), (target, None), (source.url, None), (target, 'W/"rss-v1"'),
+                        (source.url, None), (target, 'W/"rss-v1"'), (source.url, None), (target, None)]
+    assert store.source_state()[source.id]["available"] is True
+
+
 def test_region_freshness_and_retry_target_matching_feeds(archive, monkeypatch):
     store, client = archive
     ids = {"tech-in-asia", "sifted", "bbc-tech"}
@@ -95,7 +131,7 @@ def test_region_freshness_and_retry_target_matching_feeds(archive, monkeypatch):
     store.ingest("tech-in-asia", [], False, "fetch_failed")
     refreshed = []
 
-    def fetch(source):
+    def fetch(source, **kwargs):
         refreshed.append(source.id)
         return [], {"available": True}
 
@@ -112,7 +148,7 @@ def test_first_reader_can_start_an_empty_archive(archive, monkeypatch):
     _, client = archive
     source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
-    monkeypatch.setattr(ingestion, "read_feed", lambda _: ([], {"available": True}))
+    monkeypatch.setattr(ingestion, "read_feed", lambda _, **kwargs: ([], {"available": True}))
     first = client.get("/api/news?hours=12")
     assert first.json()["freshness"]["status"] == "pending"
     assert "Vercel-CDN-Cache-Control" not in first.headers
@@ -138,7 +174,7 @@ def test_twelve_hour_view_excludes_older_stories_and_refreshes_stale_archive_onc
     newest = story("newest", timedelta(minutes=5))
     fetched = []
 
-    def fetch(feed):
+    def fetch(feed, **kwargs):
         fetched.append(feed.id)
         return [newest, recent], {"available": True}
 

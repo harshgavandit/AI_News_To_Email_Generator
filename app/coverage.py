@@ -164,7 +164,21 @@ KOREAN_SIGNALS = (
     ("ai", re.compile(r"인공지능|생성형\s*AI|거대언어모델", re.I)),
     ("software", re.compile(r"오픈소스|클라우드|소프트웨어")),
 )
-LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS}
+TRADITIONAL_CHINESE_SIGNALS = (
+    ("security", re.compile(r"資安漏洞|勒索軟體|網路攻擊|資料外洩")),
+    ("startups", re.compile(r"新創|融資|募資")),
+    ("chips", re.compile(r"半導體|晶片|晶圓|記憶體|台積電")),
+    ("ai", re.compile(r"人工智慧|生成式\s*AI|大型語言模型", re.I)),
+    ("software", re.compile(r"開放原始碼|開源|雲端運算|軟體")),
+)
+ARABIC_SIGNALS = (
+    ("security", re.compile(r"الأمن السيبراني|هجوم إلكتروني|اختراق|تسريب بيانات")),
+    ("startups", re.compile(r"شركات ناشئة|شركة ناشئة|جولة تمويل|استثمار")),
+    ("chips", re.compile(r"أشباه الموصلات|رقائق إلكترونية")),
+    ("ai", re.compile(r"الذكاء الاصطناعي|نماذج اللغة")),
+    ("software", re.compile(r"الحوسبة السحابية|مفتوح المصدر|البرمجيات")),
+)
+LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS, "zh-TW": TRADITIONAL_CHINESE_SIGNALS, "ar": ARABIC_SIGNALS}
 
 
 def article_source(article):

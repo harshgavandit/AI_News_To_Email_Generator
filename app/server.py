@@ -306,6 +306,28 @@ def discovery_options():
             "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
 
 
+class RecommendationScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    hours: TimeWindow = TimeWindow.week
+    source: str = Field(default="all", max_length=64)
+    publisher: str = Field(default="", max_length=64)
+    kind: str = Field(default="all", max_length=24)
+    topic: str = Field(default="all", max_length=24)
+    region: str = Field(default="", max_length=16)
+    coverage: str = Field(default="", max_length=24)
+    language: str = Field(default="", max_length=16)
+    subject: str = Field(default="", max_length=24)
+
+    @model_validator(mode="after")
+    def supported_scope(self):
+        if (self.source not in ("all", *GROUPS, *BY_ID) or (self.publisher and self.publisher not in BY_ID)
+                or self.kind not in KINDS or self.topic not in ("all", *TOPICS)
+                or self.region not in ("", *REGION_LABELS) or self.coverage not in ("", *COVERAGE_TYPES)
+                or self.language not in ("", *LANGUAGES) or self.subject not in ("", *SUBJECTS)):
+            raise ValueError("Choose supported filters for your recommendations.")
+        return self
+
+
 class RecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     topics: list[str] = Field(default_factory=list, max_length=10)
@@ -315,6 +337,7 @@ class RecommendationRequest(BaseModel):
     exclude_ids: list[str] = Field(default_factory=list, max_length=100)
     q: str = Field(default="", max_length=150)
     limit: int = Field(default=24, ge=1, le=50)
+    scope: RecommendationScope = Field(default_factory=RecommendationScope)
 
     @model_validator(mode="after")
     def supported_preferences(self):
@@ -322,22 +345,37 @@ class RecommendationRequest(BaseModel):
                 or any(source not in (*GROUPS, *BY_ID) for source in self.sources)
                 or any(not 1 <= len(ident) <= 40 for ident in self.exclude_ids)):
             raise ValueError("Choose supported interests and sources.")
+        if self.q.strip() and not search_terms(self.q):
+            raise ValueError("Enter at least one letter or number to search.")
         return self
 
 
-def intelligence_candidates(store, hours=168):
+def intelligence_candidates(store, hours=168, *, scope=None, query=""):
+    filters = scope.model_dump(exclude={"hours"}) if scope else {}
     if store:
-        return store.with_reading_access(store.world_candidates(hours, ()))
+        return store.world_candidates(hours, (), query=query, **filters)
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=hours)
     result = []
     for article in collect_news()["articles"]:
         try:
             if cutoff <= datetime.fromisoformat(article["published_at"]) <= now:
-                result.append(article)
+                if not scope or recommendation_scope_matches(article, scope):
+                    result.append(article)
         except (KeyError, TypeError, ValueError):
             continue
     return result
+
+
+def recommendation_scope_matches(article, scope):
+    entry = article_source(article)
+    return (scope.source in ("all", article["source"], article.get("source_id"))
+            and (not scope.publisher or scope.publisher == article.get("source_id"))
+            and scope.kind in ("all", article.get("kind")) and scope.topic in ("all", topic_for(article))
+            and region_matches(article, scope.region)
+            and (not scope.coverage or entry and scope.coverage == entry.coverage)
+            and (not scope.language or entry and scope.language == entry.language)
+            and (not scope.subject or scope.subject in subjects_for(article)))
 
 
 @app.post("/api/recommendations")
@@ -345,8 +383,17 @@ def recommendations(body: RecommendationRequest, request: Request, response: Res
     store = get_store()
     rate_limit(request, "recommendations", 60)
     response.headers["Cache-Control"] = "no-store"
-    return recommend(intelligence_candidates(store), topics=body.topics, subjects=body.subjects,
-                     preferred_sources=body.sources, authors=body.authors, exclude_ids=body.exclude_ids, query=body.q, limit=body.limit)
+    query = search_text(body.q)
+    candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query)
+    ranked = recommend(candidates, topics=body.topics, subjects=body.subjects, preferred_sources=body.sources,
+                       authors=body.authors, exclude_ids=body.exclude_ids, query=query, limit=body.limit)
+    if store and ranked["articles"]:
+        enriched = store.with_reading_access(ranked["articles"])
+        for article in enriched:
+            if access := article.pop("_reading_access", None):
+                article.update(reading_access=access, reading_policy="full_text")
+        ranked["articles"] = enriched
+    return {**ranked, "scope": body.scope.model_dump()}
 
 
 @app.get("/api/authors")

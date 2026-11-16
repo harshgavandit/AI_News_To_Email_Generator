@@ -42,6 +42,10 @@ sources = Table("brief_sources", schema,
     Column("id", String(64), primary_key=True), Column("enabled", Boolean, nullable=False, default=True),
     Column("available", Boolean, nullable=False, default=False), Column("count", Integer, nullable=False, default=0),
     Column("checked", Float), Column("last_success", Float), Column("error", String(60)))
+feed_validators = Table("brief_feed_validators", schema,
+    Column("id", String(64), primary_key=True), Column("feed_url", Text, nullable=False),
+    Column("resource_url", Text, nullable=False), Column("etag", String(512)), Column("last_modified", String(80)),
+    Column("expires", Float, nullable=False))
 limits = Table("brief_limits", schema, Column("scope", String(150), primary_key=True),
     Column("bucket", String(30), primary_key=True), Column("used", Integer, nullable=False),
     Column("touched", Float, nullable=False))
@@ -121,6 +125,7 @@ class Store:
         self.insert = pg_insert if self.engine.dialect.name == "postgresql" else sqlite_insert
         self._discovery_ready = False
         self._syndication_ready = False
+        self._feed_validators_ready = False
         self._schema_lock = threading.Lock()
         self._source_stats_lock = threading.Lock()
         self._source_stats = {}
@@ -192,6 +197,19 @@ class Store:
             reading_permissions.create(conn, checkfirst=True)
         self._syndication_ready = True
 
+    def current_feed_validators(self):
+        if not self._feed_validators_ready:
+            with self._schema_lock, self.engine.begin() as conn:
+                if not inspect(conn).has_table(feed_validators.name):
+                    if conn.dialect.name == "postgresql":
+                        conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
+                        conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+                    feed_validators.create(conn, checkfirst=True)
+            self._feed_validators_ready = True
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(feed_validators).where(feed_validators.c.expires > time.time())).mappings()
+            return {row["id"]: dict(row) for row in rows}
+
     def with_reading_access(self, rows, *, include_body=False):
         from app.syndication import annotate_reading
         return annotate_reading(self, rows, include_body=include_body)
@@ -201,14 +219,18 @@ class Store:
             stmt = self.insert(sources).values(id=source_id, enabled=enabled)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
 
-    def ingest(self, source_id, items, available, error=None):
+    def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None, unchanged=False):
         if items and available:
             self.ensure_discovery_schema()
         now = time.time()
         state = {"available": available, "checked": now, "error": error}
-        if available:
+        if available and not unchanged:
             state.update(last_success=now, count=len(items))
         with self.engine.begin() as conn:
+            if unchanged:
+                conn.execute(update(sources).where(sources.c.id == source_id, sources.c.last_success.is_not(None))
+                             .values(**state, last_success=now))
+                return
             if items and available:
                 stmt = self.insert(articles)
                 values = [{**{k: a[k] for k in ("id", "url", "title", "description", "source", "publisher",
@@ -230,6 +252,13 @@ class Store:
                     where=changed), values)
             stmt = self.insert(sources).values(id=source_id, **state)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
+            if available and feed_url:
+                if validators:
+                    data = {**validators, "feed_url": feed_url, "expires": now + 6 * 3600}
+                    stmt = self.insert(feed_validators).values(id=source_id, **data)
+                    conn.execute(stmt.on_conflict_do_update(index_elements=[feed_validators.c.id], set_=data))
+                else:
+                    conn.execute(delete(feed_validators).where(feed_validators.c.id == source_id))
 
     def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None,
               topic="all", region="", coverage="", language="", subject=""):
@@ -314,11 +343,13 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(stmt).mappings()]
 
-    def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject=""):
+    def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject="",
+                         source="all", publisher="", kind="all", query=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
-        ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region,
+        ranked = self.query(hours, source=source, publisher=publisher, kind=kind, query=query,
+                            source_ids=source_ids, topic=topic, region=region,
                             language=language, coverage=coverage, subject=subject).add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]

@@ -36,7 +36,10 @@ export const languageOptions = {
   ko: "Korean",
   "pt-BR": "Portuguese (Brazil)",
   "es-MX": "Spanish (Mexico)",
+  "es-ES": "Spanish (Spain)",
   "zh-CN": "Chinese (Simplified)",
+  "zh-TW": "Chinese (Traditional)",
+  ar: "Arabic",
   und: "Not specified",
 };
 

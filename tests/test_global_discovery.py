@@ -9,8 +9,8 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
 from app import server
-from app.launch_store import Store
-from app.sources import BY_ID
+from app.launch_store import Store, feed_validators
+from app.sources import BY_ID, DEFAULT_SOURCES
 
 
 def story(source_id, ident, title, *, hours=1, description="Publisher excerpt."):
@@ -19,6 +19,35 @@ def story(source_id, ident, title, *, hours=1, description="Publisher excerpt.")
             "kind": source.kind, "category": "News", "title": title, "description": description,
             "url": f"https://{source.hosts[0]}/{ident}",
             "published_at": (datetime.now(UTC) - timedelta(hours=hours)).isoformat()}
+
+
+def test_reviewed_sources_have_unique_ids():
+    assert len(DEFAULT_SOURCES) == len(BY_ID)
+
+
+@pytest.mark.parametrize("with_archive", [True, False])
+def test_for_you_filters_and_search_select_native_language_matching_candidates(with_archive, monkeypatch, tmp_path):
+    rows = [story("entarabi-ar", "matched", "جولة تمويل لتوسع الشركة الناشئة", hours=48),
+            story("entarabi-ar", "other", "شركة ناشئة تطلق منصة جديدة"),
+            story("entarabi", "english", "A startup announces funding"),
+            story("technews-tw-chips", "chips", "台積電晶圓製造新聞")]
+    store = Store(f"sqlite:///{tmp_path / 'scoped.db'}") if with_archive else None
+    if store:
+        for article in rows:
+            store.ingest(article["source_id"], [article], True)
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(server, "collect_news", lambda: {"articles": rows, "sources": []})
+    server._limits.clear()
+    body = {"q": "جولة تمويل", "topics": ["chips"], "scope": {"hours": 168, "region": "MENA", "language": "ar",
+            "kind": "news", "coverage": "reporting", "topic": "startups", "subject": "funding"}}
+    with TestClient(server.app) as client:
+        response = client.post("/api/recommendations", json=body)
+        assert response.status_code == 200
+        assert [article["id"] for article in response.json()["articles"]] == ["matched"]
+        body["scope"]["hours"] = 24
+        assert client.post("/api/recommendations", json=body).json()["articles"] == []
+        body["scope"]["language"] = "fake"
+        assert client.post("/api/recommendations", json=body).status_code == 422
 
 
 @pytest.mark.parametrize("with_archive", [True, False])
@@ -199,6 +228,23 @@ def test_archive_upgrade_backfills_legacy_rows_and_keeps_canonical_owner(legacy_
     assert store.pinned_articles(["legacy"])[0]["source_id"] == "anthropic-research"
     store.engine.dispose()
     engine.dispose()
+
+
+def test_conditional_feed_state_is_additive_and_preserves_archive_rows(legacy_archive):
+    store = Store(legacy_archive)
+    store.migrate()
+    feed_validators.drop(store.engine)
+    assert store.current_feed_validators() == {}
+    source = BY_ID["entarabi-ar"]
+    story_row = story(source.id, "local-startup", "شركة ناشئة تحصل على تمويل")
+    validators = {"resource_url": source.url, "etag": '"v1"', "last_modified": None}
+    store.ingest(source.id, [story_row], True, feed_url=source.url, validators=validators)
+    store.ingest(source.id, [], True, feed_url=source.url, unchanged=True)
+    metadata = store.current_feed_validators()[source.id]
+    assert metadata["etag"] == '"v1"'
+    assert store.source_state()[source.id]["count"] == 1
+    assert store.article(story_row["id"])["title"] == story_row["title"]
+    store.engine.dispose()
 
 
 def test_archive_relevance_upgrade_hides_non_technical_community_posts(legacy_archive):

@@ -30,10 +30,10 @@ Related results come from the last 30 days, using at most 200 archive candidates
 `POST /api/recommendations` accepts a JSON object:
 
 ```json
-{"topics":["software","research"],"subjects":["cloud","open-source"],"sources":["dev","medium-codex"],"authors":[],"exclude_ids":[],"q":"","limit":24}
+{"topics":["software","research"],"subjects":["cloud","open-source"],"sources":["dev","medium-codex"],"authors":[],"exclude_ids":[],"q":"Kubernetes","limit":24,"scope":{"hours":168,"coverage":"article"}}
 ```
 
-It ranks a bounded, publisher-and-topic-diverse pool from the last seven days. The response includes `articles`, `total_candidates`, `personalized`, `basis`, and `updated_at`. Each article includes `recommendation_reasons`. Interests, up to 50 followed source groups/feeds, and up to 30 validated author keys receive preference weights, with smaller freshness, excerpt-availability and engagement signals. A publisher diversity penalty and canonical URL deduplication reduce repetition. An empty preference set produces a diverse recent selection. This is an explainable rule-based ranking, with no model call or user identity storage. Browser interests stay local; selected preferences and at most 100 excluded read IDs are submitted per request. Responses are `no-store` and the endpoint is rate limited.
+It ranks a bounded, publisher-and-topic-diverse pool. The optional `scope` accepts `hours` (12, 24, 168 or 720), `source`, `publisher`, `kind`, `topic`, `region`, `coverage`, `language`, and `subject` with the same IDs used by `/api/news`. Omit individual filters for all values. The default is seven days of all coverage. Search `q` and the scope are applied before the archive samples candidate rows. The response echoes `scope` and includes `articles`, `total_candidates`, `personalized`, `basis`, and `updated_at`. Each article includes `recommendation_reasons`. Interests, up to 50 followed source groups/feeds, and up to 30 validated author keys receive preference weights, with smaller freshness, excerpt-availability and engagement signals. A publisher diversity penalty and canonical URL deduplication reduce repetition. This ranking uses the supplied preferences and requires zero model calls. Browser interests stay local. Selected preferences and at most 100 excluded read IDs are submitted per request. Responses are `no-store` and the endpoint is rate limited.
 
 ## Author reading permissions
 

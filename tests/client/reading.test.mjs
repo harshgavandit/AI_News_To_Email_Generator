@@ -104,6 +104,35 @@ test('actual Reading Room module opens permitted text, follows its author and re
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
+test('For You sends the same search and filters shown in the Reading Room', async () => {
+  const env = mount(html, 'https://informa.test/?view=for-you&language=ar&region=MENA&window=7d&q=تمويل');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    const path = String(url);
+    if (path === '/api/recommendations') requests.push(JSON.parse(options.body));
+    const data = path === '/api/sources' ? { ...catalog } : path === '/api/authors' ? { authors: [] } :
+      { articles: [], total_candidates: 0 };
+    return new Response(JSON.stringify(data), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?recommendations=${Date.now()}`);
+    await until(() => requests.length > 0 && document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    assert.equal(document.getElementById('feed-controls').hidden, false);
+    assert.equal(requests[0].q, 'تمويل');
+    assert.equal(requests[0].scope.region, 'MENA');
+    assert.equal(requests[0].scope.language, 'ar');
+    assert.equal(requests[0].scope.hours, 168);
+    const search = document.getElementById('search');
+    search.value = 'شركة ناشئة';
+    document.getElementById('story-search').dispatchEvent(new window.Event('submit', { cancelable: true }));
+    await until(() => requests.some(request => request.q === 'شركة ناشئة') &&
+      document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    assert.equal(new URL(location.href).searchParams.get('q'), 'شركة ناشئة');
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
 test('author workspace submits privately and owner review requires an explicit permission check', async () => {
   const page = readFileSync(new URL('../../public/contribute.html', import.meta.url), 'utf8');
   const env = mount(page, 'https://informa.test/contribute.html?article=listed-article');

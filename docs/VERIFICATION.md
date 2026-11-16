@@ -1,5 +1,11 @@
 # Informa AI verification
 
+## Regional discovery and feed synchronization — November 16, 2026
+
+- The public source audit parsed 5,421 records from all 158 reviewed integrations in 27.99 seconds before archive deduplication and date filtering. The five added feeds were entARABI Arabic, TechNews Taiwan Semiconductors, Xataka España, Numerama, and the CNCF blog. Counts measure a single audit, and availability and publication recency can change independently.
+- Discovery tests cover scoped For You matching in archive and direct-feed modes, including Arabic keyword search, language, region, subject, date, and malformed filters. The browser client test checks that changing a search in For You updates its request and shareable URL.
+- Refresh tests cover persisted RSS validators, same-host redirects, `304` reuse, upstream failure, and targeted full recovery. Live repeat requests returned `304` from entARABI, TechNews Taiwan, Numerama, and PostgreSQL News. The PostgreSQL CI job checks the additive validator table and archive retention. No AI or email provider calls are required for these tests.
+
 ## Public community discovery and reading permissions — November 16, 2026
 
 - The initial 136-source audit parsed 4,790 per-source records before archive deduplication and date filtering. A subsequent production connector check parsed 15 current Hashnode articles and ten records from each added Medium publication (ProAndroidDev, Level Up Coding and Towards AI). These counts change as sources update.

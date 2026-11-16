@@ -173,6 +173,14 @@ DEFAULT_SOURCES = (
               "thenationalnews.com", region="Middle East & North Africa"),
     reporting("entarabi", "entARABI", "https://entarabi.com/en/feed/", "entarabi.com",
               region="Middle East & North Africa", topic="startups"),
+    reporting("entarabi-ar", "entARABI (العربية)", "https://entarabi.com/feed/", "entarabi.com",
+              region="Middle East & North Africa", topic="startups", language="ar", excluded_paths=("/en/",)),
+    reporting("technews-tw-chips", "TechNews 科技新報 — Semiconductors", "https://technews.tw/category/semiconductor/feed/",
+              "technews.tw", region="Asia", topic="chips", language="zh-TW"),
+    reporting("xataka-es", "Xataka España", "https://www.xataka.com/feedburner.xml", "xataka.com", region="Europe",
+              language="es-ES", excluded_paths=("/seleccion/", "/magnet/", "/cine-y-tv/", "/ecologia-y-naturaleza/")),
+    reporting("numerama", "Numerama", "https://www.numerama.com/feed/", "numerama.com", region="Europe", language="fr",
+              article_paths=("/tech/", "/cyberguerre/", "/sciences/", "/vroom/")),
     reporting("thenextweb", "The Next Web", "https://thenextweb.com/feed", "thenextweb.com", "www.thenextweb.com",
               region="Europe", topic="startups"),
     reporting("crunchbase-news", "Crunchbase News", "https://news.crunchbase.com/feed/", "crunchbase.com", "news.crunchbase.com",
@@ -185,6 +193,7 @@ DEFAULT_SOURCES = (
     reporting("infoq", "InfoQ", "https://feed.infoq.com/", "infoq.com", topic="software"),
     Source("aws-news", "aws-news", "AWS News Blog", "engineering", "https://aws.amazon.com/blogs/aws/feed/", ("aws.amazon.com",), topic="software"),
     Source("cloudflare-blog", "cloudflare-blog", "Cloudflare Blog", "engineering", "https://blog.cloudflare.com/rss/", ("blog.cloudflare.com",), topic="software"),
+    article_feed("cncf-blog", "Cloud Native Computing Foundation", "https://www.cncf.io/blog/feed/", "cncf.io"),
     Source("vercel", "vercel", "Vercel Changelog", "engineering", "https://vercel.com/atom", ("vercel.com",), topic="software"),
     Source("kubernetes", "kubernetes", "Kubernetes Blog", "engineering", "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software"),
     Source("postgresql", "postgresql", "PostgreSQL News", "engineering", "https://www.postgresql.org/news.rss", ("postgresql.org",), topic="software"),
@@ -339,7 +348,7 @@ GROUPS = tuple(dict.fromkeys(s.group for s in DEFAULT_SOURCES))
 KINDS = ("all", "news", "research", "engineering", "video", "status")
 LANGUAGES = {code: label for code, label in (
     ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"), ("ko", "Korean"),
-    ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"),
-    ("zh-CN", "Chinese (Simplified)"),
+    ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"), ("es-ES", "Spanish (Spain)"),
+    ("zh-CN", "Chinese (Simplified)"), ("zh-TW", "Chinese (Traditional)"), ("ar", "Arabic"),
     ("und", "Not specified"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}

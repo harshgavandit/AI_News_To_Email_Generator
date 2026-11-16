@@ -314,8 +314,9 @@ function syncURL() {
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
-  $("reset-filters").hidden = state.view !== "feed" ||
-    (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
+  const baseHours = state.view === "for-you" ? 168 : 12;
+  $("reset-filters").hidden = state.view === "saved" ||
+    (!count && !$("region").value && state.topic === "all" && state.hours === baseHours && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
 
@@ -353,7 +354,8 @@ function restoreURL() {
   state.publisher = params.get("publisher") || "";
   $("publisher").value = state.publisher;
   const windowValue = params.get("window");
-  state.hours = Number(Object.keys(windows).find((hours) => windows[hours] === windowValue || hours === windowValue)) || 12;
+  state.hours = Number(Object.keys(windows).find((hours) => windows[hours] === windowValue || hours === windowValue)) ||
+    (params.get("view") === "for-you" ? 168 : 12);
   state.topic = Object.hasOwn(state.topics, params.get("topic")) ? params.get("topic") : "all";
   $("search").value = (params.get("q") || "").slice(0, 150);
   state.searching = Boolean($("search").value.trim());
@@ -373,7 +375,8 @@ function restoreURL() {
   state.view = ["saved", "for-you"].includes(viewParam) ? viewParam : "feed";
   for (const peer of ["feed", "for-you", "saved"])
     $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
-  $("feed-controls").hidden = $("sort").hidden = state.view !== "feed";
+  $("feed-controls").hidden = state.view === "saved";
+  $("sort").hidden = state.view !== "feed";
   $("refresh").hidden = state.view === "saved";
   $("personalization").hidden = state.view !== "for-you";
 }
@@ -476,11 +479,11 @@ function renderStories() {
     const query = $("search").value.trim();
     empty.append(node("strong", "", isSaved ? "No saved stories" : (isForYou ? "No stories in your personalized feed" : "No matching stories")));
     empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
-      isForYou ? "Choose topics and followed sources, or reset your interests to explore a wider selection." :
+      isForYou ? "Try a different search or widen your filters. For You also skips stories you have already opened." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
-    if (isSaved || isForYou) {
+    if (isSaved || (isForYou && !nextWindow)) {
       const browse = node("button", "button secondary", "Browse latest stories");
       browse.type = "button";
       browse.addEventListener("click", () => {
@@ -488,7 +491,7 @@ function renderStories() {
         $("view-feed").click();
       });
       empty.append(browse);
-    } else if (nextWindow && !isForYou) {
+    } else if (nextWindow) {
       const expand = node("button", "button secondary", `Search the last ${windows[nextWindow]}`);
       expand.type = "button";
       expand.addEventListener("click", () => {
@@ -541,6 +544,7 @@ function renderStories() {
     );
     top.append(badges, date);
     const heading = node("h3");
+    heading.dir = "auto";
     if (article.language) heading.lang = article.language;
     const storyLink = node("a", "", article.title);
     storyLink.href = `/?article=${encodeURIComponent(article.id)}#reading-room`;
@@ -618,6 +622,7 @@ function renderStories() {
       tabGroup.append(tabSummary, tabWhy);
 
       const paragraph = node("p", "story-summary", storySummary || "Read original source for coverage details.");
+      paragraph.dir = "auto";
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
 
       const why = node("div", "why-matters-box");
@@ -645,6 +650,7 @@ function renderStories() {
       main.append(perspectiveWrap);
     } else if (storySummary) {
       const paragraph = node("p", "story-summary", storySummary);
+      paragraph.dir = "auto";
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
       main.append(paragraph);
     }
@@ -674,7 +680,7 @@ function renderStories() {
   status(
     "news-status",
     isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
-      isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} recent candidates · Ranked by interests, freshness, and source diversity` :
+      isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} matching candidates · Last ${windows[state.hours]}` :
       [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context].join(" · "),
   );
 }
@@ -870,6 +876,7 @@ async function checkForUpdates() {
   }
 }
 
+let authorCatalogLoaded = false;
 async function loadRecommendations() {
   state.controller?.abort();
   state.updateCheck?.abort();
@@ -878,7 +885,7 @@ async function loadRecommendations() {
   $("stories").setAttribute("aria-busy", "true");
   $("refresh").disabled = true;
   $("show-more").hidden = true;
-  status("news-status", "Finding recent stories across your interests…");
+  status("news-status", "Finding stories that match your filters…");
   syncURL();
   try {
     if (!state.sources.length) {
@@ -887,15 +894,16 @@ async function loadRecommendations() {
       renderCoverageControls(catalog);
       updateSourceCatalog(catalog.sources);
     }
-    try {
-      const authors = await request("/api/authors", { signal: controller.signal });
+    if (!authorCatalogLoaded) request("/api/authors", { signal: controller.signal }).then((authors) => {
       if (state.controller !== controller) return;
       preferences.update(authors);
-    } catch (error) { if (error.name === "AbortError") throw error; }
+      authorCatalogLoaded = true;
+    }).catch(() => {});
+    const { q, sort, limit, hours, ...filters } = Object.fromEntries(newsParams());
     const selected = preferences.request();
     const data = await request("/api/recommendations", { method: "POST",
       headers: { "Content-Type": "application/json" }, signal: controller.signal,
-      body: JSON.stringify({ ...selected, exclude_ids: [...readStories].slice(-100) }) });
+      body: JSON.stringify({ ...selected, q, scope: { ...filters, hours: Number(hours) }, exclude_ids: [...readStories].slice(-100) }) });
     if (state.controller !== controller || state.view !== "for-you") return;
     state.recommendations = data.articles;
     state.recommendationCandidates = data.total_candidates;
@@ -920,12 +928,11 @@ async function loadRecommendations() {
 
 async function loadNews(append = false, force = false) {
   if (state.view === "saved") return;
-  if (state.view === "for-you") return loadRecommendations();
-  if (state.view === "for-you") return loadRecommendations();
   clearTimeout(searchTimer);
   const searching = Boolean($("search").value.trim());
   if ($("sort").value === defaultSort(state.searching)) $("sort").value = defaultSort(searching);
   state.searching = searching;
+  if (state.view === "for-you") return loadRecommendations();
   const params = newsParams();
   const feedKey = params.toString();
   state.controller?.abort();
@@ -1051,20 +1058,21 @@ for (const view of ["feed", "for-you", "saved"]) {
     state.view = view;
     for (const peer of ["feed", "for-you", "saved"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = $("sort").hidden = view !== "feed";
+    $("feed-controls").hidden = view === "saved";
+    $("sort").hidden = view !== "feed";
     $("refresh").hidden = view === "saved";
     $("personalization").hidden = view !== "for-you";
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
-    if (view === "for-you" || (view === "feed" && !state.articles.length)) loadNews();
+    if (view !== "saved" && (view === "for-you" || state.feedKey !== newsParams().toString())) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
   clearTimeout(searchTimer);
   state.topic = state.source = "all";
   state.publisher = "";
-  state.hours = 12;
+  state.hours = state.view === "for-you" ? 168 : 12;
   state.searching = false;
   for (const id of ["search", "region", "publisher", "coverage", "language", "subject"]) $(id).value = "";
   $("kind").value = "all";

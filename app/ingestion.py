@@ -14,15 +14,28 @@ def refresh_sources(store, only=None, *, source_ids=None):
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)
               and (source_ids is None or s.id in source_ids)]
+    validators = store.current_feed_validators() if any(feed.integration == "rss" for feed in active) else {}
     with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
-        futures = {pool.submit(read_feed, source): source for source in active}
+        futures = {}
+        for source in active:
+            saved = validators.get(source.id, {})
+            if source.integration == "rss":
+                # A targeted owner refresh requests a complete snapshot for recovery.
+                cached = saved if only is None and saved.get("feed_url") == source.url else {}
+                future = pool.submit(read_feed, source, validators=cached)
+            else:
+                future = pool.submit(read_feed, source)
+            futures[future] = source
         for future in as_completed(futures):
             try:
                 items, status = future.result()
             except Exception:
                 # A malformed feed must not stop the other publishers from updating.
                 items, status = [], {"available": False, "error": "parser_failed"}
-            store.ingest(futures[future].id, items, status["available"], status.get("error"))
+            source = futures[future]
+            store.ingest(source.id, items, status["available"], status.get("error"),
+                         feed_url=source.url if source.integration == "rss" else None,
+                         validators=status.get("validators"), unchanged=status.get("unchanged", False))
     if only is None and source_ids is None:
         store.prune()
     return source_catalog(store)

@@ -5,7 +5,7 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -38,6 +38,25 @@ SPONSORED_TITLE = re.compile(
 )
 MEDIUM_POST = re.compile(r"https://medium\.com/p/([a-f0-9]{8,16})\Z")
 BARE_VERSION = re.compile(r"\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", re.ASCII)
+ETAG = re.compile(r'(?:W/)?"[\x21\x23-\x7e]{0,480}"')
+
+
+@dataclass(frozen=True)
+class FeedResponse:
+    body: bytes | None
+    url: str
+    etag: str | None = None
+    last_modified: str | None = None
+
+
+def feed_validator_headers(etag, last_modified):
+    headers = {}
+    if isinstance(etag, str) and ETAG.fullmatch(etag):
+        headers["If-None-Match"] = etag
+    if (isinstance(last_modified, str) and 1 <= len(last_modified) <= 80
+            and all(32 <= ord(char) < 127 for char in last_modified)):
+        headers["If-Modified-Since"] = last_modified
+    return headers
 
 
 def feed_failure(status_code):
@@ -90,17 +109,21 @@ def feed_category(tags):
 
 
 def fetch_bytes(url):
-    return asyncio.run(fetch_with_deadline(url))
+    return asyncio.run(fetch_with_deadline(url)).body
 
 
-async def fetch_with_deadline(url):
+async def fetch_with_deadline(url, validators=None):
     # The deadline covers DNS, connection, redirects and the response body.
     headers = {"User-Agent": "Mozilla/5.0 (compatible; InformaAI/1.0; +https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
     async with asyncio.timeout(10):
         async with httpx.AsyncClient(timeout=httpx.Timeout(10, connect=6), follow_redirects=False, trust_env=False) as client:
             for _ in range(3):
-                async with client.stream("GET", url, headers=headers) as response:
-                    if response.is_redirect:
+                conditional = (feed_validator_headers(validators.get("etag"), validators.get("last_modified"))
+                               if validators and validators.get("resource_url") == url else {})
+                async with client.stream("GET", url, headers={**headers, **conditional}) as response:
+                    if response.status_code == 304 and conditional:
+                        return FeedResponse(None, url)
+                    if response.has_redirect_location:
                         target = str(response.next_request.url)
                         if urlsplit(target).netloc != urlsplit(url).netloc or urlsplit(target).scheme != "https":
                             raise ValueError("Unexpected feed redirect")
@@ -112,11 +135,12 @@ async def fetch_with_deadline(url):
                         body.extend(chunk)
                         if len(body) > MAX_BYTES:
                             raise ValueError("Feed download limit exceeded")
-                    return bytes(body)
+                    fingerprint = feed_validator_headers(response.headers.get("etag"), response.headers.get("last-modified"))
+                    return FeedResponse(bytes(body), url, fingerprint.get("If-None-Match"), fingerprint.get("If-Modified-Since"))
     raise ValueError("Too many feed redirects")
 
 
-def read_feed(task):
+def read_feed(task, *, validators=None):
     if isinstance(task, Source) and task.integration == "hashnode-api":
         from app.hashnode import read_hashnode
         return read_hashnode(task)
@@ -138,7 +162,14 @@ def read_feed(task):
         s = Source(group, group, label, "news", url, tuple(ALLOWED_DOMAINS[group]))
     status = dict(s.public(), available=False, count=0)
     try:
-        if isinstance(task, Source):
+        if validators is not None and isinstance(task, Source):
+            feed = asyncio.run(fetch_with_deadline(s.url, validators))
+            if feed.body is None:
+                return [], dict(status, available=True, unchanged=True)
+            content = feed.body
+            if feed.etag or feed.last_modified:
+                status["validators"] = {"resource_url": feed.url, "etag": feed.etag, "last_modified": feed.last_modified}
+        elif isinstance(task, Source):
             content = fetch_bytes(s.url)
         else:
             # Legacy callable; no HTTP route accepts this tuple from the public.
