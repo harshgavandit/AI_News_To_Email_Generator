@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="/workspace.css" />
     <link rel="stylesheet" href="/reading.css" />
     <link rel="stylesheet" href="/brief.css" />
+    <link rel="stylesheet" href="/intelligence.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -46,6 +47,9 @@
           <a href="/sources.html">Sources</a>
         </nav>
         <div class="site-tools">
+          <button id="cmd-palette-btn" class="cmd-pill" type="button" aria-label="Open command palette (Press ⌘K or /)">
+            <kbd>⌘K</kbd> <span>Quick Search</span>
+          </button>
           <select id="site-theme" class="theme-select" aria-label="Color theme" disabled>
             <option value="system">System</option>
             <option value="light">Light</option>
@@ -88,7 +92,12 @@
               <span class="quick-send-badge">1-CLICK DISPATCH</span>
               <h2>Global Top 5 Intelligence</h2>
             </div>
-            <button id="world-preview" class="text-button" type="button">Preview</button>
+            <div class="quick-send-actions">
+              <button id="world-audio-btn" class="text-button audio-top5-btn" type="button" aria-label="Listen to Global Top 5 Brief">
+                <span class="audio-icon-pulse" aria-hidden="true">🎧</span> Listen
+              </button>
+              <button id="world-preview" class="text-button" type="button">Preview</button>
+            </div>
           </div>
           <p class="brief-description">The 5 highest-signal global stories from the past 24 hours, synthesized directly to your mailbox.</p>
           <label class="world-email-label" for="hero-email">Email address</label>
@@ -296,6 +305,8 @@
               <p id="news-status" role="status" aria-live="polite">Loading stories…</p>
               <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
               <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief from these filters <span aria-hidden="true">↗</span></button>
+              <button id="export-saved-md" type="button" class="text-button" hidden>Export Markdown</button>
+              <button id="pin-all-saved" type="button" class="text-button" hidden>Pin all to brief</button>
             </div>
             <div class="reading-result-tools">
               <label for="sort" class="sr-only">Sort stories</label>
@@ -308,6 +319,12 @@
                 <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
                 <button id="layout-list" type="button" aria-pressed="false">List</button>
               </div>
+              <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false" title="Filter for primary reporting, research preprints, and advisories">
+                ✦ High Signal
+              </button>
+              <button id="mark-all-read" class="text-button read-action-btn" type="button" title="Mark all displayed stories as read">
+                Mark read
+              </button>
             </div>
           </div>
           <p id="story-action-status" class="sr-only" role="status"></p>
@@ -634,5 +651,113 @@
         <p id="mail-status" class="status" role="status" aria-live="polite"></p>
       </div>
     </dialog>
+
+    <!-- Slide-Over Intelligence Dossier Drawer (Particle + Trace Inspired) -->
+    <div id="dossier-backdrop" class="dossier-backdrop" hidden></div>
+    <aside id="dossier-drawer" class="dossier-drawer" aria-labelledby="dossier-title" role="dialog" aria-modal="true" hidden>
+      <header class="dossier-header">
+        <div class="dossier-meta-top">
+          <span id="dossier-index" class="dossier-counter">Story 1 of 10</span>
+          <div class="dossier-nav-arrows">
+            <button id="dossier-prev" class="dossier-nav-btn" type="button" aria-label="Previous story (Left arrow)">←</button>
+            <button id="dossier-next" class="dossier-nav-btn" type="button" aria-label="Next story (Right arrow)">→</button>
+          </div>
+        </div>
+        <button id="dossier-close" class="dialog-close" type="button" aria-label="Close intelligence dossier (Esc)">×</button>
+      </header>
+      <div class="dossier-body">
+        <div class="dossier-badges">
+          <span id="dossier-topic" class="source-badge">Topic</span>
+          <span id="dossier-region" class="meta-pill region-pill">Region</span>
+          <span id="dossier-read-time" class="meta-pill read-time-pill">2m read</span>
+          <span id="dossier-coverage" class="meta-pill coverage-pill">Primary Reporting</span>
+        </div>
+        <h2 id="dossier-title" class="dossier-headline" tabindex="-1"></h2>
+        <div class="dossier-byline">
+          <span id="dossier-source-mark" class="source-mark" aria-hidden="true">P</span>
+          <div>
+            <strong id="dossier-publisher">Publisher</strong>
+            <span id="dossier-provenance" class="muted">Provenance</span>
+          </div>
+          <time id="dossier-time" class="dossier-timestamp"></time>
+        </div>
+        <div class="dossier-actions-bar">
+          <button id="dossier-listen-btn" class="button secondary dossier-btn" type="button">
+            🎧 Listen
+          </button>
+          <button id="dossier-pin-btn" class="button secondary dossier-btn" type="button">
+            Pin to brief
+          </button>
+          <button id="dossier-save-btn" class="button secondary dossier-btn" type="button">
+            Save story
+          </button>
+          <button id="dossier-copy-btn" class="button secondary dossier-btn" type="button">
+            Copy Markdown
+          </button>
+          <a id="dossier-external-link" class="button primary dossier-btn" href="#" target="_blank" rel="noopener noreferrer">
+            Visit Source ↗
+          </a>
+        </div>
+        <div class="dossier-layers">
+          <section class="dossier-section">
+            <h3 class="dossier-section-title">Executive Summary</h3>
+            <p id="dossier-summary" class="dossier-text"></p>
+          </section>
+          <section id="dossier-why-section" class="dossier-section dossier-why-box" hidden>
+            <h3 class="dossier-section-title">✦ Strategic Context &amp; Market Impact</h3>
+            <p id="dossier-why-text" class="dossier-why-content"></p>
+          </section>
+          <section id="dossier-takeaways-section" class="dossier-section" hidden>
+            <h3 class="dossier-section-title">Key Intelligence Takeaways</h3>
+            <ul id="dossier-takeaways-list" class="dossier-takeaways"></ul>
+          </section>
+          <section class="dossier-section dossier-audit-section">
+            <h3 class="dossier-section-title">Signal &amp; Publisher Provenance</h3>
+            <dl class="dossier-audit-grid">
+              <div><dt>Primary Source</dt><dd id="dossier-audit-url"></dd></div>
+              <div><dt>Publisher Region</dt><dd id="dossier-audit-region"></dd></div>
+              <div><dt>Coverage Classification</dt><dd id="dossier-audit-coverage"></dd></div>
+              <div><dt>Intelligence Status</dt><dd id="dossier-audit-status">Verified Feed Ingestion</dd></div>
+            </dl>
+          </section>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Interactive Command Palette (Trace-Inspired Keyboard Navigation) -->
+    <dialog id="command-dialog" class="command-dialog" aria-label="Command Palette">
+      <div class="command-palette-inner">
+        <div class="command-input-row">
+          <span class="command-search-icon" aria-hidden="true">🔍</span>
+          <input id="command-input" type="search" placeholder="Type a command, topic, region, or search headlines..." autocomplete="off" />
+          <button id="command-close" type="button" class="dialog-close" aria-label="Close command palette (Esc)">×</button>
+        </div>
+        <div class="command-shortcuts-strip">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span><kbd>Enter</kbd> select</span>
+          <span><kbd>Esc</kbd> dismiss</span>
+        </div>
+        <div id="command-results" class="command-results-list" role="listbox"></div>
+      </div>
+    </dialog>
+
+    <!-- Floating Audio Intelligence Player Bar (Particle-Inspired Audio Brief) -->
+    <div id="audio-player-bar" class="audio-player-bar" hidden aria-label="Audio brief narrator" role="region">
+      <div class="audio-player-left">
+        <div class="audio-wave" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="audio-info">
+          <span class="audio-label">NARRATING INTELLIGENCE</span>
+          <span id="audio-story-title" class="audio-title">Story title</span>
+        </div>
+      </div>
+      <div class="audio-player-controls">
+        <button id="audio-prev-btn" class="audio-control-btn" type="button" aria-label="Previous story">⏮</button>
+        <button id="audio-play-pause-btn" class="audio-control-btn audio-play-btn" type="button" aria-label="Pause narration">⏸</button>
+        <button id="audio-next-btn" class="audio-control-btn" type="button" aria-label="Next story">⏭</button>
+        <button id="audio-stop-btn" class="audio-control-btn audio-close-btn" type="button" aria-label="Stop audio narration">✕</button>
+      </div>
+    </div>
   </body>
 </html>

@@ -55,11 +55,53 @@ def markdown_to_html(markdown_text: str) -> str:
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #252e29;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
+            padding: 24px 20px;
+            background-color: #f8fafc;
+        }}
+        .brand-header {{
+            border-bottom: 2px solid #059669;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+        }}
+        .brand-title {{
+            font-family: Georgia, serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #064e3b;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }}
+        .brand-headline {{
+            font-size: 11px;
+            font-weight: 600;
+            color: #047857;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 3px 0 0;
+        }}
+        .brand-tagline {{
+            font-size: 10px;
+            color: #64748b;
+            margin: 2px 0 0;
+        }}
+        .brand-pillars {{
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #059669;
+            margin-top: 4px;
+        }}
+        .brand-footer {{
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 11px;
+            color: #64748b;
+            text-align: center;
         }}
         h2 {{
             font-size: 18px;
@@ -121,7 +163,17 @@ def markdown_to_html(markdown_text: str) -> str:
     </style>
 </head>
 <body>
+<div class="brand-header">
+    <div class="brand-title">Informa AI</div>
+    <div class="brand-headline">Your Personal AI News Intelligence Agent.</div>
+    <div class="brand-tagline">Discover what matters. Understand why it matters. Stay ahead without information overload.</div>
+    <div class="brand-pillars">Discover · Analyze · Personalize · Automate</div>
+</div>
 {html}
+<div class="brand-footer">
+    Informa AI · Discover · Analyze · Personalize · Automate<br>
+    <em>Discover what matters. Understand why it matters. Stay ahead without information overload.</em>
+</div>
 </body>
 </html>"""
 
@@ -157,11 +209,53 @@ def digest_to_html(digest_response) -> str:
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #252e29;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
+            padding: 24px 20px;
+            background-color: #f8fafc;
+        }}
+        .brand-header {{
+            border-bottom: 2px solid #059669;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+        }}
+        .brand-title {{
+            font-family: Georgia, serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #064e3b;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }}
+        .brand-headline {{
+            font-size: 11px;
+            font-weight: 600;
+            color: #047857;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 3px 0 0;
+        }}
+        .brand-tagline {{
+            font-size: 10px;
+            color: #64748b;
+            margin: 2px 0 0;
+        }}
+        .brand-pillars {{
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #059669;
+            margin-top: 4px;
+        }}
+        .brand-footer {{
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 11px;
+            color: #64748b;
+            text-align: center;
         }}
         h3 {{
             font-size: 16px;
@@ -228,7 +322,17 @@ def digest_to_html(digest_response) -> str:
     </style>
 </head>
 <body>
+<div class="brand-header">
+    <div class="brand-title">Informa AI</div>
+    <div class="brand-headline">Your Personal AI News Intelligence Agent.</div>
+    <div class="brand-tagline">Discover what matters. Understand why it matters. Stay ahead without information overload.</div>
+    <div class="brand-pillars">Discover · Analyze · Personalize · Automate</div>
+</div>
 {html_content}
+<div class="brand-footer">
+    Informa AI · Discover · Analyze · Personalize · Automate<br>
+    <em>Discover what matters. Understand why it matters. Stay ahead without information overload.</em>
+</div>
 </body>
 </html>"""
 

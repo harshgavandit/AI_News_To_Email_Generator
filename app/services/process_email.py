@@ -72,7 +72,7 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
         markdown_content = result.to_markdown()
         html_content = digest_to_html(result)
         
-        subject = f"Daily AI News Digest - {result.introduction.greeting.split('for ')[-1] if 'for ' in result.introduction.greeting else 'Today'}"
+        subject = f"Informa AI — Intelligence Brief ({result.introduction.greeting.split('for ')[-1] if 'for ' in result.introduction.greeting else 'Today'})"
         
         send_email(
             subject=subject,

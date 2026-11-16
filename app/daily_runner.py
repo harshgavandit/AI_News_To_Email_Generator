@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
     start_time = datetime.now()
     logger.info("=" * 60)
-    logger.info("Starting Daily AI News Aggregator Pipeline")
+    logger.info("Starting Informa AI News Intelligence Pipeline")
     logger.info("=" * 60)
     
     results = {

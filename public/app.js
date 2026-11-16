@@ -95,14 +95,33 @@ $("edition-date").dateTime = date.toLocaleDateString("sv-SE");
 $("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(date);
 
 const savedKey = "informa-saved-v1";
+const readKey = "informa-read-v1";
 const layoutKey = "informa-story-layout";
 const saved = new Map();
+const readStories = new Set();
 try {
   const stored = JSON.parse(localStorage.getItem(savedKey) || "[]");
   for (const item of stored.slice(0, 100)) {
     if (typeof item.id === "string" && typeof item.title === "string" && typeof item.url === "string") saved.set(item.id, item);
   }
 } catch {}
+try {
+  const storedRead = JSON.parse(localStorage.getItem(readKey) || "[]");
+  for (const id of storedRead) readStories.add(String(id));
+} catch {}
+
+function markAsRead(storyId) {
+  readStories.add(String(storyId));
+  try {
+    localStorage.setItem(readKey, JSON.stringify([...readStories].slice(-300)));
+  } catch {}
+  const card = $("stories")?.querySelector(`[data-story-card-id="${CSS.escape(String(storyId))}"]`);
+  if (card) {
+    card.classList.add("is-read");
+    card.classList.remove("is-unread");
+    card.querySelector(".unread-dot")?.remove();
+  }
+}
 
 function setLayout(layout, persist = false) {
   $("stories").classList.toggle("story-list", layout === "list");
@@ -384,13 +403,19 @@ function renderStories() {
   const container = $("stories");
   container.replaceChildren();
   const isSaved = state.view === "saved";
-  const articles = isSaved ? [...saved.values()].reverse() : state.articles;
+  $("export-saved-md").hidden = !isSaved || !saved.size;
+  $("pin-all-saved").hidden = !isSaved || !saved.size;
+  let articles = isSaved ? [...saved.values()].reverse() : state.articles;
+  if (state.highSignalOnly && !isSaved) {
+    articles = articles.filter((a) => a.coverage === "reporting" || a.coverage === "preprint" || a.coverage === "advisory" || a.research_status === "preprint");
+  }
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
     empty.append(node("strong", "", isSaved ? "No saved stories" : "No matching stories"));
     empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
+        state.highSignalOnly ? "No high-signal stories found in this window. Try toggling off the High Signal filter." :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
     if (isSaved) {
@@ -414,12 +439,20 @@ function renderStories() {
     container.append(empty);
   }
   for (const article of articles) {
+    const isRead = readStories.has(String(article.id));
     const card = node(
       "article",
-      `story${state.pins.has(String(article.id)) ? " pinned" : ""}`,
+      `story${state.pins.has(String(article.id)) ? " pinned" : ""}${isRead ? " is-read" : " is-unread"}`,
     );
+    card.dataset.storyCardId = String(article.id);
     const main = node("div", "story-main");
     const top = node("div", "story-top");
+    if (!isRead) {
+      const dot = node("span", "unread-dot");
+      dot.title = "Unread story";
+      dot.setAttribute("aria-hidden", "true");
+      top.append(dot);
+    }
     const timestamp = article.publishedAt || article.published_at;
     const topic = article.category || article.topic;
     const date = node("time", "", relativeTime(timestamp));
@@ -442,6 +475,13 @@ function renderStories() {
     const heading = node("h3");
     if (article.language) heading.lang = article.language;
     const storyLink = externalLink(article.sourceUrl || article.url, article.title);
+    storyLink.title = "Click to inspect Intelligence Dossier (⌘/Ctrl+click to open original URL)";
+    storyLink.addEventListener("click", (e) => {
+      if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        openDossier(article);
+      }
+    });
     const externalMark = node("span", "story-external-mark", "↗");
     externalMark.setAttribute("aria-hidden", "true");
     storyLink.append(" ", externalMark);
@@ -485,8 +525,20 @@ function renderStories() {
     save.title = isBookmarked ? "Remove from saved stories" : "Save in this browser";
     save.addEventListener("click", () => toggleSaved(article));
     pin.title = "Include in your next brief";
+
+    const dossierBtn = node("button", "card-dossier-btn", "Dossier");
+    dossierBtn.type = "button";
+    dossierBtn.title = "Open full intelligence dossier (Enter)";
+    dossierBtn.addEventListener("click", () => openDossier(article));
+
+    const audioBtn = node("button", "card-audio-btn", "🎧");
+    audioBtn.type = "button";
+    audioBtn.title = "Listen to audio narration";
+    audioBtn.setAttribute("aria-label", `Listen to ${article.title}`);
+    audioBtn.addEventListener("click", () => playStoryAudio(article));
+
     const actions = node("div", "story-actions");
-    actions.append(save, pin);
+    actions.append(audioBtn, dossierBtn, save, pin);
     bottom.append(actions);
     main.append(top, heading);
     card.append(main);
@@ -1721,11 +1773,461 @@ function updateActiveStory(index) {
   cards[activeStoryIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+/* High-Signal Filter & Read All Status (Feedly Inspired) */
+state.highSignalOnly = false;
+$("filter-high-signal")?.addEventListener("click", () => {
+  state.highSignalOnly = !state.highSignalOnly;
+  $("filter-high-signal").setAttribute("aria-pressed", String(state.highSignalOnly));
+  renderStories();
+});
+
+$("mark-all-read")?.addEventListener("click", () => {
+  for (const a of state.articles) readStories.add(String(a.id));
+  try {
+    localStorage.setItem(readKey, JSON.stringify([...readStories].slice(-300)));
+  } catch {}
+  renderStories();
+  status("story-action-status", "All visible stories marked as read.");
+});
+
+/* Saved Stories Markdown Export & Pin All (Trace Inspired) */
+$("export-saved-md")?.addEventListener("click", async () => {
+  if (!saved.size) return;
+  const lines = ["# Informa AI — Saved Intelligence Brief", ""];
+  for (const art of saved.values()) {
+    lines.push(`## ${art.title}`);
+    lines.push(`*Publisher:* ${art.publisher || art.sourceName || "Source"} (${publisherRegion(art)})`);
+    lines.push(`*Source:* ${art.url || art.sourceUrl}`);
+    const sum = art.cleanSummary || art.description || art.summary || "";
+    if (sum) lines.push(`\n${sum}`);
+    if (art.whyItMatters) lines.push(`\n*Why It Matters:* ${art.whyItMatters}`);
+    if (art.keyTakeaway) lines.push(`*Key Takeaway:* ${art.keyTakeaway}`);
+    lines.push("\n---\n");
+  }
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    status("story-action-status", `Copied ${saved.size} saved stories as Markdown to clipboard!`);
+  } catch {
+    status("story-action-status", "Clipboard access unavailable.");
+  }
+});
+
+$("pin-all-saved")?.addEventListener("click", () => {
+  let count = 0;
+  for (const art of saved.values()) {
+    if (state.pins.size < 10 && !state.pins.has(String(art.id))) {
+      state.pins.set(String(art.id), art);
+      count++;
+    }
+  }
+  renderPins();
+  renderStories();
+  status("story-action-status", `Pinned ${count} saved stories to your brief.`);
+});
+
+/* Slide-Over Intelligence Dossier (Particle + Trace Inspired) */
+let currentDossierStory = null;
+let currentDossierList = [];
+let currentDossierIndex = 0;
+
+function openDossier(article) {
+  if (!article) return;
+  currentDossierStory = article;
+  markAsRead(article.id);
+  const isSavedView = state.view === "saved";
+  currentDossierList = isSavedView ? [...saved.values()].reverse() : state.articles;
+  currentDossierIndex = currentDossierList.findIndex((a) => String(a.id) === String(article.id));
+  if (currentDossierIndex === -1) currentDossierIndex = 0;
+
+  $("dossier-index").textContent = `Story ${currentDossierIndex + 1} of ${currentDossierList.length}`;
+  $("dossier-prev").disabled = currentDossierIndex <= 0;
+  $("dossier-next").disabled = currentDossierIndex >= currentDossierList.length - 1;
+
+  const topic = article.category || article.topic;
+  $("dossier-topic").textContent = state.topics[topic] || article.topic_label || "Technology";
+  $("dossier-topic").className = `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`;
+  $("dossier-region").textContent = publisherRegion(article);
+
+  const summary = article.cleanSummary || article.description || article.summary || "";
+  const wordCount = (article.title + " " + summary).split(/\s+/).length;
+  const readingMinutes = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
+  $("dossier-read-time").textContent = `${readingMinutes}m read`;
+
+  const covLabel = state.coverageTypes[article.coverage] || coverageLabels[article.coverage] || "Primary Reporting";
+  $("dossier-coverage").textContent = covLabel;
+
+  $("dossier-title").textContent = article.title;
+  const publisher = article.sourceName || article.publisher || "Original source";
+  $("dossier-source-mark").textContent = publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase();
+  $("dossier-publisher").textContent = publisher;
+  $("dossier-provenance").textContent = [covLabel, publisherRegion(article), originalLanguage(article.language)].filter(Boolean).join(" · ");
+
+  const timestamp = article.publishedAt || article.published_at;
+  $("dossier-time").textContent = relativeTime(timestamp);
+  $("dossier-time").title = readableTime(timestamp);
+
+  const rawUrl = article.sourceUrl || article.url || "#";
+  $("dossier-external-link").href = rawUrl;
+  $("dossier-summary").textContent = summary || "Read original publication for details.";
+
+  if (article.whyItMatters) {
+    $("dossier-why-section").hidden = false;
+    $("dossier-why-text").textContent = article.whyItMatters;
+  } else {
+    $("dossier-why-section").hidden = true;
+  }
+
+  const takeaways = article.keyTakeaway ? [article.keyTakeaway] : [];
+  if (takeaways.length) {
+    $("dossier-takeaways-section").hidden = false;
+    $("dossier-takeaways-list").replaceChildren();
+    for (const t of takeaways) {
+      const li = node("li", "", t);
+      $("dossier-takeaways-list").append(li);
+    }
+  } else {
+    $("dossier-takeaways-section").hidden = true;
+  }
+
+  try {
+    const domain = new URL(rawUrl).hostname;
+    $("dossier-audit-url").textContent = domain;
+  } catch {
+    $("dossier-audit-url").textContent = rawUrl;
+  }
+  $("dossier-audit-region").textContent = publisherRegion(article);
+  $("dossier-audit-coverage").textContent = covLabel;
+  $("dossier-audit-status").textContent = "Verified Feed Ingestion";
+
+  const isPinned = state.pins.has(String(article.id));
+  $("dossier-pin-btn").textContent = isPinned ? "Unpin from brief" : "Pin to brief";
+
+  const isBookmarked = saved.has(String(article.id));
+  $("dossier-save-btn").textContent = isBookmarked ? "Saved" : "Save story";
+
+  $("dossier-backdrop").hidden = false;
+  $("dossier-drawer").hidden = false;
+  $("dossier-title").focus();
+}
+
+function closeDossier() {
+  $("dossier-backdrop").hidden = true;
+  $("dossier-drawer").hidden = true;
+  currentDossierStory = null;
+}
+
+$("dossier-close")?.addEventListener("click", closeDossier);
+$("dossier-backdrop")?.addEventListener("click", closeDossier);
+
+$("dossier-prev")?.addEventListener("click", () => {
+  if (currentDossierIndex > 0) openDossier(currentDossierList[currentDossierIndex - 1]);
+});
+$("dossier-next")?.addEventListener("click", () => {
+  if (currentDossierIndex < currentDossierList.length - 1) openDossier(currentDossierList[currentDossierIndex + 1]);
+});
+
+$("dossier-pin-btn")?.addEventListener("click", () => {
+  if (!currentDossierStory) return;
+  togglePin(currentDossierStory);
+  const isPinned = state.pins.has(String(currentDossierStory.id));
+  $("dossier-pin-btn").textContent = isPinned ? "Unpin from brief" : "Pin to brief";
+});
+
+$("dossier-save-btn")?.addEventListener("click", () => {
+  if (!currentDossierStory) return;
+  toggleSaved(currentDossierStory);
+  const isBookmarked = saved.has(String(currentDossierStory.id));
+  $("dossier-save-btn").textContent = isBookmarked ? "Saved" : "Save story";
+});
+
+$("dossier-copy-btn")?.addEventListener("click", async () => {
+  if (!currentDossierStory) return;
+  const art = currentDossierStory;
+  const lines = [
+    `# ${art.title}`,
+    `*Publisher:* ${art.publisher || art.sourceName || "Source"} (${publisherRegion(art)})`,
+    `*Source:* ${art.url || art.sourceUrl}`,
+    "",
+    art.cleanSummary || art.description || art.summary || "",
+  ];
+  if (art.whyItMatters) lines.push(`\n**Strategic Context:** ${art.whyItMatters}`);
+  if (art.keyTakeaway) lines.push(`**Key Takeaway:** ${art.keyTakeaway}`);
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    $("dossier-copy-btn").textContent = "Copied! ✓";
+    setTimeout(() => { $("dossier-copy-btn").textContent = "Copy Markdown"; }, 2000);
+  } catch {}
+});
+
+$("dossier-listen-btn")?.addEventListener("click", () => {
+  if (currentDossierStory) playStoryAudio(currentDossierStory);
+});
+
+/* Native Web Speech Audio Engine (Particle-Inspired) */
+const audioNarrator = {
+  activeStory: null,
+  playlist: [],
+  playlistIndex: 0,
+  synth: typeof window !== "undefined" && window.speechSynthesis,
+  utterance: null,
+};
+
+function playStoryAudio(article) {
+  if (!audioNarrator.synth) {
+    status("news-status", "Speech synthesis is not supported on this browser.", true);
+    return;
+  }
+  audioNarrator.activeStory = article;
+  audioNarrator.playlist = [article];
+  audioNarrator.playlistIndex = 0;
+  speakStory(article);
+}
+
+function speakStory(article) {
+  if (!audioNarrator.synth || !article) return;
+  audioNarrator.synth.cancel();
+
+  const title = article.title || "";
+  const publisher = article.publisher || article.sourceName || "Source";
+  const why = article.whyItMatters ? ` Strategic context: ${article.whyItMatters}.` : "";
+  const summary = article.cleanSummary || article.description || article.summary || "";
+  const text = `${title}. Reported by ${publisher}.${why} ${summary}`;
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1.05;
+  utter.pitch = 1.0;
+  utter.onend = () => {
+    if (audioNarrator.playlistIndex < audioNarrator.playlist.length - 1) {
+      audioNarrator.playlistIndex++;
+      const nextStory = audioNarrator.playlist[audioNarrator.playlistIndex];
+      speakStory(nextStory);
+    } else {
+      stopAudio();
+    }
+  };
+  utter.onerror = () => stopAudio();
+
+  audioNarrator.utterance = utter;
+  $("audio-story-title").textContent = title;
+  $("audio-player-bar").hidden = false;
+  $("audio-play-pause-btn").textContent = "⏸";
+  $("audio-play-pause-btn").setAttribute("aria-label", "Pause narration");
+  document.querySelector(".audio-wave")?.classList.remove("paused");
+  audioNarrator.synth.speak(utter);
+}
+
+function stopAudio() {
+  if (audioNarrator.synth) audioNarrator.synth.cancel();
+  $("audio-player-bar").hidden = true;
+  audioNarrator.activeStory = null;
+  audioNarrator.playlist = [];
+  audioNarrator.playlistIndex = 0;
+}
+
+function toggleAudioPause() {
+  if (!audioNarrator.synth) return;
+  if (audioNarrator.synth.paused) {
+    audioNarrator.synth.resume();
+    $("audio-play-pause-btn").textContent = "⏸";
+    document.querySelector(".audio-wave")?.classList.remove("paused");
+  } else {
+    audioNarrator.synth.pause();
+    $("audio-play-pause-btn").textContent = "▶";
+    document.querySelector(".audio-wave")?.classList.add("paused");
+  }
+}
+
+$("audio-play-pause-btn")?.addEventListener("click", toggleAudioPause);
+$("audio-stop-btn")?.addEventListener("click", stopAudio);
+$("audio-prev-btn")?.addEventListener("click", () => {
+  if (audioNarrator.playlistIndex > 0) {
+    audioNarrator.playlistIndex--;
+    speakStory(audioNarrator.playlist[audioNarrator.playlistIndex]);
+  }
+});
+$("audio-next-btn")?.addEventListener("click", () => {
+  if (audioNarrator.playlistIndex < audioNarrator.playlist.length - 1) {
+    audioNarrator.playlistIndex++;
+    speakStory(audioNarrator.playlist[audioNarrator.playlistIndex]);
+  }
+});
+
+$("world-audio-btn")?.addEventListener("click", () => {
+  const stories = state.articles.slice(0, 5);
+  if (!stories.length) {
+    status("world-status", "Loading stories to narrate...", false);
+    return;
+  }
+  audioNarrator.playlist = stories;
+  audioNarrator.playlistIndex = 0;
+  speakStory(stories[0]);
+});
+
+/* Trace-Inspired Command Palette */
+let commandActiveIndex = 0;
+let commandItems = [];
+
+function getBaseCommands() {
+  const actions = [
+    { id: "act-listen-top5", label: "🎧 Listen to Global Top 5 Brief", category: "Actions", run: () => $("world-audio-btn")?.click() },
+    { id: "act-send-top5", label: "📬 1-Click Send Global Top 5 Brief", category: "Actions", run: () => { $("hero-email")?.focus(); $("hero-email")?.scrollIntoView({ behavior: "smooth" }); } },
+    { id: "act-build", label: "⚙️ Open Brief Builder", category: "Actions", run: () => $("nav-builder")?.click() },
+    { id: "act-cards", label: "🗂️ Switch to Editorial Cards View", category: "Layout", run: () => setLayout("cards", true) },
+    { id: "act-list", label: "📋 Switch to Compact List View", category: "Layout", run: () => setLayout("list", true) },
+    { id: "act-high-signal", label: "✦ Toggle High-Signal Only Stories", category: "Filters", run: () => $("filter-high-signal")?.click() },
+    { id: "act-mark-read", label: "✓ Mark All Stories as Read", category: "Actions", run: () => $("mark-all-read")?.click() },
+    { id: "act-export-saved", label: "📋 Export Saved Stories as Markdown", category: "Actions", run: () => $("export-saved-md")?.click() },
+    { id: "act-theme", label: "🌓 Toggle Light / Dark Theme", category: "Actions", run: () => {
+      const current = document.documentElement.dataset.theme;
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem("informa-theme", next); } catch {}
+      $("site-theme").value = next;
+    }},
+  ];
+
+  const topics = Object.entries(state.topics).map(([id, label]) => ({
+    id: `topic-${id}`,
+    label: `✦ Channel: ${label}`,
+    category: "Topics",
+    run: () => chooseTopic(id),
+  }));
+
+  const regions = Object.entries(state.regions).map(([id, label]) => ({
+    id: `region-${id}`,
+    label: `🌐 Region: ${label}`,
+    category: "Regions",
+    run: () => {
+      $("region").value = id;
+      syncURL();
+      loadNews();
+    },
+  }));
+
+  return [...actions, ...topics, ...regions];
+}
+
+function openCommandPalette() {
+  const dialog = $("command-dialog");
+  if (!dialog) return;
+  $("command-input").value = "";
+  renderCommandResults("");
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.hidden = false;
+  $("command-input").focus();
+}
+
+function closeCommandPalette() {
+  const dialog = $("command-dialog");
+  if (!dialog) return;
+  if (typeof dialog.close === "function") dialog.close();
+  else dialog.hidden = true;
+}
+
+$("cmd-palette-btn")?.addEventListener("click", openCommandPalette);
+$("command-close")?.addEventListener("click", closeCommandPalette);
+
+function renderCommandResults(query) {
+  const cleanQ = query.trim().toLowerCase();
+  const base = getBaseCommands();
+  const matchedBase = cleanQ ? base.filter((c) => c.label.toLowerCase().includes(cleanQ) || c.category.toLowerCase().includes(cleanQ)) : base;
+
+  const matchedStories = cleanQ ? state.articles.filter((a) => a.title.toLowerCase().includes(cleanQ)).slice(0, 5).map((a) => ({
+    id: `story-${a.id}`,
+    label: `📰 ${a.title}`,
+    category: "Stories",
+    run: () => openDossier(a),
+  })) : [];
+
+  commandItems = [...matchedBase, ...matchedStories];
+  commandActiveIndex = 0;
+
+  const container = $("command-results");
+  container.replaceChildren();
+
+  if (!commandItems.length) {
+    const empty = node("div", "command-item", "No matching commands or headlines.");
+    empty.style.color = "var(--muted)";
+    container.append(empty);
+    return;
+  }
+
+  let lastCategory = "";
+  commandItems.forEach((item, idx) => {
+    if (item.category !== lastCategory) {
+      lastCategory = item.category;
+      container.append(node("div", "command-group-heading", lastCategory));
+    }
+    const row = node("button", `command-item${idx === 0 ? " active" : ""}`);
+    row.type = "button";
+    row.dataset.cmdIdx = String(idx);
+    const left = node("div", "command-item-left");
+    left.append(node("span", "command-item-label", item.label));
+    row.append(left);
+    row.addEventListener("click", () => {
+      closeCommandPalette();
+      item.run();
+    });
+    row.addEventListener("mouseenter", () => {
+      container.querySelectorAll(".command-item").forEach((el) => el.classList.remove("active"));
+      row.classList.add("active");
+      commandActiveIndex = idx;
+    });
+    container.append(row);
+  });
+}
+
+$("command-input")?.addEventListener("input", (e) => {
+  renderCommandResults(e.target.value);
+});
+
+$("command-input")?.addEventListener("keydown", (e) => {
+  const rows = Array.from($("command-results").querySelectorAll(".command-item"));
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (commandItems.length) {
+      commandActiveIndex = (commandActiveIndex + 1) % commandItems.length;
+      rows.forEach((r, i) => r.classList.toggle("active", i === commandActiveIndex));
+      rows[commandActiveIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (commandItems.length) {
+      commandActiveIndex = (commandActiveIndex - 1 + commandItems.length) % commandItems.length;
+      rows.forEach((r, i) => r.classList.toggle("active", i === commandActiveIndex));
+      rows[commandActiveIndex]?.scrollIntoView({ block: "nearest" });
+    }
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (commandItems[commandActiveIndex]) {
+      closeCommandPalette();
+      commandItems[commandActiveIndex].run();
+    }
+  } else if (e.key === "Escape") {
+    closeCommandPalette();
+  }
+});
+
+/* Keyboard Navigation (Trace & Power-Reader Workflows) */
 window.addEventListener("keydown", (e) => {
   const activeEl = document.activeElement;
   const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT" || activeEl.isContentEditable);
 
+  if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
   if (e.key === "Escape") {
+    if (!$("command-dialog")?.hidden && $("command-dialog")?.open) {
+      closeCommandPalette();
+      return;
+    }
+    if (!$("dossier-drawer")?.hidden) {
+      closeDossier();
+      return;
+    }
     if ($("mail-dialog")?.open) return;
     if (isInput) activeEl.blur();
     return;
@@ -1743,6 +2245,9 @@ window.addEventListener("keydown", (e) => {
   } else if (e.key === "k" || e.key === "K") {
     e.preventDefault();
     updateActiveStory(activeStoryIndex - 1);
+  } else if (e.key === "Enter" && activeStoryIndex >= 0 && activeStoryIndex < cards.length && $("dossier-drawer")?.hidden) {
+    e.preventDefault();
+    cards[activeStoryIndex]?.querySelector(".card-dossier-btn")?.click();
   } else if ((e.key === "p" || e.key === "P") && activeStoryIndex >= 0 && activeStoryIndex < cards.length) {
     e.preventDefault();
     cards[activeStoryIndex]?.querySelector(".pin-button")?.click();
