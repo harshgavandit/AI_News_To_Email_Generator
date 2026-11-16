@@ -199,3 +199,24 @@ def test_archive_upgrade_backfills_legacy_rows_and_keeps_canonical_owner(legacy_
     assert store.pinned_articles(["legacy"])[0]["source_id"] == "anthropic-research"
     store.engine.dispose()
     engine.dispose()
+
+
+def test_archive_relevance_upgrade_hides_non_technical_community_posts(legacy_archive):
+    store = Store(legacy_archive)
+    store.migrate()
+    posts = [story("dev-community", "technical", "A Python guide to logging"),
+             story("dev-latest", "local-ad", "Emergency towing and battery jump starts",
+                   description="Our local towing service is available every day.")]
+    for post in posts:
+        store.ingest(post["source_id"], [post], True)
+    with store.engine.begin() as conn:
+        conn.execute(text("ALTER TABLE brief_articles DROP COLUMN community_relevant"))
+    store._discovery_ready = False
+    store.ensure_discovery_schema()
+    page = store.page(hours=24, source="dev", query="", kind="all", publisher="", limit=10, cursor=None)
+    assert page["total"] == 1
+    assert [item["id"] for item in page["articles"]] == ["technical"]
+    assert store.article("local-ad") is None
+    with store.engine.connect() as conn:
+        assert conn.scalar(text("SELECT COUNT(*) FROM brief_articles")) == 2
+    store.engine.dispose()

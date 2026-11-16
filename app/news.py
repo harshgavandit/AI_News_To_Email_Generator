@@ -15,6 +15,7 @@ import httpx
 from app.sources import DEFAULT_SOURCES, Source
 from app.sanitation import sanitize_story_excerpt, sanitize_text
 from app.article_metadata import metadata_for
+from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 
 # Compatibility for the original read_feed helper and tests.
 ALLOWED_DOMAINS = {s.group: set(s.hosts) for s in DEFAULT_SOURCES}
@@ -201,6 +202,8 @@ def read_feed(task):
                     "author": entry.get("author") or s.author_name,
                     "thumbnail_url": image, "original_url": entry.get("link") if s.id == "hacker-news" else None,
                     "discussion_url": url if s.id == "hacker-news" else None}))
+                if s.id in GENERAL_DEV_FEEDS and not dev_article_in_scope(story_record):
+                    continue
                 articles[article_id] = story_record
             except (ValueError, TypeError, OverflowError, AttributeError, IndexError):
                 continue

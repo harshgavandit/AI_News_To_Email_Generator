@@ -15,6 +15,8 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
 - `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
 
+The two broad DEV streams require a technical title, excerpt, or topic tag. The archive applies the same rule to previously retained posts, so search totals, recommendations, and reading details exclude out-of-scope records.
+
 ## Reading and recommendations
 
 `GET /api/articles/{article_id}` returns an enabled, retained article, up to five related articles, a reading notice, and the source excerpt with `limited_source: true`. When an active, owner-approved reading permission exists, `reading` contains sanitized HTML, plain text and attribution; otherwise it is `null`. Missing or paused-source articles return `404`. Detail responses are `no-store` so withdrawn permissions are checked on the next read. There is no arbitrary URL fetch or automatic article extraction. The frontend uses `/?article=<id>#reading-room` for shareable reader links. These links resolve while the record remains in the archive (currently 90 days).

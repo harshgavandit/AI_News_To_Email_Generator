@@ -55,7 +55,9 @@ def test_official_dev_api_validates_fields_and_deduplicates_with_rss(monkeypatch
                 "canonical_url": "https://author.example/rust", "tag_list": ["rust", "opensource"],
                 "comments_count": 4, "public_reactions_count": 12, "reading_time_minutes": 5},
                {"title": "Unsafe URL", "url": "https://dev.to.evil.example/x"},
-               {"title": "Malformed date", "url": "https://dev.to/user/x", "published_at": "invalid"}]
+               {"title": "Malformed date", "url": "https://dev.to/user/x", "published_at": "invalid"},
+               {"title": "Emergency towing and battery jump starts", "url": "https://dev.to/user/local-ad",
+                "published_at": datetime.now(UTC).isoformat(), "tag_list": ["local", "services"]}]
     monkeypatch.setattr(news, "fetch_bytes", lambda _: json.dumps(payload).encode())
     rows, status = news.read_feed(BY_ID["dev-community"])
     assert status["available"] and len(rows) == 1

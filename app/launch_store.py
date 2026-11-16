@@ -18,6 +18,7 @@ from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
 from app.article_metadata import metadata_for, restore_metadata
+from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 
 schema = MetaData()
 articles = Table("brief_articles", schema,
@@ -27,9 +28,10 @@ articles = Table("brief_articles", schema,
     Column("publisher", String(140), nullable=False), Column("kind", String(24), nullable=False),
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
-    Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text))
+    Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
+    Column("community_relevant", Boolean))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
-                     articles.c.metadata_json, articles.c.subject_keys)
+                     articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -94,13 +96,15 @@ def discovery_fields(article):
     publisher = " ".join([article["publisher"], metadata.get("author", ""), *metadata.get("tags", [])])
     return {"topic": topic_for(article), "search_title": search_text(article["title"]),
             "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
-            "subject_keys": "|" + "|".join(subjects_for(article)) + "|"}
+            "subject_keys": "|" + "|".join(subjects_for(article)) + "|",
+            "community_relevant": (dev_article_in_scope(article) if article["source_id"] in GENERAL_DEV_FEEDS else None)}
 
 
 def backfill_discovery(conn):
     stmt = select(*(articles.c[key] for key in ("id", "source_id", "source", "title", "description", "publisher",
-                                               "category", "kind", "metadata_json"))).where(
-                                                   or_(articles.c.topic.is_(None), articles.c.subject_keys.is_(None)))
+                                               "category", "kind", "metadata_json"))).where(or_(
+        articles.c.topic.is_(None), articles.c.subject_keys.is_(None),
+        and_(articles.c.source_id.in_(GENERAL_DEV_FEEDS), articles.c.community_relevant.is_(None))))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
         conn.execute(patch, [{"article_id": row["id"], **discovery_fields(restore_metadata(row))} for row in rows])
@@ -234,6 +238,7 @@ class Store:
         cutoff = (now - timedelta(hours=hours)).isoformat()
         stmt = select(articles).outerjoin(sources, articles.c.source_id == sources.c.id).where(
             articles.c.published_at.between(cutoff, now.isoformat()),
+            articles.c.community_relevant.is_not(False),
             or_(sources.c.enabled.is_(True), sources.c.enabled.is_(None)))
         if source != "all":
             stmt = stmt.where(or_(articles.c.source == source, articles.c.source_id == source))

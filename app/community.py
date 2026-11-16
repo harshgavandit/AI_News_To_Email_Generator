@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import json
+import re
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -12,6 +13,29 @@ from app.sanitation import sanitize_story_excerpt, sanitize_text
 HN_BASE = "https://hacker-news.firebaseio.com/v0"
 HEADERS = {"User-Agent": "InformaAI/1.0 (+https://github.com/harshgavandit/AI_News_To_Email_Generator)",
            "Accept": "application/json"}
+GENERAL_DEV_FEEDS = frozenset({"dev-community", "dev-latest"})
+DEV_TECH_TERMS = re.compile(
+    r"\b(?:software|programming|developer|coding|debugging|algorithms?|compilers?|"
+    r"python|javascript|typescript|golang|rust|java|kotlin|swift|php|ruby|"
+    r"react|angular|svelte|next\.js|webassembly|frontend|backend|api|"
+    r"android|ios|web accessibility|screen readers?|design systems?|"
+    r"databases?|postgres(?:ql)?|sqlite|mysql|mongodb|redis|sql|"
+    r"devops|docker|kubernetes|linux|open[ -]?source|git(?:hub|lab)?|"
+    r"cloud|serverless|distributed systems?|cybersecurity|vulnerabilit(?:y|ies)|encryption|"
+    r"ai|llms?|machine learning|artificial intelligence|chatgpt|"
+    r"robotics|semiconductors?|risc[ -]v|firmware|embedded systems?)\b", re.I,
+)
+DEV_TECH_TAGS = frozenset({"webdev", "machinelearning", "datascience", "computerscience",
+                           "csharp", "cpp", "go", "node", "nodejs", "dotnet", "aws", "azure",
+                           "security", "testing", "opensource", "programming", "cloudcomputing"})
+
+
+def dev_article_in_scope(article):
+    """The mixed DEV streams can carry non-technical posts and local ads."""
+    if DEV_TECH_TERMS.search(f"{article['title']} {article.get('description', '')}"):
+        return True
+    tags = set(metadata_for(article).get("tags", ()))
+    return bool(tags & DEV_TECH_TAGS or any(DEV_TECH_TERMS.fullmatch(tag) for tag in tags))
 
 
 def record(source, title, url, published, description="", **metadata):
@@ -35,25 +59,28 @@ def read_dev(source, fetch):
     if not isinstance(payload, list):
         raise ValueError("Invalid DEV response")
     records = []
+    valid_record = False
     for item in payload[:100]:
         try:
             if not isinstance(item, dict) or not str(item.get("url", "")).startswith("https://dev.to/"):
                 continue
             user = item.get("user") or {}
             username = user.get("username", "") if isinstance(user, dict) else ""
-            import re
             profile = f"https://dev.to/{username}" if re.fullmatch(r"[A-Za-z0-9_-]{1,80}", username) else ""
             tags = item.get("tag_list") or []
             if not isinstance(tags, list):
                 tags = []
-            records.append(record(source, item["title"], item["url"], item["published_at"], item.get("description", ""),
+            article = record(source, item["title"], item["url"], item["published_at"], item.get("description", ""),
                 author=user.get("name", "") if isinstance(user, dict) else "", author_url=profile, tags=tags,
                 original_url=item.get("canonical_url"), thumbnail_url=item.get("cover_image"),
                 points=item.get("public_reactions_count"), comments_count=item.get("comments_count"),
-                reading_time_minutes=item.get("reading_time_minutes")))
+                reading_time_minutes=item.get("reading_time_minutes"))
+            valid_record = True
+            if source.id not in GENERAL_DEV_FEEDS or dev_article_in_scope(article):
+                records.append(article)
         except (ValueError, TypeError, KeyError, OverflowError):
             continue
-    if payload and not records:
+    if payload and not valid_record:
         raise ValueError("No eligible DEV articles")
     return records
 

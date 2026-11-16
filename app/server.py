@@ -64,10 +64,10 @@ MAX_REQUEST_BYTES = 100_000
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
-_digest_cache = Cache("digest-v9")
-_news_cache = Cache("news-v14")
+_digest_cache = Cache("digest-v10")
+_news_cache = Cache("news-v15")
 _headline_cache = Cache("headlines-v5")
-_trending_cache = Cache("trending-v3")
+_trending_cache = Cache("trending-v4")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
