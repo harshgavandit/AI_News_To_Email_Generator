@@ -211,6 +211,7 @@ DEFAULT_SOURCES = (
     article_feed("medium-programming", "Medium Programming", "https://medium.com/feed/tag/programming", group="medium"),
     article_feed("dev-architecture", "DEV Community Architecture", "https://dev.to/feed/tag/architecture", "dev.to", group="dev"),
     article_feed("dev-security", "DEV Community Security", "https://dev.to/feed/tag/security", "dev.to", group="dev", topic="security"),
+    article_feed("hashnode", "Hashnode Community", "https://townhall.hashnode.com/rss.xml", "townhall.hashnode.com", group="hashnode", topic="software"),
     article_feed("freecodecamp", "freeCodeCamp", "https://www.freecodecamp.org/news/rss/", "freecodecamp.org"),
     article_feed("towards-data-science", "Towards Data Science", "https://towardsdatascience.com/feed/", "towardsdatascience.com", topic="ai"),
     article_feed("martin-fowler", "Martin Fowler", "https://martinfowler.com/feed.atom", "martinfowler.com"),
