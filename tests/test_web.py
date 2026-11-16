@@ -75,6 +75,13 @@ def test_health_has_no_credentials(client):
     assert response.headers["cache-control"] == "no-store"
 
 
+def test_trending_returns_topics(client, article, monkeypatch):
+    monkeypatch.setattr(server, "collect_news", lambda: {"articles": [article], "sources": []})
+    response = client.get("/api/trending")
+    assert response.status_code == 200
+    assert "trending" in response.json()
+
+
 def test_missing_configuration(client, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY")
     assert client.post("/api/digest", json={}).status_code == 503
