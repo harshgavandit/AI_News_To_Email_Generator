@@ -16,6 +16,7 @@ COVERAGE_TYPES = {
     "publisher": "Official publications",
     "advisory": "Security advisories",
     "preprint": "Research preprints",
+    "journal": "Research journals",
     "status": "Service status",
     "discussion": "Community discussion",
     "article": "Articles & tutorials",

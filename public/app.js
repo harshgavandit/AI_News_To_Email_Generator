@@ -929,7 +929,13 @@ async function loadRecommendations() {
 }
 
 async function loadNews(append = false, force = false) {
-  if (state.view === "saved") return;
+  if (state.view === "saved") {
+    state.controller?.abort();
+    state.updateCheck?.abort();
+    $("stories").setAttribute("aria-busy", "false");
+    renderStories();
+    return;
+  }
   clearTimeout(searchTimer);
   const searching = Boolean($("search").value.trim());
   if ($("sort").value === defaultSort(state.searching)) $("sort").value = defaultSort(searching);
@@ -2055,13 +2061,35 @@ function syncFollowActions() {
   $("dossier-follow-publication").setAttribute("aria-pressed", String(publication));
 }
 
-async function loadArticleDetails(article) {
+function renderDossierLinks(id, stories) {
+  $(id).replaceChildren(...stories.map((story) => {
+    const button = node("button", "related-story");
+    button.type = "button";
+    const title = node("strong", "", story.title);
+    title.lang = story.language || "";
+    title.dir = story.language === "ar" ? "rtl" : "auto";
+    button.append(title, node("span", "", `${story.publisher} · ${relativeTime(story.published_at)}`));
+    if (story.related_reason) button.append(node("span", "related-reason", story.related_reason));
+    button.addEventListener("click", () => {
+      const existing = dossier.articles.findIndex((item) => item.id === story.id);
+      if (existing < 0) dossier.articles.push(story);
+      dossier.index = existing < 0 ? dossier.articles.length - 1 : existing;
+      renderDossier();
+      $("dossier-title").focus({ preventScroll: true });
+    });
+    return button;
+  }));
+  $(`${id}-section`).hidden = !stories.length;
+}
+
+async function loadArticleDetails(article, details) {
   dossier.controller?.abort();
   const controller = dossier.controller = new AbortController();
-  $("dossier-related-section").hidden = true;
-  $("dossier-related").replaceChildren();
+  dossier.coverage = [];
+  renderDossierLinks("dossier-related", []);
+  renderDossierLinks("dossier-matches", []);
   try {
-    const data = await request(`/api/articles/${encodeURIComponent(article.id)}`, { signal: controller.signal });
+    const data = details || await request(`/api/articles/${encodeURIComponent(article.id)}`, { signal: controller.signal });
     if (dossier.controller !== controller || dossier.article?.id !== article.id) return;
     Object.assign(article, { author: data.article.author, author_key: data.article.author_key,
       author_url: data.article.author_url, reading_access: data.article.reading_access });
@@ -2077,22 +2105,10 @@ async function loadArticleDetails(article) {
         node("p", "dossier-reading-notice", `Shared with permission · ${data.reading.attribution}`),
         ...readingContent(data.reading.html));
     }
-    const container = $("dossier-related");
-    for (const related of data.related || []) {
-      const button = node("button", "related-story");
-      button.type = "button";
-      button.append(node("strong", "", related.title), node("span", "", `${related.publisher} · ${relativeTime(related.published_at)}`));
-      if (related.related_reason) button.append(node("span", "related-reason", related.related_reason));
-      button.addEventListener("click", () => {
-        const existing = dossier.articles.findIndex((item) => item.id === related.id);
-        if (existing < 0) dossier.articles.push(related);
-        dossier.index = existing < 0 ? dossier.articles.length - 1 : existing;
-        renderDossier();
-        $("dossier-title").focus({ preventScroll: true });
-      });
-      container.append(button);
-    }
-    $("dossier-related-section").hidden = !container.children.length;
+    dossier.coverage = data.coverage || [];
+    const coverageIds = new Set(dossier.coverage.map((story) => story.id));
+    renderDossierLinks("dossier-matches", dossier.coverage);
+    renderDossierLinks("dossier-related", (data.related || []).filter((story) => !coverageIds.has(story.id)));
   } catch (error) {
     if (error.name !== "AbortError" && dossier.article?.id === article.id)
       status("dossier-feedback", "Related coverage could not be loaded. The original source remains available.");
@@ -2107,13 +2123,13 @@ async function openLinkedArticle() {
   try {
     const data = await request(`/api/articles/${encodeURIComponent(id)}`);
     if (new URLSearchParams(location.search).get("article") === id)
-      openDossier(data.article, $("cmd-palette-btn"));
+      openDossier(data.article, $("cmd-palette-btn"), data);
   } catch (error) {
     status("news-status", error.message, true);
   }
 }
 
-function openDossier(article, trigger) {
+function openDossier(article, trigger, details) {
   if (!article || $("dossier-drawer").open) return;
   dossier.trigger = trigger;
   dossier.openerId = String(article.id);
@@ -2123,12 +2139,12 @@ function openDossier(article, trigger) {
     dossier.articles = [article];
     dossier.index = 0;
   }
-  renderDossier();
+  renderDossier(details);
   $("dossier-drawer").showModal();
   $("dossier-title").focus({ preventScroll: true });
 }
 
-function renderDossier() {
+function renderDossier(details) {
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
   const topic = article.category || article.topic;
@@ -2200,7 +2216,7 @@ function renderDossier() {
   const url = new URL(location.href);
   url.searchParams.set("article", article.id);
   history.replaceState(null, "", url);
-  loadArticleDetails(article);
+  loadArticleDetails(article, details);
 }
 
 function syncDossierActions() {
@@ -2251,6 +2267,22 @@ $("dossier-follow-author").addEventListener("click", () => {
 $("dossier-follow-publication").addEventListener("click", () => {
   status("dossier-feedback", preferences.togglePublication(dossier.article));
   syncFollowActions();
+});
+$("dossier-coverage-brief").addEventListener("click", () => {
+  if (!dossier.article || !dossier.coverage.length) return;
+  const newPins = [dossier.article, ...dossier.coverage].filter((story) => !state.pins.has(String(story.id)));
+  if (state.pins.size + newPins.length > 10) {
+    status("dossier-feedback", "Free up pin slots in your brief to add this coverage.", true);
+    return;
+  }
+  for (const story of newPins) state.pins.set(String(story.id), story);
+  if (state.pins.size > Number($("article-count").value))
+    $("article-count").value = state.pins.size <= 5 ? "5" : "10";
+  renderPins();
+  renderStories();
+  $("dossier-drawer").close();
+  openBuilder("build", $("nav-builder"));
+  status("pin-status", `${state.pins.size} stories pinned to your brief.`);
 });
 $("dossier-summarize").addEventListener("click", async () => {
   const article = dossier.article;

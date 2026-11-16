@@ -37,6 +37,8 @@ export const languageOptions = {
   "pt-BR": "Portuguese (Brazil)",
   "es-MX": "Spanish (Mexico)",
   "es-ES": "Spanish (Spain)",
+  "es-419": "Spanish (Latin America)",
+  nl: "Dutch",
   "zh-CN": "Chinese (Simplified)",
   "zh-TW": "Chinese (Traditional)",
   ar: "Arabic",
@@ -51,6 +53,7 @@ export const coverageLabels = {
   release: "Release notes",
   advisory: "Security advisory",
   preprint: "Research preprint",
+  journal: "Research journal",
   status: "Official status",
 };
 

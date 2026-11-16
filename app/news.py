@@ -7,6 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
@@ -67,6 +68,20 @@ def feed_failure(status_code):
     if status_code >= 500:
         return "upstream_unavailable"
     return "fetch_failed"
+
+
+def http_failure(error):
+    response = error.response
+    status = {"error": feed_failure(response.status_code)}
+    if response.status_code in (429, 503):
+        value = response.headers.get("Retry-After", "").strip()
+        try:
+            delay = int(value) if value.isascii() and value.isdecimal() else (
+                parsedate_to_datetime(value).timestamp() - time.time())
+            status["retry_after"] = max(0, min(86400, delay))
+        except (ValueError, TypeError, OverflowError, OSError):
+            pass
+    return status
 
 
 def canonical_url(url, *, medium=False):
@@ -150,10 +165,15 @@ def read_feed(task, *, validators=None):
         if status["available"]:
             return items, status
         fallback = {"hacker-news-api": "https://news.ycombinator.com/rss", "dev-api": "https://dev.to/feed"}.get(task.integration)
+        if task.integration == "dev-api" and (status.get("error") == "rate_limited" or status.get("retry_after")):
+            return [], status  # DEV's API and RSS endpoint share the same host.
         if fallback:
             items, fallback_status = read_feed(replace(task, url=fallback, integration="rss"))
             if fallback_status["available"]:
                 return items, {**fallback_status, **task.public(), "transport": "official-rss-fallback"}
+            if task.integration == "dev-api" and (fallback_status.get("retry_after") or
+                                                  fallback_status.get("error") == "rate_limited"):
+                return [], {**fallback_status, **task.public()}
         return [], status
     if isinstance(task, Source):
         s = task
@@ -243,7 +263,7 @@ def read_feed(task, *, validators=None):
         return list(articles.values()), dict(status, available=True, count=len(articles),
             latest_published_at=max((article["published_at"] for article in articles.values()), default=None))
     except httpx.HTTPStatusError as error:
-        return [], dict(status, error=feed_failure(error.response.status_code))
+        return [], {**status, **http_failure(error)}
     except (httpx.HTTPError, ValueError, OSError):
         return [], dict(status, error="fetch_failed")
 
@@ -261,13 +281,19 @@ def collect_news(*, force=False):
     with _lock:
         cache_age = time.monotonic() - _refreshed
         if not _cache or cache_age >= (30 if force else 300):
-            enabled = [s for s in DEFAULT_SOURCES if s.enabled]
+            now = datetime.now(timezone.utc).isoformat()
+            enabled = [s for s in DEFAULT_SOURCES if s.enabled and (
+                _cache.get(s.id, ([], {}))[1].get("retry_at") or "") <= now]
             with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
                 for s, (articles, status) in zip(enabled, pool.map(safe_read_feed, enabled)):
-                    checked_at = datetime.now(timezone.utc).isoformat()
+                    checked = datetime.now(timezone.utc)
+                    checked_at = checked.isoformat()
                     previous_articles, previous_status = _cache.get(s.id, ([], {}))
                     status["checked_at"] = checked_at
                     status["last_success"] = checked_at if status["available"] else previous_status.get("last_success")
+                    delay = max(status.get("retry_after", 0), 900 if status.get("error") == "rate_limited" else 0)
+                    if delay:
+                        status["retry_at"] = (checked + timedelta(seconds=delay)).isoformat()
                     if not status["available"]:
                         articles = previous_articles
                         status["count"] = len(articles)

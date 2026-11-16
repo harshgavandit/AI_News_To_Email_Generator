@@ -11,8 +11,10 @@ FRESH_FOR = timedelta(minutes=45)
 
 def refresh_sources(store, only=None, *, source_ids=None):
     state = store.source_state(include_archive=False)
+    now = datetime.now(UTC).timestamp()
     active = [s for s in DEFAULT_SOURCES if (only is None or s.id == only)
               and state.get(s.id, {}).get("enabled", s.enabled)
+              and (state.get(s.id, {}).get("retry_at") or 0) <= now
               and (source_ids is None or s.id in source_ids)]
     validators = store.current_feed_validators() if any(feed.integration == "rss" for feed in active) else {}
     with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
@@ -35,7 +37,8 @@ def refresh_sources(store, only=None, *, source_ids=None):
             source = futures[future]
             store.ingest(source.id, items, status["available"], status.get("error"),
                          feed_url=source.url if source.integration == "rss" else None,
-                         validators=status.get("validators"), unchanged=status.get("unchanged", False))
+                         validators=status.get("validators"), unchanged=status.get("unchanged", False),
+                         retry_after=status.get("retry_after", 0))
     if only is None and source_ids is None:
         store.prune()
     return source_catalog(store)
@@ -43,7 +46,8 @@ def refresh_sources(store, only=None, *, source_ids=None):
 
 def source_catalog(store=None, *, include_archive=True):
     states = store.source_state(include_archive=include_archive) if store else {}
-    cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
+    now = datetime.now(UTC)
+    cutoff = (now - FRESH_FOR).isoformat()
     result = []
     for s in DEFAULT_SOURCES:
         state = states.get(s.id, {})
@@ -54,6 +58,8 @@ def source_catalog(store=None, *, include_archive=True):
         feed["retained_count"] = state.get("retained_count", 0)
         if state.get("error"):
             feed["error"] = state["error"]
+        if feed["enabled"] and (state.get("retry_at") or 0) > now.timestamp():
+            feed["retry_at"] = timestamp(state["retry_at"])
         feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
         result.append(feed)
     return result

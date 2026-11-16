@@ -49,6 +49,45 @@ def test_metadata_survives_archive_without_html_bodies_or_unreviewed_images(tmp_
     store.engine.dispose()
 
 
+@pytest.mark.parametrize("with_archive", [True, False])
+def test_reader_compares_recent_coverage_without_merging_individual_articles(monkeypatch, tmp_path, with_archive):
+    headline = "Northstar recalls 200 Falcon battery packs after overheating reports"
+    rows = [story("lead", source_id="the-verge", title=headline),
+            story("match", source_id="ars-technica", title=headline + " surface"),
+            story("same-publisher", source_id="the-verge", title=headline),
+            story("old", source_id="bbc-tech", title=headline, age=80),
+            story("different-number", source_id="bbc-tech", title=headline.replace("200", "500")),
+            story("post", source_id="dev-community", title=headline + " in a Python simulator"),
+            story("other", source_id="wired", title="Northstar ships a smaller Falcon battery pack")]
+    store = Store(f"sqlite:///{tmp_path / 'compare.db'}") if with_archive else None
+    if store:
+        for item in rows:
+            store.ingest(item["source_id"], [item], True)
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(server, "collect_news", lambda: {"articles": rows, "sources": []})
+    client = TestClient(server.app)
+    response = client.get("/api/articles/lead")
+    assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
+    matches = response.json()["coverage"]
+    assert [item["id"] for item in matches] == ["match"]
+    assert matches[0]["related_reason"] == "Closely matching headlines"
+    assert matches[0]["url"] == rows[1]["url"]
+    reverse = client.get("/api/articles/match").json()["coverage"]
+    assert [item["source_id"] for item in reverse] == ["the-verge"]
+    if store:
+        store.enable("ars-technica", False)
+        assert client.get("/api/articles/lead").json()["coverage"] == []
+        store.engine.dispose()
+
+
+def test_common_headline_words_do_not_create_related_coverage(monkeypatch):
+    rows = [story("robotaxi", source_id="techcrunch", title="Zoox robotaxis are now on the Uber app in Las Vegas"),
+            story("unrelated", source_id="dev-community", title="Muse Spark models are now live on Google Cloud")]
+    monkeypatch.setattr(server, "get_store", lambda: None)
+    monkeypatch.setattr(server, "collect_news", lambda: {"articles": rows, "sources": []})
+    assert TestClient(server.app).get("/api/articles/robotaxi").json()["related"] == []
+
+
 def test_official_dev_api_validates_fields_and_deduplicates_with_rss(monkeypatch):
     payload = [{"title": "Learn Rust", "url": "https://dev.to/author/rust", "published_at": datetime.now(UTC).isoformat(),
                 "description": "Memory safety and ownership.", "user": {"name": "A Developer"},
@@ -280,3 +319,18 @@ def test_community_api_failure_falls_back_only_to_official_rss(monkeypatch):
     rows, status = news.read_feed(BY_ID["dev-community"])
     assert rows == [] and status["available"] and status["transport"] == "official-rss-fallback"
     assert calls == [BY_ID["dev-community"].url, "https://dev.to/feed"]
+
+
+def test_dev_rss_fallback_can_defer_next_api_attempt(monkeypatch):
+    def fetch(url):
+        if url == BY_ID["dev-community"].url:
+            raise httpx.ConnectError("Upstream unavailable")
+        request = httpx.Request("GET", url)
+        response = httpx.Response(429, request=request, headers={"Retry-After": "1200"})
+        response.raise_for_status()
+
+    monkeypatch.setattr(news, "fetch_bytes", fetch)
+    rows, status = news.read_feed(BY_ID["dev-community"])
+    assert not rows and not status["available"]
+    assert status["feed_url"] == BY_ID["dev-community"].url
+    assert status["error"] == "rate_limited" and status["retry_after"] == 1200

@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from threading import Barrier
+from types import SimpleNamespace
 
 import pytest
 import httpx
@@ -8,6 +9,31 @@ from fastapi.testclient import TestClient
 
 from app import ingestion, launch_store, news, server
 from app.sources import BY_ID
+
+
+def test_direct_feed_rate_limits_preserve_previous_records(monkeypatch):
+    source = BY_ID["bbc-tech"]
+    monkeypatch.setattr(news, "DEFAULT_SOURCES", (source,))
+    monkeypatch.setattr(news, "_cache", {})
+    monkeypatch.setattr(news, "_refreshed", 0)
+    clock = iter((1000, 1000, 1301, 1301, 1602, 1602))
+    monkeypatch.setattr(news, "time", SimpleNamespace(monotonic=lambda: next(clock)))
+    item = {"id": "previous", "published_at": datetime.now(UTC).isoformat()}
+    replies = iter([([item], {"available": True}),
+                    ([], {"available": False, "error": "rate_limited", "retry_after": 900})])
+    attempts = []
+
+    def fetch(feed):
+        attempts.append(feed.id)
+        return next(replies)
+
+    monkeypatch.setattr(news, "safe_read_feed", fetch)
+    assert news.collect_news()["articles"] == [item]
+    for _ in range(2):
+        result = news.collect_news()
+        assert result["articles"] == [item]
+        assert result["sources"][0]["retry_at"] > result["sources"][0]["checked_at"]
+    assert attempts == [source.id, source.id]
 
 
 @pytest.fixture
@@ -86,6 +112,38 @@ def test_readiness_fails_when_no_feed_has_succeeded(archive):
     assert response.status_code == 503
     assert response.json()["freshness"]["status"] == "pending"
     assert client.get("/api/health").status_code == 200
+
+
+def test_retry_after_is_persisted_and_scoped_to_the_failed_feed(archive, monkeypatch):
+    store, client = archive
+    bbc, guardian = BY_ID["bbc-tech"], BY_ID["guardian-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (bbc, guardian))
+    store.ingest(bbc.id, [], True)
+    calls = []
+
+    def fetch(source, **kwargs):
+        calls.append(source.id)
+        if calls.count(bbc.id) == 1 and source == bbc:
+            response = httpx.Response(429, headers={"Retry-After": "3600"}, request=httpx.Request("GET", source.url))
+            error = httpx.HTTPStatusError("rate limited", request=response.request, response=response)
+            return [], {"available": False, **news.http_failure(error)}
+        return [], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    first = {feed["id"]: feed for feed in ingestion.refresh_sources(store)}
+    assert first[bbc.id]["last_success"] and first[bbc.id]["error"] == "rate_limited"
+    assert datetime.fromisoformat(first[bbc.id]["retry_at"]) > datetime.now(UTC) + timedelta(minutes=55)
+    second_worker = launch_store.Store(str(store.engine.url))
+    ingestion.refresh_sources(second_worker)
+    assert calls.count(bbc.id) == 1 and calls.count(guardian.id) == 2
+    assert not client.get(f"/api/news?publisher={bbc.id}&force=true").json().get("refresh_requested")
+
+    with store.engine.begin() as conn:
+        conn.execute(launch_store.feed_retries.update().values(retry_at=0))
+    final = {feed["id"]: feed for feed in ingestion.refresh_sources(second_worker)}
+    assert final[bbc.id]["freshness"] == "fresh" and "retry_at" not in final[bbc.id]
+    assert store.source_state()[bbc.id]["retry_at"] is None
+    second_worker.engine.dispose()
 
 
 def test_conditional_refresh_preserves_articles_through_not_modified_and_outage(archive, monkeypatch):

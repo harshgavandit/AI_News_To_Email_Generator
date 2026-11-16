@@ -89,6 +89,8 @@ function sourceRow(source) {
     const successful = timestamp(source.last_success, "Last success");
     if (successful) health.append(successful);
   }
+  const retry = source.retry_at && new Date(source.retry_at) > new Date() ? timestamp(source.retry_at, "Retry after") : null;
+  if (retry) health.append(retry);
   const published = timestamp(source.latest_published_at, "Latest story");
   if (published) health.append(published);
   else if (source.checked_at && source.available) health.append(node("span", "directory-timestamp", "No retained stories"));

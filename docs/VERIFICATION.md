@@ -1,5 +1,12 @@
 # Informa AI verification
 
+## Coverage comparison and archive reliability — November 16, 2026
+
+- The enabled integrations returned 5,518 source records from 165 public RSS and API endpoints in one audit. The seven added feeds returned 104 eligible records. A separate ingest into a disposable PostgreSQL archive retained 4,234 stories after canonical replacement and pruning. All 165 sources passed the archive readiness check.
+- Live-fed local API checks covered ranked cursor pagination, Arabic publisher filtering, the journal filter, personalized recommendations, trending topics, and a two-source brief with HTML and Markdown exports. PostgreSQL used `brief_articles_search_trgm` on the observed `kubernetes` substring query. This measures one local query and dataset.
+- Desktop browser checks opened related reporting on the Zoox launch, pinned three displayed reports into the brief composer, and reopened a saved article after a fresh navigation. At 375 CSS pixels, an Arabic article rendered right to left, the reader and page matched the viewport width, and the journal filter returned stories.
+- Python 3.12 and 3.14 passed 208 tests each, including the disposable PostgreSQL cases. The six browser client tests, static asset build, and lint checks passed. Regression coverage includes false related matches, mismatched headline numbers, paused sources, shared retry state, and partial Hashnode rate limits. The validation used public feeds and a disposable archive. Live OpenAI synthesis, email delivery, and production promotion were outside this check.
+
 ## Regional discovery and feed synchronization — November 16, 2026
 
 - The public source audit parsed 5,421 records from all 158 reviewed integrations in 27.99 seconds before archive deduplication and date filtering. The five added feeds were entARABI Arabic, TechNews Taiwan Semiconductors, Xataka España, Numerama, and the CNCF blog. Counts measure a single audit, and availability and publication recency can change independently.

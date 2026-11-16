@@ -78,11 +78,14 @@ test('actual Reading Room module opens permitted text, follows its author and re
     source: 'medium', source_id: 'medium-codex', publisher: 'CodeX on Medium', sourceName: 'CodeX on Medium',
     url: 'https://medium.com/codex/test', sourceUrl: 'https://medium.com/codex/test', published_at: new Date().toISOString(),
     topic: 'software', category: 'software', has_excerpt: true, author: 'A Writer', author_key: authorKey, subjects: ['cloud'] };
+  const coverage = { ...article, id: 'comparison', title: 'The same project covered elsewhere',
+    source: 'ars-technica', source_id: 'ars-technica', publisher: 'Ars Technica',
+    url: 'https://arstechnica.com/comparison', related_reason: 'Closely matching headlines' };
   let permitted = true;
   globalThis.fetch = async (url) => {
     const path = String(url);
     const data = path.startsWith('/api/news') ? { ...catalog, articles: [article], total: 1, sources: catalog.sources, facets: {} } :
-      path.startsWith('/api/articles/') ? { article: { ...article, reading_access: { mode: permitted ? 'full_text' : 'excerpt', label: permitted ? 'Full article · with permission' : 'Publisher excerpt' } }, related: [],
+      path.startsWith('/api/articles/') ? { article: { ...article, reading_access: { mode: permitted ? 'full_text' : 'excerpt', label: permitted ? 'Full article · with permission' : 'Publisher excerpt' } }, related: [coverage], coverage: [coverage],
         reading: permitted ? { html: '<p>Licensed body supplied by the author.</p>', attribution: 'A Writer' } : null,
         reading_notice: permitted ? 'Shared with permission.' : 'Publisher-supplied excerpt.' } :
       path === '/api/headlines' ? { articles: [], coverage: [] } : path === '/api/trending' ? { trending: [] } : {};
@@ -101,6 +104,11 @@ test('actual Reading Room module opens permitted text, follows its author and re
     await until(() => document.getElementById('dossier-reading-access').textContent === 'Publisher excerpt');
     assert.equal(document.getElementById('dossier-full-body').hidden, true);
     assert.equal(document.getElementById('dossier-full-body').textContent, '');
+    assert.equal(document.querySelectorAll('#dossier-matches .related-story').length, 1);
+    assert.equal(document.getElementById('dossier-related-section').hidden, true);
+    document.getElementById('dossier-coverage-brief').click();
+    assert.equal(document.getElementById('dossier-drawer').open, false);
+    assert.match(document.getElementById('pin-status').textContent, /2 stories pinned/);
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
@@ -136,6 +144,28 @@ test('For You sends the same search and filters shown in the Reading Room', asyn
     await until(() => requests.some(request => request.q === 'شركة ناشئة') &&
       document.getElementById('stories').getAttribute('aria-busy') === 'false');
     assert.equal(new URL(location.href).searchParams.get('q'), 'شركة ناشئة');
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
+test('opening the Saved view directly renders bookmarks from browser storage', async () => {
+  const env = mount(html, 'https://informa.test/?view=saved#reading-room');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    requests.push(String(url));
+    return new Response('{}', { status: 200 });
+  };
+  try {
+    localStorage.setItem('informa-saved-v1', JSON.stringify([{
+      id: 'saved-article', title: 'A saved engineering story', url: 'https://example.org/article',
+      publisher: 'Example', source: 'engineering', topic: 'software', category: 'software',
+      published_at: new Date().toISOString(),
+    }]));
+    await import(`../../public/app.js?saved=${Date.now()}`);
+    assert.equal(document.querySelector('#stories h3')?.textContent, 'A saved engineering story');
+    assert.equal(document.getElementById('view-saved').getAttribute('aria-pressed'), 'true');
+    assert(!requests.some(path => path.startsWith('/api/news')));
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 

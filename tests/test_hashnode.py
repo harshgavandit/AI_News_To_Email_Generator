@@ -80,6 +80,18 @@ def test_hashnode_partial_page_failure_keeps_successful_records(monkeypatch):
     assert status["available"] and len(rows) == 1
 
 
+def test_hashnode_partial_rate_limit_keeps_rows_and_returns_retry_window(monkeypatch):
+    def handler(request):
+        if json.loads(request.content)["variables"]["after"]:
+            return httpx.Response(429, headers={"Retry-After": "1800"})
+        return httpx.Response(200, json=page(post(), after="next"))
+
+    mock_client(monkeypatch, handler)
+    rows, status = news.read_feed(BY_ID["hashnode-discover"])
+    assert len(rows) == 1 and status["available"]
+    assert status["error"] == "rate_limited" and status["retry_after"] == 1800
+
+
 def test_hashnode_total_timeout_preserves_completed_pages(monkeypatch):
     real_timeout = asyncio.timeout
     monkeypatch.setattr(hashnode.asyncio, "timeout", lambda _: real_timeout(.05))

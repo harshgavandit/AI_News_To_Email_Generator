@@ -217,8 +217,11 @@ def test_archive_upgrade_backfills_legacy_rows_and_keeps_canonical_owner(legacy_
         with ThreadPoolExecutor(max_workers=2) as workers:
             list(workers.map(upgrade, range(2)))
     store = Store(legacy_archive)
-    store.migrate()
-    assert "brief_articles_topic_page" in {index["name"] for index in inspect(engine).get_indexes("brief_articles")}
+    search_index = store.migrate()
+    indexes = {index["name"] for index in inspect(engine).get_indexes("brief_articles")}
+    assert "brief_articles_topic_page" in indexes
+    if engine.dialect.name == "postgresql":
+        assert search_index == "trigram" and "brief_articles_search_trgm" in indexes
     store.ingest("anthropic-research", [dict(article, publisher="Anthropic Research")], True)
     page = store.page(hours=24, source="all", query="sao paulo", kind="all", publisher="", limit=12, cursor=None)
     assert [(row["id"], row["source_id"], row["topic"]) for row in page["articles"]] == [

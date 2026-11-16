@@ -144,5 +144,8 @@ def read_community(source, fetch):
     try:
         items = read_dev(source, fetch) if source.integration == "dev-api" else asyncio.run(hn_records(source))
         return items, dict(source.public(), available=True, count=len(items))
+    except httpx.HTTPStatusError as error:
+        from app.news import http_failure
+        return [], dict(source.public(), available=False, count=0, **http_failure(error))
     except (httpx.HTTPError, ValueError, TypeError, OSError, TimeoutError):
         return [], dict(source.public(), available=False, count=0, error="api_unavailable")

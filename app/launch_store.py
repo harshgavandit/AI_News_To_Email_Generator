@@ -9,10 +9,11 @@ from functools import lru_cache
 
 from sqlalchemy import (
     Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
-    and_, bindparam, case, create_engine, delete, func, inspect, literal, or_, select, tuple_, update,
+    and_, bindparam, case, create_engine, delete, func, inspect, literal, literal_column, or_, select, tuple_, update,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import DBAPIError
 
 from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
@@ -38,6 +39,9 @@ article_indexes = (
     Index("brief_articles_source_page", articles.c.source_id, articles.c.published_at, articles.c.id),
     Index("brief_articles_topic_page", articles.c.topic, articles.c.published_at, articles.c.id),
 )
+search_document = (func.coalesce(articles.c.search_title, literal_column("''")) + literal_column("' '")
+                   + func.coalesce(articles.c.search_description, literal_column("''")) + literal_column("' '")
+                   + func.coalesce(articles.c.search_publisher, literal_column("''")))
 sources = Table("brief_sources", schema,
     Column("id", String(64), primary_key=True), Column("enabled", Boolean, nullable=False, default=True),
     Column("available", Boolean, nullable=False, default=False), Column("count", Integer, nullable=False, default=0),
@@ -46,6 +50,9 @@ feed_validators = Table("brief_feed_validators", schema,
     Column("id", String(64), primary_key=True), Column("feed_url", Text, nullable=False),
     Column("resource_url", Text, nullable=False), Column("etag", String(512)), Column("last_modified", String(80)),
     Column("expires", Float, nullable=False))
+feed_retries = Table("brief_feed_retries", schema,
+    Column("id", String(64), primary_key=True), Column("failures", Integer, nullable=False),
+    Column("retry_at", Float, nullable=False))
 limits = Table("brief_limits", schema, Column("scope", String(150), primary_key=True),
     Column("bucket", String(30), primary_key=True), Column("used", Integer, nullable=False),
     Column("touched", Float, nullable=False))
@@ -114,6 +121,28 @@ def backfill_discovery(conn):
         conn.execute(patch, [{"article_id": row["id"], **discovery_fields(restore_metadata(row))} for row in rows])
 
 
+def install_search_index(conn):
+    """Index the same normalized substring predicate used by regular search."""
+    try:
+        with conn.begin_nested():
+            conn.exec_driver_sql("SET LOCAL lock_timeout = '5s'")
+            conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+            conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            namespace = conn.exec_driver_sql("""
+                SELECT n.nspname FROM pg_extension AS e
+                JOIN pg_namespace AS n ON n.oid = e.extnamespace WHERE e.extname = 'pg_trgm'
+            """).scalar_one()
+            operator_schema = conn.dialect.identifier_preparer.quote_identifier(namespace)
+            expression = search_document.compile(dialect=conn.dialect, compile_kwargs={"include_table": False})
+            conn.exec_driver_sql(f"CREATE INDEX IF NOT EXISTS brief_articles_search_trgm ON brief_articles "
+                                 f"USING gin (({expression}) {operator_schema}.gin_trgm_ops)")
+    except DBAPIError as error:
+        if getattr(error.orig, "sqlstate", None) not in {"42501", "0A000", "58P01", "55P03"}:
+            raise
+        return "unavailable"
+    return "trigram"
+
+
 class Store:
     def __init__(self, url):
         if url.startswith(("postgres://", "postgresql://")):
@@ -125,7 +154,7 @@ class Store:
         self.insert = pg_insert if self.engine.dialect.name == "postgresql" else sqlite_insert
         self._discovery_ready = False
         self._syndication_ready = False
-        self._feed_validators_ready = False
+        self._feed_state_ready = False
         self._schema_lock = threading.Lock()
         self._source_stats_lock = threading.Lock()
         self._source_stats = {}
@@ -164,6 +193,10 @@ class Store:
             for index in article_indexes:
                 index.create(conn, checkfirst=True)
             backfill_discovery(conn)
+        if self.engine.dialect.name == "postgresql":
+            with self.engine.begin() as conn:
+                return install_search_index(conn)
+        return "portable"
 
     def source_archive_stats(self):
         # Reuse the retained-article count across search requests. Availability
@@ -180,9 +213,11 @@ class Store:
             return self._source_stats
 
     def source_state(self, *, include_archive=True):
+        self.ensure_feed_state_schema()
         latest = self.source_archive_stats() if include_archive else {}
+        stmt = select(sources, feed_retries.c.retry_at).outerjoin(feed_retries, feed_retries.c.id == sources.c.id)
         with self.engine.connect() as conn:
-            return {row.id: {**dict(row._mapping), **latest.get(row.id, {})} for row in conn.execute(select(sources))}
+            return {row.id: {**dict(row._mapping), **latest.get(row.id, {})} for row in conn.execute(stmt)}
 
     def ensure_syndication_schema(self):
         if self._syndication_ready:
@@ -197,15 +232,23 @@ class Store:
             reading_permissions.create(conn, checkfirst=True)
         self._syndication_ready = True
 
-    def current_feed_validators(self):
-        if not self._feed_validators_ready:
+    def ensure_feed_state_schema(self):
+        if not self._feed_state_ready:
             with self._schema_lock, self.engine.begin() as conn:
-                if not inspect(conn).has_table(feed_validators.name):
+                tables = (feed_validators, feed_retries)
+                inspector = inspect(conn)
+                if not all(inspector.has_table(table.name) for table in tables):
                     if conn.dialect.name == "postgresql":
                         conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
                         conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
-                    feed_validators.create(conn, checkfirst=True)
-            self._feed_validators_ready = True
+                    else:
+                        conn.exec_driver_sql("BEGIN IMMEDIATE")
+                    for table in tables:
+                        table.create(conn, checkfirst=True)
+            self._feed_state_ready = True
+
+    def current_feed_validators(self):
+        self.ensure_feed_state_schema()
         with self.engine.connect() as conn:
             rows = conn.execute(select(feed_validators).where(feed_validators.c.expires > time.time())).mappings()
             return {row["id"]: dict(row) for row in rows}
@@ -219,7 +262,9 @@ class Store:
             stmt = self.insert(sources).values(id=source_id, enabled=enabled)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
 
-    def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None, unchanged=False):
+    def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None,
+               unchanged=False, retry_after=0):
+        self.ensure_feed_state_schema()
         if items and available:
             self.ensure_discovery_schema()
         now = time.time()
@@ -230,6 +275,7 @@ class Store:
             if unchanged:
                 conn.execute(update(sources).where(sources.c.id == source_id, sources.c.last_success.is_not(None))
                              .values(**state, last_success=now))
+                conn.execute(delete(feed_retries).where(feed_retries.c.id == source_id))
                 return
             if items and available:
                 stmt = self.insert(articles)
@@ -252,6 +298,17 @@ class Store:
                     where=changed), values)
             stmt = self.insert(sources).values(id=source_id, **state)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
+            if available:
+                conn.execute(delete(feed_retries).where(feed_retries.c.id == source_id))
+            if not available or retry_after or error == "rate_limited":
+                previous = conn.scalar(select(feed_retries.c.failures).where(feed_retries.c.id == source_id)) or 0
+                # The source upsert above serializes writes for this feed, including a recovery.
+                failures = min(previous + 1, 5)
+                delay = max(retry_after, (0, 300, 900, 1800, 3600)[failures - 1],
+                            900 if error == "rate_limited" else 0)
+                retry = {"failures": failures, "retry_at": now + delay}
+                attempt = self.insert(feed_retries).values(id=source_id, **retry)
+                conn.execute(attempt.on_conflict_do_update(index_elements=[feed_retries.c.id], set_=retry))
             if available and feed_url:
                 if validators:
                     data = {**validators, "feed_url": feed_url, "expires": now + 6 * 3600}
@@ -285,9 +342,7 @@ class Store:
             stmt = stmt.where(articles.c.subject_keys.contains(f"|{subject}|", autoescape=True))
         if query:
             terms = search_terms(query) or (query,)
-            text_columns = [articles.c[f"search_{key}"] for key in ("title", "description", "publisher")]
-            stmt = stmt.where(*(or_(*(column.contains(term, autoescape=True) for column in text_columns))
-                                for term in terms))
+            stmt = stmt.where(*(search_document.contains(term, autoescape=True) for term in terms))
         return stmt
 
     def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest",

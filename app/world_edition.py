@@ -17,7 +17,7 @@ PROVIDERS = {
     "cloudflare": r"\bcloudflare\b",
 }
 SCHEDULED_WORK = re.compile(r"\b(?:scheduled|planned) (?:maintenance|work)\b", re.I)
-REPORTING_PRIORITY = {"reporting": 2, "publisher": 1, "preprint": 1, "advisory": 1}
+REPORTING_PRIORITY = {"reporting": 2, "publisher": 1, "preprint": 1, "journal": 1, "advisory": 1}
 
 
 def incident_key(article):

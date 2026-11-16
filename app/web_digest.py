@@ -31,6 +31,7 @@ COVERAGE_LABELS = {
     "reporting": "Independent reporting",
     "publisher": "Publisher update",
     "preprint": "Research preprint",
+    "journal": "Research journal",
     "advisory": "Security advisory",
     "status": "Provider status",
     "discussion": "Community discussion",

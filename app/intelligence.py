@@ -35,8 +35,10 @@ SUBJECT_PATTERNS = {
 MATCHERS = {key: re.compile(rf"(?<!\w)(?:{value})(?!\w)", re.I) for key, value in SUBJECT_PATTERNS.items()}
 REFERENCE = re.compile(r"\b(?:CVE-\d{4}-\d{4,}|GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4})\b", re.I)
 GENERIC_TERMS = frozenset(
-    "about after analysis article best build cloud developer explains first from guide how latest learn makes news "
-    "release research software startup technology their these this tools tutorial update using what which with your".split()
+    "about after analysis and are article available because before been best both build can cloud developer explains "
+    "first for from guide had has have how into its just latest learn makes may more news now one only our release "
+    "report research says should software some startup technology than that the their them these they this through "
+    "tools tutorial under update use using via was were what when where which who will with would you your".split()
 )
 
 
@@ -168,9 +170,9 @@ def related_articles(article, candidates, limit=5):
         item_refs = ref_ids & references(raw)
         candidate_terms = set(related_terms(raw))
         overlap = anchor_title & candidate_terms
-        if not item_refs and len(overlap) < 2:
-            continue
         confidence = 2 * len(overlap) / max(1, len(anchor_title) + len(candidate_terms))
+        if not item_refs and (len(overlap) < 2 or confidence < .25):
+            continue
         ranked.append((len(item_refs), confidence, raw.get("source") != article["source"],
                        raw["published_at"], raw["id"], raw, item_refs, overlap))
     ranked.sort(key=lambda item: item[:5], reverse=True)

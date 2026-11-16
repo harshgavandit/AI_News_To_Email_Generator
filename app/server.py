@@ -45,6 +45,7 @@ from app.world_edition import build_world, select_world
 from app.services.email import send_email
 from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
+from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
 from app.public_mail import router as mail_router
@@ -66,7 +67,7 @@ _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v10")
 _news_cache = Cache("news-v15")
-_headline_cache = Cache("headlines-v5")
+_headline_cache = Cache("headlines-v6")
 _trending_cache = Cache("trending-v4")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
@@ -426,11 +427,16 @@ def article_details(article_id: str, response: Response):
         raise HTTPException(404, "This story is no longer in the archive. Open its original source if you saved the link.")
     article = public_article(raw)
     candidates = store.related_candidates(article_id, related_terms(article)) if store else rows
+    now = datetime.now(timezone.utc).isoformat()
+    eligible = [row for row in candidates if row["published_at"] <= now]
+    coverage = compare_coverage(article, eligible)
     related = related_articles(article, candidates)
     if store:
         related = store.with_reading_access(related)
+        coverage = store.with_reading_access(coverage)
     response.headers["Cache-Control"] = "no-store"
     return {"article": article, "related": [public_article(item) for item in related],
+            "coverage": [public_article(item) for item in coverage],
             "reading": raw.get("_reading_content"),
             "reading_notice": ("Full text shared with permission from the rights holder. Original source and attribution are preserved."
                 if raw.get("_reading_content") else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
@@ -494,8 +500,8 @@ def admin_sources(authorization: str | None = Header(default=None)):
 def initialize_news(authorization: str | None = Header(default=None)):
     require_owner(authorization)
     store = source_store()
-    store.migrate()
-    return {"database": store.engine.dialect.name, "schema_ready": True}
+    search_index = store.migrate()
+    return {"database": store.engine.dialect.name, "schema_ready": True, "search_index": search_index}
 
 
 @app.patch("/api/admin/sources/{source_id}")
@@ -690,8 +696,9 @@ def refresh_cached_page(store, filters, key, *, force=False):
 
 
 def reader_refresh_scope(catalog, filters, *, force):
-    cutoff = (datetime.now(timezone.utc) - ARCHIVE_REFRESH_INTERVAL).isoformat()
-    active = [feed for feed in catalog if feed["enabled"]]
+    now = datetime.now(timezone.utc)
+    cutoff = (now - ARCHIVE_REFRESH_INTERVAL).isoformat()
+    active = [feed for feed in catalog if feed["enabled"] and (feed.get("retry_at") or "") <= now.isoformat()]
     checked = {feed["id"] for feed in active if feed["checked_at"]}
     overdue = {feed["id"] for feed in active if (feed["checked_at"] or "") <= cutoff}
     scoped_filters = {name: filters[name] for name in FEED_FILTERS}

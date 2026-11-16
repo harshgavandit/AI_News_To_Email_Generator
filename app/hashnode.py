@@ -7,7 +7,7 @@ import re
 import httpx
 
 from app.community import HEADERS, record
-from app.news import canonical_url
+from app.news import canonical_url, http_failure
 
 ENDPOINT = "https://gql-beta.hashnode.com/"
 PAGE_SIZE = 20
@@ -70,6 +70,7 @@ def normalize_post(source, item):
 
 async def collect(source):
     records, cursors, after, completed = {}, set(), None, 0
+    deferred = {}
     try:
         async with asyncio.timeout(18), httpx.AsyncClient(timeout=httpx.Timeout(10, connect=3), trust_env=False,
                 follow_redirects=False, headers={**HEADERS, "x-hashnode-client": "informa-ai"}) as client:
@@ -91,16 +92,24 @@ async def collect(source):
                         or after in cursors):
                     break
                 cursors.add(after)
+    except httpx.HTTPStatusError as error:
+        if not completed:
+            raise
+        failure = http_failure(error)
+        if failure.get("retry_after") or failure["error"] == "rate_limited":
+            deferred = failure
     except (httpx.HTTPError, ValueError, TypeError, OSError, TimeoutError):
         if not completed:
             raise
-    return list(records.values())
+    return list(records.values()), deferred
 
 
 def read_hashnode(source):
     try:
-        items = asyncio.run(collect(source))
+        items, deferred = asyncio.run(collect(source))
         return items, dict(source.public(), available=True, count=len(items),
-            latest_published_at=max((row["published_at"] for row in items), default=None))
+            latest_published_at=max((row["published_at"] for row in items), default=None), **deferred)
+    except httpx.HTTPStatusError as error:
+        return [], dict(source.public(), available=False, count=0, **http_failure(error))
     except (httpx.HTTPError, ValueError, TypeError, OSError, TimeoutError):
         return [], dict(source.public(), available=False, count=0, error="api_unavailable")

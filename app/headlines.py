@@ -3,8 +3,10 @@ import re
 from datetime import UTC, datetime, timedelta
 
 from app.coverage import public_article
+from app.intelligence import story_identity
 from app.selection import words
 from app.sources import BY_ID
+from app.story_coverage import coverage_match, headline
 
 HEADLINE_HOURS = 72
 LEADERSHIP = re.compile(r"\b(?:ceo|chief executive|successor|succession|leadership)\b", re.I)
@@ -78,6 +80,7 @@ def build_headlines(rows, *, now=None, limit=4):
     eligible.sort(key=lambda article: headline_score(article, now), reverse=True)
     coverage = active_coverage(now)
     picked, publishers, used_regions, used_topics, seen_titles = [], set(), set(), set(), []
+    links, headlines = set(), []
     for unique_topic, unique_region in ((True, True), (False, True), (False, False)):
         for candidate in eligible:
             if candidate["publisher"] in publishers:
@@ -91,7 +94,13 @@ def build_headlines(rows, *, now=None, limit=4):
             tokens = words(article["title"])
             if any(tokens and len(tokens & old) / len(tokens | old) >= .67 for old in seen_titles):
                 continue
+            identity = story_identity(article)
+            candidate_headline = headline(article)
+            if identity in links or any(coverage_match(candidate_headline, old) for old in headlines):
+                continue
             picked.append(article)
+            links.add(identity)
+            headlines.append(candidate_headline)
             publishers.add(article["publisher"])
             used_topics.add(article["topic"])
             used_regions.add(region)

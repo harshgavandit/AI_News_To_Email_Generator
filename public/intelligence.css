@@ -25,6 +25,7 @@
 .related-story strong { display: block; font-size: 15px; line-height: 1.5; font-weight: 600; }
 .related-story span { display: block; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .related-story:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+#dossier-coverage-brief { min-height: 44px; margin-block-start: 6px; }
 .card-original-link { font-size: 12px; color: var(--green); min-height: 44px; display: inline-flex; align-items: center; padding-inline: 6px; }
 .for-you-badge { max-width: 100%; white-space: normal; }
 .dossier-contribute-link { display: block; margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.65; }

@@ -178,7 +178,15 @@ ARABIC_SIGNALS = (
     ("ai", re.compile(r"الذكاء الاصطناعي|نماذج اللغة")),
     ("software", re.compile(r"الحوسبة السحابية|مفتوح المصدر|البرمجيات")),
 )
-LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS, "zh-TW": TRADITIONAL_CHINESE_SIGNALS, "ar": ARABIC_SIGNALS}
+DUTCH_SIGNALS = (
+    ("outages", headline_pattern(r"storing|storingen|onbereikbaar")),
+    ("security", headline_pattern(r"beveiligingslek(?:ken)?|kwetsbaarhe(?:id|den)|datalek(?:ken)?|cyberaanval(?:len)?")),
+    ("startups", headline_pattern(r"financieringsronde|durfkapitaal")),
+    ("chips", headline_pattern(r"halfgeleiders?|videokaarten?|processors?")),
+    ("ai", headline_pattern(r"kunstmatige intelligentie|taalmodellen?")),
+)
+LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS, "zh-TW": TRADITIONAL_CHINESE_SIGNALS,
+                 "ar": ARABIC_SIGNALS, "nl": DUTCH_SIGNALS}
 
 
 def article_source(article):
