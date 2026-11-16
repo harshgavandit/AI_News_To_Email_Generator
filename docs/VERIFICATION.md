@@ -10,6 +10,14 @@
 - Computer Use stopped before visual testing because it could not determine the browser URL with sufficient confidence. No desktop/mobile screenshots or live browser interaction tests are claimed for this release. Source wiring, API integration journeys, asset build and live source checks provide separate verification.
 - Run `uv run python -m scripts.check_sources` to repeat the public-source audit. Production release checks should additionally verify setup, fresh archive ingestion, reading details, interest ranking, subject filtering and global brief generation at the deployment URL. AI generation and actual email delivery require separate provider checks.
 
+Production verification for application release `5ad1855`:
+
+- GitHub Actions [43867267277](https://github.com/harshgavandit/AI_News_To_Email_Generator/actions/runs/43867267277) passed Python 3.12 and 3.14 (154 tests each), plus all 10 PostgreSQL archive tests. Its 10,000-recipient rehearsal used synthetic transport and observed zero duplicates; it sent no real email.
+- Vercel deployment `dpl_YS3BWPqGTbpS87EYqZ6ohpjoGXta` reached Ready and was aliased to the production domain. The owner-authenticated archive setup returned `schema_ready: true` on PostgreSQL. Public JavaScript asset hashes matched the local release files.
+- At 12:36 UTC on November 16, `/api/ready` returned 200 with all 130 enabled feeds fresh. Source checks are separate from publication recency; the selected Hashnode feed had no retained article within the archive window.
+- Live API journeys verified 161 DEV articles in the seven-day window, author search, 228 cloud-subject matches, non-overlapping cursor pages, 12 personalized recommendations from 1,611 bounded candidates, five related stories, 10 observed trending topics, and a three-story cloud global brief with HTML and Markdown exports. Counts are time-dependent observations rather than product limits.
+- Invalid recommendation preferences returned 422; unauthenticated owner setup returned 401. The live checks did not request paid AI synthesis, send email, or dispatch a workspace message. Browser interaction verification remains unavailable for the reason recorded above.
+
 ## Reading Room and digest update — November 15, 2026
 
 - The locked environments passed 72 tests each on Python 3.12 and 3.14. The tests cover both news storage modes, sorted cursors, streamed previews, provider failure and fallback, size limits, verified-inbox delivery, and owner authorization. Ruff, Python compilation, frontend lint, and the static production build passed. Starlette emits a deprecation warning about its test client’s `httpx` integration.

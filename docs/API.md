@@ -4,7 +4,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 ## Discover stories
 
-`GET /api/headlines` returns reviewed developing coverage and a ranked selection of recent articles from enabled reporting feeds. The homepage uses it independently of the Reading Roomâ€™s time window and sort.
+`GET /api/headlines` returns reviewed developing coverage and a ranked selection of recent articles from enabled reporting feeds. The homepage uses it independently of the Reading Room’s time window and sort.
 
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
@@ -13,7 +13,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 - `facets.topics`, `facets.regions`, and `facets.languages` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, feed excerpts, and retained author names and tags. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Archive and direct-feed search use the same weights. Relevance without a query uses newest-first order.
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
-- `freshness` reports the selected feedsâ€™ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
+- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
 
 ## Reading and recommendations
 
@@ -33,7 +33,7 @@ It ranks a bounded, publisher-and-topic-diverse pool from the last seven days. T
 
 ## Build and deliver a brief
 
-Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1â€“10). Both editions accept `topic`, `subject`, `region`, `language`, `coverage`, `sources`, and ordered `pinned_ids`. The coverage setting filters sources for automatic story selection. Explicit pins can include stories outside that scope. A personal edition can also specify `name`, `focus`, free-text `topics`, `persona`, and `style`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key. The article reader uses this same validated pipeline with one pinned story for its AI brief action.
+Post JSON to `/api/digest` with `edition` (`world` or `personal`), `hours`, and `top_n` (1–10). Both editions accept `topic`, `subject`, `region`, `language`, `coverage`, `sources`, and ordered `pinned_ids`. The coverage setting filters sources for automatic story selection. Explicit pins can include stories outside that scope. A personal edition can also specify `name`, `focus`, free-text `topics`, `persona`, and `style`. The response contains the preview, Markdown, HTML, and delivery metadata. The personal edition requires a configured OpenAI key. The article reader uses this same validated pipeline with one pinned story for its AI brief action.
 
 Add `?stream=true` to receive newline-delimited JSON. Events contain a numbered `stage`, a final `result`, or an `error` with a `status` and optional `retry_after`. Errors emitted after streaming starts are carried in the stream rather than the HTTP status.
 
