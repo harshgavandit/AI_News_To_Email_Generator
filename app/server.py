@@ -45,6 +45,7 @@ from app.world_edition import build_world, select_world
 from app.services.email import send_email
 from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
+from app.trending import extract_trending
 from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates
@@ -63,6 +64,7 @@ _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v8")
 _news_cache = Cache("news-v11")
 _headline_cache = Cache("headlines-v5")
+_trending_cache = Cache("trending-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -315,6 +317,25 @@ def headlines(response: Response):
     response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
     if data["articles"]:
         response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30"
+    return data
+
+
+@app.get("/api/trending")
+def trending(response: Response):
+    store = get_store()
+    key = hashlib.sha256(str(store.engine.url if store else "rss").encode()).hexdigest()
+    data, _ = _trending_cache.get(key)
+    if data is None:
+        with _trending_cache.key_lock(key):
+            data, _ = _trending_cache.get(key)
+            if data is None:
+                rows = store.headline_candidates(48) if store else collect_news()["articles"]
+                data = extract_trending(rows)
+                if data["trending"]:
+                    _trending_cache.put(key, data, ttl=120)
+    response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
+    if data and data.get("trending"):
+        response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=60"
     return data
 
 
