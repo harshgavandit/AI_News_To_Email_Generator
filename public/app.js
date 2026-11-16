@@ -524,6 +524,8 @@ function renderStories() {
     date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
     const storySummary = article.cleanSummary || article.description || article.summary;
+    const titleDirection = article.language === "ar" ? "rtl" : "auto";
+    const excerptDirection = article.has_excerpt && article.summary_basis !== "ai_feed_summary" ? titleDirection : "auto";
     const whyItMatters = deriveWhyItMatters(article);
     const wordCount = (article.title + " " + (storySummary || "")).split(/\s+/).length;
     const readingTime = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
@@ -544,7 +546,7 @@ function renderStories() {
     );
     top.append(badges, date);
     const heading = node("h3");
-    heading.dir = "auto";
+    heading.dir = titleDirection;
     if (article.language) heading.lang = article.language;
     const storyLink = node("a", "", article.title);
     storyLink.href = `/?article=${encodeURIComponent(article.id)}#reading-room`;
@@ -622,7 +624,7 @@ function renderStories() {
       tabGroup.append(tabSummary, tabWhy);
 
       const paragraph = node("p", "story-summary", storySummary || "Read original source for coverage details.");
-      paragraph.dir = "auto";
+      paragraph.dir = excerptDirection;
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
 
       const why = node("div", "why-matters-box");
@@ -650,7 +652,7 @@ function renderStories() {
       main.append(perspectiveWrap);
     } else if (storySummary) {
       const paragraph = node("p", "story-summary", storySummary);
-      paragraph.dir = "auto";
+      paragraph.dir = excerptDirection;
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
       main.append(paragraph);
     }
@@ -2151,6 +2153,7 @@ function renderDossier() {
 
   $("dossier-title").textContent = article.title;
   $("dossier-title").lang = article.language || "";
+  $("dossier-title").dir = article.language === "ar" ? "rtl" : "auto";
   $("dossier-source-mark").textContent = publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase();
   $("dossier-publisher").textContent = publisher;
   $("dossier-provenance").textContent = originalLanguage(article.language);
@@ -2178,6 +2181,7 @@ function renderDossier() {
     "Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content." :
     "Headline and source link only. The full article has not been retrieved or summarized.";
   $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
+  $("dossier-summary").dir = $("dossier-summary").lang === "ar" ? "rtl" : "auto";
   $("dossier-full-body").hidden = true;
   $("dossier-full-body").replaceChildren();
   const effectiveWhy = deriveWhyItMatters(article);

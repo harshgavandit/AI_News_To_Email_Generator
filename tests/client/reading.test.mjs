@@ -109,11 +109,15 @@ test('For You sends the same search and filters shown in the Reading Room', asyn
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
   globalThis.setInterval = () => 0;
   const requests = [];
+  const article = { id: 'arabic-fixture', title: 'ExampleCorp تعلن عن جولة تمويل',
+    cleanSummary: 'ExampleCorp توسع عملياتها', language: 'ar', source: 'entarabi-ar', source_id: 'entarabi-ar',
+    publisher: 'entARABI', url: 'https://entarabi.com/example-fixture', published_at: new Date().toISOString(),
+    topic: 'startups', category: 'startups', has_excerpt: true, summary_basis: 'publisher_excerpt' };
   globalThis.fetch = async (url, options) => {
     const path = String(url);
     if (path === '/api/recommendations') requests.push(JSON.parse(options.body));
     const data = path === '/api/sources' ? { ...catalog } : path === '/api/authors' ? { authors: [] } :
-      { articles: [], total_candidates: 0 };
+      path === '/api/recommendations' ? { articles: [article], total_candidates: 1 } : {};
     return new Response(JSON.stringify(data), { status: 200 });
   };
   try {
@@ -124,6 +128,8 @@ test('For You sends the same search and filters shown in the Reading Room', asyn
     assert.equal(requests[0].scope.region, 'MENA');
     assert.equal(requests[0].scope.language, 'ar');
     assert.equal(requests[0].scope.hours, 168);
+    assert.equal(document.querySelector('#stories h3').dir, 'rtl');
+    assert.equal(document.querySelector('#stories .story-summary').dir, 'rtl');
     const search = document.getElementById('search');
     search.value = 'شركة ناشئة';
     document.getElementById('story-search').dispatchEvent(new window.Event('submit', { cancelable: true }));
