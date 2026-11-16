@@ -3,7 +3,7 @@ import { readingContent } from "./reading-content.js";
 const byId = (id) => document.getElementById(id);
 const node = (tag, text, className = "") => { const el = document.createElement(tag); el.textContent = text; el.className = className; return el; };
 const message = (id, text, error = false) => { byId(id).textContent = text; byId(id).classList.toggle("error", error); };
-let config = null, selected = null, captchaId = null, captchaToken = "", ownerKey = "", ownerRevision = 0, nextCursor = null;
+let config = null, selected = null, captchaId = null, captchaToken = "", ownerKey = "", ownerRevision = 0, nextCursor = null, authRevision = 0;
 
 async function request(path, options = {}) {
   const response = await fetch(path, { ...options, cache: "no-store", signal: AbortSignal.timeout(25000) });
@@ -46,8 +46,11 @@ async function captcha() {
 }
 
 async function refreshAuth() {
+  const revision = ++authRevision;
   try {
-    config = await request("/api/mail/contributions/config");
+    const data = await request("/api/mail/contributions/config");
+    if (revision !== authRevision) return;
+    config = data;
     byId("contribution-grant-text").textContent = config.permission_statement;
     byId("contribution-identity").hidden = !config.verified;
     byId("contribution-email").textContent = config.verified_email || "";
@@ -63,6 +66,7 @@ async function refreshAuth() {
       await captcha();
     } else message("contribution-auth-status", "Inbox verification is currently unavailable. Author submissions will reopen when delivery is configured.");
   } catch (error) {
+    if (revision !== authRevision) return;
     message("contribution-auth-status", error.message, true);
     byId("contribution-retry-auth").hidden = false;
   }
@@ -109,22 +113,37 @@ byId("contribution-verify").addEventListener("submit", async (event) => {
 });
 byId("contribution-change-email").addEventListener("click", () => { byId("contribution-verify").hidden = true; byId("contribution-challenge").hidden = false; byId("contribution-email-input").focus(); });
 byId("contribution-signout").addEventListener("click", async () => {
-  try { await post("/api/mail/logout", {}); byId("contribution-list").replaceChildren(); byId("contribution-form").reset(); await refreshAuth(); message("contribution-list-status", "Verify your inbox to see your private submissions."); }
+  const button = byId("contribution-signout");
+  button.disabled = true;
+  authRevision++;
+  byId("contribution-fields").disabled = byId("contribution-reload").disabled = true;
+  try {
+    await post("/api/mail/logout", {});
+    config = null;
+    byId("contribution-list").replaceChildren();
+    byId("contribution-form").reset();
+    byId("contribution-status").textContent = "";
+    message("contribution-list-status", "Verify your inbox to see your private submissions.");
+    await refreshAuth();
+  }
   catch (error) { message("contribution-auth-status", error.message, true); }
+  finally { button.disabled = false; updateAvailability(); }
 });
 byId("contribution-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selected || !config?.verified) return;
+  const revision = authRevision;
   byId("contribution-submit").disabled = true;
   try {
     const data = await post("/api/mail/contributions", { article_id: selected.id,
       author_name: byId("contribution-author").value.trim(), body_markdown: byId("contribution-body").value,
       permission_evidence: byId("contribution-evidence").value.trim(), grant_permission: byId("contribution-grant").checked,
       terms_version: config.terms_version });
+    if (revision !== authRevision) return;
     message("contribution-status", data.message);
     byId("contribution-grant").checked = false;
     await loadOwn();
-  } catch (error) { message("contribution-status", error.message, true); }
+  } catch (error) { if (revision === authRevision) message("contribution-status", error.message, true); }
   finally { byId("contribution-submit").disabled = false; }
 });
 
@@ -136,10 +155,12 @@ function card(row, owner) {
   const actions = node("div", "", "submission-actions");
   const view = node("button", owner ? "Review submission" : "View submitted text", "button secondary"); view.type = "button";
   view.addEventListener("click", async () => {
-    const revision = ownerRevision; view.disabled = true;
+    const revision = owner ? ownerRevision : authRevision;
+    const current = () => revision === (owner ? ownerRevision : authRevision);
+    view.disabled = true;
     try {
       const data = await request(`${owner ? "/api/admin/contributions" : "/api/mail/contributions"}/${row.id}`, owner ? { headers: ownerHeaders() } : {});
-      if (owner && revision !== ownerRevision) return;
+      if (!current()) return;
       item.querySelector(".submission-detail")?.remove();
       const detail = node("div", "", "submission-detail");
       detail.append(node("h4", "Permission evidence"), node("p", data.permission_evidence));
@@ -153,16 +174,23 @@ function card(row, owner) {
       }
       if (owner && ["pending", "approved"].includes(data.state)) detail.append(reviewForm(data));
       item.append(detail);
-    } catch (error) { message(owner ? "editor-status" : "contribution-list-status", error.message, true); }
+    } catch (error) { if (current()) message(owner ? "editor-status" : "contribution-list-status", error.message, true); }
     finally { view.disabled = false; }
   });
   actions.append(view);
   if (!owner && ["pending", "approved"].includes(row.state)) {
     const withdraw = node("button", "Withdraw permission", "text-button"); withdraw.type = "button";
     withdraw.addEventListener("click", async () => {
+      const revision = authRevision;
       withdraw.disabled = true;
-      try { await post(`/api/mail/contributions/${row.id}/withdraw`, {}); await loadOwn(); message("contribution-list-status", "Permission withdrawn. Future full-text delivery is disabled."); }
-      catch (error) { withdraw.disabled = false; message("contribution-list-status", error.message, true); }
+      try {
+        await post(`/api/mail/contributions/${row.id}/withdraw`, {});
+        if (revision !== authRevision) return;
+        await loadOwn();
+        if (revision === authRevision) message("contribution-list-status", "Permission withdrawn. Future full-text delivery is disabled.");
+      } catch (error) {
+        if (revision === authRevision) message("contribution-list-status", error.message, true);
+      } finally { withdraw.disabled = false; }
     });
     actions.append(withdraw);
   }
@@ -170,8 +198,9 @@ function card(row, owner) {
 }
 
 async function loadOwn() {
-  try { const data = await request("/api/mail/contributions"); byId("contribution-list").replaceChildren(...data.submissions.map((row) => card(row, false))); message("contribution-list-status", data.submissions.length ? `${data.submissions.length} recent submissions` : "No submissions yet. Your text stays private until approved."); }
-  catch (error) { message("contribution-list-status", error.message, true); }
+  const revision = authRevision;
+  try { const data = await request("/api/mail/contributions"); if (revision !== authRevision || !config?.verified) return; byId("contribution-list").replaceChildren(...data.submissions.map((row) => card(row, false))); message("contribution-list-status", data.submissions.length ? `${data.submissions.length} recent submissions` : "No submissions yet. Your text stays private until approved."); }
+  catch (error) { if (revision === authRevision) message("contribution-list-status", error.message, true); }
 }
 byId("contribution-reload").addEventListener("click", loadOwn);
 

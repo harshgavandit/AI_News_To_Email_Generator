@@ -109,6 +109,7 @@ test('author workspace submits privately and owner review requires an explicit p
   const env = mount(page, 'https://informa.test/contribute.html?article=listed-article');
   const fetchBefore = globalThis.fetch;
   let submitted = false, approved = false;
+  let signedOut = false, delayList = false, finishList;
   const ident = 'b'.repeat(32), requests = [];
   const row = { id: ident, article_id: 'listed-article', article_url: 'https://author.example/article',
     author_name: 'A Writer', permission_evidence: 'The owner can verify my publishing and syndication permission.',
@@ -116,13 +117,17 @@ test('author workspace submits privately and owner review requires an explicit p
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url); requests.push({ path, options });
     let data;
-    if (path === '/api/mail/contributions/config') data = { enabled: true, verified: true, verified_email: 'writer@example.org', permission_statement: 'I have permission to share this text.', terms_version: 'test-version' };
+    if (path === '/api/mail/contributions/config') data = { enabled: !signedOut, verified: !signedOut, verified_email: signedOut ? null : 'writer@example.org', permission_statement: 'I have permission to share this text.', terms_version: 'test-version' };
+    else if (path === '/api/mail/logout') { signedOut = true; data = {}; }
     else if (path.startsWith('/api/articles/')) data = { article: { id: 'listed-article', title: 'The original article', url: 'https://author.example/article', author: 'A Writer' } };
     else if (path === '/api/mail/contributions' && options.method === 'POST') {
       const body = JSON.parse(options.body); assert.equal(body.grant_permission, true);
       assert.equal(body.article_id, 'listed-article'); submitted = true;
       data = { id: ident, state: 'pending', message: 'Submitted for owner review.' };
-    } else if (path === '/api/mail/contributions') data = { submissions: submitted ? [row] : [] };
+    } else if (path === '/api/mail/contributions') {
+      if (delayList) await new Promise(resolve => { finishList = resolve; });
+      data = { submissions: submitted ? [row] : [] };
+    }
     else if (path.startsWith('/api/admin/contributions?')) data = { submissions: submitted && !approved ? [row] : [], next_cursor: null };
     else if (path.endsWith('/review')) {
       assert.equal(options.headers.Authorization, 'Bearer test-owner-for-client');
@@ -159,5 +164,14 @@ test('author workspace submits privately and owner review requires an explicit p
     assert.equal(requests.some(request => request.path === '/api/mail/send'), false);
     document.getElementById('editor-signout').click();
     assert.equal(document.getElementById('editor-controls').hidden, true);
+    delayList = true;
+    document.getElementById('contribution-reload').click();
+    await until(() => finishList);
+    document.getElementById('contribution-signout').click();
+    await until(() => document.getElementById('contribution-identity').hidden);
+    finishList();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(document.querySelector('#contribution-list .submission-card'), null);
+    assert.equal(document.getElementById('contribution-body').value, '');
   } finally { globalThis.fetch = fetchBefore; env.close(); }
 });

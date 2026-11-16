@@ -226,10 +226,10 @@ def signature(digest: dict, expires: int) -> str:
     return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
 
 
-def require_owner(authorization: str | None):
+def require_owner(authorization: str | None, *, detail="Enter the owner access key to send to the configured Gmail inbox."):
     secret = os.getenv("ADMIN_TOKEN", "")
     if not secret or not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
-        raise HTTPException(401, "Enter the owner access key to send to the configured Gmail inbox.")
+        raise HTTPException(401, detail)
 
 
 @app.middleware("http")

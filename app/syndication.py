@@ -26,6 +26,9 @@ GRANT = ("I own the rights to this text or have authority to grant permission. I
          "I understand that publication requires editorial review and that my verified email is visible only to the owner.")
 ALLOWED_TAGS = {"p", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "pre", "code", "em", "strong",
                 "a", "hr", "br", "table", "thead", "tbody", "tr", "th", "td", "del"}
+SUBMISSION_FIELDS = ("id", "article_id", "article_url", "author_name", "permission_evidence", "terms_version",
+                     "state", "created", "updated", "review_note")
+SUBMISSION_COLUMNS = tuple(contributions.c[key] for key in SUBMISSION_FIELDS)
 
 
 def render_body(value):
@@ -132,9 +135,7 @@ def history(row, action, actor, note=""):
 
 
 def submission_record(row, *, owner=False, include_body=False):
-    keys = ("id", "article_id", "article_url", "author_name", "permission_evidence", "terms_version",
-            "state", "created", "updated", "review_note")
-    return {**{key: row[key] for key in keys}, **({"verified_email": row["email"]} if owner else {}),
+    return {**{key: row[key] for key in SUBMISSION_FIELDS}, **({"verified_email": row["email"]} if owner else {}),
             **({"body_markdown": row["body_markdown"], "preview_html": render_body(row["body_markdown"]),
                 "events": json.loads(row["events"])} if include_body else {})}
 
@@ -151,7 +152,7 @@ def own_contributions(request: Request, response: Response):
     store, _, mailbox = require_contributor(request)
     response.headers["Cache-Control"] = "no-store"
     with store.engine.connect() as conn:
-        rows = conn.execute(select(contributions).where(contributions.c.mailbox == mailbox)
+        rows = conn.execute(select(*SUBMISSION_COLUMNS).where(contributions.c.mailbox == mailbox)
                             .order_by(contributions.c.created.desc()).limit(50)).mappings()
         return {"submissions": [submission_record(row) for row in rows]}
 
@@ -205,7 +206,7 @@ def withdraw(ident: str, request: Request):
 
 def editor_store(authorization):
     from app.server import require_owner
-    require_owner(authorization)
+    require_owner(authorization, detail="Enter a valid owner access key to review reading permissions.")
     store = get_store()
     if not store:
         raise HTTPException(503, "The article archive is not configured.")
@@ -220,7 +221,7 @@ def review_queue(response: Response, state: Annotated[str, Query(pattern=r"^(pen
     store = editor_store(authorization)
     response.headers["Cache-Control"] = "no-store"
     with store.engine.connect() as conn:
-        stmt = select(contributions).where(contributions.c.state == state)
+        stmt = select(*SUBMISSION_COLUMNS, contributions.c.email).where(contributions.c.state == state)
         if cursor:
             marker = conn.execute(select(contributions.c.created).where(contributions.c.id == cursor)).first()
             if not marker:

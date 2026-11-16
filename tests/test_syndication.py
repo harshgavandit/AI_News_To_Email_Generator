@@ -147,3 +147,29 @@ def test_feed_metadata_cannot_self_grant_full_text(workspace):
     store.ingest("medium-codex", [{**original, "full_text": BODY,
         "reading_access": {"mode": "full_text"}, "body_markdown": BODY}], True)
     assert stranger.get("/api/articles/permission-article").json()["reading"] is None
+
+
+def test_permission_evidence_and_review_history_are_retained(workspace):
+    _, author, owner, _ = workspace
+    evidence = "Verify the author's permission at https://author.example/syndication?article=guide&format=full"
+    ident = author.post("/api/mail/contributions", json=payload(permission_evidence=evidence)).json()["id"]
+    assert owner.get(f"/api/admin/contributions/{ident}").json()["permission_evidence"] == evidence
+    approval = {"action": "approve", "note": "Verified the source and rights holder.", "permission_verified": True}
+    assert owner.post(f"/api/admin/contributions/{ident}/review", json={**approval, "note": " " * 20}).status_code == 422
+    assert owner.post(f"/api/admin/contributions/{ident}/review", json=approval).status_code == 200
+    assert author.post(f"/api/mail/contributions/{ident}/withdraw").status_code == 200
+    assert author.post(f"/api/mail/contributions/{ident}/withdraw").status_code == 200
+    events = author.get(f"/api/mail/contributions/{ident}").json()["events"]
+    assert [entry["action"] for entry in events] == ["submitted", "approved", "withdrawn"]
+
+
+def test_withdrawing_an_old_grant_cannot_revoke_a_newer_approved_submission(workspace):
+    _, author, owner, stranger = workspace
+    first = author.post("/api/mail/contributions", json=payload()).json()["id"]
+    second = author.post("/api/mail/contributions", json=payload(body_markdown=BODY + "\n\nAn authorized revision.")).json()["id"]
+    approve = {"action": "approve", "note": "This revision and permission have been verified.", "permission_verified": True}
+    assert owner.post(f"/api/admin/contributions/{first}/review", json=approve).status_code == 200
+    assert owner.post(f"/api/admin/contributions/{second}/review", json=approve).status_code == 200
+    author.post(f"/api/mail/contributions/{first}/withdraw")
+    reading = stranger.get("/api/articles/permission-article").json()["reading"]
+    assert "An authorized revision" in reading["text"]
