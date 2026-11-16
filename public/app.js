@@ -365,6 +365,10 @@ function syncURL() {
   else url.searchParams.delete("view");
   history.replaceState(null, "", url);
   $("clear-search").hidden = !$("search").value;
+  const currentQuery = $("search").value.trim().toLowerCase();
+  for (const chip of $("trending-chips")?.children || []) {
+    chip.setAttribute("aria-pressed", String(currentQuery && chip.dataset.query?.toLowerCase() === currentQuery));
+  }
   const count = Number(state.source !== "all") + Number(Boolean(state.publisher)) +
     Number($("kind").value !== "all") + Number(Boolean($("coverage").value)) + Number(Boolean($("language").value));
   $("filter-count").hidden = !count;
@@ -1158,6 +1162,7 @@ async function loadTrending() {
     if (!res.ok) return;
     const data = await res.json();
     const items = data?.trending || [];
+    state.trending = items;
     if (!items.length) {
       $("trending-bar").hidden = true;
       return;
@@ -2043,8 +2048,13 @@ function storyMarkdown(article) {
   if (href) lines.push(`Source: <${href}>`);
   const excerpt = publishedExcerpt(article);
   if (excerpt) lines.push("", excerpt);
-  if (article.whyItMatters) lines.push("", `Why it matters: ${article.whyItMatters}`);
-  if (article.keyTakeaway) lines.push(`Key takeaway: ${article.keyTakeaway}`);
+  const why = article.whyItMatters || deriveWhyItMatters(article);
+  if (why) lines.push("", `Why it matters: ${why}`);
+  const takeaway = article.keyTakeaway || deriveKeyTakeaway(article, why);
+  if (takeaway) lines.push(`Key takeaway: ${takeaway}`);
+  if (article.full_text && article.full_text.length > (excerpt || "").length + 50) {
+    lines.push("", "### Article Content", "", article.full_text);
+  }
   return lines.join("\n");
 }
 
@@ -2122,6 +2132,43 @@ function renderDossier() {
   $("dossier-basis").textContent = summary ? basis : "Headline only";
   $("dossier-summary").textContent = summary || "Open the original publication for details.";
   $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
+  const fullText = (article.full_text || "").trim();
+  const fullBodyContainer = $("dossier-full-body");
+  if (fullBodyContainer) {
+    if (fullText && fullText.length > (summary || "").length + 50) {
+      fullBodyContainer.hidden = false;
+      fullBodyContainer.replaceChildren();
+      const rawParas = fullText.split(/\n\n+|(?<=[.!?])\s{2,}/).map((p) => p.trim()).filter((p) => p.length > 20);
+      const paragraphs = rawParas.length > 1 ? rawParas : (() => {
+        const sentences = fullText.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullText];
+        const chunks = [];
+        let curr = [];
+        for (const s of sentences) {
+          curr.push(s.trim());
+          if (curr.join(" ").length > 300) {
+            chunks.push(curr.join(" "));
+            curr = [];
+          }
+        }
+        if (curr.length) chunks.push(curr.join(" "));
+        return chunks;
+      })();
+      for (const pText of paragraphs) {
+        const p = node("p", "dossier-paragraph", pText);
+        p.lang = article.language || "";
+        fullBodyContainer.append(p);
+      }
+      const notice = node("div", "dossier-syndication-notice");
+      const noteSpan = node("span", "", "Syndicated via ");
+      const strong = node("strong", "", publisher);
+      const postSpan = node("span", "", " · Full coverage available at original publisher.");
+      notice.append(noteSpan, strong, postSpan);
+      fullBodyContainer.append(notice);
+    } else {
+      fullBodyContainer.hidden = true;
+      fullBodyContainer.replaceChildren();
+    }
+  }
   const effectiveWhy = article.whyItMatters || deriveWhyItMatters(article);
   $("dossier-why-section").hidden = !effectiveWhy;
   $("dossier-why-text").textContent = effectiveWhy || "";
@@ -2223,6 +2270,7 @@ $("dossier-share-btn")?.addEventListener("click", async () => {
 $("dossier-font-btn")?.addEventListener("click", () => {
   const isLarge = $("dossier-summary").classList.toggle("large-reading-text");
   $("dossier-why-text")?.classList.toggle("large-reading-text", isLarge);
+  $("dossier-full-body")?.classList.toggle("large-reading-text", isLarge);
   $("dossier-font-btn").setAttribute("aria-pressed", String(isLarge));
   status("dossier-feedback", isLarge ? "Reading font enlarged." : "Standard font size.");
 });
@@ -2428,7 +2476,18 @@ function listCommands() {
     { label: "Show story cards", run: () => setLayout("cards", true) },
     { label: "Show compact story list", run: () => setLayout("list", true) },
   ];
-  return [["Actions", actions], ["Layout", layouts], ["Topics", topics], ["Publisher regions", regions]];
+  const commands = [["Actions", actions], ["Layout", layouts], ["Topics", topics], ["Publisher regions", regions]];
+  if (state.trending?.length) {
+    const trendingCommands = state.trending.map((item) => ({
+      label: `#${item.tag} (${item.count} stories)`,
+      run: () => openFeedCommand(() => {
+        $("search").value = item.query || item.tag;
+        state.searching = true;
+      }),
+    }));
+    commands.splice(3, 0, ["Trending topics", trendingCommands]);
+  }
+  return commands;
 }
 
 function normalizeCommand(value) {

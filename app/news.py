@@ -151,19 +151,33 @@ def read_feed(task):
                 if not article_in_scope(s, parts.path, title, tags):
                     continue
                 media = entry.get("media_description") or ""
+                raw_content = ""
+                if entry.get("content"):
+                    for c in entry.get("content"):
+                        if isinstance(c, dict) and c.get("value"):
+                            raw_content = c.get("value")
+                            break
+                raw_desc = media or entry.get("summary") or entry.get("description") or ""
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
-                    media or entry.get("summary") or entry.get("description") or "", s.group, title, channel=s.label,
-                    video_fallback=False)
+                    raw_desc, s.group, title, channel=s.label, video_fallback=False)
+                full_body = ""
+                if s.id != "hacker-news":
+                    cleaned_body = sanitize_text(raw_content or raw_desc, limit=3500)
+                    if len(cleaned_body) > len(desc) + 60:
+                        full_body = cleaned_body
                 post = MEDIUM_POST.fullmatch(entry.get("id", "")) if medium else None
                 # Require the permalink and feed GUID to agree before using the shared Medium ID.
                 identity = post[0] if post and parts.path.rsplit("/", 1)[-1].split("-")[-1] == post[1] else url
                 article_id = hashlib.sha256(identity.encode()).hexdigest()[:20]
-                articles[article_id] = {
+                story_record = {
                     "id": article_id, "title": title,
                     "description": desc, "url": url, "source": s.group, "source_id": s.id,
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
                     "category": feed_category(tags),
                 }
+                if full_body:
+                    story_record["full_text"] = full_body
+                articles[article_id] = story_record
             except (ValueError, TypeError, OverflowError, AttributeError, IndexError):
                 continue
         if parsed.entries and not has_valid_entry:

@@ -257,6 +257,8 @@ def public_article(article):
         "coverage": source.coverage if source else "publisher",
         "language": source.language if source else "en",
     })
+    if article.get("full_text"):
+        result["full_text"] = article["full_text"]
     if source and source.coverage == "preprint":
         result["research_status"] = "preprint"
     if article.get("kind") == "video" and len(url) <= 2048:
