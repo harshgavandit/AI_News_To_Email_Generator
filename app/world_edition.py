@@ -88,9 +88,10 @@ def build_world(articles, hours, all_pool=None, *, scope=()):
     window = {24: "24 hours", 168: "7 days", 720: "30 days"}.get(hours, f"{hours} hours")
     scope_text = f" Archive filters include {', '.join(scope)}." if scope else ""
     intro = {
-        "greeting": "Your global brief from Informa AI",
-        "introduction": f"Recent technology stories from the past {window}.{scope_text} "
-                        "Excerpts come from the linked publishers. Provider status pages carry current incident details.",
+        "greeting": "Your Informa AI Global Intelligence Brief",
+        "introduction": f"High-signal technology and AI intelligence from the past {window}.{scope_text} "
+                        "Discover what matters and understand why it matters without information overload. "
+                        "Primary excerpts synthesized from linked global publishers.",
     }
     result = {
         "edition": "world",

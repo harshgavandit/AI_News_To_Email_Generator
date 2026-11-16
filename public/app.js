@@ -130,6 +130,7 @@ function toggleSaved(article) {
     status("news-status", "You can save up to 100 stories. Remove one to save another.", true);
     return;
   }
+  const previousIndex = Array.from($("stories").querySelectorAll(".save-button")).findIndex((button) => button.dataset.storyId === id);
   if (removing) saved.delete(id);
   else saved.set(id, article);
   let persisted = false;
@@ -139,9 +140,10 @@ function toggleSaved(article) {
   } catch {}
   reflectSavedCount();
   renderStories();
-  const replacement = [...$("stories").querySelectorAll(".save-button")].find((button) => button.dataset.storyId === id);
-  (replacement || $("view-saved")).focus();
-  status("news-status", removing ? `Story removed. ${saved.size} saved.` :
+  const actions = Array.from($("stories").querySelectorAll(".save-button"));
+  const replacement = actions.find((button) => button.dataset.storyId === id) || actions[Math.min(previousIndex, actions.length - 1)];
+  (replacement || $("view-saved")).focus({ preventScroll: Boolean(replacement) });
+  status("story-action-status", removing ? `Story removed. ${saved.size} saved.` :
     persisted ? `Story saved. ${saved.size} saved on this browser.` : "Story saved for this session. Browser storage is unavailable.");
 }
 async function request(url, options = {}) {
@@ -195,7 +197,11 @@ async function loadHeadlines() {
       }
       const search = node("a", "coverage-search", `Browse ${story.query} coverage →`);
       search.href = `/?${new URLSearchParams({ q: story.query, window: "7d", sort: "relevance" })}#reading-room`;
-      feature.append(meta, node("h3", "", story.title), node("p", "", story.summary), links, search);
+      const actions = node("div", "coverage-actions");
+      const sources = node("details");
+      sources.append(node("summary", "", `Sources (${story.sources.length})`), links);
+      actions.append(sources, search);
+      feature.append(meta, node("h3", "", story.title), node("p", "", story.summary), actions);
       container.append(feature);
     }
     if (articles.length) {
@@ -218,7 +224,8 @@ async function loadHeadlines() {
     const readingRoom = $("reading-room");
     const previousTop = readingRoom.getBoundingClientRect().top;
     $("headlines").hidden = false;
-    if (location.hash === "#reading-room" && Math.abs(previousTop) < 96) {
+    const anchorTop = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+    if (location.hash === "#reading-room" && Math.abs(previousTop - anchorTop) < 40) {
       const offset = readingRoom.getBoundingClientRect().top - previousTop;
       if (offset > 0) window.scrollBy({ top: offset, behavior: "instant" });
     }
@@ -329,7 +336,14 @@ function renderCoverageControls(data = {}) {
       button.addEventListener("click", () => chooseTopic(id));
       $("topics").append(button);
     }
-    button.textContent = optionLabel(label, counts?.[id]);
+    const count = counts?.[id];
+    button.setAttribute("aria-label", optionLabel(label, count));
+    button.replaceChildren(document.createTextNode(label));
+    if (Number.isInteger(count)) {
+      const total = node("span", "topic-result-count", count.toLocaleString());
+      total.setAttribute("aria-hidden", "true");
+      button.append(total);
+    }
   }
   fillOptions($("topic-mobile"), state.topics, "All topics", counts, state.topic);
   fillOptions($("region"), state.regions, "All regions", state.facets.regions);
@@ -379,7 +393,15 @@ function renderStories() {
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
-    if (!isSaved && nextWindow) {
+    if (isSaved) {
+      const browse = node("button", "button secondary", "Browse latest stories");
+      browse.type = "button";
+      browse.addEventListener("click", () => {
+        $("view-feed").focus();
+        $("view-feed").click();
+      });
+      empty.append(browse);
+    } else if (nextWindow) {
       const expand = node("button", "button secondary", `Search the last ${windows[nextWindow]}`);
       expand.type = "button";
       expand.addEventListener("click", () => {
@@ -403,19 +425,27 @@ function renderStories() {
     const date = node("time", "", relativeTime(timestamp));
     date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
-    top.append(
+    const summary = article.cleanSummary || article.description || article.summary || "";
+    const wordCount = (article.title + " " + summary).split(/\s+/).length;
+    const readingMinutes = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
+    const badges = node("div", "story-meta-badges");
+    badges.append(
       node(
         "span",
         `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`,
         state.topics[topic] || article.topic_label || "Technology",
       ),
-      date,
+      node("span", "meta-pill region-pill", publisherRegion(article)),
+      node("span", "meta-pill read-time-pill", `${readingMinutes}m read`),
     );
+    top.append(badges, date);
     const heading = node("h3");
     if (article.language) heading.lang = article.language;
-    heading.append(
-      externalLink(article.sourceUrl || article.url, article.title),
-    );
+    const storyLink = externalLink(article.sourceUrl || article.url, article.title);
+    const externalMark = node("span", "story-external-mark", "↗");
+    externalMark.setAttribute("aria-hidden", "true");
+    storyLink.append(" ", externalMark);
+    heading.append(storyLink);
     const bottom = node("div", "story-bottom");
     const publisher = article.sourceName || article.publisher || "Original source";
     const sourceMark = node("span", "source-mark", publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase());
@@ -433,7 +463,7 @@ function renderStories() {
     const pin = node(
       "button",
       "pin-button",
-      state.pins.has(String(article.id)) ? "✓ Pinned" : "+ Pin",
+      state.pins.has(String(article.id)) ? "Pinned" : "Pin",
     );
     pin.type = "button";
     pin.dataset.pinId = String(article.id);
@@ -460,9 +490,40 @@ function renderStories() {
     bottom.append(actions);
     main.append(top, heading);
     card.append(main);
-    const summary = article.cleanSummary || article.description || article.summary;
-    if (summary) {
-      const paragraph = node("p", "story-summary", summary);
+    const storySummary = article.cleanSummary || article.description || article.summary;
+    if (article.whyItMatters) {
+      const perspectiveWrap = node("div", "story-perspectives");
+      const tabGroup = node("div", "perspective-tabs");
+      const tabSummary = node("button", "perspective-tab active", "Summary");
+      tabSummary.type = "button";
+      const tabWhy = node("button", "perspective-tab", "Why It Matters");
+      tabWhy.type = "button";
+      tabGroup.append(tabSummary, tabWhy);
+
+      const paragraph = node("p", "story-summary", storySummary || "Read original source for coverage details.");
+      if (article.language && article.has_excerpt) paragraph.lang = article.language;
+
+      const why = node("div", "why-matters-box");
+      why.hidden = true;
+      why.append(node("span", "why-tag", "✦ STRATEGIC CONTEXT"), document.createTextNode(article.whyItMatters));
+
+      tabSummary.addEventListener("click", () => {
+        tabSummary.classList.add("active");
+        tabWhy.classList.remove("active");
+        paragraph.hidden = false;
+        why.hidden = true;
+      });
+      tabWhy.addEventListener("click", () => {
+        tabWhy.classList.add("active");
+        tabSummary.classList.remove("active");
+        paragraph.hidden = true;
+        why.hidden = false;
+      });
+
+      perspectiveWrap.append(tabGroup, paragraph, why);
+      main.append(perspectiveWrap);
+    } else if (storySummary) {
+      const paragraph = node("p", "story-summary", storySummary);
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
       main.append(paragraph);
     }
@@ -478,20 +539,12 @@ function renderStories() {
       image.src = article.thumbnail_url;
       card.append(image);
     }
-    if (article.whyItMatters) {
-      const why = node("p", "why-matters");
-      why.append(node("strong", "", "Why it matters. "), document.createTextNode(article.whyItMatters));
-      main.append(why);
-    }
     card.append(bottom);
     container.append(card);
   }
   $("show-more").hidden = isSaved || !state.cursor;
   $("brief-from-view").hidden = isSaved || !state.articles.length || !(state.topic !== "all" ||
-    $("region").value || $("language").value || state.publisher || state.searching);
-  $("stories").classList.toggle("has-lead", !isSaved && state.source === "all" && state.topic === "all" && state.hours <= 24 &&
-    !state.searching && !$("region").value && !state.publisher && !$("coverage").value && !$("language").value && $("kind").value === "all" &&
-    state.articles.length >= 3);
+    $("region").value || $("language").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
   const context = [
     state.topics[state.topic],
     $("region").value && state.regions[$("region").value],
@@ -508,6 +561,7 @@ function togglePin(article) {
   if (state.pins.has(id)) state.pins.delete(id);
   else {
     if (state.pins.size === 10) {
+      status("news-status", "You can pin up to 10 stories. Remove one to add another.", true);
       status(
         "pin-status",
         "You can pin up to 10 stories. Remove one to add another.",
@@ -523,12 +577,14 @@ function togglePin(article) {
   renderPins();
   const restorePinFocus = document.activeElement?.dataset.pinId === id;
   renderStories();
+  status("story-action-status", state.pins.has(id) ? `Story pinned. ${state.pins.size} in this brief.` : `Story unpinned. ${state.pins.size} in this brief.`);
   if (restorePinFocus) $("stories").querySelector(`[data-pin-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
 }
 function renderPins() {
   const count = state.pins.size;
   $("selected-count").textContent = `${count} / 10`;
   $("mobile-pin-count").textContent = `${count} pinned`;
+  $("mobile-builder").hidden = !count;
   $("pinned-bar-count").textContent =
     `${count} ${count === 1 ? "story" : "stories"} pinned`;
   $("pinned-bar").hidden = !count;
@@ -536,7 +592,7 @@ function renderPins() {
   $("selected-stories").replaceChildren();
   if (!count)
     $("selected-stories").append(
-      node("p", "small", "Pinned stories are included even if they fall outside your filters."),
+      node("p", "small", "Pin stories in the Reading Room to include them here."),
     );
   for (const article of state.pins.values()) {
     const row = node("div", "selected-item");
@@ -544,7 +600,10 @@ function renderPins() {
     const remove = node("button", "", "×");
     remove.type = "button";
     remove.setAttribute("aria-label", `Remove ${article.title}`);
-    remove.addEventListener("click", () => togglePin(article));
+    remove.addEventListener("click", () => {
+      togglePin(article);
+      ($("selected-stories").querySelector("button") || $("article-count")).focus();
+    });
     row.append(remove);
     $("selected-stories").append(row);
   }
@@ -555,7 +614,10 @@ for (const id of ["clear-pins", "pinned-clear"])
     renderPins();
     renderStories();
     status("pin-status", "Pinned selection cleared.");
+    if (id === "clear-pins") $("article-count").focus();
+    else $("nav-builder").focus({ preventScroll: true });
   });
+renderPins();
 function updateSourceCatalog(sources) {
   if (!sources?.length) return;
   state.sources = sources;
@@ -703,10 +765,12 @@ async function loadNews(append = false, force = false) {
   if (!append) {
     $("news-update").hidden = true;
     $("show-more").hidden = true;
-    if (state.feedKey !== feedKey) state.articles = [];
+    if (state.feedKey !== feedKey) {
+      state.articles = [];
+      $("brief-from-view").hidden = true;
+    }
   }
   if (!state.articles.length) {
-    $("stories").classList.remove("has-lead");
     $("stories").replaceChildren(...Array.from({ length: 3 }, () => {
       const card = node("div", "story-skeleton");
       card.setAttribute("aria-hidden", "true");
@@ -806,7 +870,7 @@ for (const view of ["feed", "saved"]) {
     state.view = view;
     for (const peer of ["feed", "saved"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = $("sort").hidden = view === "saved";
+    $("feed-controls").hidden = $("sort").hidden = $("refresh").hidden = view === "saved";
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
@@ -831,6 +895,10 @@ $("search").addEventListener("input", () => {
   $("clear-search").hidden = !$("search").value;
   searchTimer = setTimeout(() => loadNews(), 250);
 });
+$("story-search").addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadNews();
+});
 $("clear-search").addEventListener("click", () => {
   clearTimeout(searchTimer);
   $("search").value = "";
@@ -843,8 +911,13 @@ $("brief-from-view").addEventListener("click", () => {
   $("digest-region").value = $("region").value;
   $("digest-language").value = $("language").value;
   $("digest-window").value = String(state.hours);
-  $("digest-sources").value = state.publisher || "all";
-  if (!$("focus").value.trim()) $("focus").value = $("search").value.trim();
+  const source = state.publisher || (state.source !== "all" ? state.source : "");
+  state.digestSources.clear();
+  if (source) state.digestSources.add(source);
+  renderDigestSources();
+  const query = $("search").value.trim();
+  if (query) $("focus").value = query;
+  if (source || query || $("language").value) $("coverage-options").open = true;
   openBuilder();
 });
 $("show-updates").addEventListener("click", async () => {
@@ -872,11 +945,23 @@ document.addEventListener("keydown", (event) => {
     const restoreHealthFocus = $("source-popover").contains(document.activeElement);
     showHealth(false);
     if (restoreHealthFocus) $("source-health-button").focus();
-    if ($("composer").classList.contains("open")) closeBuilder();
   }
 });
-const mobile = () => matchMedia("(max-width: 1023px)").matches;
+const builderMedia = matchMedia("(max-width: 1023px)");
+const mobile = () => builderMedia.matches;
+const drawerIsolation = new Set();
+let drawerOpener;
+function isolateBuilder() {
+  for (let child = $("composer"); child !== document.body; child = child.parentElement) {
+    for (const sibling of child.parentElement.children) {
+      if (sibling === child || sibling.inert || ["sheet-backdrop", "mail-dialog"].includes(sibling.id)) continue;
+      sibling.inert = true;
+      drawerIsolation.add(sibling);
+    }
+  }
+}
 function setTab(tab, focus = false) {
+  const changed = state.tab !== tab;
   state.tab = tab;
   for (const name of ["build", "preview"]) {
     const selected = name === tab;
@@ -887,36 +972,52 @@ function setTab(tab, focus = false) {
   }
   $("build-panel").hidden = mobile() && tab !== "build";
   $("preview-section").hidden = mobile() && tab !== "preview";
+  if (mobile() && changed) $("composer").scrollTop = 0;
 }
-function openBuilder(tab = "build") {
+function openBuilder(tab = "build", trigger = document.activeElement) {
   setTab(tab);
   if (mobile()) {
+    if (!$("composer").classList.contains("open")) {
+      drawerOpener = trigger;
+      $("composer").scrollTop = 0;
+    }
     $("composer").classList.add("open");
     $("sheet-backdrop").hidden = false;
-    $("mobile-builder").setAttribute("aria-expanded", "true");
+    for (const id of ["mobile-builder", "nav-builder"])
+      $(id).setAttribute("aria-expanded", "true");
     document.body.classList.add("sheet-open");
     $("composer").setAttribute("role", "dialog");
     $("composer").setAttribute("aria-modal", "true");
-    $("close-builder").focus();
+    isolateBuilder();
+    $("close-builder").focus({ preventScroll: true });
   } else {
     $("composer-title").focus({ preventScroll: true });
     $("composer").scrollIntoView({ block: "start" });
   }
 }
-function closeBuilder() {
+function closeBuilder(restoreFocus = true) {
+  if (!$("composer").classList.contains("open")) return;
   $("composer").classList.remove("open");
   $("sheet-backdrop").hidden = true;
-  $("mobile-builder").setAttribute("aria-expanded", "false");
+  for (const id of ["mobile-builder", "nav-builder"])
+    $(id).setAttribute("aria-expanded", "false");
   document.body.classList.remove("sheet-open");
   $("composer").removeAttribute("role");
   $("composer").removeAttribute("aria-modal");
-  $("mobile-builder").focus();
+  for (const sibling of drawerIsolation) sibling.inert = false;
+  drawerIsolation.clear();
+  if (restoreFocus)
+    (drawerOpener?.getClientRects().length ? drawerOpener : $("nav-builder")).focus({ preventScroll: true });
+  drawerOpener = null;
 }
 for (const id of ["nav-builder", "mobile-builder", "pinned-build"])
-  $(id).addEventListener("click", () => openBuilder());
+  $(id).addEventListener("click", (event) => openBuilder("build", event.currentTarget));
 for (const id of ["close-builder", "sheet-backdrop"])
-  $(id).addEventListener("click", closeBuilder);
-$("empty-build").addEventListener("click", () => setTab("build", true));
+  $(id).addEventListener("click", () => closeBuilder());
+$("empty-build").addEventListener("click", () => {
+  setTab("build");
+  $("digest-topic").focus();
+});
 for (const tab of ["build", "preview"])
   $(`${tab}-tab`).addEventListener("click", () => setTab(tab));
 document.querySelector(".builder-tabs").addEventListener("keydown", (event) => {
@@ -934,26 +1035,20 @@ document.querySelector(".builder-tabs").addEventListener("keydown", (event) => {
     );
   }
 });
-matchMedia("(max-width: 1023px)").addEventListener("change", () => {
+builderMedia.addEventListener("change", () => {
   setTab(state.tab);
-  if (!mobile()) {
-    $("composer").classList.remove("open");
-    $("sheet-backdrop").hidden = true;
-    $("mobile-builder").setAttribute("aria-expanded", "false");
-    document.body.classList.remove("sheet-open");
-    $("composer").removeAttribute("role");
-    $("composer").removeAttribute("aria-modal");
-  }
+  if (!mobile()) closeBuilder(false);
 });
 $("composer").addEventListener("keydown", (event) => {
-  if (
-    event.key !== "Tab" ||
-    !mobile() ||
-    !$("composer").classList.contains("open")
-  )
+  if (!mobile() || !$("composer").classList.contains("open") || $("mail-dialog").open) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeBuilder();
     return;
+  }
+  if (event.key !== "Tab") return;
   const items = [
-    ...$("composer").querySelectorAll("button,a,input,select,textarea"),
+    ...$("composer").querySelectorAll("button,a[href],input,select,textarea,summary"),
   ].filter(
     (el) => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length,
   );
@@ -967,6 +1062,11 @@ $("composer").addEventListener("keydown", (event) => {
     first.focus();
   }
 });
+function focusPreview() {
+  if (mobile() && !$("composer").classList.contains("open")) return;
+  $("preview-title").focus({ preventScroll: true });
+  $("preview-title").scrollIntoView({ block: "nearest" });
+}
 function renderDigest() {
   const digest = state.digest.digest;
   $("copy-fallback").hidden = true;
@@ -975,12 +1075,14 @@ function renderDigest() {
   $("preview").replaceChildren();
   $("preview-title").textContent =
     digest.edition === "world"
-      ? "Today’s Global Top 5"
-      : "Your personalized brief";
+      ? "Global tech brief"
+      : "Personalized tech brief";
+  const count = digest.articles.length;
+  $("preview-tab").setAttribute("aria-label", count === 1 ? "Preview, 1 story" : "Preview, " + count + " stories");
   $("preview-basis").textContent = digest.synthesis?.degraded
     ? "Some AI processing was unavailable. Publisher excerpts or headline-only entries are labeled below."
     : state.digest.source_basis || "Based on publisher feed titles and excerpts.";
-  $("preview-count").textContent = `(${digest.articles.length})`;
+  $("preview-count").textContent = String(count);
   if (digest.introduction) {
     $("preview").append(
       node("p", "email-greeting", digest.introduction.greeting),
@@ -1107,9 +1209,10 @@ async function composeBrief(body, isWorld) {
   state.composing = true;
   const button = $(isWorld ? "world-brief" : "generate"),
     message = isWorld ? "world-status" : "digest-status";
-  const label = button.textContent;
+  const label = [...button.childNodes];
   $("world-brief").disabled = $("world-preview").disabled = $("generate").disabled = true;
   button.textContent = "Preparing your brief…";
+  button.setAttribute("aria-busy", "true");
   status(
     message,
     isWorld ? "Selecting today’s global stories…" : "Preparing your selection…",
@@ -1144,7 +1247,8 @@ async function composeBrief(body, isWorld) {
   } finally {
     state.composing = false;
     $("world-brief").disabled = $("world-preview").disabled = $("generate").disabled = false;
-    button.textContent = label;
+    button.replaceChildren(...label);
+    button.removeAttribute("aria-busy");
   }
 }
 $("digest-form").addEventListener("submit", async (event) => {
@@ -1169,10 +1273,11 @@ $("digest-form").addEventListener("submit", async (event) => {
       "Choose a brief length large enough for your pinned stories.",
       true,
     );
+    $("article-count").focus();
     return;
   }
   const brief = await composeBrief(body, false);
-  if (brief) $("preview-title").focus();
+  if (brief) focusPreview();
 });
 function composeWorldBrief() {
   return composeBrief(
@@ -1186,10 +1291,11 @@ function composeWorldBrief() {
     true,
   );
 }
-$("world-preview").addEventListener("click", async () => {
+$("world-preview").addEventListener("click", async (event) => {
+  const trigger = event.currentTarget;
   if (await composeWorldBrief()) {
-    openBuilder("preview");
-    $("preview-title").focus();
+    openBuilder("preview", trigger);
+    focusPreview();
   }
 });
 $("world-form").addEventListener("submit", async (event) => {
@@ -1226,6 +1332,7 @@ $("copy").addEventListener("click", async () => {
     const fallback = $("copy-fallback");
     fallback.value = markdown;
     fallback.hidden = false;
+    fallback.focus();
     fallback.select();
     status("email-status", "Clipboard access was unavailable. Copy the selected Markdown manually.");
     return;
@@ -1274,14 +1381,30 @@ for (const mode of ["email", "webhook"])
 let captchaWidget,
   captchaToken = "",
   captchaLoader;
+let mailBusy = false;
+let mailOpener;
+const deliveryButtons = ["send", "webhook-send", "delivery-owner"];
+function toggleDeliveryButtons(disabled) {
+  for (const id of deliveryButtons) $(id).disabled = disabled;
+}
 function mailStep(step) {
-  for (const id of ["request-code", "verify-code", "send-brief"])
+  for (const id of ["request-code", "verify-code", "send-brief", "owner-email-form"])
     $(id).hidden = id !== step;
+  const owner = step === "owner-email-form";
+  const destination = state.pending?.kind === "webhook" ? "your webhook" : "your inbox";
+  $("mail-title").textContent = owner ? "Send to owner inbox" : step === "send-brief" ? "Deliver your brief" : "Verify your inbox";
+  $("mail-explanation").textContent = owner
+    ? "Delivery goes to the server owner’s configured inbox."
+    : step === "request-code"
+      ? "We’ll send a six-digit code to this address before delivering the brief to " + destination + "."
+      : step === "verify-code"
+        ? "Enter the code sent to " + state.pending?.email + ". It expires after 10 minutes."
+        : "Your inbox is verified. Retry delivery to " + destination + ".";
 }
 async function showCaptcha() {
+  captchaToken = "";
   if (captchaWidget !== undefined) {
     window.turnstile.reset(captchaWidget);
-    captchaToken = "";
     return;
   }
   captchaLoader ??= new Promise((resolve, reject) => {
@@ -1305,7 +1428,7 @@ async function showCaptcha() {
     document.head.append(script);
   });
   await captchaLoader;
-  if (captchaWidget !== undefined) return;
+  if (captchaWidget !== undefined || !$("mail-dialog").open || $("request-code").hidden) return;
   captchaWidget = window.turnstile.render("#mail-captcha", {
     sitekey: state.mail.site_key,
     action: "verify_email",
@@ -1319,6 +1442,15 @@ async function showCaptcha() {
       captchaToken = "";
     },
   });
+}
+async function loadCaptcha() {
+  $("retry-captcha").hidden = true;
+  try {
+    await showCaptcha();
+  } catch (error) {
+    $("retry-captcha").hidden = false;
+    status("mail-status", error.message, true);
+  }
 }
 async function performDelivery() {
   const pending = state.pending;
@@ -1344,13 +1476,15 @@ async function performDelivery() {
     : "";
   status(pending.statusId, message + schedule);
   status("email-status", message + schedule);
-  if ($("mail-dialog").open) $("mail-dialog").close();
   state.pending = null;
+  if ($("mail-dialog").open) $("mail-dialog").close();
   return result;
 }
 async function beginDelivery(pending) {
-  if (state.pending?.sending) return;
+  if (state.pending || $("mail-dialog").open) return;
+  mailOpener = pending.trigger || document.activeElement;
   state.pending = pending;
+  toggleDeliveryButtons(true);
   status(pending.statusId, "Checking inbox verification…");
   try {
     state.mail = await request("/api/mail/config");
@@ -1364,7 +1498,6 @@ async function beginDelivery(pending) {
       normalizeEmail(state.mail.verified_email) ===
         normalizeEmail(pending.email)
     ) {
-      pending.sending = true;
       status(
         pending.statusId,
         pending.kind === "webhook"
@@ -1376,94 +1509,117 @@ async function beginDelivery(pending) {
     }
     mailStep("request-code");
     $("mail-address").value = pending.email;
-    $("mail-explanation").textContent =
-      pending.kind === "webhook"
-        ? "Verify your email once and we’ll post your prepared brief to your webhook automatically."
-        : "Verify your email once and we’ll send your prepared brief automatically. No account or access key needed.";
     status("mail-status", "");
     $("mail-dialog").showModal();
-    await showCaptcha();
+    $("mail-address").focus();
+    await loadCaptcha();
   } catch (error) {
-    pending.sending = false;
     status(
       $("mail-dialog").open ? "mail-status" : pending.statusId,
       error.message,
       true,
     );
+  } finally {
+    if (!$("mail-dialog").open) {
+      state.pending = null;
+      toggleDeliveryButtons(false);
+    }
   }
 }
-$("preview-send-form").addEventListener("submit", async (event) => {
+$("preview-send-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  $("send").disabled = true;
-  try {
-    await beginDelivery({
-      kind: "email",
-      email: $("preview-email").value.trim(),
-      subscribe: $("preview-subscribe").checked,
-      statusId: "email-status",
-      preview: state.digest,
-    });
-  } finally {
-    $("send").disabled = false;
-  }
+  beginDelivery({
+    kind: "email",
+    email: $("preview-email").value.trim(),
+    subscribe: $("preview-subscribe").checked,
+    statusId: "email-status",
+    preview: state.digest,
+    trigger: event.submitter,
+  });
 });
-$("webhook-form").addEventListener("submit", async (event) => {
+$("webhook-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  const url = $("webhook-url").value.trim();
-  if (!url.startsWith("https://")) {
-    status("email-status", "Use an HTTPS webhook URL.", true);
+  let url;
+  try {
+    url = new URL($("webhook-url").value.trim());
+  } catch {}
+  if (url?.protocol !== "https:" || url.username || url.password) {
+    status("email-status", "Use an HTTPS webhook URL without embedded credentials.", true);
+    $("webhook-url").focus();
     return;
   }
-  $("webhook-send").disabled = true;
-  try {
-    await beginDelivery({
-      kind: "webhook",
-      email: $("webhook-email").value.trim(),
-      url,
-      statusId: "email-status",
-      preview: state.digest,
-    });
-  } finally {
-    $("webhook-send").disabled = false;
-  }
+  beginDelivery({
+    kind: "webhook",
+    email: $("webhook-email").value.trim(),
+    url: url.href,
+    statusId: "email-status",
+    preview: state.digest,
+    trigger: event.submitter,
+  });
+});
+$("delivery-owner").addEventListener("click", (event) => {
+  if (state.pending || $("mail-dialog").open) return;
+  mailOpener = event.currentTarget;
+  mailStep("owner-email-form");
+  status("mail-status", "");
+  $("mail-dialog").showModal();
+  $("owner-key").focus();
 });
 $("mail-close").addEventListener("click", () => $("mail-dialog").close());
+$("mail-dialog").addEventListener("cancel", (event) => {
+  if (mailBusy) event.preventDefault();
+});
 $("mail-dialog").addEventListener("close", () => {
+  if ($("mail-dialog").open) return;
   $("mail-code").value = "";
   $("owner-key").value = "";
-  if (state.pending && !state.pending.sending) {
+  captchaToken = "";
+  if (state.pending) {
     status(
       state.pending.statusId,
       "Your brief is ready. Verify your email when you want to send it.",
     );
     state.pending = null;
   }
+  toggleDeliveryButtons(false);
+  if (mailOpener?.getClientRects().length && !mailOpener.disabled) mailOpener.focus({ preventScroll: true });
+  mailOpener = null;
 });
-async function submitMail(event, task) {
-  event.preventDefault();
-  const button = event.currentTarget.querySelector('button[type="submit"]');
-  button.disabled = true;
-  status("mail-status", "Working…");
+async function runMailAction(task, message) {
+  if (mailBusy) return;
+  mailBusy = true;
+  const buttons = $("mail-dialog").querySelectorAll("button");
+  for (const button of buttons) button.disabled = true;
+  status("mail-status", message);
   try {
     await task();
   } catch (error) {
-    if (state.pending) state.pending.sending = false;
     status("mail-status", error.message, true);
   } finally {
-    button.disabled = false;
+    for (const button of buttons) button.disabled = false;
+    mailBusy = false;
   }
 }
+function submitMail(event, task, message) {
+  event.preventDefault();
+  return runMailAction(task, message);
+}
+$("retry-captcha").addEventListener("click", () =>
+  runMailAction(loadCaptcha, "Loading security check…"),
+);
 $("request-code").addEventListener("submit", (event) =>
   submitMail(event, async () => {
-    if (!captchaToken) throw new Error("Complete the bot check first.");
+    if (!captchaToken) throw new Error("Complete the security check first.");
     const token = captchaToken;
+    const email = $("mail-address").value.trim();
     captchaToken = "";
     try {
       await jsonPost("/api/mail/challenge", {
-        email: $("mail-address").value.trim(),
+        email,
         captcha: token,
       });
-      if (state.pending) state.pending.email = $("mail-address").value.trim();
+      if (state.pending) state.pending.email = email;
+      $("mail-address").value = email;
       mailStep("verify-code");
       $("mail-code").focus();
       status(
@@ -1471,10 +1627,10 @@ $("request-code").addEventListener("submit", (event) =>
         "Check your inbox for the six-digit verification code.",
       );
     } catch (error) {
-      await showCaptcha();
+      await loadCaptcha();
       throw error;
     }
-  }),
+  }, "Requesting verification code…"),
 );
 $("verify-code").addEventListener("submit", (event) =>
   submitMail(event, async () => {
@@ -1482,27 +1638,22 @@ $("verify-code").addEventListener("submit", (event) =>
     $("mail-code").value = "";
     mailStep("send-brief");
     status("mail-status", "Inbox verified. Sending your prepared brief…");
-    if (state.pending) state.pending.sending = true;
     await performDelivery();
-  }),
+  }, "Verifying code…"),
 );
 $("send-brief").addEventListener("submit", (event) =>
-  submitMail(event, async () => {
-    if (state.pending) state.pending.sending = true;
-    await performDelivery();
-  }),
+  submitMail(event, performDelivery, "Delivering your brief…"),
 );
-$("different-email").addEventListener("click", async () => {
-  try {
+for (const id of ["different-email", "resend-code"])
+  $(id).addEventListener("click", () => runMailAction(async () => {
     await jsonPost("/api/mail/logout", {});
     $("mail-code").value = "";
     mailStep("request-code");
-    await showCaptcha();
+    $("mail-address").focus();
+    if (id === "different-email") $("mail-address").select();
     status("mail-status", "");
-  } catch (error) {
-    status("mail-status", error.message, true);
-  }
-});
+    await loadCaptcha();
+  }, "Resetting verification…"));
 $("owner-email-form").addEventListener("submit", (event) =>
   submitMail(event, async () => {
     const preview = state.pending?.preview || state.digest;
@@ -1526,7 +1677,7 @@ $("owner-email-form").addEventListener("submit", (event) =>
       "email-status",
       result.message || "The brief was accepted for delivery.",
     );
-  }),
+  }, "Sending to owner inbox…"),
 );
 function reflectTopic() {
   for (const button of $("topics").children)
@@ -1545,11 +1696,61 @@ restoreURL();
 reflectFilters();
 reflectSavedCount();
 setTab("build");
+if (location.hash === "#composer")
+  window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
 loadNews();
 loadHeadlines();
+window.addEventListener("hashchange", () => {
+  if (location.hash === "#composer") openBuilder("build", $("nav-builder"));
+});
 window.addEventListener("popstate", () => {
   clearTimeout(searchTimer);
   restoreURL();
   reflectFilters();
   loadNews();
+});
+
+let activeStoryIndex = -1;
+function updateActiveStory(index) {
+  const cards = Array.from($("stories").querySelectorAll(".story"));
+  if (!cards.length) return;
+  activeStoryIndex = Math.max(0, Math.min(index, cards.length - 1));
+  cards.forEach((card, i) => {
+    card.classList.toggle("keyboard-active", i === activeStoryIndex);
+  });
+  cards[activeStoryIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+window.addEventListener("keydown", (e) => {
+  const activeEl = document.activeElement;
+  const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT" || activeEl.isContentEditable);
+
+  if (e.key === "Escape") {
+    if ($("mail-dialog")?.open) return;
+    if (isInput) activeEl.blur();
+    return;
+  }
+  if (isInput) return;
+
+  const cards = Array.from($("stories").querySelectorAll(".story"));
+  if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    $("search")?.focus();
+    $("search")?.select();
+  } else if (e.key === "j" || e.key === "J") {
+    e.preventDefault();
+    updateActiveStory(activeStoryIndex + 1);
+  } else if (e.key === "k" || e.key === "K") {
+    e.preventDefault();
+    updateActiveStory(activeStoryIndex - 1);
+  } else if ((e.key === "p" || e.key === "P") && activeStoryIndex >= 0 && activeStoryIndex < cards.length) {
+    e.preventDefault();
+    cards[activeStoryIndex]?.querySelector(".pin-button")?.click();
+  } else if ((e.key === "s" || e.key === "S") && activeStoryIndex >= 0 && activeStoryIndex < cards.length) {
+    e.preventDefault();
+    cards[activeStoryIndex]?.querySelector(".save-button")?.click();
+  } else if (e.key === "b" || e.key === "B") {
+    e.preventDefault();
+    $("nav-builder")?.click();
+  }
 });

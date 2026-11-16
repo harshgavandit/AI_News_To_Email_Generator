@@ -339,12 +339,13 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <span style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#294a3b;letter-spacing:-0.5px;">Informa AI</span>
-                    <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#697169;margin-top:3px;">Global Tech Intelligence &amp; Perspective</div>
+                    <span style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#1e352b;letter-spacing:-0.5px;">Informa AI</span>
+                    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#4f5a52;margin-top:3px;font-weight:600;">Your Personal AI News Intelligence Agent</div>
+                    <div style="font-size:9px;letter-spacing:0.8px;color:#7c877e;margin-top:2px;">Discover · Analyze · Personalize · Automate</div>
                   </td>
                   <td align="right" style="vertical-align:top;">
-                    <span style="display:inline-block;height:8px;width:8px;background-color:#768a58;border-radius:50%;margin-right:4px;"></span>
-                    <span style="font-size:10px;color:#697169;font-weight:600;">DAILY BRIEF</span>
+                    <span style="display:inline-block;height:8px;width:8px;background-color:#10b981;border-radius:50%;margin-right:4px;"></span>
+                    <span style="font-size:10px;color:#4f5a52;font-weight:700;letter-spacing:0.5px;">INTELLIGENCE DOSSIER</span>
                   </td>
                 </tr>
               </table>
@@ -384,8 +385,11 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
                 <a href="{origin}/sources.html" style="color:#697169;text-decoration:underline;">Source Directory</a> · 
                 <a href="{origin}" style="color:#697169;text-decoration:underline;">Web Edition</a>
               </p>
-              <p style="margin:0;font-size:10px;color:#9ca29b;">
-                Informa AI · Independent Global Technology &amp; AI Intelligence
+              <p style="margin:0;font-size:11px;font-weight:600;color:#4f5a52;">
+                Informa AI · Discover · Analyze · Personalize · Automate
+              </p>
+              <p style="margin:4px 0 0;font-size:10px;color:#7c877e;font-style:italic;">
+                Discover what matters. Understand why it matters. Stay ahead without information overload.
               </p>
             </td>
           </tr>

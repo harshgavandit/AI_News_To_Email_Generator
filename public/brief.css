@@ -1,0 +1,553 @@
+.composer {
+  padding: clamp(18px, 3vw, 34px);
+  scroll-margin-top: 12px;
+}
+
+.builder-heading {
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.builder-heading h2 {
+  margin: 0;
+  font: 700 clamp(23px, 2.5vw, 30px)/1.2 var(--font-ui);
+  letter-spacing: -.025em;
+}
+
+.builder-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.builder-grid > * {
+  min-width: 0;
+}
+
+.composer .brief-settings-group {
+  min-width: 0;
+  margin: 0 0 22px;
+}
+
+.brief-settings-group + .brief-settings-group {
+  padding-top: 4px;
+}
+
+.digest-form .brief-settings-group legend {
+  margin: 0 0 12px;
+  padding: 0;
+  color: var(--ink);
+  font: 650 14px/1.35 var(--font-ui);
+}
+
+.composer .form-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.composer .form-row + .form-row {
+  margin-top: 12px;
+}
+
+.form-row > div,
+.details-fields > div,
+.delivery-body form > div {
+  min-width: 0;
+}
+
+.composer label,
+.composer .form-row label,
+#mail-dialog label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.composer :is(input:not([type="checkbox"]), select, textarea),
+#mail-dialog input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 8px;
+  font: 400 14px/1.35 var(--font-ui);
+}
+
+.composer textarea {
+  resize: vertical;
+}
+
+.brief-details {
+  min-width: 0;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.brief-details summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  list-style: none;
+}
+
+.brief-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.brief-details summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.brief-details[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.brief-details summary:hover {
+  background: var(--subtle, var(--sage));
+}
+
+.details-fields,
+.delivery-body {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.composer #digest-source-selection {
+  margin: 8px 0 0;
+}
+
+.composer .interest-chips .topic-chip {
+  min-height: 36px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.brief-pins {
+  margin-block: 0 20px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--subtle, var(--bg));
+}
+
+.brief-pins .selected-heading {
+  margin: 0;
+}
+
+.selected-heading h3 {
+  margin: 0;
+  font: 650 13px/1.3 var(--font-ui);
+}
+
+.brief-pins .small,
+.build-actions .small {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.brief-pins .selected-item {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.brief-pins .selected-item button {
+  flex: 0 0 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.brief-pins .selected-item button:hover {
+  background: var(--paper);
+}
+
+.brief-pins .selected-item:last-child {
+  border-bottom: 0;
+}
+
+.brief-pins #clear-pins {
+  min-height: 36px;
+}
+
+.build-actions .button,
+.preview-actions .button,
+.composer .preview-toolbar button,
+.delivery-body button,
+#mail-dialog button {
+  min-height: 42px;
+  font-size: 13px;
+}
+
+.composer .generation-stages {
+  font-size: 12px;
+}
+
+.composer .preview-empty {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 10px;
+  min-height: 260px;
+  padding: clamp(18px, 4vw, 42px);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--subtle, var(--bg));
+  text-align: left;
+}
+
+.composer .preview-empty h3,
+.composer #preview-title {
+  margin: 0;
+  color: var(--ink);
+  font: 700 clamp(19px, 2vw, 25px)/1.25 var(--font-ui);
+  letter-spacing: -.02em;
+}
+
+.composer .preview-empty p {
+  max-width: 38ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.composer .preview-empty .button {
+  min-height: 42px;
+  margin-top: 4px;
+}
+
+.preview-heading {
+  margin-bottom: 12px;
+}
+
+.preview-heading .preview-basis {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.composer .preview-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+}
+
+.composer .preview-actions .button {
+  flex: 0 1 auto;
+  padding: 8px 12px;
+}
+
+.brief-delivery .delivery-tabs {
+  justify-self: start;
+  margin: 0;
+}
+
+.delivery-body form {
+  display: grid;
+  gap: 12px;
+}
+
+.delivery-body #preview-send-form {
+  padding: 0;
+  border: 0;
+}
+
+.delivery-body #preview-send-form > .button,
+.delivery-body #webhook-form .button,
+.delivery-body #webhook-form label {
+  margin-top: 0;
+}
+
+.delivery-body form > .button {
+  justify-self: start;
+}
+
+.composer .delivery-body .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 0;
+}
+
+.delivery-help {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+
+.delivery-help p {
+  flex: 1 1 185px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.delivery-help .text-button {
+  white-space: nowrap;
+}
+
+.composer .preview-toolbar {
+  justify-content: space-between;
+  gap: 8px;
+  margin: 18px 0 10px;
+}
+
+.composer .preview-toolbar .segmented button {
+  font-size: 13px;
+}
+
+.composer .email-preview {
+  min-width: 0;
+  margin-bottom: 0;
+  padding: clamp(16px, 2.8vw, 28px);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.email-preview .email-greeting {
+  margin: 0 0 8px;
+  font-size: clamp(19px, 2vw, 25px);
+}
+
+.email-preview .email-intro,
+.email-preview .digest-item p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.email-preview .digest-item h3 {
+  font-size: clamp(18px, 2vw, 23px);
+}
+
+.email-preview .digest-meta,
+.email-preview .digest-source-row,
+.email-preview .digest-item a {
+  font-size: 12px;
+}
+
+.composer #copy-fallback {
+  margin-top: 10px;
+}
+
+.composer .status:not(:empty),
+#mail-dialog .status:not(:empty) {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--sage);
+  color: var(--green);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.composer .status.error:not(:empty),
+#mail-dialog .status.error:not(:empty) {
+  background: var(--warning-surface);
+  color: var(--warning-text);
+}
+
+#mail-dialog {
+  width: min(460px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: clamp(18px, 4vw, 26px);
+  overscroll-behavior: contain;
+}
+
+#mail-dialog .mail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#mail-dialog h2 {
+  margin: 0;
+  font: 700 22px/1.24 var(--font-ui);
+  letter-spacing: -.02em;
+}
+
+#mail-dialog .dialog-close {
+  position: static;
+  flex: 0 0 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 23px;
+}
+
+#mail-dialog .dialog-close:hover {
+  background: var(--subtle, var(--sage));
+}
+
+#mail-dialog #mail-explanation {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#mail-dialog form {
+  gap: 9px;
+  margin-top: 16px;
+}
+
+#mail-dialog form label,
+#mail-dialog form .button {
+  margin: 0;
+}
+
+#mail-dialog #mail-code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .13em;
+}
+
+.mail-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 8px;
+}
+
+@media (min-width: 1024px) {
+  .composer .builder-grid {
+    grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr);
+    gap: clamp(24px, 3vw, 38px);
+  }
+
+  .composer .builder-grid > #build-panel {
+    padding-right: clamp(24px, 3vw, 38px);
+  }
+}
+
+@media (max-width: 1023px) {
+  .composer {
+    inset-inline: 0;
+    width: min(100%, 680px);
+    max-height: min(90dvh, 840px);
+    margin-inline: auto;
+    padding: 0 clamp(14px, 4vw, 24px) max(20px, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    overscroll-behavior: contain;
+  }
+
+  .builder-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-top: 1px;
+    background: var(--paper);
+  }
+
+  .builder-heading {
+    margin: 0;
+  }
+
+  .builder-heading p {
+    max-width: 42ch;
+  }
+
+  .composer .sheet-handle {
+    margin: 8px auto 12px;
+    background: var(--line);
+  }
+
+  .composer #close-builder {
+    flex: 0 0 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 8px;
+    color: var(--ink);
+  }
+
+  .composer #close-builder:hover {
+    background: var(--subtle, var(--sage));
+  }
+
+  .composer .builder-tabs {
+    gap: 20px;
+    margin: 8px 0 15px;
+  }
+
+  .composer .builder-tabs button {
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 14px;
+  }
+
+  .builder-tabs #preview-count:not(:empty) {
+    display: inline-block;
+    min-width: 18px;
+    margin-left: 4px;
+    padding: 1px 3px;
+    border-radius: 5px;
+    background: var(--sage);
+    color: var(--green);
+  }
+
+  .composer :is(button, select, input:not([type="checkbox"]), summary) {
+    min-height: 44px;
+  }
+
+  .composer :is(select, textarea, input:not([type="checkbox"])),
+  #mail-dialog input {
+    font-size: 16px;
+  }
+
+  .composer #preview-title {
+    scroll-margin-top: 138px;
+  }
+
+  .composer .preview-toolbar .segmented button {
+    font-size: 12px;
+  }
+
+  .composer .preview-empty {
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 380px) {
+  .composer .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .composer .preview-actions .button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer,
+  .composer .email-preview {
+    transition: none;
+  }
+}

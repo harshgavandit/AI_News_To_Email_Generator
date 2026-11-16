@@ -5,62 +5,93 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="Follow global news on AI, startups, cybersecurity, software, hardware, research, and technology companies. Search original sources and build a personalized brief."
+      content="Informa AI is your personal AI news intelligence agent. Discover what matters. Understand why it matters. Stay ahead without information overload. Global technology intelligence with one-click mailbox delivery."
     />
-    <meta name="theme-color" content="#f6f4ee" />
+    <meta name="theme-color" content="#f4f6f8" />
     <meta name="google-site-verification" content="Jws4GlM5qkCYc6x_MCXN_e96mXAoMGD43YrYiY-g28U" />
-    <title>Informa AI | Technology News &amp; Personalized Briefs</title>
+    <title>Informa AI — Your Personal AI News Intelligence Agent</title>
     <link rel="canonical" href="https://ai-news-to-email-generator.vercel.app/" />
-    <script>
-      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
+    <script defer src="/analytics.js"></script>
     <script defer src="/_vercel/insights/script.js"></script>
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Informa AI | Technology News &amp; Personalized Briefs" />
-    <meta property="og:description" content="Follow technology news around the world, read original sources, and build a brief around what you follow." />
+    <meta property="og:site_name" content="Informa AI" />
+    <meta property="og:title" content="Informa AI — Your Personal AI News Intelligence Agent" />
+    <meta property="og:description" content="Discover what matters. Understand why it matters. Stay ahead without information overload. Global technology intelligence with one-click mailbox delivery." />
     <meta property="og:url" content="https://ai-news-to-email-generator.vercel.app/" />
     <meta property="og:image" content="https://ai-news-to-email-generator.vercel.app/edition-city.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Informa AI — Your Personal AI News Intelligence Agent" />
+    <meta name="twitter:description" content="Discover what matters. Understand why it matters. Stay ahead without information overload." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/reading.css" />
+    <link rel="stylesheet" href="/brief.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
     <a class="skip" href="#reading-room">Skip to stories</a>
-    <header class="topbar wrap">
-      <a class="brand" href="/" aria-label="Informa AI home">
-        <img class="brand-icon" src="/informa-ai-icon.png" width="33" height="33" alt="" />
-        <span>Informa AI</span>
-      </a>
-      <nav aria-label="Main navigation">
-        <a href="#reading-room">Reading Room</a>
-        <a href="/sources.html">Sources</a>
-        <select id="site-theme" class="theme-select" aria-label="App color theme" disabled>
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-        <button id="nav-builder" class="text-button" type="button">
-          Build a brief ↗
-        </button>
-      </nav>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home">
+          <img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" />
+          <span class="brand-name">Informa AI</span>
+          <span class="brand-badge">AGENT</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="#reading-room" aria-current="page">Reading Room</a>
+          <a href="/sources.html">Sources</a>
+        </nav>
+        <div class="site-tools">
+          <select id="site-theme" class="theme-select" aria-label="Color theme" disabled>
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <button id="nav-builder" class="button primary" type="button" aria-controls="composer" aria-expanded="false">Build a brief</button>
+        </div>
+      </div>
     </header>
     <main id="main" class="wrap">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <time id="edition-date" class="edition-date"></time>
-          <h1 id="hero-title">Global technology news</h1>
-          <p>
-            Follow AI, startups, cybersecurity, software, hardware, and research from publishers around the world.
+          <div class="hero-badge-row">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="hero-badge-text">AUTONOMOUS AGENT ACTIVE</span>
+            <span class="badge-separator" aria-hidden="true">·</span>
+            <time id="edition-date" class="edition-date"></time>
+          </div>
+          <h1 id="hero-title">Your Personal AI<br><span class="hero-headline-accent">News Intelligence Agent.</span></h1>
+          <p class="hero-tagline">
+            Discover what matters. Understand why it matters. Stay ahead without information overload.
           </p>
-          <a class="edition-link" href="#reading-room">Browse stories <span aria-hidden="true">↓</span></a>
+          <div class="core-pillars" aria-label="Core Pillars">
+            <span class="pillar">Discover</span>
+            <span class="pillar-dot" aria-hidden="true">·</span>
+            <span class="pillar">Analyze</span>
+            <span class="pillar-dot" aria-hidden="true">·</span>
+            <span class="pillar">Personalize</span>
+            <span class="pillar-dot" aria-hidden="true">·</span>
+            <span class="pillar">Automate</span>
+          </div>
+          <div class="hero-actions">
+            <a class="edition-link" href="#reading-room">Enter Reading Room <span aria-hidden="true">↓</span></a>
+            <a class="hero-secondary-link" href="#composer">Configure Custom Agent <span aria-hidden="true">→</span></a>
+          </div>
         </div>
         <form id="world-form" class="quick-send">
-          <h2>The Global Top 5</h2>
-          <label class="sr-only" for="hero-email">Email address for today's brief</label>
-          <p class="brief-description">Five stories from the last 24 hours, in one email.</p>
+          <div class="brief-card-heading">
+            <div class="quick-send-title-wrap">
+              <span class="quick-send-badge">1-CLICK DISPATCH</span>
+              <h2>Global Top 5 Intelligence</h2>
+            </div>
+            <button id="world-preview" class="text-button" type="button">Preview</button>
+          </div>
+          <p class="brief-description">The 5 highest-signal global stories from the past 24 hours, synthesized directly to your mailbox.</p>
+          <label class="world-email-label" for="hero-email">Email address</label>
           <div class="email-action">
             <input
               id="hero-email"
@@ -70,17 +101,16 @@
               autocomplete="email"
               placeholder="you@example.com"
             /><button id="world-brief" class="button primary" type="submit">
-              Get the brief <span aria-hidden="true">↗</span>
+              Send Top 5 Brief ✦
             </button>
           </div>
           <label class="check-label"
             ><input id="hero-subscribe" type="checkbox" /><span
-              >Also send it daily at 8 AM, my local time
+              >Deliver automatically every morning at 8:00 AM (local time)
               <span id="timezone-label" class="muted"></span></span
           ></label>
           <div class="brief-footer">
-            <p class="small">Free. Up to 3 briefs per verified inbox each day.</p>
-            <button id="world-preview" class="text-button" type="button">Preview today’s brief</button>
+            <p class="small">1-click verified delivery · Zero spam · GDPR / CAN-SPAM compliant.</p>
           </div>
           <p
             id="world-status"
@@ -93,7 +123,7 @@
       <section id="headlines" class="headlines" aria-labelledby="headlines-title" hidden>
         <div class="headline-header">
           <h2 id="headlines-title">Top stories</h2>
-          <a href="#reading-room" class="text-button">Latest stories <span aria-hidden="true">↓</span></a>
+          <a href="#reading-room" class="text-button">All stories <span aria-hidden="true">↓</span></a>
         </div>
         <div id="headlines-content" class="headlines-content"></div>
       </section>
@@ -104,9 +134,7 @@
           aria-labelledby="reading-title"
         >
           <div class="section-top">
-            <div>
-              <h2 id="reading-title">Reading Room</h2>
-            </div>
+            <h2 id="reading-title">Reading Room</h2>
             <div class="source-health">
               <button
                 id="source-health-button"
@@ -137,17 +165,82 @@
               </div>
             </div>
           </div>
-          <div class="reading-views" role="group" aria-label="Reading Room view">
-            <button id="view-feed" type="button" aria-pressed="true">Latest stories</button>
-            <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
+          <div class="reading-stream">
+            <div class="reading-views" role="group" aria-label="Reading Room view">
+              <button id="view-feed" type="button" aria-pressed="true">Latest stories</button>
+              <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
+            </div>
+            <div class="reading-stream-actions">
+              <span class="keyboard-hints" aria-label="Keyboard navigation available" title="Power Shortcuts: / Search · J/K Navigate · P Pin · S Save · B Brief Builder"><kbd>/</kbd> search · <kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin</span>
+              <button id="refresh" class="reading-reload text-button" type="button" aria-label="Reload latest stories">
+                <span aria-hidden="true">↻</span> Refresh
+              </button>
+            </div>
           </div>
           <div id="feed-controls">
-            <div
-              id="topics"
-              class="topic-controls"
-              role="group"
-              aria-label="Story category"
-            ></div>
+            <div class="reading-discovery">
+              <div class="discovery-fields">
+                <form id="story-search" class="reading-search" role="search">
+                  <label for="search">Search stories</label>
+                  <div class="search-wrap">
+                    <span class="reading-search-icon" aria-hidden="true"></span>
+                    <input id="search" type="search" maxlength="150" placeholder="Companies or headlines" />
+                    <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
+                  </div>
+                </form>
+                <div class="mobile-topic">
+                  <label for="topic-mobile">Topic</label>
+                  <select id="topic-mobile"><option value="">All topics</option></select>
+                </div>
+                <div>
+                  <label for="region">Publisher region</label>
+                  <select id="region"><option value="">All regions</option></select>
+                </div>
+              </div>
+              <div id="topics" class="topic-controls" role="group" aria-label="Story topic"></div>
+              <div class="desk-controls">
+                <div class="toolbar">
+                  <div class="segmented" id="window-controls" role="group" aria-label="Publication window">
+                    <button type="button" data-hours="12" aria-label="Last 12 hours" aria-pressed="true">12h</button>
+                    <button type="button" data-hours="24" aria-label="Last 24 hours" aria-pressed="false">24h</button>
+                    <button type="button" data-hours="168" aria-label="Last 7 days" aria-pressed="false">7d</button>
+                    <button type="button" data-hours="720" aria-label="Last 30 days" aria-pressed="false">30d</button>
+                  </div>
+                  <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">
+                    More filters <span id="filter-count" hidden></span>
+                  </button>
+                </div>
+              </div>
+              <div id="active-filters" class="active-filters" aria-label="Active filters" hidden></div>
+              <div id="extra-filters" class="extra-filters" hidden>
+                <div class="filter-fields">
+                  <div>
+                    <label for="publisher">Publisher feed</label>
+                    <select id="publisher"><option value="">All publisher feeds</option></select>
+                  </div>
+                  <div>
+                    <label for="kind">Content type</label>
+                    <select id="kind">
+                      <option value="all">All formats</option>
+                      <option value="news">News</option>
+                      <option value="research">Research</option>
+                      <option value="engineering">Engineering</option>
+                      <option value="video">Video</option>
+                      <option value="status">Service status</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="coverage">Source type</label>
+                    <select id="coverage"><option value="">All source types</option></select>
+                  </div>
+                  <div>
+                    <label for="language">Story language</label>
+                    <select id="language"><option value="">All languages</option></select>
+                  </div>
+                </div>
+                <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="Source collections"></div>
+              </div>
+            </div>
             <aside
               id="outage-links"
               class="outage-links"
@@ -187,82 +280,6 @@
                 >GitHub ↗</a
               >
             </aside>
-            <div class="discovery-fields">
-              <div class="reading-search">
-                <label for="search">Search coverage</label>
-                <div class="search-wrap">
-                  <span aria-hidden="true">⌕</span>
-                  <input id="search" type="search" maxlength="150" placeholder="Headlines, companies, technologies…" />
-                  <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
-                </div>
-              </div>
-              <div class="mobile-topic">
-                <label for="topic-mobile">Topic</label>
-                <select id="topic-mobile"><option value="">All topics</option></select>
-              </div>
-              <div>
-                <label for="region">Publisher region</label>
-                <select id="region"><option value="">All regions</option></select>
-              </div>
-            </div>
-            <div class="desk-controls">
-              <div class="toolbar">
-                <div
-                  class="segmented"
-                  id="window-controls"
-                  role="group"
-                  aria-label="Published within"
-                >
-                  <button type="button" data-hours="12" aria-pressed="true">
-                    12h</button
-                  ><button type="button" data-hours="24" aria-pressed="false">
-                    24h</button
-                  ><button type="button" data-hours="168" aria-pressed="false">
-                    7d</button
-                  ><button type="button" data-hours="720" aria-pressed="false">
-                    30d
-                  </button>
-                </div>
-                <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">Filters<span id="filter-count" hidden></span></button>
-                <button
-                  id="refresh"
-                  class="text-button"
-                  type="button"
-                  aria-label="Reload latest stories"
-                >
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
-            <div id="active-filters" class="active-filters" aria-label="Active filters" hidden></div>
-            <div id="extra-filters" class="extra-filters" hidden>
-              <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="News sources"></div>
-              <div class="filter-fields">
-                <div>
-                  <label for="publisher">Publisher feed</label>
-                  <select id="publisher"><option value="">All publisher feeds</option></select>
-                </div>
-                <div>
-                  <label for="kind">Content type</label>
-                  <select id="kind">
-                    <option value="all">All formats</option>
-                    <option value="news">News</option>
-                    <option value="research">Research</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="video">Video</option>
-                    <option value="status">Service status</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="coverage">Source type</label>
-                  <select id="coverage"><option value="">All source types</option></select>
-                </div>
-                <div>
-                  <label for="language">Story language</label>
-                  <select id="language"><option value="">All languages</option></select>
-                </div>
-              </div>
-            </div>
             <div id="failed-alert" class="failed-alert" hidden>
               <span id="failed-message"></span
               ><button id="retry-sources" class="text-button" type="button">
@@ -275,22 +292,25 @@
             </div>
           </div>
           <div class="results-line">
-            <p id="news-status" role="status" aria-live="polite">
-              Finding fresh stories…
-            </p>
-            <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
-            <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief from these filters ↗</button>
-            <label for="sort" class="sr-only">Sort stories</label>
-            <select id="sort">
-              <option value="latest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="relevance">Most relevant</option>
-            </select>
-            <div class="segmented layout-controls" role="group" aria-label="Story layout">
-              <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
-              <button id="layout-list" type="button" aria-pressed="false">List</button>
+            <div class="reading-result-context">
+              <p id="news-status" role="status" aria-live="polite">Loading stories…</p>
+              <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
+              <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief from these filters <span aria-hidden="true">↗</span></button>
+            </div>
+            <div class="reading-result-tools">
+              <label for="sort" class="sr-only">Sort stories</label>
+              <select id="sort">
+                <option value="latest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="relevance">Most relevant</option>
+              </select>
+              <div class="segmented layout-controls" role="group" aria-label="Story layout">
+                <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
+                <button id="layout-list" type="button" aria-pressed="false">List</button>
+              </div>
             </div>
           </div>
+          <p id="story-action-status" class="sr-only" role="status"></p>
           <div id="stories" class="stories" aria-busy="true"></div>
           <button
             id="show-more"
@@ -298,13 +318,17 @@
             class="button secondary more"
             hidden
           >
-            More stories <span aria-hidden="true">↓</span>
+            Load more stories <span aria-hidden="true">↓</span>
           </button>
         </section>
         <aside id="composer" class="composer" aria-labelledby="composer-title">
+          <div class="builder-header">
           <div class="sheet-handle" aria-hidden="true"></div>
           <div class="builder-heading">
-            <h2 id="composer-title" tabindex="-1">Brief builder</h2>
+            <div>
+              <h2 id="composer-title" tabindex="-1">Brief builder</h2>
+              <p>Choose your coverage and generate a newsletter you can export or send.</p>
+            </div>
             <button
               id="close-builder"
               type="button"
@@ -322,7 +346,7 @@
               aria-selected="true"
               aria-controls="build-panel"
             >
-              Brief settings</button
+              Settings</button
             ><button
               id="preview-tab"
               type="button"
@@ -334,32 +358,12 @@
               Preview <span id="preview-count"></span>
             </button>
           </div>
+          </div>
           <div class="builder-grid">
             <div id="build-panel" role="tabpanel" aria-labelledby="build-tab">
               <form id="digest-form" class="digest-form">
-                <label for="reader-name"
-                  >Your name <span class="optional">Optional</span></label
-                ><input
-                  id="reader-name"
-                  name="name"
-                  maxlength="60"
-                  autocomplete="given-name"
-                  placeholder="Reader"
-                /><label for="persona">Reader perspective</label
-                ><select id="persona">
-                  <option value="executive">
-                    Executive — decisions &amp; impact
-                  </option>
-                  <option value="engineer">
-                    Engineer — implementation &amp; tradeoffs
-                  </option>
-                  <option value="security">
-                    Security — risks &amp; defenses
-                  </option>
-                  <option value="product">
-                    Product — users &amp; opportunities
-                  </option>
-                </select>
+                <fieldset class="brief-settings-group">
+                <legend>Coverage</legend>
                 <div class="form-row">
                   <div>
                     <label for="digest-topic">Topic</label>
@@ -370,41 +374,39 @@
                     <select id="digest-region"><option value="">All regions</option></select>
                   </div>
                 </div>
-                <label for="focus"
-                  >Specific interests
-                  <span class="optional">Optional</span></label
-                ><textarea
-                  id="focus"
-                  rows="2"
-                  maxlength="400"
-                  placeholder="e.g. chip manufacturing, cloud security, or climate tech"
-                ></textarea>
-                <label for="digest-language">Source language</label>
-                <select id="digest-language"><option value="">All languages</option></select>
-                <div class="selected-heading">
-                  <strong
-                    >Pinned stories
-                    <span id="selected-count">0 / 10</span></strong
-                  ><button
-                    id="clear-pins"
-                    class="text-button"
-                    type="button"
-                    hidden
-                  >
-                    Clear
-                  </button>
+                <div class="form-row">
+                  <div>
+                    <label for="digest-language">Source language</label>
+                    <select id="digest-language"><option value="">All languages</option></select>
+                  </div>
+                  <div>
+                    <label for="digest-window">Time period</label>
+                    <select id="digest-window">
+                      <option value="12">12 hours</option>
+                      <option value="24" selected>24 hours</option>
+                      <option value="168">7 days</option>
+                      <option value="720">30 days</option>
+                    </select>
+                  </div>
                 </div>
-                <div id="selected-stories">
-                  <p class="small">
-                    Pinned stories are included even if they fall outside your filters.
-                  </p>
-                </div>
-                <p
-                  id="pin-status"
-                  class="status"
-                  role="status"
-                  aria-live="polite"
-                ></p>
+                <details id="coverage-options" class="brief-details">
+                  <summary>Interests and sources</summary>
+                  <div class="details-fields">
+                    <div>
+                      <label for="focus">Specific interests <span class="optional">Optional</span></label>
+                      <textarea id="focus" rows="2" maxlength="400" placeholder="e.g. chip manufacturing or cloud security"></textarea>
+                    </div>
+                    <div>
+                      <label for="digest-sources">Include specific sources</label>
+                      <select id="digest-sources"><option value="all">All sources</option></select>
+                      <div id="digest-source-selection" class="interest-chips" aria-label="Selected sources" hidden></div>
+                    </div>
+                  </div>
+                </details>
+                </fieldset>
+
+                <fieldset class="brief-settings-group">
+                <legend>Format</legend>
                 <div class="form-row">
                   <div>
                     <label for="article-count">Stories</label
@@ -423,45 +425,47 @@
                     </select>
                   </div>
                 </div>
-                <div class="form-row">
-                  <div>
-                    <label for="digest-window">Look back</label
-                    ><select id="digest-window">
-                      <option value="12">12 hours</option>
-                      <option value="24" selected>24 hours</option>
-                      <option value="168">7 days</option>
-                      <option value="720">30 days</option>
-                    </select>
+                <details class="brief-details">
+                  <summary>Reader perspective and name</summary>
+                  <div class="details-fields">
+                    <div>
+                      <label for="persona">Reader perspective</label>
+                      <select id="persona">
+                        <option value="executive">Executive</option>
+                        <option value="engineer">Engineering</option>
+                        <option value="security">Security</option>
+                        <option value="product">Product</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="reader-name">First name <span class="optional">Optional</span></label>
+                      <input id="reader-name" name="name" maxlength="60" autocomplete="given-name" />
+                    </div>
                   </div>
-                  <div>
-                    <label for="digest-sources">Add a source</label>
-                    <select id="digest-sources"><option value="all">All sources</option></select>
+                </details>
+                </fieldset>
+
+                <section class="brief-pins" aria-labelledby="pinned-section-title">
+                  <div class="selected-heading">
+                    <h3 id="pinned-section-title">Pinned stories <span id="selected-count">0 / 10</span></h3>
+                    <button id="clear-pins" class="text-button" type="button" hidden>Clear</button>
                   </div>
+                  <div id="selected-stories"></div>
+                  <p id="pin-status" class="status" role="status"></p>
+                </section>
+
+                <div class="build-actions">
+                  <button id="generate" class="button primary full" type="submit">
+                    Generate preview <span aria-hidden="true">→</span>
+                  </button>
+                  <p id="config-note" class="small">The brief links to the original sources.</p>
+                  <ol id="generation-stages" class="generation-stages" hidden aria-label="Brief preparation progress">
+                    <li data-stage="1">Selecting stories</li>
+                    <li data-stage="2">Summarizing and ranking</li>
+                    <li data-stage="3">Formatting your brief</li>
+                  </ol>
+                  <p id="digest-status" class="status" role="status"></p>
                 </div>
-                <div id="digest-source-selection" class="interest-chips" aria-label="Selected sources" hidden></div>
-                <button id="generate" class="button primary full" type="submit">
-                  Preview my brief <span aria-hidden="true">↗</span>
-                </button>
-                <p id="config-note" class="small">
-                  Summaries use publisher titles and excerpts. Original sources
-                  are always linked.
-                </p>
-                <ol
-                  id="generation-stages"
-                  class="generation-stages"
-                  hidden
-                  aria-label="Brief preparation progress"
-                >
-                  <li data-stage="1">Selecting stories</li>
-                  <li data-stage="2">Summarizing and ranking</li>
-                  <li data-stage="3">Formatting your brief</li>
-                </ol>
-                <p
-                  id="digest-status"
-                  class="status"
-                  role="status"
-                  aria-live="polite"
-                ></p>
               </form>
             </div>
             <section
@@ -469,134 +473,69 @@
               role="tabpanel"
               aria-labelledby="preview-tab"
             >
-              <div class="preview-toolbar">
-                <strong>Live preview</strong>
-                <div class="segmented" role="group" aria-label="Preview width">
-                  <button
-                    id="preview-desktop"
-                    type="button"
-                    aria-pressed="true"
-                  >
-                    Full</button
-                  ><button
-                    id="preview-mobile"
-                    type="button"
-                    aria-pressed="false"
-                  >
-                    375px
-                  </button>
-                </div>
-                <button
-                  id="preview-theme"
-                  type="button"
-                  class="text-button"
-                  aria-pressed="false"
-                >
-                  Dark preview
-                </button>
-              </div>
               <div id="preview-empty" class="preview-empty">
-                <span aria-hidden="true">✉</span>
-                <h3>No brief yet</h3>
-                <p>Choose a topic, region, or specific interest to preview a personalized edition.</p>
+                <h3>Your newsletter preview</h3>
+                <p>Generate a brief to review its stories before you copy, download, or send it.</p>
                 <button id="empty-build" type="button" class="button secondary">
-                  Build a brief
+                  Choose coverage
                 </button>
               </div>
               <div id="preview-content" hidden>
-                <h3 id="preview-title" tabindex="-1">Your Informa AI</h3>
-                <p id="preview-basis" class="preview-basis"></p>
-                <article id="preview" class="email-preview"></article>
-                <div class="preview-actions">
-                  <button id="copy" type="button" class="button secondary">
-                    Copy Markdown</button
-                  ><button id="download" type="button" class="button secondary">
-                    HTML ↓</button
-                  ><button
-                    id="download-eml"
-                    type="button"
-                    class="button secondary"
-                  >
-                    Email .eml ↓
-                  </button>
+                <header class="preview-heading">
+                  <h3 id="preview-title" tabindex="-1">Your newsletter preview</h3>
+                  <p id="preview-basis" class="preview-basis"></p>
+                </header>
+                <div class="preview-actions" role="group" aria-label="Export brief">
+                  <button id="copy" type="button" class="button secondary">Copy Markdown</button>
+                  <button id="download" type="button" class="button secondary">Download HTML</button>
+                  <button id="download-eml" type="button" class="button secondary">Download .eml</button>
                 </div>
                 <textarea id="copy-fallback" aria-label="Markdown for manual copying" rows="5" readonly hidden></textarea>
-                <div
-                  class="delivery-tabs"
-                  role="group"
-                  aria-label="Delivery method"
-                >
-                  <button
-                    id="delivery-email"
-                    class="topic-chip"
-                    type="button"
-                    aria-pressed="true"
-                  >
-                    Email</button
-                  ><button
-                    id="delivery-webhook"
-                    class="topic-chip"
-                    type="button"
-                    aria-pressed="false"
-                  >
-                    Webhook
-                  </button>
+                <details id="delivery-options" class="brief-details brief-delivery">
+                  <summary>Delivery options</summary>
+                  <div class="delivery-body">
+                    <div class="segmented delivery-tabs" role="group" aria-label="Delivery method">
+                      <button id="delivery-email" type="button" aria-controls="preview-send-form" aria-pressed="true">Email</button>
+                      <button id="delivery-webhook" type="button" aria-controls="webhook-form" aria-pressed="false">Webhook</button>
+                    </div>
+                    <form id="preview-send-form">
+                      <div>
+                        <label for="preview-email">Recipient email</label>
+                        <input id="preview-email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com" />
+                      </div>
+                      <label class="check-label">
+                        <input id="preview-subscribe" type="checkbox" />
+                        <span>Also send a daily brief at 8 AM in my local time</span>
+                      </label>
+                      <button id="send" type="submit" class="button primary">Send to inbox</button>
+                    </form>
+                    <form id="webhook-form" hidden>
+                      <div>
+                        <label for="webhook-url">HTTPS webhook URL</label>
+                        <input id="webhook-url" type="url" required placeholder="https://your-service.example/webhook" />
+                      </div>
+                      <div>
+                        <label for="webhook-email">Email for verification</label>
+                        <input id="webhook-email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com" />
+                      </div>
+                      <button id="webhook-send" class="button primary" type="submit">Send to webhook</button>
+                    </form>
+                    <div class="delivery-help">
+                      <p class="small">Delivery requires inbox verification. Email is limited to three briefs per inbox per UTC day.</p>
+                      <button id="delivery-owner" class="text-button" type="button">Owner inbox</button>
+                    </div>
+                  </div>
+                </details>
+                <p id="email-status" class="status" role="status"></p>
+                <div class="preview-toolbar">
+                  <div class="segmented" role="group" aria-label="Preview width">
+                    <button id="preview-desktop" type="button" aria-pressed="true">Full width</button>
+                    <button id="preview-mobile" type="button" aria-pressed="false">Mobile</button>
+                  </div>
+                  <button id="preview-theme" type="button" class="button secondary" aria-pressed="false">Dark preview</button>
                 </div>
-                <form id="preview-send-form">
-                  <label for="preview-email">Send this brief to</label
-                  ><input
-                    id="preview-email"
-                    type="email"
-                    required
-                    maxlength="254"
-                    autocomplete="email"
-                    placeholder="you@example.com"
-                  /><label class="check-label"
-                    ><input id="preview-subscribe" type="checkbox" /><span
-                      >Also send a daily brief at 8 AM, my local time</span
-                    ></label
-                  ><button id="send" type="submit" class="button primary full">
-                    Send to my inbox ↗
-                  </button>
-                </form>
-                <form id="webhook-form" hidden>
-                  <label for="webhook-url">HTTPS webhook URL</label
-                  ><input
-                    id="webhook-url"
-                    type="url"
-                    required
-                    placeholder="https://your-service.example/webhook"
-                  /><label for="webhook-email"
-                    >Your email for verification</label
-                  ><input
-                    id="webhook-email"
-                    type="email"
-                    required
-                    autocomplete="email"
-                    placeholder="you@example.com"
-                  />
-                  <p class="small">
-                    The brief is posted to this endpoint. Verify your email once
-                    to deliver.
-                  </p>
-                  <button
-                    id="webhook-send"
-                    class="button primary full"
-                    type="submit"
-                  >
-                    Send to webhook ↗
-                  </button>
-                </form>
-                <p class="small">
-                  Verify your inbox once. Up to 3 briefs per inbox per UTC day.
-                </p>
+                <article id="preview" class="email-preview" aria-label="Newsletter preview"></article>
               </div>
-              <p
-                id="email-status"
-                class="status"
-                role="status"
-                aria-live="polite"
-              ></p>
             </section>
           </div>
         </aside>
@@ -613,6 +552,7 @@
       id="mobile-builder"
       class="mobile-builder"
       type="button"
+      hidden
       aria-expanded="false"
       aria-controls="composer"
     >
@@ -620,33 +560,30 @@
       ><span aria-hidden="true">↑</span>
     </button>
     <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
-    <footer class="wrap">
-      <a class="footer-brand" href="/">Informa AI</a
-      ><div>
-        <a href="#reading-room">Reading Room</a>
-        <a href="/sources.html">Source directory</a
-        ><a
-          href="https://github.com/harshgavandit/AI_News_To_Email_Generator"
-          target="_blank"
-          rel="noopener noreferrer"
-          >View source ↗</a
-        >
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col">
+        <a class="footer-brand" href="/">Informa AI</a>
+        <p class="footer-headline">Your Personal AI News Intelligence Agent.</p>
+        <p class="footer-tagline">Discover what matters. Understand why it matters. Stay ahead without information overload.</p>
+        <div class="footer-pillars">
+          <span>Discover</span> · <span>Analyze</span> · <span>Personalize</span> · <span>Automate</span>
+        </div>
       </div>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="#reading-room">Reading Room</a>
+        <a href="/sources.html">Source Directory</a>
+        <a href="#composer">Brief Builder</a>
+        <a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
     </footer>
-    <dialog id="mail-dialog" aria-labelledby="mail-title">
+    <dialog id="mail-dialog" aria-labelledby="mail-title" aria-describedby="mail-explanation">
       <div class="mail-inner">
-        <button
-          id="mail-close"
-          type="button"
-          class="dialog-close"
-          aria-label="Close email verification"
-        >
-          ×
-        </button>
-        <h2 id="mail-title">Verify your inbox</h2>
+        <div class="mail-heading">
+          <h2 id="mail-title">Verify your inbox</h2>
+          <button id="mail-close" type="button" class="dialog-close" aria-label="Close delivery dialog">×</button>
+        </div>
         <p id="mail-explanation">
-          Verify your email once and we'll send your prepared brief
-          automatically. No account or access key needed.
+          We’ll send a six-digit code to verify the address before delivery.
         </p>
         <form id="request-code">
           <label for="mail-address">Email address</label
@@ -658,6 +595,7 @@
             autocomplete="email"
           />
           <div id="mail-captcha"></div>
+          <button id="retry-captcha" class="text-button" type="button" hidden>Reload security check</button>
           <button class="button primary" type="submit">
             Send verification code
           </button>
@@ -671,34 +609,28 @@
             maxlength="6"
             required
             autocomplete="one-time-code"
-          /><button class="button primary" type="submit">
-            Verify &amp; send my brief</button
-          ><button id="different-email" class="text-button" type="button">
-            Use another email
-          </button>
+          />
+          <button class="button primary" type="submit">Verify and deliver brief</button>
+          <div class="mail-secondary-actions">
+            <button id="different-email" class="text-button" type="button">Change email</button>
+            <button id="resend-code" class="text-button" type="button">Request a new code</button>
+          </div>
         </form>
         <form id="send-brief" hidden>
           <button class="button primary" type="submit">
             Retry sending brief
           </button>
         </form>
-        <details id="owner-fallback">
-          <summary>Legacy owner delivery</summary>
-          <p class="small">
-            Optional: send to the server owner’s configured inbox using its
-            existing access key.
-          </p>
-          <form id="owner-email-form">
+        <form id="owner-email-form" hidden>
             <label for="owner-key">Owner access key</label
-            ><input id="owner-key" type="password" autocomplete="off" /><button
+            ><input id="owner-key" type="password" autocomplete="off" required /><button
               id="owner-send"
               class="button secondary"
               type="submit"
             >
               Send to owner inbox
             </button>
-          </form>
-        </details>
+        </form>
         <p id="mail-status" class="status" role="status" aria-live="polite"></p>
       </div>
     </dialog>

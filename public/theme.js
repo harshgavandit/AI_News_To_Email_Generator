@@ -13,7 +13,7 @@
   const apply = () => {
     const dark = preference === "dark" || (preference === "system" && systemTheme.matches);
     root.dataset.theme = dark ? "dark" : "light";
-    document.querySelector('meta[name="theme-color"]').content = dark ? "#171e1a" : "#f6f4ee";
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#111917" : "#f4f6f8";
   };
 
   // Apply before the stylesheets load to avoid flashing the other theme.

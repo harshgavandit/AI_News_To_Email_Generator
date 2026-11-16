@@ -3,74 +3,118 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#f6f4ee" />
-    <meta name="description" content="Browse Informa AI’s global technology news sources by publisher region, focus, source type, and feed status." />
-    <title>Global Technology News Sources | Informa AI</title>
+    <meta name="theme-color" content="#f4f6f8" />
+    <meta name="description" content="Informa AI is your personal AI news intelligence agent. Browse verified global technology sources across frontier AI labs, research preprints, cloud engineering, and regional reporting." />
+    <title>Informa AI — Global Technology &amp; AI Intelligence Sources</title>
     <link rel="canonical" href="https://ai-news-to-email-generator.vercel.app/sources.html" />
-    <script>
-      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
+    <script defer src="/analytics.js"></script>
     <script defer src="/_vercel/insights/script.js"></script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/directory.css" />
     <script type="module" src="/sources.js"></script>
   </head>
   <body>
     <a class="skip" href="#source-search">Skip to source search</a>
-    <header class="topbar wrap">
-      <a class="brand" href="/" aria-label="Informa AI home">
-        <img class="brand-icon" src="/informa-ai-icon.png" width="33" height="33" alt="" />
-        <span>Informa AI</span>
-      </a>
-      <nav aria-label="Main navigation">
-        <a class="text-button" href="/">Latest stories</a>
-        <select id="site-theme" class="theme-select" aria-label="App color theme" disabled>
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </nav>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home">
+          <img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" />
+          <span class="brand-name">Informa AI</span>
+          <span class="brand-badge">AGENT</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/#reading-room">Reading Room</a>
+          <a href="/sources.html" aria-current="page">Sources</a>
+        </nav>
+        <div class="site-tools">
+          <select id="site-theme" class="theme-select" aria-label="Color theme" disabled>
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+          <a class="button primary" href="/#composer">Build a brief</a>
+        </div>
+      </div>
     </header>
     <main class="wrap directory">
-      <div class="directory-heading">
-        <h1>Source directory</h1>
-        <p>Find the publications, research feeds, and advisories behind the Reading Room. See when each feed was last checked and browse its stories.</p>
+      <div class="directory-intro">
+        <div>
+          <h1>Source directory</h1>
+          <p>Browse publishers, research feeds, and advisories. See feed health and open recent stories.</p>
+        </div>
+        <dl id="directory-overview" class="directory-overview" hidden>
+          <div><dt>Feeds up to date</dt><dd id="source-fresh-count"></dd></div>
+          <div><dt>Publisher regions</dt><dd id="source-region-count"></dd></div>
+          <div><dt>Languages</dt><dd id="source-language-count"></dd></div>
+        </dl>
       </div>
-      <div class="directory-controls">
-        <label for="source-search">Find a source
-          <input id="source-search" type="search" maxlength="120" placeholder="Publisher or keyword">
-        </label>
-        <label for="source-region">Publisher region
-          <select id="source-region"><option value="">All regions</option></select>
-        </label>
-        <label for="source-topic">Feed focus
-          <select id="source-topic"><option value="">All topics</option></select>
-        </label>
-        <label for="source-coverage">Source type
-          <select id="source-coverage"><option value="">All source types</option></select>
-        </label>
-        <label for="source-filter">Feed status
-          <select id="source-filter">
-            <option value="">Any status</option>
-            <option value="fresh">Up to date</option>
-            <option value="stale">Check overdue</option>
-            <option value="failed">Last check failed</option>
-            <option value="pending">Awaiting first check</option>
-            <option value="paused">Paused</option>
-          </select>
-        </label>
-        <label for="source-language">Feed language
-          <select id="source-language"><option value="">All languages</option></select>
-        </label>
-      </div>
-      <div class="directory-results">
-        <p id="source-status" role="status" aria-live="polite"></p>
+      <fieldset id="directory-filters" class="directory-filters" aria-label="Filter sources" disabled>
+        <div class="directory-search-bar">
+          <div class="directory-search" role="search" aria-label="Source directory">
+            <label for="source-search">Search sources</label>
+            <input id="source-search" type="search" maxlength="120" placeholder="Publisher or keyword">
+          </div>
+          <button id="directory-filter-toggle" class="button secondary" type="button" aria-expanded="false" aria-controls="directory-fields">Filters</button>
+        </div>
+        <div id="directory-fields" class="directory-fields">
+          <label for="source-region">Publisher region
+            <select id="source-region"><option value="">All regions</option></select>
+          </label>
+          <label for="source-topic">Feed focus
+            <select id="source-topic"><option value="">All topics</option></select>
+          </label>
+          <label for="source-coverage">Source type
+            <select id="source-coverage"><option value="">All source types</option></select>
+          </label>
+          <label for="source-filter">Feed status
+            <select id="source-filter"><option value="">Any status</option></select>
+          </label>
+          <label for="source-language">Feed language
+            <select id="source-language"><option value="">All languages</option></select>
+          </label>
+        </div>
+      </fieldset>
+      <div class="directory-result-bar">
+        <p id="source-status" role="status">Loading sources…</p>
         <button id="source-reset" class="text-button" type="button" hidden>Reset filters</button>
       </div>
-      <button id="source-retry" class="button secondary" type="button" hidden>Try again</button>
-      <div id="source-rows" class="source-table" aria-busy="true"></div>
+      <div id="source-results" class="directory-results-panel" aria-busy="true">
+        <div id="source-columns" class="directory-columns" aria-hidden="true" hidden>
+          <span>Publisher</span><span>Coverage</span><span>Feed health</span><span>Links</span>
+        </div>
+        <div id="source-loading" class="directory-loading" aria-hidden="true">
+          <div></div><div></div><div></div>
+        </div>
+        <ul id="source-rows" class="directory-list" aria-label="Sources" role="list" hidden></ul>
+        <div id="source-message" class="directory-message" hidden>
+          <h2 id="source-message-title"></h2>
+          <p id="source-message-detail"></p>
+          <button id="source-retry" class="button secondary" type="button" hidden>Try again</button>
+          <button id="source-clear-empty" class="button secondary" type="button" hidden>Reset filters</button>
+        </div>
+      </div>
+      <noscript><p class="directory-no-script">Enable JavaScript to load the source directory.</p></noscript>
     </main>
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col">
+        <a class="footer-brand" href="/">Informa AI</a>
+        <p class="footer-headline">Your Personal AI News Intelligence Agent.</p>
+        <p class="footer-tagline">Discover what matters. Understand why it matters. Stay ahead without information overload.</p>
+        <div class="footer-pillars">
+          <span>Discover</span> · <span>Analyze</span> · <span>Personalize</span> · <span>Automate</span>
+        </div>
+      </div>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="/#reading-room">Reading Room</a>
+        <a href="/sources.html" aria-current="page">Source Directory</a>
+        <a href="/#composer">Brief Builder</a>
+        <a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </footer>
   </body>
 </html>

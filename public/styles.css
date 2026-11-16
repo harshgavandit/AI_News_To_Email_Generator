@@ -1078,6 +1078,7 @@ dialog .button {
   .composer.open {
     transform: translateY(0);
     visibility: visible;
+    transition-property: transform;
   }
   .sheet-handle {
     display: block;
