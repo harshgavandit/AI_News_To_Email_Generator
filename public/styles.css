@@ -1361,14 +1361,24 @@ dialog .button {
   background: #e8ede3;
   color: #2d4529;
 }
+.source-badge.research {
+  background: #e6eef8;
+  color: #1e3a5f;
+}
+.source-badge.industry {
+  background: #f0edf8;
+  color: #3c2a63;
+}
 :root[data-theme="dark"] .source-badge {
   background: color-mix(in srgb, currentColor 14%, var(--paper));
   color: var(--green);
 }
 :root[data-theme="dark"] .source-badge.software { color: #afd2f0; }
+:root[data-theme="dark"] .source-badge.research { color: #9ac2f4; }
 :root[data-theme="dark"] .source-badge.startups,
 :root[data-theme="dark"] .source-badge.outages { color: #f0cb91; }
-:root[data-theme="dark"] .source-badge.bigtech { color: #d7bae9; }
+:root[data-theme="dark"] .source-badge.bigtech,
+:root[data-theme="dark"] .source-badge.industry { color: #d7bae9; }
 :root[data-theme="dark"] .source-badge.chips { color: #a7dcd1; }
 :root[data-theme="dark"] .source-badge.security,
 :root[data-theme="dark"] .source-badge.video { color: #f3b5b4; }

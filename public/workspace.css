@@ -131,6 +131,49 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
 }
 .hero-secondary-link:hover { background: rgba(38, 78, 61, 0.5); color: #fff; }
 .hero-secondary-link:focus-visible { outline-color: #d6f5e4; }
+.global-domains-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(161, 182, 168, 0.25);
+}
+.domains-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a2cfb6;
+  margin-right: 4px;
+}
+.domain-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.domain-chip {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(12, 32, 25, 0.45);
+  color: #e4f2eb;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.domain-chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #fff;
+}
+.domain-chip:focus-visible {
+  outline: 2px solid #a2cfb6;
+  outline-offset: 1px;
+}
 .hero .quick-send { align-content: center; padding: clamp(18px, 2.2vw, 28px); border-radius: var(--radius); }
 .brief-card-heading { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px; }
 .quick-send h2 { font: 680 21px/1.2 var(--font-ui); letter-spacing: -.025em; }

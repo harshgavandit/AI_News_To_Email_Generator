@@ -891,6 +891,14 @@ async function loadNews(append = false, force = false) {
   }
 }
 $("topic-mobile").addEventListener("change", () => chooseTopic($("topic-mobile").value || "all"));
+for (const chip of document.querySelectorAll(".domain-chip")) {
+  chip.addEventListener("click", () => {
+    const domain = chip.dataset.domain;
+    if (state.view !== "feed") $("view-feed").click();
+    chooseTopic(domain);
+    $("reading-room").scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+}
 for (const button of $("window-controls").children)
   button.addEventListener("click", () => {
     state.hours = Number(button.dataset.hours);

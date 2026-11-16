@@ -38,18 +38,24 @@ STORY_SIGNALS = (
     ("security", headline_pattern(
         r"ransomware|cyber[ -]?(?:attacks?|security|incidents?)|data breach(?:es)?|"
         r"zero[ -]days?|0[ -]days?|vulnerabilit(?:y|ies)|cve[- ]\d{4}[- ]\d+|"
+        r"threat actors?|infosec|botnets?|ddos|rootkits?|backdoors?|exploits?|cisa advisory|"
+        r"remote code execution|rce|supply chain attacks?|cryptojacking|trojans?|"
         r"phishing|malware|spyware|security (?:alerts?|fix(?:es)?|patch(?:es)?|updates?)|"
         r"privacy (?:law|lawsuit|watchdog|breach)|ciberseguridad|ciber(?:ataques?|segurança)|"
         r"vazamento de dados|cybersécurité|cyberattaque|sicherheitslücke[n]?|cyberangriff(?:e)?"
     )),
     ("startups", headline_pattern(
         r"start[ -]?ups?|venture capital|seed (?:round|funding)|series[- ](?:a|b|c|d|e) (?:round|funding)|"
+        r"unicorns?|decacorns?|angel (?:investing|investors?)|venture capital(?:ists)?|valuations?|"
+        r"y combinator|techstars|pre-seed|term sheets?|bootstrapped|early-stage|"
         r"funding round|startup accelerator|venture fund|rodada de investimento|financiación semilla|"
         r"levée de fonds|finanzierungsrunde"
     )),
     ("industry", headline_pattern(
         r"antitrust|anti[ -]monopoly|export (?:controls?|restrictions?)|"
         r"(?:digital markets|digital services|ai) act|tech polic(?:y|ies)|"
+        r"trade sanctions?|tariffs?|telecommunications? policy|copyright (?:dispute|lawsuit|infringement)|"
+        r"ftc|doj|sec|european commission|cma|"
         r"(?:digital|internet) regulation|net neutrality|data sovereignty|"
         r"(?:anti)?monop[oó]lio|regulação digital|soberanía de datos|souveraineté numérique"
     )),
@@ -57,13 +63,16 @@ STORY_SIGNALS = (
         r"peer[ -]reviewed|researchers (?:develop|discover|find|introduce|publish|show|unveil)|"
         r"scientists (?:create|develop|discover|find|unveil)|(?:new )?study (?:finds|shows|suggests)|"
         r"(?:research|scientific) paper|preprints?|arxiv|quantum (?:computing|computer|network)|"
+        r"algorithmic (?:breakthrough|efficiency)|benchmarks?|empirical (?:study|evaluation)|"
+        r"state of the art|sota|cryptographic protocols?|"
         r"pesquisadores (?:criam|descobrem)|chercheurs (?:découvrent|développent)"
     )),
 )
 COMPANY = headline_pattern(
-    r"alphabet|amazon|amd|anthropic|apple|asml|baidu|broadcom|bytedance|cisco|google|huawei|"
-    r"ibm|intel|meta|microsoft|nvidia|openai|oracle|qualcomm|salesforce|samsung|sap|tencent|"
-    r"tesla|tiktok|tsmc|uber|tech giant(?:s)?|chipmakers?"
+    r"alphabet|amazon|amd|anthropic|apple|asml|baidu|broadcom|bytedance|cisco|cloudflare|"
+    r"crowdstrike|databricks|deepseek|google|huawei|ibm|intel|meta|microsoft|mistral|"
+    r"nvidia|openai|oracle|palantir|palo alto networks|qualcomm|salesforce|samsung|sap|"
+    r"snowflake|tencent|tesla|tiktok|tsmc|uber|xai|tech giant(?:s)?|chipmakers?"
 )
 CORPORATE_ACTION = headline_pattern(
     r"ceo|chief executive|succession|successor|shareholders?|earnings|quarterly (?:profit|revenue)|"
@@ -73,19 +82,26 @@ CORPORATE_ACTION = headline_pattern(
 DOMAIN_SIGNALS = (
     ("chips", headline_pattern(
         r"semiconductors?|chip[ -]?makers?|chiplets?|chip (?:foundr(?:y|ies)|manufacturing|shortage)|"
-        r"(?:ai|smartphone|custom) chips?|cpus?|gpus?|"
+        r"(?:ai|smartphone|custom) chips?|cpus?|gpus?|tpus?|npus?|"
         r"processors?|graphics cards?|smartphones?|laptops?|motherboards?|memory chips?|"
         r"hardware accelerators?|wearables?|foldables?|game consoles?|"
+        r"tsmc|asml|lithography|wafers?|silicon|photolithography|risc-v|arm architecture|"
+        r"blackwell|hopper|gaudi|quantum processors?|microarchitecture|"
+        r"robotics|humanoid robots?|autonomous drones?|lidar|"
         r"semicondutores?|procesadores?|processeurs?|halbleiter|grafikkarten?"
     )),
     ("ai", headline_pattern(
         r"ai|gen[ -]?ai|artificial intelligence|machine learning|deep learning|language models?|"
         r"llms?|chatgpt|openai|anthropic|claude (?:code|models?)|google gemini|deepmind|agentic|diffusion models?|"
+        r"multimodal|frontier models?|reasoning models?|rag|fine-tuning|synthetic data|embedding models?|"
+        r"deepseek|mistral|grok|copilot|reinforcement learning|rlhf|"
         r"intelig[eê]ncia artificial|intelligence artificielle|künstliche intelligenz"
     )),
     ("software", headline_pattern(
         r"open[ -]source|developer tools?|software|sdk|browser|operating systems?|"
         r"linux|kubernetes|postgresql|sqlite|databases?|programming languages?|compilers?|rust|"
+        r"devops|ci/cd|docker|containers?|microservices?|cloud-native|backend|frontend|"
+        r"api(?:s)?|sdk(?:s)?|typescript|golang|webassembly|wasm|database engines?|redis|mongodb|graphql|git|"
         r"react (?:native|\d+)|cloud computing|serverless|infrastructure as code|"
         r"código abierto|c[oó]digo aberto|logiciel(?:s)?|code source ouvert"
     )),
@@ -100,19 +116,30 @@ SECTION_TOPICS = {
     "tech companies": "bigtech",
     "cybersecurity": "security",
     "security": "security",
+    "infosec": "security",
     "privacidade": "security",
     "hardware": "chips",
+    "chips": "chips",
     "gadgets": "chips",
     "semiconductors": "chips",
+    "robotics": "chips",
     "research": "research",
     "science": "research",
+    "preprints": "research",
     "software": "software",
     "open source": "software",
+    "devops": "software",
+    "programming": "software",
+    "developer": "software",
     "apps": "software",
     "cloud": "software",
     "startups": "startups",
     "venture capital": "startups",
+    "funding": "startups",
+    "venture": "startups",
     "tech policy": "industry",
+    "policy": "industry",
+    "telecom": "industry",
     "regulation": "industry",
 }
 JAPANESE_SIGNALS = (
