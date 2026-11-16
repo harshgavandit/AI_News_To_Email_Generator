@@ -987,7 +987,7 @@ for (const chip of document.querySelectorAll(".domain-chip")) {
   chip.addEventListener("click", () => {
     const domain = chip.dataset.domain;
     if (state.view !== "feed") $("view-feed").click();
-    chooseTopic(domain);
+    chooseTopic(state.topic === domain ? "all" : domain);
     $("reading-room").scrollIntoView({ block: "start", behavior: "smooth" });
   });
 }
@@ -1833,6 +1833,8 @@ $("owner-email-form").addEventListener("submit", (event) =>
 function reflectTopic() {
   for (const button of $("topics").children)
     button.setAttribute("aria-pressed", String(button.dataset.topic === state.topic));
+  for (const chip of document.querySelectorAll(".domain-chip"))
+    chip.setAttribute("aria-pressed", String(chip.dataset.domain === state.topic));
   $("topic-mobile").value = state.topic === "all" ? "" : state.topic;
   $("outage-links").hidden = state.topic !== "outages";
 }
