@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from app.sanitation import sanitize_text
 from .openai_client import generate_response
 
 logger = logging.getLogger(__name__)
@@ -41,17 +42,9 @@ class EmailDigestResponse(BaseModel):
     top_n: int
     
     def to_markdown(self) -> str:
-        markdown = f"{self.introduction.greeting}\n\n"
-        markdown += f"{self.introduction.introduction}\n\n"
-        markdown += "---\n\n"
-        
-        for article in self.articles:
-            markdown += f"## {article.title}\n\n"
-            markdown += f"{article.summary}\n\n"
-            markdown += f"[Read more →]({article.url})\n\n"
-            markdown += "---\n\n"
-        
-        return markdown
+        from app.web_digest import digest_markdown
+
+        return digest_markdown(self.model_dump())
 
 
 class EmailDigest(BaseModel):
@@ -61,7 +54,7 @@ class EmailDigest(BaseModel):
 
 EMAIL_PROMPT = """Write a personalized global technology brief.
 
-Your role is to write a warm, professional introduction for a daily AI news digest email that:
+Your role is to write a warm, professional introduction for a daily technology brief that:
 - Greets the user by name
 - Includes the current date
 - Provides a brief, engaging overview of the supplied ranked articles
@@ -77,9 +70,11 @@ class EmailAgent:
         self.user_profile = user_profile
 
     def generate_introduction(self, ranked_articles: List) -> EmailIntroduction:
+        current_date = datetime.now().strftime('%B %d, %Y')
+        greeting = f"Your technology brief for {current_date}, {self.user_profile['name']}."
         if not ranked_articles:
             return EmailIntroduction(
-                greeting=f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {datetime.now().strftime('%B %d, %Y')}.",
+                greeting=greeting,
                 introduction="No articles were ranked today."
             )
         
@@ -87,7 +82,6 @@ class EmailAgent:
         rows = [article.model_dump() if isinstance(article, RankedArticleDetail) else article for article in top_articles]
         article_summaries = "\n".join(f"- {row.get('title', 'Story')}: {row.get('summary', '')[:550]}" for row in rows)
         
-        current_date = datetime.now().strftime('%B %d, %Y')
         user_prompt = f"""Create an email introduction for {self.user_profile['name']} for {current_date}.
 
 Top {len(top_articles)} ranked articles:
@@ -98,28 +92,15 @@ Generate a greeting and introduction that previews these articles."""
 
         try:
             raw_response = generate_response(user_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction)
-
-            # Expect the LLM to return JSON matching EmailIntroduction
-            try:
-                intro = EmailIntroduction.model_validate_json(raw_response)
-            except Exception:
-                # Fallback: treat the response as plain text
-                intro = EmailIntroduction(
-                    greeting=f"Hey {self.user_profile['name']}, here is your daily digest of AI news for {current_date}.",
-                    introduction="Here are the stories selected for your interests. Follow the source links for more detail."
-                )
-
-            if not intro.greeting.startswith(f"Hey {self.user_profile['name']}"):
-                intro.greeting = f"Hey {self.user_profile['name']}, here is your tech brief for {current_date}."
-
-            return intro
+            overview = sanitize_text(EmailIntroduction.model_validate_json(raw_response).introduction, 600)
+            if overview:
+                return EmailIntroduction(greeting=greeting, introduction=overview)
         except Exception as error:
             logger.info("brief_intro_failed error_type=%s", type(error).__name__)
-            current_date = datetime.now().strftime('%B %d, %Y')
-            return EmailIntroduction(
-                greeting=f"Hey {self.user_profile['name']}, here is your tech brief for {current_date}.",
-                introduction="Here are the stories selected for your interests. Follow the source links for more detail."
-            )
+        return EmailIntroduction(
+            greeting=greeting,
+            introduction="Here are the stories selected for your interests. Follow the source links for more detail."
+        )
 
     def create_email_digest(self, ranked_articles: List[dict], limit: int = 10) -> EmailDigest:
         top_articles = ranked_articles[:limit]

@@ -5,6 +5,7 @@ import html
 import json
 import logging
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -12,6 +13,7 @@ from app.agent.curator_agent import CuratorAgent
 from app.agent.digest_agent import DigestAgent
 from app.agent.email_agent import EmailDigestResponse, EmailIntroduction, RankedArticleDetail
 from app.agent.openai_client import get_openai_model
+from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, PILLARS, PUBLIC_SITE, TAGLINE
 from app.coverage import public_article
 from app.news import canonical_url
 from app.profiles.user_profile import USER_PROFILE
@@ -50,6 +52,52 @@ def safe_href(value):
         return canonical_url(value)
     except ValueError:
         return "#"
+
+
+def public_site():
+    url = safe_href(os.getenv("PUBLIC_ORIGIN", PUBLIC_SITE))
+    return PUBLIC_SITE if url == "#" else url.rstrip("/")
+
+
+MARKDOWN_LITERAL = re.compile(r"([\\\x60\[\]*_!<>~|])")
+
+
+def markdown_text(value):
+    return MARKDOWN_LITERAL.sub(r"\\\1", " ".join(str(value or "").split()))
+
+
+def markdown_link(value):
+    url = safe_href(value)
+    return "" if url == "#" else "<" + url.replace("<", "%3C").replace(">", "%3E") + ">"
+
+
+def digest_markdown(digest):
+    intro = digest["introduction"]
+    lines = [f"# {NAME}", markdown_text(intro.get("greeting")), markdown_text(intro.get("introduction"))]
+    for article in digest["articles"]:
+        detail = " · ".join(part for part in (article.get("topic_label"), story_attribution(article)) if part)
+        lines.extend([
+            f"## {article['rank']}. {markdown_text(article.get('title'))}",
+            markdown_text(detail),
+            markdown_text(article.get("summary")),
+        ])
+        if takeaway := article.get("keyTakeaway"):
+            lines.append(f"**Key takeaway.** {markdown_text(takeaway)}")
+        if impact := article.get("whyItMatters"):
+            if impact != article.get("keyTakeaway"):
+                lines.append(f"**Why it matters.** {markdown_text(impact)}")
+        if source := markdown_link(article.get("url")):
+            lines.append(f"Source: {source}")
+
+    if quick_hits := digest.get("quick_hits"):
+        lines.append("### Quick hits")
+        hits = []
+        for item in quick_hits:
+            detail = " · ".join(part for part in (item.get("title"), item.get("publisher"), item.get("region")) if part)
+            hits.append(f"- {markdown_text(detail)} {markdown_link(item.get('url'))}".rstrip())
+        lines.append("\n".join(hits))
+    return "\n\n".join(filter(None, lines))
+
 
 PERSONA_GUIDANCE = {
     "executive": "Connect the news to strategy, investment, ROI, and partnerships.",
@@ -195,7 +243,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
     topic_labels = list(dict.fromkeys(article.topic_label for article in details))[:3]
     digest = EmailDigestResponse(
         introduction=EmailIntroduction(greeting=f"Your tech brief, {name}",
-                                       introduction=f"In this edition: {', '.join(topic_labels)}."),
+                                       introduction=f"This brief covers {', '.join(topic_labels)}."),
         articles=details, total_ranked=len(details), top_n=len(details),
     )
     result = digest.model_dump()
@@ -212,34 +260,22 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
         logger.info("brief_synthesis_degraded stories=%d ai_summaries=%d ranking_failed=%s",
                     len(details), result["synthesis"]["ai_summaries"], ranking_failed)
 
-    # Compose rich markdown
-    md_lines = [f"# {digest.introduction.greeting}\n", f"{digest.introduction.introduction}\n\n---"]
-    for art in details:
-        attribution = story_attribution(art.model_dump())
-        md_lines.append(f"## {art.rank}. {art.title}\n{art.topic_label or 'Tech'} · {attribution}\n\n{art.summary}\n")
-        if art.keyTakeaway:
-            md_lines.append(f"* **Key Takeaway:** {art.keyTakeaway}\n")
-        elif art.whyItMatters:
-            md_lines.append(f"* **Why It Matters:** {art.whyItMatters}\n")
-        md_lines.append(f"Source: {safe_href(art.url)}\n\n---")
-
-    if quick_hits:
-        md_lines.append("### Quick Hits Around the World")
-        for qh in quick_hits:
-            md_lines.append(f"- {qh['title']} · {qh['publisher']} ({qh['region']}) · <{safe_href(qh['url'])}>")
-
-    result["markdown"] = "\n\n".join(md_lines)
+    result["markdown"] = digest_markdown(result)
     result["html"] = safe_email_html(result)
     return result
 
 
-def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
+def safe_email_html(digest: dict, unsubscribe_url: str | None = None, *, scheduled: bool = False) -> str:
     escape = html.escape
     intro = digest.get("introduction", {})
-    greeting = escape(intro.get("greeting", "Your Informa AI"))
-    overview = escape(intro.get("introduction", "The technology stories that matter, curated for your morning read."))
-    origin = escape(safe_href(os.getenv("PUBLIC_ORIGIN", "https://ai-news-to-email-generator.vercel.app")).rstrip("/"), quote=True)
-    unsubscribe = f'<a href="{escape(safe_href(unsubscribe_url), quote=True)}">Unsubscribe</a> · ' if unsubscribe_url else ""
+    greeting = escape(intro.get("greeting", "Your technology brief"))
+    overview = escape(intro.get("introduction", "Follow the source links for details."))
+    origin = escape(public_site(), quote=True)
+    unsubscribe_href = safe_href(unsubscribe_url)
+    unsubscribe = (
+        f'<a class="email-link" href="{escape(unsubscribe_href, quote=True)}" style="color:#375e48;">Unsubscribe</a> · '
+        if unsubscribe_href != "#" else ""
+    )
 
     article_cards = []
     articles = digest.get("articles", [])
@@ -248,33 +284,42 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
         url = escape(safe_href(article.get("url")), quote=True)
         summary = escape(article.get("summary", ""))
         topic_label = escape(article.get("topic_label") or article.get("category", "Technology"))
-        takeaway = escape(article.get("keyTakeaway") or article.get("whyItMatters") or "")
         attribution = escape(story_attribution(article))
         language = escape(article.get("language") or "en", quote=True)
+        heading_link = (
+            f'<a class="email-link" href="{url}" style="color:#252e29;text-decoration:none;">{title}</a>'
+            if url != "#" else title
+        )
 
         card_html = f"""
-        <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border:1px solid #dedfd5;border-radius:8px;background-color:#ffffff;padding:20px;">
+        <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;border:1px solid #d9e1db;border-radius:8px;background-color:#ffffff;">
           <tr>
-            <td>
-              <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#697169;margin-bottom:8px;">
+            <td style="padding:18px;">
+              <div class="email-text" style="font-size:12px;font-weight:600;color:#506158;margin-bottom:8px;">
                 <span style="background-color:#e8eddf;color:#294a3b;padding:3px 7px;border-radius:3px;">{topic_label}</span>
                 <span style="margin-left:8px;">{attribution}</span>
               </div>
               <h2 class="email-heading" lang="{language}" style="font-family:Georgia,serif;font-size:19px;line-height:1.3;margin:8px 0 10px;color:#252e29;">
-                <a class="email-link" href="{url}" style="color:#252e29;text-decoration:none;">{title}</a>
+                {heading_link}
               </h2>
               <p class="email-text" style="font-size:13px;line-height:1.6;color:#4a534e;margin:0 0 12px;">{summary}</p>
               """
-        if takeaway:
+        insights = (("Key takeaway", article.get("keyTakeaway")), ("Why it matters", article.get("whyItMatters")))
+        for heading, insight in insights:
+            if not insight or (heading == "Why it matters" and insight == article.get("keyTakeaway")):
+                continue
             card_html += f"""
               <div class="takeaway-box" style="font-size:12px;line-height:1.5;color:#294a3b;background-color:#f4f6f0;border-left:3px solid #294a3b;padding:8px 12px;margin-bottom:12px;border-radius:0 4px 4px 0;">
-                <strong>Key Takeaway:</strong> {takeaway}
+                <strong>{heading}.</strong> {escape(insight)}
               </div>
             """
-        card_html += f"""
+        if url != "#":
+            card_html += f"""
               <div>
-                <a href="{url}" style="font-size:11px;font-weight:600;color:#294a3b;text-decoration:none;">Read original source →</a>
+                <a class="email-link" href="{url}" style="font-size:12px;font-weight:600;color:#294a3b;text-decoration:none;">Read original source →</a>
               </div>
+            """
+        card_html += """
             </td>
           </tr>
         </table>
@@ -291,9 +336,13 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
             q_url = escape(safe_href(qh.get("url")), quote=True)
             q_pub = escape(qh.get("publisher", "Source"))
             q_reg = escape(qh.get("region", "Global"))
+            q_label = (
+                f'<a class="email-link" href="{q_url}" style="color:#252e29;text-decoration:underline;">{q_title}</a>'
+                if q_url != "#" else q_title
+            )
             quick_hits_items.append(
                 f'<li style="margin-bottom:8px;font-size:12px;line-height:1.5;">'
-                f'<a href="{q_url}" style="color:#252e29;text-decoration:underline;">{q_title}</a> '
+                f'{q_label} '
                 f'<span style="color:#697169;">— {q_pub} ({q_reg})</span></li>'
             )
         quick_hits_html = f"""
@@ -314,49 +363,39 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{BRIEF_SUBJECT}</title>
   <meta name="color-scheme" content="light dark">
   <style>
     :root {{ color-scheme: light dark; supported-color-schemes: light dark; }}
     @media (prefers-color-scheme: dark) {{
-      body, .email-bg {{ background-color: #1a1e1b !important; color: #e1e4dc !important; }}
-      .email-card {{ background-color: #242925 !important; border-color: #38403a !important; }}
-      .email-text {{ color: #c8ccc4 !important; }}
-      .email-heading {{ color: #f0f2eb !important; }}
-      .email-link {{ color: #8fa879 !important; }}
-      .takeaway-box {{ background-color: #2d3630 !important; border-color: #8fa879 !important; color: #d6e2cb !important; }}
+      body, .email-bg {{ background-color: #101916 !important; color: #e6eee9 !important; }}
+      .email-card {{ background-color: #18241f !important; border-color: #344941 !important; }}
+      .email-text {{ color: #c3d2c9 !important; }}
+      .email-heading {{ color: #eef5f1 !important; }}
+      .email-link {{ color: #a3ddbb !important; }}
+      .takeaway-box {{ background-color: #243c30 !important; border-color: #8dcfab !important; color: #ddf2e5 !important; }}
     }}
   </style>
 </head>
-<body style="margin:0;padding:24px 12px;background-color:#f6f4ee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#252e29;line-height:1.6;">
+<body style="margin:0;padding:24px 12px;background-color:#f3f6f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#172721;line-height:1.6;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
       <td align="center">
         <!-- 600px Max-Width Single Column Container -->
         <table role="presentation" width="100%" style="max-width:600px;text-align:left;" cellpadding="0" cellspacing="0">
-          <!-- Header Branding -->
           <tr>
-            <td style="padding-bottom:24px;border-bottom:1px solid #dedfd5;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <span style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#1e352b;letter-spacing:-0.5px;">Informa AI</span>
-                    <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#4f5a52;margin-top:3px;font-weight:600;">Your Personal AI News Intelligence Agent</div>
-                    <div style="font-size:9px;letter-spacing:0.8px;color:#7c877e;margin-top:2px;">Discover · Analyze · Personalize · Automate</div>
-                  </td>
-                  <td align="right" style="vertical-align:top;">
-                    <span style="display:inline-block;height:8px;width:8px;background-color:#10b981;border-radius:50%;margin-right:4px;"></span>
-                    <span style="font-size:10px;color:#4f5a52;font-weight:700;letter-spacing:0.5px;">INTELLIGENCE DOSSIER</span>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding-bottom:18px;border-bottom:1px solid #d9e1db;">
+              <p class="email-heading" style="font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#193f2d;letter-spacing:-0.5px;margin:0;">{NAME}</p>
+              <p class="email-heading" style="font-size:14px;font-weight:650;margin:3px 0;color:#193f2d;">{HEADLINE}</p>
+              <p class="email-text" style="font-size:13px;margin:4px 0;color:#506158;">{TAGLINE}</p>
+              <p class="email-text" style="font-size:12px;margin:8px 0 0;color:#506158;">{PILLARS}</p>
             </td>
           </tr>
 
-          <!-- Intro & Macro Synthesis -->
           <tr>
-            <td style="padding:24px 0 16px;">
-              <p style="font-family:Georgia,serif;font-size:19px;line-height:1.35;margin:0 0 10px;color:#252e29;">{greeting}</p>
-              <p style="font-size:13px;line-height:1.65;color:#5a625a;margin:0;">{overview}</p>
+            <td style="padding:20px 0 17px;">
+              <h1 class="email-heading" style="font-family:Georgia,serif;font-weight:normal;font-size:22px;line-height:1.35;margin:0 0 8px;color:#172721;">{greeting}</h1>
+              <p class="email-text" style="font-size:14px;line-height:1.65;color:#506158;margin:0;white-space:pre-line;">{overview}</p>
             </td>
           </tr>
 
@@ -374,22 +413,13 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None) -> str:
             </td>
           </tr>
 
-          <!-- Footer with CAN-SPAM Compliance & 1-Click Unsubscribe -->
           <tr>
-            <td style="padding-top:24px;border-top:1px solid #dedfd5;font-size:11px;line-height:1.6;color:#80867f;text-align:center;">
-              <p style="margin:0 0 8px;">
-                You received this email on-demand from <a href="{origin}" style="color:#294a3b;text-decoration:none;font-weight:600;">Informa AI</a>.
-              </p>
-              <p style="margin:0 0 8px;">
+            <td class="email-text" style="padding-top:16px;border-top:1px solid #d9e1db;font-size:12px;line-height:1.6;color:#506158;text-align:center;">
+              {"<p style='margin:0 0 6px;'>You subscribed to the daily technology brief.</p>" if scheduled else ""}
+              <p style="margin:0;">
                 {unsubscribe}
-                <a href="{origin}/sources.html" style="color:#697169;text-decoration:underline;">Source Directory</a> · 
-                <a href="{origin}" style="color:#697169;text-decoration:underline;">Web Edition</a>
-              </p>
-              <p style="margin:0;font-size:11px;font-weight:600;color:#4f5a52;">
-                Informa AI · Discover · Analyze · Personalize · Automate
-              </p>
-              <p style="margin:4px 0 0;font-size:10px;color:#7c877e;font-style:italic;">
-                Discover what matters. Understand why it matters. Stay ahead without information overload.
+                <a class="email-link" href="{origin}/sources.html" style="color:#375e48;text-decoration:underline;">Source directory</a> ·
+                <a class="email-link" href="{origin}" style="color:#375e48;text-decoration:underline;">Web edition</a>
               </p>
             </td>
           </tr>

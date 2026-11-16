@@ -9,8 +9,10 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from app import public_mail
+from app.brand import BRIEF_SUBJECT
 from app.launch_store import get_store
 from app.news import canonical_url
+from app.web_digest import markdown_text, story_attribution
 
 router = APIRouter(prefix="/api/deliver")
 
@@ -49,27 +51,27 @@ def message_payload(digest: dict, provider: str) -> dict:
         except (KeyError, ValueError, TypeError):
             continue
         title = story.get("title", "Story")[:280]
-        publisher = (story.get("publisher") or story.get("article_type") or "Source")[:80]
+        publisher = story_attribution(story)[:180]
         summary = story.get("summary", "")[:500]
         rows.append((title, publisher, summary, url))
 
     if provider == "slack":
-        blocks = [{"type": "header", "text": {"type": "plain_text", "text": "Informa AI"}}]
+        blocks = [{"type": "header", "text": {"type": "plain_text", "text": BRIEF_SUBJECT}}]
         if intro:
             blocks.append({"type": "section", "text": {"type": "plain_text", "text": intro}})
         for title, publisher, summary, url in rows:
             blocks.append({"type": "section", "text": {"type": "plain_text", "text": f"{title}\n{publisher}\n{summary}"},
                            "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Read source"},
                                          "url": url, "action_id": "read_source"}})
-        return {"text": "Informa AI", "blocks": blocks, "unfurl_links": False, "unfurl_media": False}
+        return {"text": BRIEF_SUBJECT, "blocks": blocks, "unfurl_links": False, "unfurl_media": False}
 
-    blocks = [{"type": "TextBlock", "text": "Informa AI", "weight": "Bolder", "size": "Large"}]
+    blocks = [{"type": "TextBlock", "text": BRIEF_SUBJECT, "weight": "Bolder", "size": "Large"}]
     if intro:
-        blocks.append({"type": "TextBlock", "text": intro, "wrap": True})
+        blocks.append({"type": "TextBlock", "text": markdown_text(intro), "wrap": True})
     for title, publisher, summary, url in rows:
         blocks.extend([
-            {"type": "TextBlock", "text": title, "weight": "Bolder", "wrap": True, "separator": True},
-            {"type": "TextBlock", "text": f"{publisher}\n{summary}", "wrap": True},
+            {"type": "TextBlock", "text": markdown_text(title), "weight": "Bolder", "wrap": True, "separator": True},
+            {"type": "TextBlock", "text": f"{markdown_text(publisher)}\n{markdown_text(summary)}", "wrap": True},
             {"type": "ActionSet", "actions": [{"type": "Action.OpenUrl", "title": "Read source", "url": url}]},
         ])
     card = {"type": "AdaptiveCard", "version": "1.2", "body": blocks}

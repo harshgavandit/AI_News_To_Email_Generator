@@ -34,6 +34,7 @@ from app import public_mail
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.news import collect_news
+from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, TAGLINE
 from app.coverage import REGION_LABELS, TOPICS, public_article, region_id, region_matches, topic_for
 from app.discovery import (
     COVERAGE_TYPES, InvalidCursor, SortOrder, facet_counts, page_fingerprint, page_result, page_window,
@@ -49,7 +50,7 @@ from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 
-app = FastAPI(title="Informa AI", version="1.1.0", docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
 app.include_router(mail_events_router)
 app.include_router(workspace_router)
@@ -663,7 +664,7 @@ def assemble_digest(body, store, progress=None):
                 if lease is not None:
                     store.finish_refresh(lease, scope=scope)
     except (ValueError, RuntimeError):
-        raise HTTPException(502, "The AI provider could not complete this digest. Please try again shortly.") from None
+        raise HTTPException(502, "Could not prepare this brief. Please try again shortly.") from None
     expires = int(time.time()) + 3600
     preview_id = secrets.token_urlsafe(24) if store else None
     if store:
@@ -709,7 +710,8 @@ def prepare_digest(body, store, name, focus, world, progress):
     if world:
         if progress:
             progress(3)
-        return build_world([public_article(article) for article in selected], body.hours, all_pool=pool, scope=scope)
+        return build_world([public_article(article) for article in selected], body.hours, all_pool=pool,
+                           scope=scope, includes_pins=bool(pins))
     if not _generation_lock.acquire(blocking=False):
         raise HTTPException(429, "A personalized brief is already being prepared. Try again shortly.",
                             headers={"Retry-After": "5"})
@@ -739,7 +741,7 @@ def email(body: EmailRequest, request: Request, authorization: str | None = Head
         while len(_mail_history) > 500:
             _mail_history.popitem(last=False)
     try:
-        send_email("Your Informa AI", body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
+        send_email(BRIEF_SUBJECT, body.digest["markdown"], body.digest["html"], recipients=[os.environ["MY_EMAIL"]])
     except (smtplib.SMTPException, OSError, ValueError, KeyError):
         with _limit_lock:
             _mail_history.pop(body.signature, None)

@@ -13,7 +13,7 @@ class DigestOutput(BaseModel):
 
 PROMPT = """You are a technology news analyst covering global technology, software, AI, startups, policy, security, research, and video content.
 
-Your role is to create concise, informative digests that help readers quickly understand the key points and significance of AI-related content.
+Your role is to create concise briefs that help readers understand the reported development and its significance.
 
 Guidelines:
 - Create a compelling title (5-10 words) that captures the essence of the content

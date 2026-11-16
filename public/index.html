@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="Informa AI is your personal AI news intelligence agent. Discover what matters. Understand why it matters. Stay ahead without information overload. Global technology intelligence with one-click mailbox delivery."
+      content="Discover what matters. Understand why it matters. Stay ahead without information overload. Browse technology news and build a personalized brief with Informa AI."
     />
     <meta name="theme-color" content="#f4f6f8" />
     <meta name="google-site-verification" content="Jws4GlM5qkCYc6x_MCXN_e96mXAoMGD43YrYiY-g28U" />
@@ -16,13 +16,12 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Informa AI" />
     <meta property="og:title" content="Informa AI — Your Personal AI News Intelligence Agent" />
-    <meta property="og:description" content="Discover what matters. Understand why it matters. Stay ahead without information overload. Global technology intelligence with one-click mailbox delivery." />
+    <meta property="og:description" content="Discover what matters. Understand why it matters. Stay ahead without information overload." />
     <meta property="og:url" content="https://ai-news-to-email-generator.vercel.app/" />
     <meta property="og:image" content="https://ai-news-to-email-generator.vercel.app/edition-city.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Informa AI — Your Personal AI News Intelligence Agent" />
     <meta name="twitter:description" content="Discover what matters. Understand why it matters. Stay ahead without information overload." />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
     <link rel="stylesheet" href="/styles.css" />
@@ -31,6 +30,7 @@
     <link rel="stylesheet" href="/reading.css" />
     <link rel="stylesheet" href="/brief.css" />
     <link rel="stylesheet" href="/intelligence.css" />
+    <link rel="stylesheet" href="/saved-views.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -40,15 +40,14 @@
         <a class="brand" href="/" aria-label="Informa AI home">
           <img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" />
           <span class="brand-name">Informa AI</span>
-          <span class="brand-badge">AGENT</span>
         </a>
         <nav class="site-nav" aria-label="Main navigation">
           <a href="#reading-room" aria-current="page">Reading Room</a>
           <a href="/sources.html">Sources</a>
         </nav>
         <div class="site-tools">
-          <button id="cmd-palette-btn" class="cmd-pill" type="button" aria-label="Open command palette (Press ⌘K or /)">
-            <kbd>⌘K</kbd> <span>Quick Search</span>
+          <button id="cmd-palette-btn" class="cmd-pill" type="button" aria-label="Quick search" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+            <span>Search</span> <kbd aria-hidden="true">Ctrl K</kbd>
           </button>
           <select id="site-theme" class="theme-select" aria-label="Color theme" disabled>
             <option value="system">System</option>
@@ -62,13 +61,8 @@
     <main id="main" class="wrap">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <div class="hero-badge-row">
-            <span class="live-dot" aria-hidden="true"></span>
-            <span class="hero-badge-text">AUTONOMOUS AGENT ACTIVE</span>
-            <span class="badge-separator" aria-hidden="true">·</span>
-            <time id="edition-date" class="edition-date"></time>
-          </div>
-          <h1 id="hero-title">Your Personal AI<br><span class="hero-headline-accent">News Intelligence Agent.</span></h1>
+          <time id="edition-date" class="edition-date"></time>
+          <h1 id="hero-title">Your Personal AI News Intelligence Agent.</h1>
           <p class="hero-tagline">
             Discover what matters. Understand why it matters. Stay ahead without information overload.
           </p>
@@ -82,24 +76,21 @@
             <span class="pillar">Automate</span>
           </div>
           <div class="hero-actions">
-            <a class="edition-link" href="#reading-room">Enter Reading Room <span aria-hidden="true">↓</span></a>
-            <a class="hero-secondary-link" href="#composer">Configure Custom Agent <span aria-hidden="true">→</span></a>
+            <a class="edition-link" href="#reading-room">Browse latest stories <span aria-hidden="true">↓</span></a>
+            <a class="hero-secondary-link" href="#composer">Build a brief <span aria-hidden="true">→</span></a>
           </div>
         </div>
         <form id="world-form" class="quick-send">
           <div class="brief-card-heading">
-            <div class="quick-send-title-wrap">
-              <span class="quick-send-badge">1-CLICK DISPATCH</span>
-              <h2>Global Top 5 Intelligence</h2>
-            </div>
+            <h2>Global Top 5</h2>
             <div class="quick-send-actions">
               <button id="world-audio-btn" class="text-button audio-top5-btn" type="button" aria-label="Listen to Global Top 5 Brief">
-                <span class="audio-icon-pulse" aria-hidden="true">🎧</span> Listen
+                Listen
               </button>
               <button id="world-preview" class="text-button" type="button">Preview</button>
             </div>
           </div>
-          <p class="brief-description">The 5 highest-signal global stories from the past 24 hours, synthesized directly to your mailbox.</p>
+          <p class="brief-description">Five stories from the last 24 hours, with links to the original reporting.</p>
           <label class="world-email-label" for="hero-email">Email address</label>
           <div class="email-action">
             <input
@@ -110,16 +101,16 @@
               autocomplete="email"
               placeholder="you@example.com"
             /><button id="world-brief" class="button primary" type="submit">
-              Send Top 5 Brief ✦
+              Send brief
             </button>
           </div>
           <label class="check-label"
             ><input id="hero-subscribe" type="checkbox" /><span
-              >Deliver automatically every morning at 8:00 AM (local time)
+              >Send it daily at 8 AM, local time
               <span id="timezone-label" class="muted"></span></span
           ></label>
           <div class="brief-footer">
-            <p class="small">1-click verified delivery · Zero spam · GDPR / CAN-SPAM compliant.</p>
+            <p class="small">Up to 3 briefs per verified inbox per day.</p>
           </div>
           <p
             id="world-status"
@@ -180,7 +171,7 @@
               <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
             </div>
             <div class="reading-stream-actions">
-              <span class="keyboard-hints" aria-label="Keyboard navigation available" title="Power Shortcuts: / Search · J/K Navigate · P Pin · S Save · B Brief Builder"><kbd>/</kbd> search · <kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin</span>
+              <span class="keyboard-hints" title="When a story has focus, use J and K to browse, P to pin, and S to save."><kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin · <kbd>S</kbd> save</span>
               <button id="refresh" class="reading-reload text-button" type="button" aria-label="Reload latest stories">
                 <span aria-hidden="true">↻</span> Refresh
               </button>
@@ -218,6 +209,22 @@
                   <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">
                     More filters <span id="filter-count" hidden></span>
                   </button>
+                  <details id="saved-views" class="saved-views">
+                    <summary>Saved views</summary>
+                    <div class="saved-views-panel">
+                      <p class="saved-views-note">Saved in this browser.</p>
+                      <form id="saved-view-form" class="saved-view-form">
+                        <label for="saved-view-name">Name this view</label>
+                        <div class="saved-view-entry">
+                          <input id="saved-view-name" type="text" maxlength="60" required placeholder="e.g. European startups" />
+                          <button class="button secondary" id="saved-view-save" type="submit">Save</button>
+                        </div>
+                      </form>
+                      <p class="saved-views-empty" id="saved-views-empty">No saved views yet.</p>
+                      <ul class="saved-views-list" id="saved-views-list" aria-label="Saved views"></ul>
+                      <p class="saved-views-status" id="saved-views-status" role="status"></p>
+                    </div>
+                  </details>
                 </div>
               </div>
               <div id="active-filters" class="active-filters" aria-label="Active filters" hidden></div>
@@ -304,7 +311,7 @@
             <div class="reading-result-context">
               <p id="news-status" role="status" aria-live="polite">Loading stories…</p>
               <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
-              <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief from these filters <span aria-hidden="true">↗</span></button>
+              <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief for this view <span aria-hidden="true">↗</span></button>
               <button id="export-saved-md" type="button" class="text-button" hidden>Export Markdown</button>
               <button id="pin-all-saved" type="button" class="text-button" hidden>Pin all to brief</button>
             </div>
@@ -319,11 +326,11 @@
                 <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
                 <button id="layout-list" type="button" aria-pressed="false">List</button>
               </div>
-              <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false" title="Filter for primary reporting, research preprints, and advisories">
-                ✦ High Signal
+              <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false">
+                Independent reporting
               </button>
-              <button id="mark-all-read" class="text-button read-action-btn" type="button" title="Mark all displayed stories as read">
-                Mark read
+              <button id="mark-all-read" class="text-button read-action-btn" type="button">
+                Mark page read
               </button>
             </div>
           </div>
@@ -580,8 +587,6 @@
     <footer class="site-footer wrap">
       <div class="footer-brand-col">
         <a class="footer-brand" href="/">Informa AI</a>
-        <p class="footer-headline">Your Personal AI News Intelligence Agent.</p>
-        <p class="footer-tagline">Discover what matters. Understand why it matters. Stay ahead without information overload.</p>
         <div class="footer-pillars">
           <span>Discover</span> · <span>Analyze</span> · <span>Personalize</span> · <span>Automate</span>
         </div>
@@ -652,111 +657,100 @@
       </div>
     </dialog>
 
-    <!-- Slide-Over Intelligence Dossier Drawer (Particle + Trace Inspired) -->
-    <div id="dossier-backdrop" class="dossier-backdrop" hidden></div>
-    <aside id="dossier-drawer" class="dossier-drawer" aria-labelledby="dossier-title" role="dialog" aria-modal="true" hidden>
+    <dialog id="dossier-drawer" class="dossier-drawer" aria-labelledby="dossier-title">
       <header class="dossier-header">
         <div class="dossier-meta-top">
-          <span id="dossier-index" class="dossier-counter">Story 1 of 10</span>
-          <div class="dossier-nav-arrows">
+          <span id="dossier-index" class="dossier-counter"></span>
+          <div class="dossier-nav-arrows" role="group" aria-label="Browse stories">
             <button id="dossier-prev" class="dossier-nav-btn" type="button" aria-label="Previous story (Left arrow)">←</button>
             <button id="dossier-next" class="dossier-nav-btn" type="button" aria-label="Next story (Right arrow)">→</button>
           </div>
         </div>
-        <button id="dossier-close" class="dialog-close" type="button" aria-label="Close intelligence dossier (Esc)">×</button>
+        <button id="dossier-close" class="dialog-close" type="button" aria-label="Close story details">×</button>
       </header>
       <div class="dossier-body">
         <div class="dossier-badges">
-          <span id="dossier-topic" class="source-badge">Topic</span>
-          <span id="dossier-region" class="meta-pill region-pill">Region</span>
-          <span id="dossier-read-time" class="meta-pill read-time-pill">2m read</span>
-          <span id="dossier-coverage" class="meta-pill coverage-pill">Primary Reporting</span>
+          <span id="dossier-topic" class="source-badge"></span>
+          <span id="dossier-coverage" class="meta-pill"></span>
         </div>
         <h2 id="dossier-title" class="dossier-headline" tabindex="-1"></h2>
         <div class="dossier-byline">
-          <span id="dossier-source-mark" class="source-mark" aria-hidden="true">P</span>
+          <span id="dossier-source-mark" class="source-mark" aria-hidden="true"></span>
           <div>
-            <strong id="dossier-publisher">Publisher</strong>
-            <span id="dossier-provenance" class="muted">Provenance</span>
+            <strong id="dossier-publisher"></strong>
+            <div id="dossier-provenance" class="muted"></div>
           </div>
           <time id="dossier-time" class="dossier-timestamp"></time>
         </div>
         <div class="dossier-actions-bar">
-          <button id="dossier-listen-btn" class="button secondary dossier-btn" type="button">
-            🎧 Listen
-          </button>
-          <button id="dossier-pin-btn" class="button secondary dossier-btn" type="button">
+          <a id="dossier-external-link" class="button primary" target="_blank" rel="noopener noreferrer">
+            Read original <span aria-hidden="true">↗</span>
+          </a>
+          <button id="dossier-listen-btn" class="button secondary" type="button">Listen</button>
+          <button id="dossier-stop-btn" class="button secondary" type="button" hidden>Stop</button>
+          <button id="dossier-pin-btn" class="button secondary" type="button" aria-pressed="false">
             Pin to brief
           </button>
-          <button id="dossier-save-btn" class="button secondary dossier-btn" type="button">
+          <button id="dossier-save-btn" class="button secondary" type="button" aria-pressed="false">
             Save story
           </button>
-          <button id="dossier-copy-btn" class="button secondary dossier-btn" type="button">
+          <button id="dossier-copy-btn" class="button secondary" type="button">
             Copy Markdown
           </button>
-          <a id="dossier-external-link" class="button primary dossier-btn" href="#" target="_blank" rel="noopener noreferrer">
-            Visit Source ↗
-          </a>
         </div>
+        <p id="dossier-feedback" class="status" role="status"></p>
         <div class="dossier-layers">
           <section class="dossier-section">
-            <h3 class="dossier-section-title">Executive Summary</h3>
+            <h3 id="dossier-basis" class="dossier-section-title"></h3>
             <p id="dossier-summary" class="dossier-text"></p>
           </section>
           <section id="dossier-why-section" class="dossier-section dossier-why-box" hidden>
-            <h3 class="dossier-section-title">✦ Strategic Context &amp; Market Impact</h3>
+            <h3 class="dossier-section-title">Why it matters</h3>
             <p id="dossier-why-text" class="dossier-why-content"></p>
           </section>
           <section id="dossier-takeaways-section" class="dossier-section" hidden>
-            <h3 class="dossier-section-title">Key Intelligence Takeaways</h3>
+            <h3 class="dossier-section-title">Key takeaways</h3>
             <ul id="dossier-takeaways-list" class="dossier-takeaways"></ul>
           </section>
           <section class="dossier-section dossier-audit-section">
-            <h3 class="dossier-section-title">Signal &amp; Publisher Provenance</h3>
+            <h3 class="dossier-section-title">Publication details</h3>
             <dl class="dossier-audit-grid">
-              <div><dt>Primary Source</dt><dd id="dossier-audit-url"></dd></div>
-              <div><dt>Publisher Region</dt><dd id="dossier-audit-region"></dd></div>
-              <div><dt>Coverage Classification</dt><dd id="dossier-audit-coverage"></dd></div>
-              <div><dt>Intelligence Status</dt><dd id="dossier-audit-status">Verified Feed Ingestion</dd></div>
+              <div><dt>Source domain</dt><dd id="dossier-audit-url"></dd></div>
+              <div><dt>Publisher region</dt><dd id="dossier-audit-region"></dd></div>
             </dl>
+            <a id="dossier-topic-link" hidden>Browse more on this topic <span aria-hidden="true">→</span></a>
           </section>
         </div>
       </div>
-    </aside>
+    </dialog>
 
-    <!-- Interactive Command Palette (Trace-Inspired Keyboard Navigation) -->
-    <dialog id="command-dialog" class="command-dialog" aria-label="Command Palette">
-      <div class="command-palette-inner">
+    <dialog id="command-dialog" class="command-dialog" aria-label="Quick search">
         <div class="command-input-row">
-          <span class="command-search-icon" aria-hidden="true">🔍</span>
-          <input id="command-input" type="search" placeholder="Type a command, topic, region, or search headlines..." autocomplete="off" />
-          <button id="command-close" type="button" class="dialog-close" aria-label="Close command palette (Esc)">×</button>
+          <label class="sr-only" for="command-input">Find stories, topics, regions, or actions</label>
+          <input id="command-input" type="text" role="combobox" aria-autocomplete="list" aria-controls="command-results" aria-expanded="false"
+            placeholder="Stories, topics, or actions" autocomplete="off" maxlength="150" autofocus />
+          <button id="command-close" type="button" class="dialog-close" aria-label="Close quick search">×</button>
         </div>
         <div class="command-shortcuts-strip">
           <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
           <span><kbd>Enter</kbd> select</span>
           <span><kbd>Esc</kbd> dismiss</span>
         </div>
-        <div id="command-results" class="command-results-list" role="listbox"></div>
-      </div>
+        <div class="command-results-list">
+          <div id="command-results" role="listbox" aria-label="Search suggestions"></div>
+        </div>
     </dialog>
 
-    <!-- Floating Audio Intelligence Player Bar (Particle-Inspired Audio Brief) -->
-    <div id="audio-player-bar" class="audio-player-bar" hidden aria-label="Audio brief narrator" role="region">
-      <div class="audio-player-left">
-        <div class="audio-wave" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
-        </div>
-        <div class="audio-info">
-          <span class="audio-label">NARRATING INTELLIGENCE</span>
-          <span id="audio-story-title" class="audio-title">Story title</span>
-        </div>
+    <div id="audio-player-bar" class="audio-player-bar" hidden aria-label="Audio player" role="region">
+      <div class="audio-info" role="status">
+        <span id="audio-status" class="audio-label"></span>
+        <span id="audio-story-title" class="audio-title"></span>
       </div>
       <div class="audio-player-controls">
-        <button id="audio-prev-btn" class="audio-control-btn" type="button" aria-label="Previous story">⏮</button>
-        <button id="audio-play-pause-btn" class="audio-control-btn audio-play-btn" type="button" aria-label="Pause narration">⏸</button>
-        <button id="audio-next-btn" class="audio-control-btn" type="button" aria-label="Next story">⏭</button>
-        <button id="audio-stop-btn" class="audio-control-btn audio-close-btn" type="button" aria-label="Stop audio narration">✕</button>
+        <button id="audio-prev-btn" class="audio-control-btn" type="button">Previous</button>
+        <button id="audio-play-pause-btn" class="audio-control-btn" type="button">Pause</button>
+        <button id="audio-next-btn" class="audio-control-btn" type="button">Next</button>
+        <button id="audio-stop-btn" class="audio-control-btn" type="button">Stop</button>
       </div>
     </div>
   </body>

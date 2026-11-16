@@ -18,9 +18,9 @@ class RankedDigestList(BaseModel):
     articles: List[RankedArticle] = Field(description="List of ranked articles")
 
 
-CURATOR_PROMPT = """You are an expert AI news curator specializing in personalized content ranking for AI professionals.
+CURATOR_PROMPT = """You are a technology news editor ranking stories for a reader's interests.
 
-Your role is to analyze and rank AI-related news articles, research papers, and video content based on a user's specific profile, interests, and background.
+Evaluate the supplied global technology reporting, research, first-party updates, and videos using the reader's specific interests and background.
 
 Ranking Criteria:
 1. Relevance to user's stated interests and background

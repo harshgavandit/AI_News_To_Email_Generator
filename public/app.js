@@ -1,5 +1,6 @@
 "use strict";
 import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
+import { initSavedViews } from "./saved-views.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -149,6 +150,7 @@ function toggleSaved(article) {
     status("news-status", "You can save up to 100 stories. Remove one to save another.", true);
     return;
   }
+  const restoreFocus = document.activeElement?.dataset.storyId === id;
   const previousIndex = Array.from($("stories").querySelectorAll(".save-button")).findIndex((button) => button.dataset.storyId === id);
   if (removing) saved.delete(id);
   else saved.set(id, article);
@@ -161,7 +163,7 @@ function toggleSaved(article) {
   renderStories();
   const actions = Array.from($("stories").querySelectorAll(".save-button"));
   const replacement = actions.find((button) => button.dataset.storyId === id) || actions[Math.min(previousIndex, actions.length - 1)];
-  (replacement || $("view-saved")).focus({ preventScroll: Boolean(replacement) });
+  if (restoreFocus) (replacement || $("view-saved")).focus({ preventScroll: Boolean(replacement) });
   status("story-action-status", removing ? `Story removed. ${saved.size} saved.` :
     persisted ? `Story saved. ${saved.size} saved on this browser.` : "Story saved for this session. Browser storage is unavailable.");
 }
@@ -252,9 +254,8 @@ async function loadHeadlines() {
     // Browsing and search still work when the optional headlines request fails.
   }
 }
-function syncURL() {
-  const url = new URL(location.href);
-  for (const [key, value] of Object.entries({
+function readingFilters() {
+  return {
     source: state.source,
     window: windows[state.hours],
     q: $("search").value.trim(),
@@ -265,7 +266,12 @@ function syncURL() {
     coverage: $("coverage").value,
     language: $("language").value,
     sort: $("sort").value === defaultSort(state.searching) ? "" : $("sort").value,
-  })) {
+  };
+}
+
+function syncURL() {
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries(readingFilters())) {
     if (!value || value === "all") url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
@@ -275,6 +281,7 @@ function syncURL() {
     Number($("kind").value !== "all") + Number(Boolean($("coverage").value)) + Number(Boolean($("language").value));
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
+  $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("reset-filters").hidden = state.view !== "feed" ||
     (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
@@ -398,6 +405,8 @@ function renderSourceFilters() {
     button.setAttribute("aria-pressed", String(state.source === id));
   }
 }
+const visibleStories = () => state.view === "saved" ? [...saved.values()].reverse() : state.articles;
+
 function renderStories() {
   $("outage-links").hidden = state.topic !== "outages";
   const container = $("stories");
@@ -405,17 +414,15 @@ function renderStories() {
   const isSaved = state.view === "saved";
   $("export-saved-md").hidden = !isSaved || !saved.size;
   $("pin-all-saved").hidden = !isSaved || !saved.size;
-  let articles = isSaved ? [...saved.values()].reverse() : state.articles;
-  if (state.highSignalOnly && !isSaved) {
-    articles = articles.filter((a) => a.coverage === "reporting" || a.coverage === "preprint" || a.coverage === "advisory" || a.research_status === "preprint");
-  }
+  const articles = visibleStories();
+  $("filter-high-signal").hidden = isSaved;
+  $("mark-all-read").hidden = isSaved || !articles.length;
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
     empty.append(node("strong", "", isSaved ? "No saved stories" : "No matching stories"));
     empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
-        state.highSignalOnly ? "No high-signal stories found in this window. Try toggling off the High Signal filter." :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
     if (isSaved) {
@@ -458,9 +465,6 @@ function renderStories() {
     const date = node("time", "", relativeTime(timestamp));
     date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
-    const summary = article.cleanSummary || article.description || article.summary || "";
-    const wordCount = (article.title + " " + summary).split(/\s+/).length;
-    const readingMinutes = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
     const badges = node("div", "story-meta-badges");
     badges.append(
       node(
@@ -468,20 +472,12 @@ function renderStories() {
         `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`,
         state.topics[topic] || article.topic_label || "Technology",
       ),
-      node("span", "meta-pill region-pill", publisherRegion(article)),
-      node("span", "meta-pill read-time-pill", `${readingMinutes}m read`),
     );
     top.append(badges, date);
     const heading = node("h3");
     if (article.language) heading.lang = article.language;
     const storyLink = externalLink(article.sourceUrl || article.url, article.title);
-    storyLink.title = "Click to inspect Intelligence Dossier (⌘/Ctrl+click to open original URL)";
-    storyLink.addEventListener("click", (e) => {
-      if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
-        e.preventDefault();
-        openDossier(article);
-      }
-    });
+    storyLink.addEventListener("click", () => markAsRead(article.id));
     const externalMark = node("span", "story-external-mark", "↗");
     externalMark.setAttribute("aria-hidden", "true");
     storyLink.append(" ", externalMark);
@@ -526,19 +522,14 @@ function renderStories() {
     save.addEventListener("click", () => toggleSaved(article));
     pin.title = "Include in your next brief";
 
-    const dossierBtn = node("button", "card-dossier-btn", "Dossier");
+    const dossierBtn = node("button", "card-dossier-btn", "Details");
     dossierBtn.type = "button";
-    dossierBtn.title = "Open full intelligence dossier (Enter)";
-    dossierBtn.addEventListener("click", () => openDossier(article));
-
-    const audioBtn = node("button", "card-audio-btn", "🎧");
-    audioBtn.type = "button";
-    audioBtn.title = "Listen to audio narration";
-    audioBtn.setAttribute("aria-label", `Listen to ${article.title}`);
-    audioBtn.addEventListener("click", () => playStoryAudio(article));
+    dossierBtn.setAttribute("aria-label", `Details: ${article.title}`);
+    dossierBtn.setAttribute("aria-haspopup", "dialog");
+    dossierBtn.addEventListener("click", () => openDossier(article, dossierBtn));
 
     const actions = node("div", "story-actions");
-    actions.append(audioBtn, dossierBtn, save, pin);
+    actions.append(dossierBtn, save, pin);
     bottom.append(actions);
     main.append(top, heading);
     card.append(main);
@@ -548,8 +539,12 @@ function renderStories() {
       const tabGroup = node("div", "perspective-tabs");
       const tabSummary = node("button", "perspective-tab active", "Summary");
       tabSummary.type = "button";
+      tabSummary.setAttribute("aria-pressed", "true");
       const tabWhy = node("button", "perspective-tab", "Why It Matters");
       tabWhy.type = "button";
+      tabWhy.setAttribute("aria-pressed", "false");
+      tabGroup.setAttribute("role", "group");
+      tabGroup.setAttribute("aria-label", "Story perspective");
       tabGroup.append(tabSummary, tabWhy);
 
       const paragraph = node("p", "story-summary", storySummary || "Read original source for coverage details.");
@@ -557,17 +552,21 @@ function renderStories() {
 
       const why = node("div", "why-matters-box");
       why.hidden = true;
-      why.append(node("span", "why-tag", "✦ STRATEGIC CONTEXT"), document.createTextNode(article.whyItMatters));
+      why.textContent = article.whyItMatters;
 
       tabSummary.addEventListener("click", () => {
         tabSummary.classList.add("active");
         tabWhy.classList.remove("active");
+        tabSummary.setAttribute("aria-pressed", "true");
+        tabWhy.setAttribute("aria-pressed", "false");
         paragraph.hidden = false;
         why.hidden = true;
       });
       tabWhy.addEventListener("click", () => {
         tabWhy.classList.add("active");
         tabSummary.classList.remove("active");
+        tabWhy.setAttribute("aria-pressed", "true");
+        tabSummary.setAttribute("aria-pressed", "false");
         paragraph.hidden = true;
         why.hidden = false;
       });
@@ -1407,7 +1406,7 @@ $("download-eml").addEventListener("click", () => {
       String.fromCharCode(byte),
     ).join(""),
   );
-  const eml = `Subject: Your Informa AI\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded.match(/.{1,76}/g).join("\r\n")}\r\n`;
+  const eml = `Subject: Informa AI Technology Brief\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n${encoded.match(/.{1,76}/g).join("\r\n")}\r\n`;
   download(eml, "message/rfc822", "informa-ai.eml");
   status("email-status", "Email file downloaded. Open it in your email app.");
 });
@@ -1747,6 +1746,30 @@ renderCoverageControls();
 restoreURL();
 reflectFilters();
 reflectSavedCount();
+initSavedViews($("saved-views"), {
+  readView() {
+    return new URLSearchParams(Object.entries(readingFilters()).filter(([, value]) => value && value !== "all"));
+  },
+  applyView(params) {
+    clearTimeout(searchTimer);
+    const url = new URL(location.href);
+    for (const key of Object.keys(readingFilters())) {
+      const value = params.get(key);
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    for (const key of ["source", "publisher"]) {
+      const value = url.searchParams.get(key);
+      const available = state.sources.some((source) => source.id === value || (key === "source" && source.source === value));
+      if (value && state.sources.length && !available) url.searchParams.delete(key);
+    }
+    url.hash = "reading-room";
+    history.pushState(null, "", url);
+    restoreURL();
+    reflectFilters();
+    loadNews();
+  },
+});
 setTab("build");
 if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
@@ -1762,500 +1785,526 @@ window.addEventListener("popstate", () => {
   loadNews();
 });
 
-let activeStoryIndex = -1;
-function updateActiveStory(index) {
-  const cards = Array.from($("stories").querySelectorAll(".story"));
-  if (!cards.length) return;
-  activeStoryIndex = Math.max(0, Math.min(index, cards.length - 1));
-  cards.forEach((card, i) => {
-    card.classList.toggle("keyboard-active", i === activeStoryIndex);
-  });
-  cards[activeStoryIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-/* High-Signal Filter & Read All Status (Feedly Inspired) */
-state.highSignalOnly = false;
-$("filter-high-signal")?.addEventListener("click", () => {
-  state.highSignalOnly = !state.highSignalOnly;
-  $("filter-high-signal").setAttribute("aria-pressed", String(state.highSignalOnly));
-  renderStories();
+$("filter-high-signal").addEventListener("click", () => {
+  $("coverage").value = $("coverage").value === "reporting" ? "" : "reporting";
+  loadNews();
 });
 
-$("mark-all-read")?.addEventListener("click", () => {
-  for (const a of state.articles) readStories.add(String(a.id));
+$("mark-all-read").addEventListener("click", () => {
+  const page = visibleStories();
+  for (const article of page) readStories.add(String(article.id));
   try {
     localStorage.setItem(readKey, JSON.stringify([...readStories].slice(-300)));
   } catch {}
   renderStories();
-  status("story-action-status", "All visible stories marked as read.");
+  status("story-action-status", `${page.length} displayed stories marked as read.`);
 });
 
-/* Saved Stories Markdown Export & Pin All (Trace Inspired) */
-$("export-saved-md")?.addEventListener("click", async () => {
+function publishedExcerpt(article) {
+  if (article.summary_basis === "headline_only" || article.has_excerpt === false) return "";
+  return (article.cleanSummary || article.description || article.summary || "").trim();
+}
+
+function storyMarkdown(article) {
+  const href = externalLink(article.sourceUrl || article.url, "").getAttribute("href");
+  const publisher = article.sourceName || article.publisher || "Source";
+  const lines = [`## ${article.title}`, `Publisher: ${publisher}`];
+  if (href) lines.push(`Source: <${href}>`);
+  const excerpt = publishedExcerpt(article);
+  if (excerpt) lines.push("", excerpt);
+  if (article.whyItMatters) lines.push("", `Why it matters: ${article.whyItMatters}`);
+  if (article.keyTakeaway) lines.push(`Key takeaway: ${article.keyTakeaway}`);
+  return lines.join("\n");
+}
+
+$("export-saved-md").addEventListener("click", () => {
   if (!saved.size) return;
-  const lines = ["# Informa AI — Saved Intelligence Brief", ""];
-  for (const art of saved.values()) {
-    lines.push(`## ${art.title}`);
-    lines.push(`*Publisher:* ${art.publisher || art.sourceName || "Source"} (${publisherRegion(art)})`);
-    lines.push(`*Source:* ${art.url || art.sourceUrl}`);
-    const sum = art.cleanSummary || art.description || art.summary || "";
-    if (sum) lines.push(`\n${sum}`);
-    if (art.whyItMatters) lines.push(`\n*Why It Matters:* ${art.whyItMatters}`);
-    if (art.keyTakeaway) lines.push(`*Key Takeaway:* ${art.keyTakeaway}`);
-    lines.push("\n---\n");
-  }
-  try {
-    await navigator.clipboard.writeText(lines.join("\n"));
-    status("story-action-status", `Copied ${saved.size} saved stories as Markdown to clipboard!`);
-  } catch {
-    status("story-action-status", "Clipboard access unavailable.");
-  }
+  download(
+    ["# Informa AI saved stories", ...[...saved.values()].reverse().map(storyMarkdown)].join("\n\n"),
+    "text/markdown;charset=utf-8",
+    "informa-ai-saved-stories.md",
+  );
+  status("story-action-status", `Exported ${saved.size} saved stories.`);
 });
 
-$("pin-all-saved")?.addEventListener("click", () => {
-  let count = 0;
-  for (const art of saved.values()) {
-    if (state.pins.size < 10 && !state.pins.has(String(art.id))) {
-      state.pins.set(String(art.id), art);
-      count++;
-    }
-  }
+$("pin-all-saved").addEventListener("click", () => {
+  const newPins = [...saved.values()].reverse()
+    .filter((article) => !state.pins.has(String(article.id))).slice(0, 10 - state.pins.size);
+  for (const article of newPins) state.pins.set(String(article.id), article);
+  if (state.pins.size > Number($("article-count").value))
+    $("article-count").value = state.pins.size <= 5 ? "5" : "10";
   renderPins();
   renderStories();
-  status("story-action-status", `Pinned ${count} saved stories to your brief.`);
+  status("story-action-status", newPins.length ? `Pinned ${newPins.length} saved stories. ${state.pins.size} of 10 pins in use.` :
+    state.pins.size === 10 ? "All 10 pin slots are in use." : "Your saved stories are already pinned.");
 });
 
-/* Slide-Over Intelligence Dossier (Particle + Trace Inspired) */
-let currentDossierStory = null;
-let currentDossierList = [];
-let currentDossierIndex = 0;
+const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "" };
 
-function openDossier(article) {
-  if (!article) return;
-  currentDossierStory = article;
+function openDossier(article, trigger) {
+  if (!article || $("dossier-drawer").open) return;
+  dossier.trigger = trigger;
+  dossier.openerId = String(article.id);
+  dossier.articles = visibleStories().slice();
+  dossier.index = dossier.articles.findIndex((story) => String(story.id) === String(article.id));
+  if (dossier.index < 0) {
+    dossier.articles = [article];
+    dossier.index = 0;
+  }
+  renderDossier();
+  $("dossier-drawer").showModal();
+  $("dossier-title").focus({ preventScroll: true });
+}
+
+function renderDossier() {
+  const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
-  const isSavedView = state.view === "saved";
-  currentDossierList = isSavedView ? [...saved.values()].reverse() : state.articles;
-  currentDossierIndex = currentDossierList.findIndex((a) => String(a.id) === String(article.id));
-  if (currentDossierIndex === -1) currentDossierIndex = 0;
-
-  $("dossier-index").textContent = `Story ${currentDossierIndex + 1} of ${currentDossierList.length}`;
-  $("dossier-prev").disabled = currentDossierIndex <= 0;
-  $("dossier-next").disabled = currentDossierIndex >= currentDossierList.length - 1;
-
   const topic = article.category || article.topic;
+  const coverage = article.kind === "video" ? "Creator video" : state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
+  const publisher = article.sourceName || article.publisher || "Original source";
+  const region = publisherRegion(article);
+  const timestamp = article.publishedAt || article.published_at;
+  const href = externalLink(article.sourceUrl || article.url, "").getAttribute("href");
+  const summary = publishedExcerpt(article);
+  const basis = article.summary_basis === "ai_feed_summary" ? "AI summary of publisher feed" : "Publisher excerpt";
+
+  $("dossier-index").textContent = `Story ${dossier.index + 1} of ${dossier.articles.length}`;
+  $("dossier-prev").disabled = dossier.index === 0;
+  $("dossier-next").disabled = dossier.index === dossier.articles.length - 1;
   $("dossier-topic").textContent = state.topics[topic] || article.topic_label || "Technology";
   $("dossier-topic").className = `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`;
-  $("dossier-region").textContent = publisherRegion(article);
-
-  const summary = article.cleanSummary || article.description || article.summary || "";
-  const wordCount = (article.title + " " + summary).split(/\s+/).length;
-  const readingMinutes = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
-  $("dossier-read-time").textContent = `${readingMinutes}m read`;
-
-  const covLabel = state.coverageTypes[article.coverage] || coverageLabels[article.coverage] || "Primary Reporting";
-  $("dossier-coverage").textContent = covLabel;
+  $("dossier-coverage").textContent = coverage || "";
+  $("dossier-coverage").hidden = !coverage;
 
   $("dossier-title").textContent = article.title;
-  const publisher = article.sourceName || article.publisher || "Original source";
+  $("dossier-title").lang = article.language || "";
   $("dossier-source-mark").textContent = publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase();
   $("dossier-publisher").textContent = publisher;
-  $("dossier-provenance").textContent = [covLabel, publisherRegion(article), originalLanguage(article.language)].filter(Boolean).join(" · ");
+  $("dossier-provenance").textContent = originalLanguage(article.language);
+  $("dossier-time").textContent = timestamp ? relativeTime(timestamp) : "";
+  $("dossier-time").dateTime = timestamp || "";
+  $("dossier-time").title = timestamp ? readableTime(timestamp) : "";
+  $("dossier-external-link").hidden = !href;
+  if (href) $("dossier-external-link").href = href;
+  else $("dossier-external-link").removeAttribute("href");
 
-  const timestamp = article.publishedAt || article.published_at;
-  $("dossier-time").textContent = relativeTime(timestamp);
-  $("dossier-time").title = readableTime(timestamp);
-
-  const rawUrl = article.sourceUrl || article.url || "#";
-  $("dossier-external-link").href = rawUrl;
-  $("dossier-summary").textContent = summary || "Read original publication for details.";
-
-  if (article.whyItMatters) {
-    $("dossier-why-section").hidden = false;
-    $("dossier-why-text").textContent = article.whyItMatters;
-  } else {
-    $("dossier-why-section").hidden = true;
-  }
-
-  const takeaways = article.keyTakeaway ? [article.keyTakeaway] : [];
-  if (takeaways.length) {
-    $("dossier-takeaways-section").hidden = false;
-    $("dossier-takeaways-list").replaceChildren();
-    for (const t of takeaways) {
-      const li = node("li", "", t);
-      $("dossier-takeaways-list").append(li);
-    }
-  } else {
-    $("dossier-takeaways-section").hidden = true;
-  }
-
-  try {
-    const domain = new URL(rawUrl).hostname;
-    $("dossier-audit-url").textContent = domain;
-  } catch {
-    $("dossier-audit-url").textContent = rawUrl;
-  }
-  $("dossier-audit-region").textContent = publisherRegion(article);
-  $("dossier-audit-coverage").textContent = covLabel;
-  $("dossier-audit-status").textContent = "Verified Feed Ingestion";
-
-  const isPinned = state.pins.has(String(article.id));
-  $("dossier-pin-btn").textContent = isPinned ? "Unpin from brief" : "Pin to brief";
-
-  const isBookmarked = saved.has(String(article.id));
-  $("dossier-save-btn").textContent = isBookmarked ? "Saved" : "Save story";
-
-  $("dossier-backdrop").hidden = false;
-  $("dossier-drawer").hidden = false;
-  $("dossier-title").focus();
+  $("dossier-basis").textContent = summary ? basis : "Headline only";
+  $("dossier-summary").textContent = summary || "Open the original publication for details.";
+  $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
+  $("dossier-why-section").hidden = !article.whyItMatters;
+  $("dossier-why-text").textContent = article.whyItMatters || "";
+  $("dossier-takeaways-section").hidden = !article.keyTakeaway;
+  $("dossier-takeaways-list").replaceChildren(...(article.keyTakeaway ? [node("li", "", article.keyTakeaway)] : []));
+  $("dossier-audit-url").textContent = href ? new URL(href).hostname : "Unavailable";
+  $("dossier-audit-region").textContent = region || "Unspecified";
+  $("dossier-topic-link").hidden = !Object.hasOwn(state.topics, topic);
+  $("dossier-topic-link").href = `/?${new URLSearchParams({ topic, window: "7d" })}#reading-room`;
+  status("dossier-feedback", "");
+  syncDossierActions();
+  $("dossier-drawer").querySelector(".dossier-body").scrollTop = 0;
 }
 
-function closeDossier() {
-  $("dossier-backdrop").hidden = true;
-  $("dossier-drawer").hidden = true;
-  currentDossierStory = null;
+function syncDossierActions() {
+  if (!dossier.article) return;
+  const isPinned = state.pins.has(String(dossier.article.id));
+  const isSaved = saved.has(String(dossier.article.id));
+  $("dossier-pin-btn").setAttribute("aria-pressed", String(isPinned));
+  $("dossier-save-btn").setAttribute("aria-pressed", String(isSaved));
+  $("dossier-pin-btn").textContent = isPinned ? "Pinned" : "Pin to brief";
+  $("dossier-save-btn").textContent = isSaved ? "Saved" : "Save story";
+  syncDossierAudio();
 }
 
-$("dossier-close")?.addEventListener("click", closeDossier);
-$("dossier-backdrop")?.addEventListener("click", closeDossier);
+function moveDossier(offset) {
+  const next = dossier.index + offset;
+  if (next < 0 || next >= dossier.articles.length) return;
+  dossier.index = next;
+  renderDossier();
+  $("dossier-title").focus({ preventScroll: true });
+}
 
-$("dossier-prev")?.addEventListener("click", () => {
-  if (currentDossierIndex > 0) openDossier(currentDossierList[currentDossierIndex - 1]);
+$("dossier-close").addEventListener("click", () => $("dossier-drawer").close());
+$("dossier-drawer").addEventListener("close", () => {
+  const fallback = $("stories").querySelector(`[data-story-card-id="${CSS.escape(dossier.openerId)}"] .card-dossier-btn`);
+  const trigger = dossier.trigger?.isConnected && dossier.trigger.getClientRects().length ? dossier.trigger : fallback;
+  (trigger || $("cmd-palette-btn")).focus({ preventScroll: true });
+  dossier.article = null;
+  dossier.articles = [];
+  dossier.trigger = null;
 });
-$("dossier-next")?.addEventListener("click", () => {
-  if (currentDossierIndex < currentDossierList.length - 1) openDossier(currentDossierList[currentDossierIndex + 1]);
+$("dossier-drawer").addEventListener("keydown", (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return;
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    event.preventDefault();
+    moveDossier(event.key === "ArrowLeft" ? -1 : 1);
+  }
 });
-
-$("dossier-pin-btn")?.addEventListener("click", () => {
-  if (!currentDossierStory) return;
-  togglePin(currentDossierStory);
-  const isPinned = state.pins.has(String(currentDossierStory.id));
-  $("dossier-pin-btn").textContent = isPinned ? "Unpin from brief" : "Pin to brief";
-});
-
-$("dossier-save-btn")?.addEventListener("click", () => {
-  if (!currentDossierStory) return;
-  toggleSaved(currentDossierStory);
-  const isBookmarked = saved.has(String(currentDossierStory.id));
-  $("dossier-save-btn").textContent = isBookmarked ? "Saved" : "Save story";
-});
-
-$("dossier-copy-btn")?.addEventListener("click", async () => {
-  if (!currentDossierStory) return;
-  const art = currentDossierStory;
-  const lines = [
-    `# ${art.title}`,
-    `*Publisher:* ${art.publisher || art.sourceName || "Source"} (${publisherRegion(art)})`,
-    `*Source:* ${art.url || art.sourceUrl}`,
-    "",
-    art.cleanSummary || art.description || art.summary || "",
-  ];
-  if (art.whyItMatters) lines.push(`\n**Strategic Context:** ${art.whyItMatters}`);
-  if (art.keyTakeaway) lines.push(`**Key Takeaway:** ${art.keyTakeaway}`);
-  try {
-    await navigator.clipboard.writeText(lines.join("\n"));
-    $("dossier-copy-btn").textContent = "Copied! ✓";
-    setTimeout(() => { $("dossier-copy-btn").textContent = "Copy Markdown"; }, 2000);
-  } catch {}
-});
-
-$("dossier-listen-btn")?.addEventListener("click", () => {
-  if (currentDossierStory) playStoryAudio(currentDossierStory);
-});
-
-/* Native Web Speech Audio Engine (Particle-Inspired) */
-const audioNarrator = {
-  activeStory: null,
-  playlist: [],
-  playlistIndex: 0,
-  synth: typeof window !== "undefined" && window.speechSynthesis,
-  utterance: null,
-};
-
-function playStoryAudio(article) {
-  if (!audioNarrator.synth) {
-    status("news-status", "Speech synthesis is not supported on this browser.", true);
+$("dossier-prev").addEventListener("click", () => moveDossier(-1));
+$("dossier-next").addEventListener("click", () => moveDossier(1));
+$("dossier-pin-btn").addEventListener("click", () => {
+  if (!state.pins.has(String(dossier.article.id)) && state.pins.size >= 10) {
+    status("dossier-feedback", "All 10 pin slots are in use.", true);
     return;
   }
-  audioNarrator.activeStory = article;
-  audioNarrator.playlist = [article];
-  audioNarrator.playlistIndex = 0;
-  speakStory(article);
+  togglePin(dossier.article);
+  syncDossierActions();
+});
+$("dossier-save-btn").addEventListener("click", () => {
+  if (!saved.has(String(dossier.article.id)) && saved.size >= 100) {
+    status("dossier-feedback", "You can keep up to 100 saved stories.", true);
+    return;
+  }
+  toggleSaved(dossier.article);
+  syncDossierActions();
+});
+$("dossier-copy-btn").addEventListener("click", async () => {
+  const article = dossier.article;
+  try {
+    await navigator.clipboard.writeText(storyMarkdown(article));
+    if (dossier.article === article) status("dossier-feedback", "Copied story as Markdown.");
+  } catch {
+    if (dossier.article === article) status("dossier-feedback", "Clipboard access was unavailable.", true);
+  }
+});
+
+const audio = { playlist: [], index: 0, origin: null, utterance: null, timer: null, status: "", generation: 0 };
+const speechAvailable = Boolean(window.speechSynthesis) && typeof window.SpeechSynthesisUtterance === "function";
+
+function syncDossierAudio() {
+  const current = audio.playlist[audio.index];
+  const isActive = Boolean(dossier.article && current && String(dossier.article.id) === String(current.id) &&
+    ["starting", "playing", "paused"].includes(audio.status));
+  $("dossier-listen-btn").hidden = !speechAvailable;
+  $("dossier-listen-btn").textContent = isActive ? (audio.status === "paused" ? "Resume" : "Pause") : "Listen";
+  $("dossier-listen-btn").disabled = isActive && audio.status === "starting";
+  $("dossier-stop-btn").hidden = !isActive;
 }
 
-function speakStory(article) {
-  if (!audioNarrator.synth || !article) return;
-  audioNarrator.synth.cancel();
+function renderAudio() {
+  const article = audio.playlist[audio.index];
+  $("audio-player-bar").hidden = !article;
+  $("audio-story-title").textContent = article?.title || "";
+  $("audio-story-title").lang = article?.language || "";
+  const labels = { starting: "Starting audio", playing: "Playing", paused: "Paused",
+    error: "Narration is unavailable for this story" };
+  $("audio-status").textContent = article && labels[audio.status] ?
+    `${labels[audio.status]}${audio.playlist.length > 1 ? ` · ${audio.index + 1} of ${audio.playlist.length}` : ""}` : "";
+  $("audio-prev-btn").hidden = $("audio-next-btn").hidden = audio.playlist.length < 2;
+  $("audio-prev-btn").disabled = audio.index === 0;
+  $("audio-next-btn").disabled = audio.index >= audio.playlist.length - 1;
+  $("audio-play-pause-btn").hidden = audio.status === "error";
+  $("audio-play-pause-btn").disabled = audio.status === "starting";
+  $("audio-play-pause-btn").textContent = audio.status === "paused" ? "Resume" : "Pause";
+  syncDossierAudio();
+}
 
-  const title = article.title || "";
-  const publisher = article.publisher || article.sourceName || "Source";
-  const why = article.whyItMatters ? ` Strategic context: ${article.whyItMatters}.` : "";
-  const summary = article.cleanSummary || article.description || article.summary || "";
-  const text = `${title}. Reported by ${publisher}.${why} ${summary}`;
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 1.05;
-  utter.pitch = 1.0;
-  utter.onend = () => {
-    if (audioNarrator.playlistIndex < audioNarrator.playlist.length - 1) {
-      audioNarrator.playlistIndex++;
-      const nextStory = audioNarrator.playlist[audioNarrator.playlistIndex];
-      speakStory(nextStory);
-    } else {
-      stopAudio();
-    }
-  };
-  utter.onerror = () => stopAudio();
-
-  audioNarrator.utterance = utter;
-  $("audio-story-title").textContent = title;
-  $("audio-player-bar").hidden = false;
-  $("audio-play-pause-btn").textContent = "⏸";
-  $("audio-play-pause-btn").setAttribute("aria-label", "Pause narration");
-  document.querySelector(".audio-wave")?.classList.remove("paused");
-  audioNarrator.synth.speak(utter);
+function cancelSpeech() {
+  clearTimeout(audio.timer);
+  audio.utterance = null;
+  window.speechSynthesis?.cancel();
 }
 
 function stopAudio() {
-  if (audioNarrator.synth) audioNarrator.synth.cancel();
-  $("audio-player-bar").hidden = true;
-  audioNarrator.activeStory = null;
-  audioNarrator.playlist = [];
-  audioNarrator.playlistIndex = 0;
+  const currentFocus = document.activeElement;
+  const restoreFocus = $("audio-player-bar").contains(currentFocus);
+  const stoppedInDossier = currentFocus === $("dossier-stop-btn");
+  audio.generation++;
+  cancelSpeech();
+  audio.playlist = [];
+  audio.status = "";
+  renderAudio();
+  if (stoppedInDossier) $("dossier-listen-btn").focus();
+  if (restoreFocus) {
+    const trigger = audio.origin?.getClientRects().length ? audio.origin : $("cmd-palette-btn");
+    trigger.focus({ preventScroll: true });
+  }
+}
+
+function speakStory(index) {
+  cancelSpeech();
+  audio.index = index;
+  const article = audio.playlist[index];
+  const excerpt = publishedExcerpt(article);
+  const publisher = article.sourceName || article.publisher;
+  const utterance = new SpeechSynthesisUtterance([article.title, publisher, excerpt].filter(Boolean).join(". "));
+  utterance.lang = article.language || document.documentElement.lang;
+  audio.utterance = utterance;
+  audio.status = "starting";
+  renderAudio();
+
+  function fail() {
+    if (audio.utterance !== utterance) return;
+    cancelSpeech();
+    audio.status = "error";
+    renderAudio();
+    if (dossier.article && String(dossier.article.id) === String(article.id)) {
+      status("dossier-feedback", "Your browser could not narrate this story. A speech voice may be unavailable.", true);
+      $("dossier-listen-btn").focus();
+    }
+  }
+
+  audio.timer = setTimeout(fail, 9_000);
+  utterance.onstart = () => {
+    if (audio.utterance !== utterance) return;
+    clearTimeout(audio.timer);
+    audio.status = "playing";
+    renderAudio();
+  };
+  utterance.onend = () => {
+    if (audio.utterance !== utterance) return;
+    if (audio.index + 1 < audio.playlist.length) speakStory(audio.index + 1);
+    else stopAudio();
+  };
+  utterance.onerror = fail;
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    fail();
+  }
+}
+
+function startAudio(articles, trigger) {
+  const playlist = articles.filter((article) => article?.title);
+  if (!playlist.length) return;
+  audio.generation++;
+  audio.playlist = playlist;
+  audio.origin = trigger;
+  speakStory(0);
 }
 
 function toggleAudioPause() {
-  if (!audioNarrator.synth) return;
-  if (audioNarrator.synth.paused) {
-    audioNarrator.synth.resume();
-    $("audio-play-pause-btn").textContent = "⏸";
-    document.querySelector(".audio-wave")?.classList.remove("paused");
-  } else {
-    audioNarrator.synth.pause();
-    $("audio-play-pause-btn").textContent = "▶";
-    document.querySelector(".audio-wave")?.classList.add("paused");
+  if (audio.status === "paused") {
+    window.speechSynthesis.resume();
+    audio.status = "playing";
+  } else if (audio.status === "playing") {
+    window.speechSynthesis.pause();
+    audio.status = "paused";
   }
+  renderAudio();
 }
 
-$("audio-play-pause-btn")?.addEventListener("click", toggleAudioPause);
-$("audio-stop-btn")?.addEventListener("click", stopAudio);
-$("audio-prev-btn")?.addEventListener("click", () => {
-  if (audioNarrator.playlistIndex > 0) {
-    audioNarrator.playlistIndex--;
-    speakStory(audioNarrator.playlist[audioNarrator.playlistIndex]);
+$("dossier-listen-btn").addEventListener("click", (event) => {
+  const article = dossier.article;
+  if (String(audio.playlist[audio.index]?.id) === String(article.id) && ["playing", "paused"].includes(audio.status)) {
+    toggleAudioPause();
+  } else {
+    status("dossier-feedback", "");
+    startAudio([article], event.currentTarget);
   }
 });
-$("audio-next-btn")?.addEventListener("click", () => {
-  if (audioNarrator.playlistIndex < audioNarrator.playlist.length - 1) {
-    audioNarrator.playlistIndex++;
-    speakStory(audioNarrator.playlist[audioNarrator.playlistIndex]);
+$("dossier-stop-btn").addEventListener("click", stopAudio);
+$("audio-play-pause-btn").addEventListener("click", toggleAudioPause);
+$("audio-stop-btn").addEventListener("click", stopAudio);
+$("audio-prev-btn").addEventListener("click", () => { if (audio.index > 0) speakStory(audio.index - 1); });
+$("audio-next-btn").addEventListener("click", () => { if (audio.index + 1 < audio.playlist.length) speakStory(audio.index + 1); });
+
+$("world-audio-btn").hidden = !speechAvailable;
+$("world-audio-btn").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const generation = ++audio.generation;
+  button.disabled = true;
+  status("world-status", "Preparing today's audio brief…");
+  try {
+    const result = await jsonPost("/api/digest", { edition: "world", hours: 24, top_n: 5 });
+    if (generation !== audio.generation) return;
+    startAudio(result.digest.articles, button);
+    status("world-status", "");
+  } catch (error) {
+    if (generation === audio.generation) status("world-status", error.message || "Audio brief unavailable. Try again.", true);
+  } finally {
+    if (generation !== audio.generation && $("world-status").textContent === "Preparing today's audio brief…")
+      status("world-status", "");
+    button.disabled = false;
   }
 });
 
-$("world-audio-btn")?.addEventListener("click", () => {
-  const stories = state.articles.slice(0, 5);
-  if (!stories.length) {
-    status("world-status", "Loading stories to narrate...", false);
+const commandInput = $("command-input");
+let commandItems = [];
+let commandIndex = 0;
+
+function openFeedCommand(configure) {
+  if (state.view !== "feed") $("view-feed").click();
+  configure();
+  reflectFilters();
+  loadNews();
+  $("search").focus({ preventScroll: true });
+  $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
+}
+
+function listCommands() {
+  const actions = [
+    { label: "Build a personalized brief", run: () => $("nav-builder").click() },
+    { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
+    { label: "Email the Global Top 5", run: () => $("hero-email").focus() },
+    { label: "Browse saved stories", run: () => {
+      $("view-saved").click();
+      $("view-saved").focus({ preventScroll: true });
+      $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
+    }},
+    { label: "Browse sources", run: () => { location.href = "/sources.html"; } },
+    { label: "Switch between light and dark", run: () => {
+      const theme = $("site-theme");
+      theme.value = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      theme.dispatchEvent(new Event("change"));
+    }},
+    { label: "Browse independent reporting", run: () => openFeedCommand(() => { $("coverage").value = "reporting"; }) },
+  ];
+  if (saved.size) actions.push({ label: "Export saved stories as Markdown", run: () => $("export-saved-md").click() });
+  if (speechAvailable && !$("world-audio-btn").disabled) {
+    actions.push({ label: "Listen to the Global Top 5", run: () => $("world-audio-btn").click() });
+  }
+  const topics = Object.entries(state.topics).map(([id, label]) => ({
+    label, run: () => openFeedCommand(() => { state.topic = id; }),
+  }));
+  const regions = Object.entries(state.regions).map(([id, label]) => ({
+    label, run: () => openFeedCommand(() => { $("region").value = id; }),
+  }));
+  const layouts = [
+    { label: "Show story cards", run: () => setLayout("cards", true) },
+    { label: "Show compact story list", run: () => setLayout("list", true) },
+  ];
+  return [["Actions", actions], ["Layout", layouts], ["Topics", topics], ["Publisher regions", regions]];
+}
+
+function normalizeCommand(value) {
+  return value.normalize("NFKD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+function renderCommandResults(query) {
+  const terms = normalizeCommand(query).split(/\s+/).filter(Boolean);
+  const matches = (label) => terms.every((term) => normalizeCommand(label).includes(term));
+  const groups = listCommands().map(([group, items]) => [group, items.filter((item) => matches(`${group} ${item.label}`))]);
+  if (query) {
+    const stories = visibleStories().filter((article) => matches(article.title)).slice(0, 5).map((article) => ({
+      label: article.title, language: article.language, run: () => openDossier(article, $("cmd-palette-btn")),
+    }));
+    groups.unshift(["Current stories", stories]);
+    groups.push(["Archive", [{ label: `Search all stories for “${query}”`, run: () => openFeedCommand(() => {
+      state.topic = state.source = "all";
+      state.publisher = "";
+      for (const id of ["region", "publisher", "coverage", "language"]) $(id).value = "";
+      $("kind").value = "all";
+      $("sort").value = "relevance";
+      $("search").value = query;
+      state.hours = 168;
+    }) }]]);
+  }
+
+  const results = $("command-results");
+  results.replaceChildren();
+  commandItems = [];
+  for (const [name, items] of groups) {
+    if (!items.length) continue;
+    const group = node("div");
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", name);
+    const heading = node("p", "command-group-heading", name);
+    heading.setAttribute("aria-hidden", "true");
+    group.append(heading);
+    for (const item of items) {
+      const option = node("div", "command-item", item.label);
+      const index = commandItems.length;
+      option.id = `command-option-${index}`;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", "false");
+      if (item.language) option.lang = item.language;
+      option.addEventListener("click", () => runCommand(item));
+      option.addEventListener("pointermove", (event) => {
+        if (event.pointerType === "mouse") selectCommand(index);
+      });
+      commandItems.push({ ...item, option });
+      group.append(option);
+    }
+    results.append(group);
+  }
+  commandInput.setAttribute("aria-expanded", String(commandItems.length > 0));
+  selectCommand(0);
+}
+
+function selectCommand(index, scroll = false) {
+  commandItems[commandIndex]?.option.setAttribute("aria-selected", "false");
+  commandIndex = index;
+  const option = commandItems[index]?.option;
+  if (!option) {
+    commandInput.removeAttribute("aria-activedescendant");
     return;
   }
-  audioNarrator.playlist = stories;
-  audioNarrator.playlistIndex = 0;
-  speakStory(stories[0]);
-});
-
-/* Trace-Inspired Command Palette */
-let commandActiveIndex = 0;
-let commandItems = [];
-
-function getBaseCommands() {
-  const actions = [
-    { id: "act-listen-top5", label: "🎧 Listen to Global Top 5 Brief", category: "Actions", run: () => $("world-audio-btn")?.click() },
-    { id: "act-send-top5", label: "📬 1-Click Send Global Top 5 Brief", category: "Actions", run: () => { $("hero-email")?.focus(); $("hero-email")?.scrollIntoView({ behavior: "smooth" }); } },
-    { id: "act-build", label: "⚙️ Open Brief Builder", category: "Actions", run: () => $("nav-builder")?.click() },
-    { id: "act-cards", label: "🗂️ Switch to Editorial Cards View", category: "Layout", run: () => setLayout("cards", true) },
-    { id: "act-list", label: "📋 Switch to Compact List View", category: "Layout", run: () => setLayout("list", true) },
-    { id: "act-high-signal", label: "✦ Toggle High-Signal Only Stories", category: "Filters", run: () => $("filter-high-signal")?.click() },
-    { id: "act-mark-read", label: "✓ Mark All Stories as Read", category: "Actions", run: () => $("mark-all-read")?.click() },
-    { id: "act-export-saved", label: "📋 Export Saved Stories as Markdown", category: "Actions", run: () => $("export-saved-md")?.click() },
-    { id: "act-theme", label: "🌓 Toggle Light / Dark Theme", category: "Actions", run: () => {
-      const current = document.documentElement.dataset.theme;
-      const next = current === "dark" ? "light" : "dark";
-      document.documentElement.dataset.theme = next;
-      try { localStorage.setItem("informa-theme", next); } catch {}
-      $("site-theme").value = next;
-    }},
-  ];
-
-  const topics = Object.entries(state.topics).map(([id, label]) => ({
-    id: `topic-${id}`,
-    label: `✦ Channel: ${label}`,
-    category: "Topics",
-    run: () => chooseTopic(id),
-  }));
-
-  const regions = Object.entries(state.regions).map(([id, label]) => ({
-    id: `region-${id}`,
-    label: `🌐 Region: ${label}`,
-    category: "Regions",
-    run: () => {
-      $("region").value = id;
-      syncURL();
-      loadNews();
-    },
-  }));
-
-  return [...actions, ...topics, ...regions];
+  option.setAttribute("aria-selected", "true");
+  commandInput.setAttribute("aria-activedescendant", option.id);
+  if (scroll) option.scrollIntoView({ block: "nearest" });
 }
 
 function openCommandPalette() {
   const dialog = $("command-dialog");
-  if (!dialog) return;
-  $("command-input").value = "";
+  if (dialog.open) return;
+  commandInput.value = "";
   renderCommandResults("");
-  if (typeof dialog.showModal === "function") dialog.showModal();
-  else dialog.hidden = false;
-  $("command-input").focus();
+  dialog.showModal();
+  commandInput.focus();
 }
 
-function closeCommandPalette() {
-  const dialog = $("command-dialog");
-  if (!dialog) return;
-  if (typeof dialog.close === "function") dialog.close();
-  else dialog.hidden = true;
+function runCommand(item) {
+  $("command-dialog").close();
+  item.run();
 }
 
-$("cmd-palette-btn")?.addEventListener("click", openCommandPalette);
-$("command-close")?.addEventListener("click", closeCommandPalette);
+$("cmd-palette-btn").querySelector("kbd").textContent = /Mac/i.test(navigator.platform) ? "⌘ K" : "Ctrl K";
+$("cmd-palette-btn").addEventListener("click", openCommandPalette);
+$("command-close").addEventListener("click", () => $("command-dialog").close());
+$("command-dialog").addEventListener("close", () => {
+  commandInput.setAttribute("aria-expanded", "false");
+  commandInput.removeAttribute("aria-activedescendant");
+});
 
-function renderCommandResults(query) {
-  const cleanQ = query.trim().toLowerCase();
-  const base = getBaseCommands();
-  const matchedBase = cleanQ ? base.filter((c) => c.label.toLowerCase().includes(cleanQ) || c.category.toLowerCase().includes(cleanQ)) : base;
-
-  const matchedStories = cleanQ ? state.articles.filter((a) => a.title.toLowerCase().includes(cleanQ)).slice(0, 5).map((a) => ({
-    id: `story-${a.id}`,
-    label: `📰 ${a.title}`,
-    category: "Stories",
-    run: () => openDossier(a),
-  })) : [];
-
-  commandItems = [...matchedBase, ...matchedStories];
-  commandActiveIndex = 0;
-
-  const container = $("command-results");
-  container.replaceChildren();
-
-  if (!commandItems.length) {
-    const empty = node("div", "command-item", "No matching commands or headlines.");
-    empty.style.color = "var(--muted)";
-    container.append(empty);
-    return;
-  }
-
-  let lastCategory = "";
-  commandItems.forEach((item, idx) => {
-    if (item.category !== lastCategory) {
-      lastCategory = item.category;
-      container.append(node("div", "command-group-heading", lastCategory));
-    }
-    const row = node("button", `command-item${idx === 0 ? " active" : ""}`);
-    row.type = "button";
-    row.dataset.cmdIdx = String(idx);
-    const left = node("div", "command-item-left");
-    left.append(node("span", "command-item-label", item.label));
-    row.append(left);
-    row.addEventListener("click", () => {
-      closeCommandPalette();
-      item.run();
-    });
-    row.addEventListener("mouseenter", () => {
-      container.querySelectorAll(".command-item").forEach((el) => el.classList.remove("active"));
-      row.classList.add("active");
-      commandActiveIndex = idx;
-    });
-    container.append(row);
+for (const id of ["command-dialog", "dossier-drawer"]) {
+  $(id).addEventListener("click", (event) => {
+    const dialog = event.currentTarget;
+    if (event.target !== dialog) return;
+    const { left, right, top, bottom } = dialog.getBoundingClientRect();
+    if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) dialog.close();
   });
 }
 
-$("command-input")?.addEventListener("input", (e) => {
-  renderCommandResults(e.target.value);
-});
-
-$("command-input")?.addEventListener("keydown", (e) => {
-  const rows = Array.from($("command-results").querySelectorAll(".command-item"));
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    if (commandItems.length) {
-      commandActiveIndex = (commandActiveIndex + 1) % commandItems.length;
-      rows.forEach((r, i) => r.classList.toggle("active", i === commandActiveIndex));
-      rows[commandActiveIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    if (commandItems.length) {
-      commandActiveIndex = (commandActiveIndex - 1 + commandItems.length) % commandItems.length;
-      rows.forEach((r, i) => r.classList.toggle("active", i === commandActiveIndex));
-      rows[commandActiveIndex]?.scrollIntoView({ block: "nearest" });
-    }
-  } else if (e.key === "Enter") {
-    e.preventDefault();
-    if (commandItems[commandActiveIndex]) {
-      closeCommandPalette();
-      commandItems[commandActiveIndex].run();
-    }
-  } else if (e.key === "Escape") {
-    closeCommandPalette();
+commandInput.addEventListener("input", () => renderCommandResults(commandInput.value.trim()));
+commandInput.addEventListener("keydown", (event) => {
+  if (event.isComposing || !commandItems.length) return;
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const increment = event.key === "ArrowDown" ? 1 : -1;
+    selectCommand((commandIndex + increment + commandItems.length) % commandItems.length, true);
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    runCommand(commandItems[commandIndex]);
   }
 });
 
-/* Keyboard Navigation (Trace & Power-Reader Workflows) */
-window.addEventListener("keydown", (e) => {
-  const activeEl = document.activeElement;
-  const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT" || activeEl.isContentEditable);
-
-  if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
-    e.preventDefault();
-    openCommandPalette();
+window.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.isComposing) return;
+  const key = event.key.toLowerCase();
+  const palette = $("command-dialog");
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "k") {
+    if ($("mail-dialog").open || $("dossier-drawer").open || $("composer").classList.contains("open")) return;
+    event.preventDefault();
+    if (palette.open) palette.close();
+    else openCommandPalette();
     return;
   }
-
-  if (e.key === "Escape") {
-    if (!$("command-dialog")?.hidden && $("command-dialog")?.open) {
-      closeCommandPalette();
-      return;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || palette.open) return;
+  const card = event.target.closest?.(".story[data-story-card-id]");
+  if (!card || !$("stories").contains(card)) return;
+  if (key === "j" || key === "k") {
+    const next = key === "j" ? card.nextElementSibling : card.previousElementSibling;
+    if (next?.classList.contains("story")) {
+      event.preventDefault();
+      next.querySelector(".card-dossier-btn")?.focus();
     }
-    if (!$("dossier-drawer")?.hidden) {
-      closeDossier();
-      return;
+  } else if (key === "p" || key === "s") {
+    event.preventDefault();
+    const storyId = CSS.escape(card.dataset.storyCardId);
+    card.querySelector(key === "p" ? "[data-pin-id]" : ".save-button").click();
+    if (!card.isConnected) {
+      const replacement = $("stories").querySelector(`[data-story-card-id="${storyId}"] .card-dossier-btn`);
+      (replacement || $("view-saved")).focus({ preventScroll: true });
     }
-    if ($("mail-dialog")?.open) return;
-    if (isInput) activeEl.blur();
-    return;
-  }
-  if (isInput) return;
-
-  const cards = Array.from($("stories").querySelectorAll(".story"));
-  if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    $("search")?.focus();
-    $("search")?.select();
-  } else if (e.key === "j" || e.key === "J") {
-    e.preventDefault();
-    updateActiveStory(activeStoryIndex + 1);
-  } else if (e.key === "k" || e.key === "K") {
-    e.preventDefault();
-    updateActiveStory(activeStoryIndex - 1);
-  } else if (e.key === "Enter" && activeStoryIndex >= 0 && activeStoryIndex < cards.length && $("dossier-drawer")?.hidden) {
-    e.preventDefault();
-    cards[activeStoryIndex]?.querySelector(".card-dossier-btn")?.click();
-  } else if ((e.key === "p" || e.key === "P") && activeStoryIndex >= 0 && activeStoryIndex < cards.length) {
-    e.preventDefault();
-    cards[activeStoryIndex]?.querySelector(".pin-button")?.click();
-  } else if ((e.key === "s" || e.key === "S") && activeStoryIndex >= 0 && activeStoryIndex < cards.length) {
-    e.preventDefault();
-    cards[activeStoryIndex]?.querySelector(".save-button")?.click();
-  } else if (e.key === "b" || e.key === "B") {
-    e.preventDefault();
-    $("nav-builder")?.click();
   }
 });

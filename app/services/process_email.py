@@ -5,6 +5,7 @@ load_dotenv()
 
 from app.agent.email_agent import EmailAgent, RankedArticleDetail, EmailDigestResponse
 from app.agent.curator_agent import CuratorAgent
+from app.brand import BRIEF_SUBJECT
 from app.profiles.user_profile import USER_PROFILE
 from app.database.repository import Repository
 from app.services.email import send_email, digest_to_html
@@ -58,10 +59,7 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
         limit=top_n
     )
     
-    logger.info("Email digest generated successfully")
-    logger.info(f"\n=== Email Introduction ===")
-    logger.info(email_digest.introduction.greeting)
-    logger.info(f"\n{email_digest.introduction.introduction}")
+    logger.info("Email brief generated: %d stories", len(email_digest.articles))
     
     return email_digest
 
@@ -72,7 +70,7 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
         markdown_content = result.to_markdown()
         html_content = digest_to_html(result)
         
-        subject = f"Informa AI — Intelligence Brief ({result.introduction.greeting.split('for ')[-1] if 'for ' in result.introduction.greeting else 'Today'})"
+        subject = BRIEF_SUBJECT
         
         send_email(
             subject=subject,

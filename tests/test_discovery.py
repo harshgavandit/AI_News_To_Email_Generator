@@ -137,7 +137,7 @@ def test_manual_direct_refresh_has_shared_cooldown(monkeypatch):
 def test_email_export_rejects_unsafe_story_links():
     rendered = safe_email_html({"articles": [{"title": "Unsafe link", "url": "javascript:alert(1)"}],
                                 "quick_hits": [{"title": "Other link", "url": "data:text/html,test"}]})
-    assert 'href="#"' in rendered
+    assert 'href="#"' not in rendered
     assert "javascript:" not in rendered and "data:text/html" not in rendered
 
 

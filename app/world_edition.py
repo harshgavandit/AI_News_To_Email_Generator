@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from app.coverage import TOPICS, public_article, region_id
 from app.selection import words
 from app.sources import BY_ID
-from app.web_digest import safe_email_html, safe_href, story_attribution
+from app.web_digest import digest_markdown, safe_email_html
 
 PROVIDERS = {
     "microsoft-365": r"\b(microsoft 365|m365|outlook|exchange online|microsoft outage|microsoft teams)\b",
@@ -84,14 +84,14 @@ def select_world(articles, count, sources):
     return diverse_stories(candidates, count, lead_with_incident=True)
 
 
-def build_world(articles, hours, all_pool=None, *, scope=()):
+def build_world(articles, hours, all_pool=None, *, scope=(), includes_pins=False):
     window = {24: "24 hours", 168: "7 days", 720: "30 days"}.get(hours, f"{hours} hours")
     scope_text = f" Archive filters include {', '.join(scope)}." if scope else ""
+    pinned_text = " Pinned stories may be outside these filters." if includes_pins else ""
     intro = {
-        "greeting": "Your Informa AI Global Intelligence Brief",
-        "introduction": f"High-signal technology and AI intelligence from the past {window}.{scope_text} "
-                        "Discover what matters and understand why it matters without information overload. "
-                        "Primary excerpts synthesized from linked global publishers.",
+        "greeting": "Your global technology brief",
+        "introduction": f"The archive window covers the past {window}.{scope_text}{pinned_text} "
+                        "Story labels identify publisher excerpts and headline-only entries.",
     }
     result = {
         "edition": "world",
@@ -101,8 +101,6 @@ def build_world(articles, hours, all_pool=None, *, scope=()):
         "quick_hits": [],
         "scope": list(scope),
     }
-    markdown = [f"# {intro['greeting']}", intro["introduction"]]
-
     if all_pool:
         quick_candidates = diverse_stories((public_article(item) for item in all_pool), 3, previous=articles)
         result["quick_hits"] = [
@@ -118,17 +116,16 @@ def build_world(articles, hours, all_pool=None, *, scope=()):
         ]
 
     for rank, item in enumerate(articles, start=1):
-        excerpt = item.get("cleanSummary") or item.get("description", "")
+        excerpt = (item.get("cleanSummary") or item.get("description", "")) if item.get("has_excerpt", True) else ""
         excerpt = (excerpt[:480].rsplit(" ", 1)[0] + "…") if len(excerpt) > 480 else excerpt
         label = TOPICS.get(item["topic"], item["topic"].title())
-        takeaway = item.get("keyTakeaway") or item.get("whyItMatters", "")
         
         art_entry = {
             "digest_id": item["id"],
             "rank": rank,
             "title": item["title"],
             "summary": excerpt or "Read the original source for details.",
-            "summary_basis": "publisher_excerpt" if excerpt and item.get("has_excerpt", True) else "headline_only",
+            "summary_basis": "publisher_excerpt" if excerpt else "headline_only",
             "url": item["url"],
             "article_type": item["source"],
             "publisher": item["publisher"],
@@ -139,25 +136,13 @@ def build_world(articles, hours, all_pool=None, *, scope=()):
             "region": item["region"],
             "region_id": item["region_id"],
             "language": item["language"],
-            "keyTakeaway": takeaway,
+            "keyTakeaway": item.get("keyTakeaway", ""),
             "whyItMatters": item.get("whyItMatters", ""),
         }
         if research_status := item.get("research_status"):
             art_entry["research_status"] = research_status
         result["articles"].append(art_entry)
         
-        md_part = (f"## {rank}. {item['title']}\n{label} · {story_attribution(art_entry)}"
-                   f"\n\n{art_entry['summary']}\n")
-        if takeaway:
-            md_part += f"\n* **Key Takeaway:** {takeaway}\n"
-        md_part += f"\nSource: {safe_href(item['url'])}"
-        markdown.append(md_part)
-
-    if result["quick_hits"]:
-        markdown.append("### Quick Hits Around the World")
-        for qh in result["quick_hits"]:
-            markdown.append(f"- {qh['title']} · {qh['publisher']} ({qh['region']}) · <{safe_href(qh['url'])}>")
-
-    result["markdown"] = "\n\n".join(markdown)
+    result["markdown"] = digest_markdown(result)
     result["html"] = safe_email_html(result)
     return result

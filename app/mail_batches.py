@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import httpx
 
 from app import public_mail
+from app.brand import DAILY_SUBJECT
 from app.mail_capacity import batch_sender, mail_capacity
 
 MAX_BATCH_SIZE = 100
@@ -89,8 +90,8 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
 
                 def message_for(subscription):
                     url = build_unsubscribe_url(subscription["mailbox"])
-                    content = with_unsubscribe(brief, url)
-                    return {"from": sender, "to": [subscription["email"]], "subject": "Your Daily Informa AI",
+                    content = with_unsubscribe(brief, url, scheduled=True)
+                    return {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
                             "text": content["markdown"], "html": content["html"], "headers": {
                                 "List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
                             }}, next_morning(subscription["timezone"], moment)

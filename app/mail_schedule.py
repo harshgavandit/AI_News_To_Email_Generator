@@ -7,8 +7,10 @@ import time
 import zoneinfo
 
 from app import public_mail
+from app.brand import DAILY_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import batch_sender, mail_capacity
+from app.web_digest import public_site, safe_email_html, safe_href
 
 
 def next_morning(timezone_str: str, dt: datetime | None = None) -> float:
@@ -38,15 +40,19 @@ def unsubscribe_token_for(mailbox: str) -> str:
 
 def build_unsubscribe_url(mailbox: str) -> str:
     token = unsubscribe_token_for(mailbox)
-    origin = os.getenv("PUBLIC_ORIGIN", "https://brief.example.org").rstrip("/")
-    return f"{origin}/api/mail/unsubscribe/{token}"
+    return f"{public_site()}/api/mail/unsubscribe/{token}"
 
 
-def with_unsubscribe(brief, url):
-    link = f'<p><a href="{escape(url, quote=True)}">Unsubscribe from morning briefs</a></p>'
-    html = brief["html"].replace("</body>", f"{link}</body>")
-    return dict(brief, html=html if html != brief["html"] else html + link,
-                markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
+def with_unsubscribe(brief, url, *, scheduled=False):
+    url = safe_href(url)
+    if "introduction" in brief and "articles" in brief:
+        html = safe_email_html(brief, url, scheduled=scheduled)
+    else:
+        # Older stored messages may carry only the rendered formats.
+        link = f'<p><a href="{escape(url, quote=True)}">Unsubscribe from morning briefs</a></p>'
+        html = brief["html"]
+        html = html.replace("</body>", f"{link}</body>") if "</body>" in html else html + link
+    return dict(brief, html=html, markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
 
 
 def run_due_subscriptions(generate_fn):
@@ -87,11 +93,11 @@ def run_due_subscriptions(generate_fn):
         store.reschedule_subscription(mailbox, next_run)
         if not store.subscription(mailbox)["enabled"]:
             continue
-        message = with_unsubscribe(brief, unsub_url)
+        message = with_unsubscribe(brief, unsub_url, scheduled=True)
         try:
             accepted = public_mail.send_message(
                 email,
-                "Your Daily Informa AI",
+                DAILY_SUBJECT,
                 message["markdown"],
                 message["html"],
                 ident,
