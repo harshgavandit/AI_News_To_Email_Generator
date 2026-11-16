@@ -5,6 +5,7 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -13,6 +14,7 @@ import httpx
 
 from app.sources import DEFAULT_SOURCES, Source
 from app.sanitation import sanitize_story_excerpt, sanitize_text
+from app.article_metadata import metadata_for
 
 # Compatibility for the original read_feed helper and tests.
 ALLOWED_DOMAINS = {s.group: set(s.hosts) for s in DEFAULT_SOURCES}
@@ -103,6 +105,17 @@ async def fetch_with_deadline(url):
 
 
 def read_feed(task):
+    if isinstance(task, Source) and task.integration != "rss":
+        from app.community import read_community
+        items, status = read_community(task, fetch_bytes)
+        if status["available"]:
+            return items, status
+        fallback = {"hacker-news-api": "https://news.ycombinator.com/rss", "dev-api": "https://dev.to/feed"}.get(task.integration)
+        if fallback:
+            items, fallback_status = read_feed(replace(task, url=fallback, integration="rss"))
+            if fallback_status["available"]:
+                return items, {**fallback_status, **task.public(), "transport": "official-rss-fallback"}
+        return [], status
     if isinstance(task, Source):
         s = task
     else:
@@ -151,20 +164,9 @@ def read_feed(task):
                 if not article_in_scope(s, parts.path, title, tags):
                     continue
                 media = entry.get("media_description") or ""
-                raw_content = ""
-                if entry.get("content"):
-                    for c in entry.get("content"):
-                        if isinstance(c, dict) and c.get("value"):
-                            raw_content = c.get("value")
-                            break
                 raw_desc = media or entry.get("summary") or entry.get("description") or ""
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
                     raw_desc, s.group, title, channel=s.label, video_fallback=False)
-                full_body = ""
-                if s.id != "hacker-news":
-                    cleaned_body = sanitize_text(raw_content or raw_desc, limit=3500)
-                    if len(cleaned_body) > len(desc) + 60:
-                        full_body = cleaned_body
                 post = MEDIUM_POST.fullmatch(entry.get("id", "")) if medium else None
                 # Require the permalink and feed GUID to agree before using the shared Medium ID.
                 identity = post[0] if post and parts.path.rsplit("/", 1)[-1].split("-")[-1] == post[1] else url
@@ -175,14 +177,18 @@ def read_feed(task):
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
                     "category": feed_category(tags),
                 }
-                if full_body:
-                    story_record["full_text"] = full_body
+                media_items = entry.get("media_thumbnail") or entry.get("media_content") or []
+                image = next((item.get("url", "") for item in media_items if isinstance(item, dict)), "")
+                story_record.update(metadata_for({"author": entry.get("author"), "tags": tags,
+                    "thumbnail_url": image, "original_url": entry.get("link") if s.id == "hacker-news" else None,
+                    "discussion_url": url if s.id == "hacker-news" else None}))
                 articles[article_id] = story_record
             except (ValueError, TypeError, OverflowError, AttributeError, IndexError):
                 continue
         if parsed.entries and not has_valid_entry:
             return [], dict(status, error="no_eligible_entries")
-        return list(articles.values()), dict(status, available=True, count=len(articles))
+        return list(articles.values()), dict(status, available=True, count=len(articles),
+            latest_published_at=max((article["published_at"] for article in articles.values()), default=None))
     except (httpx.HTTPError, ValueError, OSError):
         return [], dict(status, error="fetch_failed")
 

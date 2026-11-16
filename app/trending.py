@@ -1,6 +1,9 @@
 """Extract trending technology topics, companies, and keywords from recent reporting."""
 from datetime import UTC, datetime, timedelta
 import re
+from collections import Counter
+from app.discovery import search_text
+from app.intelligence import deduplicate
 
 
 TRENDING_PATTERNS = (
@@ -31,25 +34,34 @@ def extract_trending(articles, *, hours=48, limit=10):
     now = datetime.now(UTC)
     cutoff = now - timedelta(hours=hours)
     pool = []
-    for a in articles:
+    for a in deduplicate(articles):
         try:
             pub = datetime.fromisoformat(a["published_at"])
-            if pub >= cutoff:
+            if cutoff <= pub <= now:
                 pool.append(a)
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             continue
 
     results = []
     for label, category, pattern in TRENDING_PATTERNS:
         matcher = re.compile(pattern, re.I)
-        count = sum(1 for a in pool if matcher.search(a.get("title", "")) or
-                    matcher.search(a.get("cleanSummary") or a.get("description") or ""))
+        matched = [(a, matcher.search(" ".join([a.get("title", ""), a.get("cleanSummary") or a.get("description") or ""])))
+                   for a in pool]
+        matches = [(a, match) for a, match in matched if match]
+        # Use a term that actually occurs in the source text. Editorial labels
+        # such as "Venture & Funding" are not themselves searchable phrases.
+        queries = Counter(search_text(match[0]) for _, match in matches)
+        query = queries.most_common(1)[0][0] if queries else ""
+        matching = [a for a, _ in matches if all(term in search_text(
+            f"{a.get('title', '')} {a.get('description', '')}") for term in query.split())]
+        count = len(matching)
         if count > 0:
             results.append({
                 "tag": label,
                 "category": category,
                 "count": count,
-                "query": label.split("&")[0].strip().lower(),
+                "query": query,
+                "source_count": len({a.get("source_id") or a.get("source") for a in matching}),
             })
 
     results.sort(key=lambda t: t["count"], reverse=True)

@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from app.sanitation import sanitize_article, sanitize_story_excerpt
 from app.sources import BY_ID
+from app.article_metadata import restore_metadata
 
 TOPICS = {
     "ai": "AI & Machine Learning",
@@ -208,6 +209,8 @@ def topic_for(article):
 
 
 def public_article(article):
+    from app.intelligence import subjects_for
+    article = restore_metadata(article)
     source = article_source(article)
     saved_topic = article.get("topic")
     topic = saved_topic if saved_topic in TOPICS else topic_for(article)
@@ -228,9 +231,9 @@ def public_article(article):
     
     why_it_matters = article.get("whyItMatters", "")
     words_count = len(clean_summary.split())
-    reading_time = max(1, (words_count + 199) // 200)
+    reading_time = article.get("reading_time_minutes") or max(1, (words_count + 199) // 200)
 
-    private_fields = {"search_title", "search_description", "search_publisher", "topic_rank"}
+    private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
@@ -245,6 +248,10 @@ def public_article(article):
         "sourceUrl": url,
         "publishedAt": published_at,
         "readingTimeMinutes": reading_time,
+        "reading_time_basis": "publisher" if article.get("reading_time_minutes") else "excerpt",
+        "summary_basis": article.get("summary_basis") or ("publisher_excerpt" if has_excerpt else "headline_only"),
+        "reading_policy": "excerpt",
+        "subjects": subjects_for(article),
         "has_excerpt": has_excerpt,
         # Backward compatibility properties:
         "description": clean_summary,
@@ -257,8 +264,6 @@ def public_article(article):
         "coverage": source.coverage if source else "publisher",
         "language": source.language if source else "en",
     })
-    if article.get("full_text"):
-        result["full_text"] = article["full_text"]
     if source and source.coverage == "preprint":
         result["research_status"] = "preprint"
     if article.get("kind") == "video" and len(url) <= 2048:

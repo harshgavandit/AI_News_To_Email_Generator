@@ -1,5 +1,15 @@
 # Informa AI verification
 
+## Global technology discovery — November 16, 2026
+
+- Local Python 3.14 regression run: **154 passed, 1 skipped**. The skipped case requires a disposable PostgreSQL service; the existing CI job runs that archive-upgrade test against PostgreSQL. New coverage exercises official API parsing, partial failures, deadline recovery, reviewed RSS fallbacks, author search, subject-filtered pagination and briefs, article details, recommendations, canonical duplicates, metadata sanitization, unsafe destinations and archive backfills. AI and mail provider calls remain mocked in these automated tests.
+- Ruff, Python compilation, frontend JavaScript syntax checks and the production static build passed. The build now checks literal element references in the two frontend entry scripts against their HTML pages.
+- The final concurrent live source audit checked **130 integrations**, all returning valid parsed records or a valid empty feed. It parsed **4,727 article records** in **24.5 seconds**. These are per-source records before canonical deduplication, publication-window filtering and archival retention. Source health and counts change over time; a valid feed does not guarantee recent publication.
+- DEV's public API returned both editorial and latest article records. The official Hacker News API returned 40 completed stories during the concurrent audit. A standalone check returned 72; the bounded collector now preserves completed records when its deadline expires. Official RSS fallbacks remain subject to provider availability.
+- Medium public RSS feeds and the selected Hashnode publication RSS were parsed. Hashnode's current free GraphQL endpoint redirects to its paid-access announcement; no paid integration was provisioned and platform-wide Hashnode coverage is not claimed. No paywall bypass or complete article scraping was introduced.
+- Computer Use stopped before visual testing because it could not determine the browser URL with sufficient confidence. No desktop/mobile screenshots or live browser interaction tests are claimed for this release. Source wiring, API integration journeys, asset build and live source checks provide separate verification.
+- Run `uv run python -m scripts.check_sources` to repeat the public-source audit. Production release checks should additionally verify setup, fresh archive ingestion, reading details, interest ranking, subject filtering and global brief generation at the deployment URL. AI generation and actual email delivery require separate provider checks.
+
 ## Reading Room and digest update — November 15, 2026
 
 - The locked environments passed 72 tests each on Python 3.12 and 3.14. The tests cover both news storage modes, sorted cursors, streamed previews, provider failure and fallback, size limits, verified-inbox delivery, and owner authorization. Ruff, Python compilation, frontend lint, and the static production build passed. Starlette emits a deprecation warning about its test client’s `httpx` integration.

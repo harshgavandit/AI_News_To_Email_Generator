@@ -18,6 +18,7 @@ class Source:
     language: str = "en"
     article_paths: tuple[str, ...] = ()
     excluded_paths: tuple[str, ...] = ()
+    integration: str = "rss"
 
     def public(self):
         return {
@@ -31,6 +32,8 @@ class Source:
             "coverage": self.coverage,
             "region": self.region,
             "language": self.language,
+            "integration": self.integration,
+            "reading_policy": "excerpt",
         }
 
 
@@ -117,8 +120,8 @@ DEFAULT_SOURCES = (
     reporting("rest-of-world", "Rest of World", "https://restofworld.org/feed/latest/", "restofworld.org", region="Global", topic="industry"),
     Source("tech-in-asia", "tech-in-asia", "Tech in Asia", "news", "https://www.techinasia.com/feed", ("techinasia.com",), enabled=True, topic="startups", coverage="reporting", region="APAC"),
     reporting("sifted", "Sifted", "https://sifted.eu/feed", "sifted.eu", region="EU", topic="startups"),
-    Source("hacker-news", "hacker-news", "Hacker News discussions", "news", "https://hnrss.org/frontpage",
-           ("news.ycombinator.com",), topic="software", coverage="discussion"),
+    Source("hacker-news", "hacker-news", "Hacker News", "news", "https://hacker-news.firebaseio.com/v0/topstories.json",
+           ("news.ycombinator.com",), topic="software", coverage="discussion", integration="hacker-news-api"),
     reporting("techcabal", "TechCabal", "https://techcabal.com/feed/", "techcabal.com", region="Africa", topic="startups"),
     reporting("scmp-tech", "SCMP Technology", "https://www.scmp.com/rss/5/feed", "scmp.com", region="Asia"),
     reporting("indian-express-tech", "The Indian Express Technology", "https://indianexpress.com/section/technology/feed/", "indianexpress.com", region="India"),
@@ -178,6 +181,10 @@ DEFAULT_SOURCES = (
            ("docker.com", "www.docker.com"), topic="software"),
     Source("golang-blog", "golang-blog", "The Go Blog", "engineering", "https://go.dev/blog/feed.atom",
            ("go.dev",), topic="software"),
+    Source("rust-blog", "rust-blog", "Inside Rust", "engineering", "https://blog.rust-lang.org/feed.xml",
+           ("blog.rust-lang.org",), topic="software"),
+    Source("spotify-engineering", "spotify-engineering", "Spotify Engineering", "engineering",
+           "https://engineering.atspotify.com/feed", ("engineering.atspotify.com",), topic="software"),
     Source("mozilla-hacks", "mozilla-hacks", "Mozilla Hacks", "engineering", "https://hacks.mozilla.org/feed/",
            ("hacks.mozilla.org",), topic="software"),
     Source("arxiv-se", "arxiv-se", "arXiv Software Engineering", "research", "https://rss.arxiv.org/rss/cs.SE",
@@ -209,6 +216,14 @@ DEFAULT_SOURCES = (
     article_feed("medium-ai", "Medium Artificial Intelligence", "https://medium.com/feed/tag/artificial-intelligence",
                  group="medium", topic="ai"),
     article_feed("medium-programming", "Medium Programming", "https://medium.com/feed/tag/programming", group="medium"),
+    article_feed("medium-cloud", "Medium Cloud Computing", "https://medium.com/feed/tag/cloud-computing", group="medium"),
+    article_feed("medium-security", "Medium Cybersecurity", "https://medium.com/feed/tag/cybersecurity",
+                 group="medium", topic="security"),
+    article_feed("medium-open-source", "Medium Open Source", "https://medium.com/feed/tag/open-source", group="medium"),
+    Source("dev-community", "dev", "DEV Community", "engineering", "https://dev.to/api/articles?per_page=80",
+           ("dev.to",), topic="software", coverage="article", integration="dev-api"),
+    Source("dev-latest", "dev", "DEV Community Latest", "engineering", "https://dev.to/api/articles/latest?per_page=60",
+           ("dev.to",), topic="software", coverage="article", integration="dev-api"),
     article_feed("dev-architecture", "DEV Community Architecture", "https://dev.to/feed/tag/architecture", "dev.to", group="dev"),
     article_feed("dev-security", "DEV Community Security", "https://dev.to/feed/tag/security", "dev.to", group="dev", topic="security"),
     article_feed("hashnode", "Hashnode Community", "https://townhall.hashnode.com/rss.xml", "townhall.hashnode.com", group="hashnode", topic="software"),
@@ -240,6 +255,10 @@ DEFAULT_SOURCES = (
     # Research publications and research news
     Source("nature-computing", "nature-computing", "Nature Portfolio Computer Science", "research",
            "https://www.nature.com/subjects/computer-science.rss", ("nature.com",), topic="research"),
+    Source("arxiv-programming", "arxiv-programming", "arXiv Programming Languages", "research",
+           "https://rss.arxiv.org/rss/cs.PL", ("arxiv.org",), topic="software", coverage="preprint"),
+    Source("arxiv-distributed", "arxiv-distributed", "arXiv Distributed Computing", "research",
+           "https://rss.arxiv.org/rss/cs.DC", ("arxiv.org",), topic="software", coverage="preprint"),
     Source("mit-robotics", "mit-robotics", "MIT News Robotics", "research", "https://news.mit.edu/topic/mitrobotics-rss.xml",
            ("news.mit.edu",), topic="research"),
     reporting("quanta-computing", "Quanta Magazine Computer Science", "https://www.quantamagazine.org/computer-science/feed/",

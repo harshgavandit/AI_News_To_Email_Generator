@@ -195,6 +195,19 @@
             <span class="trending-title">✦ Trending:</span>
             <div id="trending-chips" class="trending-chips" role="group"></div>
           </div>
+          <section id="personalization" class="personalization" aria-label="Your news interests" hidden>
+            <p><strong>Your interests. A wider perspective.</strong> Select what you follow; discover recent stories from across the archive.</p>
+            <details>
+              <summary>Manage interests &amp; followed sources</summary>
+              <form>
+                <fieldset><legend>Topics</legend><div class="preference-options" data-preferences="topics"></div></fieldset>
+                <fieldset><legend>Explore deeper</legend><div class="preference-options" data-preferences="subjects"></div></fieldset>
+                <fieldset><legend>Follow sources <span class="muted">(up to 20)</span></legend><div class="preference-options preference-sources" data-preferences="sources"></div></fieldset>
+                <div class="preference-actions"><button class="button primary" type="submit">Update recommendations</button><button class="text-button" type="button" data-clear-preferences>Reset interests</button></div>
+                <p class="status" role="status" aria-live="polite">Your interests stay in this browser. Selected preferences are sent to rank stories when you open For You.</p>
+              </form>
+            </details>
+          </section>
           <div id="feed-controls">
             <div class="reading-discovery">
               <div class="discovery-fields">
@@ -202,7 +215,7 @@
                   <label for="search">Search stories</label>
                   <div class="search-wrap">
                     <span class="reading-search-icon" aria-hidden="true"></span>
-                    <input id="search" type="search" maxlength="150" placeholder="Companies or headlines" />
+                    <input id="search" type="search" maxlength="150" placeholder="Topics, authors, companies, or headlines" />
                     <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
                   </div>
                 </form>
@@ -266,6 +279,10 @@
                   <div>
                     <label for="coverage">Source type</label>
                     <select id="coverage"><option value="">All source types</option></select>
+                  </div>
+                  <div>
+                    <label for="subject">Subject</label>
+                    <select id="subject"><option value="">All subjects</option></select>
                   </div>
                   <div>
                     <label for="language">Story language</label>
@@ -420,6 +437,10 @@
                   </div>
                 </div>
                 <div class="form-row">
+                  <div>
+                    <label for="digest-subject">Subject</label>
+                    <select id="digest-subject"><option value="">All subjects</option></select>
+                  </div>
                   <div>
                     <label for="digest-language">Source language</label>
                     <select id="digest-language"><option value="">All languages</option></select>
@@ -707,15 +728,19 @@
           </div>
           <time id="dossier-time" class="dossier-timestamp"></time>
         </div>
+        <p id="dossier-author" class="dossier-author" hidden></p>
+        <div id="dossier-tags" class="dossier-tags" aria-label="Article subjects"></div>
         <div class="dossier-actions-bar">
           <a id="dossier-external-link" class="button primary" target="_blank" rel="noopener noreferrer">
             Read original <span aria-hidden="true">↗</span>
           </a>
           <button id="dossier-listen-btn" class="button secondary" type="button">Listen</button>
+          <button id="dossier-summarize" class="button secondary" type="button">Create AI brief</button>
           <button id="dossier-stop-btn" class="button secondary" type="button" hidden>Stop</button>
           <button id="dossier-share-btn" class="button secondary" type="button" aria-label="Share story">
             Share ↗
           </button>
+          <a id="dossier-discussion" class="button secondary" target="_blank" rel="noopener noreferrer" hidden>Join discussion ↗</a>
           <button id="dossier-font-btn" class="button secondary" type="button" aria-label="Toggle reading font size" aria-pressed="false">
             A / A+
           </button>
@@ -735,6 +760,7 @@
             <h3 id="dossier-basis" class="dossier-section-title"></h3>
             <p id="dossier-summary" class="dossier-text"></p>
             <div id="dossier-full-body" class="dossier-full-body" hidden></div>
+            <p id="dossier-reading-notice" class="dossier-reading-notice">Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content.</p>
           </section>
           <section id="dossier-why-section" class="dossier-section dossier-why-box" hidden>
             <h3 class="dossier-section-title">Why it matters</h3>
@@ -743,6 +769,10 @@
           <section id="dossier-takeaways-section" class="dossier-section" hidden>
             <h3 class="dossier-section-title">Key takeaways</h3>
             <ul id="dossier-takeaways-list" class="dossier-takeaways"></ul>
+          </section>
+          <section class="dossier-section" id="dossier-related-section" hidden>
+            <h3 class="dossier-section-title">Explore related stories</h3>
+            <div id="dossier-related" class="related-stories"></div>
           </section>
           <section class="dossier-section dossier-audit-section">
             <h3 class="dossier-section-title">Publication details</h3>

@@ -50,6 +50,7 @@ from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
+from app.intelligence import SUBJECTS, recommend, related_articles, subjects_for
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
@@ -62,9 +63,9 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v8")
-_news_cache = Cache("news-v11")
+_news_cache = Cache("news-v12")
 _headline_cache = Cache("headlines-v5")
-_trending_cache = Cache("trending-v1")
+_trending_cache = Cache("trending-v2")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
@@ -133,12 +134,13 @@ class DigestRequest(BaseModel):
     region: str = Field(default="", max_length=16)
     language: str = Field(default="", max_length=16)
     coverage: str = Field(default="", max_length=24)
+    subject: str = Field(default="", max_length=24)
 
-    @field_validator("topic", "region", "language", "coverage")
+    @field_validator("topic", "region", "language", "coverage", "subject")
     @classmethod
     def known_coverage(cls, value, info):
         choices = {"topic": TOPICS, "region": REGION_LABELS, "language": LANGUAGES,
-                   "coverage": COVERAGE_TYPES}[info.field_name]
+                   "coverage": COVERAGE_TYPES, "subject": SUBJECTS}[info.field_name]
         if value not in ("", "all") and value not in choices:
             raise ValueError("Choose a supported topic, publisher region, language, or source type.")
         return ("all" if info.field_name == "topic" else "") if value in ("", "all") else value
@@ -258,7 +260,7 @@ async def response_headers(request: Request, call_next):
         response.headers["X-Robots-Tag"] = "noindex"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https://i.ytimg.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https://i.ytimg.com https://media.dev.to https://media2.dev.to https://cdn.hashnode.com https://images.unsplash.com https://techcrunch.com https://theverge.com https://arstechnica.com https://cdn.arstechnica.net https://media.wired.com https://cdn.vox-cdn.com https://platform.theverge.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     if request.url.path == "/api/docs":
         # Swagger's standard template loads its UI assets from jsDelivr.
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'"
@@ -298,7 +300,68 @@ def sources():
 
 
 def discovery_options():
-    return {"topics": TOPICS, "regions": REGION_LABELS, "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
+    return {"topics": TOPICS, "subjects": SUBJECTS, "regions": REGION_LABELS,
+            "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
+
+
+class RecommendationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    topics: list[str] = Field(default_factory=list, max_length=10)
+    subjects: list[str] = Field(default_factory=list, max_length=12)
+    sources: list[str] = Field(default_factory=list, max_length=20)
+    exclude_ids: list[str] = Field(default_factory=list, max_length=100)
+    q: str = Field(default="", max_length=150)
+    limit: int = Field(default=24, ge=1, le=50)
+
+    @model_validator(mode="after")
+    def supported_preferences(self):
+        if (any(topic not in TOPICS for topic in self.topics) or any(key not in SUBJECTS for key in self.subjects)
+                or any(source not in (*GROUPS, *BY_ID) for source in self.sources)
+                or any(not 1 <= len(ident) <= 40 for ident in self.exclude_ids)):
+            raise ValueError("Choose supported interests and sources.")
+        return self
+
+
+def intelligence_candidates(store, hours=168):
+    if store:
+        return store.world_candidates(hours, ())
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=hours)
+    result = []
+    for article in collect_news()["articles"]:
+        try:
+            if cutoff <= datetime.fromisoformat(article["published_at"]) <= now:
+                result.append(article)
+        except (KeyError, TypeError, ValueError):
+            continue
+    return result
+
+
+@app.post("/api/recommendations")
+def recommendations(body: RecommendationRequest, request: Request, response: Response):
+    store = get_store()
+    rate_limit(request, "recommendations", 60)
+    response.headers["Cache-Control"] = "no-store"
+    return recommend(intelligence_candidates(store), topics=body.topics, subjects=body.subjects,
+                     preferred_sources=body.sources, exclude_ids=body.exclude_ids, query=body.q, limit=body.limit)
+
+
+@app.get("/api/articles/{article_id}")
+def article_details(article_id: str, response: Response):
+    if not 1 <= len(article_id) <= 40 or not all(c.isalnum() or c in "-_" for c in article_id):
+        raise HTTPException(422, "Invalid article ID.")
+    store = get_store()
+    rows = None if store else collect_news()["articles"]
+    raw = store.article(article_id) if store else next((row for row in rows if row["id"] == article_id), None)
+    if not raw:
+        raise HTTPException(404, "This story is no longer in the archive. Open its original source if you saved the link.")
+    article = public_article(raw)
+    candidates = intelligence_candidates(store) if rows is None else rows
+    response.headers["Cache-Control"] = "public, max-age=30"
+    return {"article": article, "related": related_articles(article, candidates),
+            "reading_notice": "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content.",
+            "summary": {"text": article["cleanSummary"], "basis": article["summary_basis"],
+                        "limited_source": True}}
 
 
 @app.get("/api/headlines")
@@ -329,7 +392,7 @@ def trending(response: Response):
         with _trending_cache.key_lock(key):
             data, _ = _trending_cache.get(key)
             if data is None:
-                rows = store.headline_candidates(48) if store else collect_news()["articles"]
+                rows = intelligence_candidates(store, 48)
                 data = extract_trending(rows)
                 if data["trending"]:
                     _trending_cache.put(key, data, ttl=120)
@@ -449,11 +512,14 @@ def news(request: Request, response: Response, background: BackgroundTasks,
          q: Annotated[str, Query(max_length=150)] = "", kind: str = "all", publisher: str = "", topic: str = "all",
          sort: SortOrder = "latest", coverage: Annotated[str, Query(max_length=24)] = "",
          language: Annotated[str, Query(max_length=16)] = "",
+         subject: Annotated[str, Query(max_length=24)] = "",
          limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
         raise HTTPException(422, "Choose a supported source or content type.")
     if topic != "all" and topic not in TOPICS:
         raise HTTPException(422, "Choose a supported topic.")
+    if subject and subject not in SUBJECTS:
+        raise HTTPException(422, "Choose a supported subject.")
     if (region not in ("", "all", *REGION_LABELS) or coverage not in ("", "all", *COVERAGE_TYPES)
             or language not in ("", "all", *LANGUAGES)):
         raise HTTPException(422, "Choose a supported publisher region, source type, or language.")
@@ -472,12 +538,12 @@ def news(request: Request, response: Response, background: BackgroundTasks,
         if store:
             filters = dict(hours=hours, source=source, query=q, kind=kind, publisher=publisher,
                            limit=limit, cursor=cursor, topic=topic, region=region, sort=sort, coverage=coverage,
-                           language=language)
+                           language=language, subject=subject)
             key = hashlib.sha256(json.dumps([str(store.engine.url), filters], sort_keys=True).encode()).hexdigest()
             # Reuse common views. Arbitrary search terms and cursors stay out of shared Redis.
             cacheable = not q and not cursor
             edge_cacheable = (cacheable and not force and source == "all" and kind == "all" and not publisher
-                              and not region and not coverage and not language and sort == "latest" and limit in (12, 24)
+                              and not region and not coverage and not language and not subject and sort == "latest" and limit in (12, 24)
                               and not request.headers.get("authorization"))
             cached, stale = _news_cache.get(key) if cacheable and not force else (None, False)
             if cached is not None:
@@ -494,7 +560,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
                 response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
 
-        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort, coverage, language)
+        fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort, coverage, language, subject)
         ranked = sort == "relevance" and bool(q)
         now, marker = page_window(cursor, fingerprint, ranked=ranked)
         payload = collect_news(force=True) if force else collect_news()
@@ -505,6 +571,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
         matching = [a for a in payload["articles"] if cutoff <= datetime.fromisoformat(a["published_at"]) <= now
                     and (kind == "all" or a.get("kind") == kind)
                     and (not coverage or (entry := BY_ID.get(a.get("source_id"))) and entry.coverage == coverage)
+                    and (not subject or subject in subjects_for(a))
                     and (not publisher or a.get("source_id") == publisher)]
         if q:
             terms = search_terms(q)
@@ -700,11 +767,12 @@ def prepare_digest(body, store, name, focus, world, progress):
     if progress:
         progress(1)
     scope = [label for label in (TOPICS.get(body.topic), REGION_LABELS.get(body.region), LANGUAGES.get(body.language),
-                                 COVERAGE_TYPES.get(body.coverage)) if label]
+                                 COVERAGE_TYPES.get(body.coverage), SUBJECTS.get(body.subject)) if label]
     if not world and not focus:
         focus = ", ".join(scope)
     if store:
-        filters = {"topic": body.topic, "region": body.region, "language": body.language, "coverage": body.coverage}
+        filters = {"topic": body.topic, "region": body.region, "language": body.language, "coverage": body.coverage,
+                   "subject": body.subject}
         available = (store.world_candidates(body.hours, body.sources, **filters) if world else
                      store.candidates(body.hours, body.sources, search_terms(focus), **filters))
         pins = store.pinned_articles(body.pinned_ids)
@@ -714,6 +782,7 @@ def prepare_digest(body, store, name, focus, world, progress):
         cutoff = now - timedelta(hours=body.hours)
         available = [article for article in archive if cutoff <= datetime.fromisoformat(article["published_at"]) <= now
                      and (body.topic == "all" or topic_for(article) == body.topic)
+                     and (not body.subject or body.subject in subjects_for(article))
                      and region_matches(article, body.region)
                      and (not body.language or BY_ID.get(article.get("source_id"))
                           and BY_ID[article["source_id"]].language == body.language)

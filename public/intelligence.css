@@ -1,4 +1,32 @@
 /* Command palette, story details, and the browser audio player. */
+.personalization {
+  margin-block: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  background: var(--paper);
+}
+.personalization > p { margin: 0 0 12px; font-size: 14px; color: var(--muted); line-height: 1.65; }
+.personalization > p strong { color: var(--ink); }
+.personalization summary { cursor: pointer; font-size: 14px; font-weight: 650; padding-block: 7px; }
+.personalization fieldset { border: 0; border-top: 1px solid var(--line); padding: 14px 0; margin: 12px 0 0; min-width: 0; }
+.personalization legend { font-size: 13px; font-weight: 650; padding-inline: 0 8px; }
+.preference-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 195px), 1fr)); gap: 5px 14px; }
+.preference-options label { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--ink); font-size: 13px; cursor: pointer; }
+.preference-options input { width: 17px; height: 17px; flex: 0 0 17px; accent-color: var(--green); }
+.preference-sources { max-height: 240px; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
+.preference-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
+.dossier-author, .dossier-reading-notice { font-size: 13px; line-height: 1.65; color: var(--muted); }
+.dossier-reading-notice { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.dossier-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.dossier-tags a { text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
+.related-stories { display: grid; gap: 0; }
+.related-story { width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 13px 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.related-story strong { display: block; font-size: 15px; line-height: 1.5; font-weight: 600; }
+.related-story span { display: block; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.related-story:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.card-original-link { font-size: 12px; color: var(--green); min-height: 44px; display: inline-flex; align-items: center; padding-inline: 6px; }
+.for-you-badge { max-width: 100%; white-space: normal; }
 .cmd-pill {
   display: inline-flex;
   align-items: center;

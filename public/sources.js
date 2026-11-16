@@ -45,7 +45,7 @@ function prepareCatalog(data) {
     const regionLabel = region === "Global" ? "Global" :
       source.region && source.region !== region ? source.region : labels.region[region];
     const location = [regionLabel, labels.language[source.language]].filter(Boolean).join(" · ");
-    const type = labels.coverage[coverage];
+    const type = [labels.coverage[coverage], source.integration && source.integration !== "rss" ? "Official API" : "RSS / Atom"].filter(Boolean).join(" · ");
     const focus = labels.topic[source.topic];
     const keywords = normalize([source.label, location, labels.region[region], type, focus, statusLabels[freshness]].join(" "));
     return { ...source, freshness, region, coverage, location, type, focus, keywords };
@@ -89,6 +89,9 @@ function sourceRow(source) {
     const successful = timestamp(source.last_success, "Last success");
     if (successful) health.append(successful);
   }
+  const published = timestamp(source.latest_published_at, "Latest story");
+  if (published) health.append(published);
+  else if (source.checked_at && source.available) health.append(node("span", "directory-timestamp", "No retained stories"));
 
   const links = node("div", "directory-links");
   if (source.enabled) {
@@ -100,7 +103,7 @@ function sourceRow(source) {
   try {
     const url = new URL(source.feed_url);
     if (url.protocol === "https:" && !url.username && !url.password) {
-      const feed = node("a", "text-button", "Feed ↗");
+      const feed = node("a", "text-button", source.integration && source.integration !== "rss" ? "API ↗" : "Feed ↗");
       feed.href = url.href;
       feed.setAttribute("aria-label", `Open ${source.label} feed in a new tab`);
       feed.target = "_blank";

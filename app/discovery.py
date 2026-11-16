@@ -52,7 +52,7 @@ def page_window(cursor, fingerprint, *, ranked):
         published = datetime.fromisoformat(date)
         if published.utcoffset() != timedelta(0) or published > anchor:
             raise ValueError
-        if ranked and (type(marker[0]) is not int or not 0 <= marker[0] <= 10 + 4 * MAX_SEARCH_TERMS):
+        if ranked and (type(marker[0]) is not int or not 0 <= marker[0] <= 13 + 5 * MAX_SEARCH_TERMS):
             raise ValueError
         return anchor, marker
     except (TypeError, ValueError, IndexError) as exc:
@@ -96,10 +96,9 @@ def search_text(text):
 def relevance_score(article, query, terms):
     title = search_text(article.get("title", ""))
     desc = search_text(article.get("cleanSummary") or article.get("description") or article.get("summary") or "")
-    publisher = search_text(article.get("publisher") or article.get("sourceName") or "")
-    category = search_text(article.get("category") or article.get("topic") or "")
-    why = search_text(article.get("whyItMatters", ""))
-    fields = (title, desc, publisher, category, why)
+    publisher = search_text(" ".join([article.get("publisher") or article.get("sourceName") or "",
+                                      article.get("author") or "", *article.get("tags", [])]))
+    fields = (title, desc, publisher)
     if not all(any(term in f for f in fields) for term in terms):
         return None
     score = 10 * int(query in title) + 3 * int(query in desc)
@@ -108,10 +107,12 @@ def relevance_score(article, query, terms):
     return score
 
 
-def page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage="", language=""):
+def page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage="", language="", subject=""):
     filters = [hours, source, query, kind, publisher, topic, region, sort, coverage]
     if language:
         filters.append(language)
+    if subject:
+        filters.append(["subject", subject])
     return hashlib.sha256(json.dumps(filters).encode()).hexdigest()[:16]
 
 

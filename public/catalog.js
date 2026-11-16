@@ -21,6 +21,13 @@ const regionLabels = {
   NA: "North America",
 };
 
+export const subjectLabels = {
+  programming: "Programming", cloud: "Cloud & infrastructure", "open-source": "Open source",
+  funding: "Funding & venture capital", acquisitions: "Mergers & acquisitions",
+  quantum: "Quantum computing", robotics: "Robotics", data: "Data & databases",
+  web: "Web development", mobile: "Mobile technology", space: "Space technology", climate: "Climate & energy tech",
+};
+
 export const languageOptions = {
   en: "English",
   fr: "French",

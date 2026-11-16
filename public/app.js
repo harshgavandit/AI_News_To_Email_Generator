@@ -1,10 +1,13 @@
 "use strict";
-import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions } from "./catalog.js";
+import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions, subjectLabels } from "./catalog.js";
 import { initSavedViews } from "./saved-views.js";
+import { createPreferences } from "./preferences.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
   articles: [],
+  recommendations: [],
+  recommendationCandidates: 0,
   total: 0,
   cursor: null,
   digest: null,
@@ -78,91 +81,20 @@ function publisherRegion(record) {
   return id === "Global" ? "Global" :
     record.region && record.region !== id ? record.region : state.regions[id] || id;
 }
-function deriveWhyItMatters(article) {
-  const text = `${article.title || ""} ${article.cleanSummary || article.description || ""}`.toLowerCase();
-  const topic = article.category || article.topic || "industry";
-  const region = article.region || "Global";
-  if (topic === "ai") {
-    if (/reasoning|benchmark|frontier|sota|gpt|claude|gemini|deepseek|model/.test(text))
-      return "Advances frontier AI reasoning benchmarks and model efficiency, raising the bar for production intelligence systems.";
-    if (/agent|agentic|workflow|automate|autonomous|tool|mcp/.test(text))
-      return "Accelerates the transition from prompt-based generation to autonomous agentic workflows executing multi-step enterprise tasks.";
-    if (/open[\s-]source|weights|llama|mistral|hugging face|fine-tuning/.test(text))
-      return "Lowers computational barriers for private cloud deployment, local fine-tuning, and open-weights developer ecosystems.";
-    if (/safety|alignment|guardrail|risk|red team|eval/.test(text))
-      return "Directly informs enterprise AI safety guardrails, governance frameworks, and compliance audits.";
-    return "Shapes the competitive frontier of artificial intelligence research, model capabilities, and enterprise software integration.";
-  }
-  if (topic === "security") {
-    if (/zero[\s-]day|0[\s-]day|cve|vulnerabilit|exploit|rce|remote code/.test(text))
-      return "Demands prioritized vulnerability triage, perimeter audits, and rapid patch deployment to mitigate active exploitation.";
-    if (/ransomware|extortion|encrypt|critical infrastructure/.test(text))
-      return "Highlights severe operational risk to business continuity and underscores the necessity of immutable backup architectures.";
-    if (/breach|leak|stolen|credential|password/.test(text))
-      return "Exposes customer identity data to secondary credential stuffing and necessitates immediate credential rotation.";
-    if (/nation[\s-]state|apt|espionage|china|russia|iran/.test(text))
-      return "Signals sophisticated state-sponsored cyber espionage targeting sensitive intellectual property and critical supply chains.";
-    return "Carries significant defensive implications for corporate IT perimeters, data privacy compliance, and threat posture.";
-  }
-  if (topic === "startups") {
-    if (/seed|series [a-e]|raised|funding|valuation|venture|round/.test(text))
-      return "Reflects venture capital deployment momentum and current valuation multiples in high-conviction technology verticals.";
-    if (/accelerator|incubator|y combinator|techstars/.test(text))
-      return "Provides early predictive signal on founder density, emerging technical paradigms, and upcoming seed-stage disruptors.";
-    if (/acquisition|bought|merger|exit|ipo/.test(text))
-      return "Provides liquidity benchmarks and strategic consolidation signals for investors and late-stage founders.";
-    return `Highlights regional innovation velocity and founder execution within the ${region} tech startup ecosystem.`;
-  }
-  if (topic === "software") {
-    if (/database|sql|nosql|postgres|redis|storage|vector/.test(text))
-      return "Improves data storage throughput, query latency, and horizontal scalability for modern distributed applications.";
-    if (/kubernetes|docker|cloud[\s-]native|container|devops|serverless/.test(text))
-      return "Standardizes cloud infrastructure orchestration, deployment velocity, and fault-tolerant microservice management.";
-    if (/framework|library|react|vue|typescript|rust|python|golang|bun|deno/.test(text))
-      return "Directly impacts developer productivity, memory safety guarantees, and modern application runtime performance.";
-    return "Enhances engineering productivity, system reliability, and architecture best practices across modern software stacks.";
-  }
-  if (topic === "chips") {
-    if (/gpu|nvidia|blackwell|hopper|accelerator|amd|ai chip/.test(text))
-      return "Determines global AI training and inference compute availability, data center power density, and cloud pricing.";
-    if (/tsmc|asml|lithography|foundry|wafer|packaging|node|\bnm\b/.test(text))
-      return "Dictates global semiconductor fabrication capacity, packaging lead times, and multi-year hardware product roadmaps.";
-    return "Drives per-watt compute efficiency, hardware acceleration, and silicon supply chain resilience worldwide.";
-  }
-  if (topic === "bigtech") {
-    if (/antitrust|lawsuit|regulat|monopoly|investigat|doj|ftc|eu/.test(text))
-      return "Threatens platform lock-in models and opens up competitive market space for challenger services and startups.";
-    if (/earnings|revenue|profit|quarter|forecast/.test(text))
-      return "Serves as an essential macro bellwether for enterprise IT expenditure and broader global technology market sentiment.";
-    return "Reverberates across the enterprise tech landscape, shifting market power and platform integration standards.";
-  }
-  if (topic === "research") {
-    return "Supplies empirical grounding and theoretical breakthroughs that will shape the next generation of commercial technologies.";
-  }
-  if (topic === "industry") {
-    return "Guides strategic enterprise compliance, global market entry, and technology policy alignment.";
-  }
-  if (topic === "outages") {
-    return "Tests enterprise resilience, redundant multi-region failovers, and cloud SLA enforcement during systemic downtime.";
-  }
-  if (topic === "video") {
-    return "Provides practitioner-led architecture breakdowns, live coding demonstrations, and tactical technical walkthroughs.";
-  }
-  return "Provides critical context for engineering leaders, investors, and technology decision-makers staying ahead of industry shifts.";
+function permittedImage(value) {
+  try {
+    const image = new URL(value);
+    return image.protocol === "https:" && !image.username && !image.password &&
+      ["i.ytimg.com", "media.dev.to", "media2.dev.to", "cdn.hashnode.com", "images.unsplash.com",
+        "techcrunch.com", "theverge.com", "arstechnica.com", "cdn.arstechnica.net", "media.wired.com",
+        "cdn.vox-cdn.com", "platform.theverge.com"].some((host) => image.hostname === host);
+  } catch { return false; }
 }
-function deriveKeyTakeaway(article, why) {
-  if (article.keyTakeaway) return article.keyTakeaway;
-  const topic = article.category || article.topic || "industry";
-  if (topic === "ai") return "Track benchmark replication, API token pricing, and workflow integration roadmap.";
-  if (topic === "security") return "Audit affected endpoints, verify vendor patch availability, and inspect access logs.";
-  if (topic === "startups") return "Monitor follow-on funding rounds, talent migration, and product defensibility.";
-  if (topic === "software") return "Evaluate package upgrade path, breaking changes, and CI/CD test coverage.";
-  if (topic === "chips") return "Assess hardware procurement lead times and thermal/power budgets.";
-  if (topic === "bigtech") return "Review platform dependency exposure and vendor contract terms.";
-  if (topic === "research") return "Review open code repositories and benchmark methodology for verification.";
-  if (topic === "industry") return "Consult legal and compliance teams on jurisdictional exposure.";
-  if (topic === "outages") return "Check service status dashboard and test secondary failover regions.";
-  return "Incorporate this development into strategic technology planning and operational reviews.";
+function deriveWhyItMatters(article) {
+  return article.summary_basis === "ai_feed_summary" ? article.whyItMatters || "" : "";
+}
+function deriveKeyTakeaway(article) {
+  return article.summary_basis === "ai_feed_summary" ? article.keyTakeaway || "" : "";
 }
 function normalizeEmail(value) {
   let [local, domain] = String(value || "")
@@ -184,6 +116,7 @@ $("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 
 const savedKey = "informa-saved-v1";
 const readKey = "informa-read-v1";
 const layoutKey = "informa-story-layout";
+const preferences = createPreferences($("personalization"), () => loadNews());
 const saved = new Map();
 const readStories = new Set();
 try {
@@ -351,6 +284,7 @@ function readingFilters() {
     kind: $("kind").value,
     coverage: $("coverage").value,
     language: $("language").value,
+    subject: $("subject").value,
     sort: $("sort").value === defaultSort(state.searching) ? "" : $("sort").value,
   };
 }
@@ -370,12 +304,12 @@ function syncURL() {
     chip.setAttribute("aria-pressed", String(currentQuery && chip.dataset.query?.toLowerCase() === currentQuery));
   }
   const count = Number(state.source !== "all") + Number(Boolean(state.publisher)) +
-    Number($("kind").value !== "all") + Number(Boolean($("coverage").value)) + Number(Boolean($("language").value));
+    Number($("kind").value !== "all") + Number(Boolean($("coverage").value)) + Number(Boolean($("language").value)) + Number(Boolean($("subject").value));
   $("filter-count").hidden = !count;
   $("filter-count").textContent = count;
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
-  $("reset-filters").hidden = state.view === "saved" ||
+  $("reset-filters").hidden = state.view !== "feed" ||
     (!count && !$("region").value && state.topic === "all" && state.hours === 12 && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
@@ -392,6 +326,7 @@ function renderActiveFilters() {
     [$("kind").value !== "all" && selectLabel("kind"), () => { $("kind").value = "all"; }],
     [$("coverage").value && selectLabel("coverage"), () => { $("coverage").value = ""; }],
     [$("language").value && selectLabel("language"), () => { $("language").value = ""; }],
+    [$("subject").value && selectLabel("subject"), () => { $("subject").value = ""; }],
   ].filter(([label]) => label);
   filters.replaceChildren();
   filters.hidden = !active.length;
@@ -421,6 +356,7 @@ function restoreURL() {
   $("kind").value = params.get("kind") || "all";
   $("coverage").value = params.get("coverage") || "";
   $("language").value = params.get("language") || "";
+  $("subject").value = params.get("subject") || "";
   if ($("kind").selectedIndex === -1) $("kind").value = "all";
   if ($("coverage").selectedIndex === -1) $("coverage").value = "";
   if ($("language").selectedIndex === -1) $("language").value = "";
@@ -429,12 +365,12 @@ function restoreURL() {
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
   const viewParam = params.get("view");
-  if (viewParam === "saved" || viewParam === "for-you") {
-    state.view = viewParam;
-    for (const peer of ["feed", "for-you", "saved"])
-      $(`view-${peer}`).setAttribute("aria-pressed", String(peer === viewParam));
-    $("feed-controls").hidden = $("sort").hidden = $("refresh").hidden = viewParam === "saved";
-  }
+  state.view = ["saved", "for-you"].includes(viewParam) ? viewParam : "feed";
+  for (const peer of ["feed", "for-you", "saved"])
+    $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
+  $("feed-controls").hidden = $("sort").hidden = state.view !== "feed";
+  $("refresh").hidden = state.view === "saved";
+  $("personalization").hidden = state.view !== "for-you";
 }
 function chooseTopic(topic) {
   state.topic = topic;
@@ -447,6 +383,9 @@ function renderCoverageControls(data = {}) {
   if (data.regions) state.regions = regionOptions(data.regions);
   if (data.coverage_types) state.coverageTypes = data.coverage_types;
   if (data.languages) state.languages = data.languages;
+  fillOptions($("subject"), data.subjects || subjectLabels, "All subjects");
+  fillOptions($("digest-subject"), data.subjects || subjectLabels, "All subjects");
+  preferences.update(data.topics ? data : { topics: state.topics, subjects: subjectLabels });
   state.facets = data.facets || {};
   const counts = state.facets.topics;
   const topics = { all: "All topics", ...state.topics };
@@ -508,62 +447,9 @@ function renderSourceFilters() {
     button.setAttribute("aria-pressed", String(state.source === id));
   }
 }
-function getForYouStories() {
-  if (!state.articles.length) return [];
-  const topicWeights = {};
-  const publisherWeights = {};
-
-  for (const item of saved.values()) {
-    const t = item.category || item.topic || "technology";
-    topicWeights[t] = (topicWeights[t] || 0) + 3;
-    const pub = item.publisher || item.publisher_name || item.source_name;
-    if (pub) publisherWeights[pub.toLowerCase()] = (publisherWeights[pub.toLowerCase()] || 0) + 3;
-  }
-
-  for (const art of state.articles) {
-    if (readStories.has(String(art.id))) {
-      const t = art.category || art.topic || "technology";
-      topicWeights[t] = (topicWeights[t] || 0) + 1.5;
-      const pub = art.publisher || art.publisher_name || art.source_name;
-      if (pub) publisherWeights[pub.toLowerCase()] = (publisherWeights[pub.toLowerCase()] || 0) + 1.5;
-    }
-  }
-
-  const hasHistory = Object.keys(topicWeights).length > 0 || Object.keys(publisherWeights).length > 0;
-
-  const scored = state.articles.map((art, idx) => {
-    let score = 0;
-    const t = art.category || art.topic || "technology";
-    const pub = (art.publisher || art.publisher_name || art.source_name || "").toLowerCase();
-    const isRead = readStories.has(String(art.id));
-    const isSaved = saved.has(String(art.id));
-
-    if (!isRead) score += 2.0;
-    if (isSaved) score += 1.0;
-    if (topicWeights[t]) score += topicWeights[t];
-    if (publisherWeights[pub]) score += publisherWeights[pub];
-    if (art.coverage === "reporting" || art.source_type === "reporting") score += 1.5;
-
-    if (!hasHistory) {
-      if (["ai", "software", "security", "research"].includes(t)) score += 2.0;
-      if (art.coverage === "reporting") score += 1.5;
-    }
-
-    score -= idx * 0.05;
-    const isPersonalized = hasHistory && (Boolean(topicWeights[t]) || Boolean(publisherWeights[pub]));
-    return { article: art, score, isPersonalized };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.map((s) => {
-    s.article._forYouRecommended = s.isPersonalized;
-    return s.article;
-  });
-}
-
 const visibleStories = () => {
   if (state.view === "saved") return [...saved.values()].reverse();
-  if (state.view === "for-you") return getForYouStories();
+  if (state.view === "for-you") return state.recommendations;
   return state.articles;
 };
 
@@ -576,19 +462,19 @@ function renderStories() {
   $("export-saved-md").hidden = !isSaved || !saved.size;
   $("pin-all-saved").hidden = !isSaved || !saved.size;
   const articles = visibleStories();
-  $("filter-high-signal").hidden = isSaved;
-  $("filter-articles").hidden = isSaved;
+  $("filter-high-signal").hidden = isSaved || isForYou;
+  $("filter-articles").hidden = isSaved || isForYou;
   $("mark-all-read").hidden = isSaved || !articles.length;
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
     empty.append(node("strong", "", isSaved ? "No saved stories" : (isForYou ? "No stories in your personalized feed" : "No matching stories")));
     empty.append(node("p", "", isSaved ? "Save an article to keep it in this browser." :
-      isForYou ? "Read and save articles to train your personal AI news intelligence feed, or adjust your filters." :
+      isForYou ? "Choose topics and followed sources, or reset your interests to explore a wider selection." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
-    if (isSaved) {
+    if (isSaved || isForYou) {
       const browse = node("button", "button secondary", "Browse latest stories");
       browse.type = "button";
       browse.addEventListener("click", () => {
@@ -596,7 +482,7 @@ function renderStories() {
         $("view-feed").click();
       });
       empty.append(browse);
-    } else if (nextWindow) {
+    } else if (nextWindow && !isForYou) {
       const expand = node("button", "button secondary", `Search the last ${windows[nextWindow]}`);
       expand.type = "button";
       expand.addEventListener("click", () => {
@@ -629,13 +515,13 @@ function renderStories() {
     date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
     const storySummary = article.cleanSummary || article.description || article.summary;
-    const whyItMatters = article.whyItMatters || deriveWhyItMatters(article);
+    const whyItMatters = deriveWhyItMatters(article);
     const wordCount = (article.title + " " + (storySummary || "")).split(/\s+/).length;
     const readingTime = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
 
     const badges = node("div", "story-meta-badges");
-    if (state.view === "for-you" && article._forYouRecommended) {
-      badges.append(node("span", "for-you-badge", "✦ For You"));
+    if (state.view === "for-you" && article.recommendation_reasons?.length) {
+      badges.append(node("span", "for-you-badge", article.recommendation_reasons[0]));
     }
     badges.append(
       node(
@@ -644,16 +530,18 @@ function renderStories() {
         state.topics[topic] || article.topic_label || "Technology",
       ),
       node("span", "meta-pill region-pill", publisherRegion(article)),
-      node("span", "meta-pill read-time-pill", `${readingTime}m read`),
+      node("span", "meta-pill read-time-pill", article.reading_time_basis === "publisher" ? `${readingTime} min read` : "Excerpt"),
     );
     top.append(badges, date);
     const heading = node("h3");
     if (article.language) heading.lang = article.language;
-    const storyLink = externalLink(article.sourceUrl || article.url, article.title);
-    storyLink.addEventListener("click", () => markAsRead(article.id));
-    const externalMark = node("span", "story-external-mark", "↗");
-    externalMark.setAttribute("aria-hidden", "true");
-    storyLink.append(" ", externalMark);
+    const storyLink = node("a", "", article.title);
+    storyLink.href = `/?article=${encodeURIComponent(article.id)}#reading-room`;
+    storyLink.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      openDossier(article, storyLink);
+    });
     heading.append(storyLink);
     const bottom = node("div", "story-bottom");
     const publisher = article.sourceName || article.publisher || "Original source";
@@ -664,7 +552,7 @@ function renderStories() {
       state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
     attribution.append(
       node("strong", "", publisher),
-      node("span", "", [sourceType, publisherRegion(article), originalLanguage(article.language)].filter(Boolean).join(" · ")),
+      node("span", "", [article.author, sourceType, publisherRegion(article), originalLanguage(article.language)].filter(Boolean).join(" · ")),
     );
     const byline = node("div", "story-byline");
     byline.append(sourceMark, attribution);
@@ -702,6 +590,9 @@ function renderStories() {
     dossierBtn.addEventListener("click", () => openDossier(article, dossierBtn));
 
     const actions = node("div", "story-actions");
+    const original = externalLink(article.original_url || article.url, "Original ↗");
+    original.className = "card-original-link";
+    actions.append(original);
     actions.append(dossierBtn, save, pin);
     bottom.append(actions);
     main.append(top, heading);
@@ -750,7 +641,7 @@ function renderStories() {
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
       main.append(paragraph);
     }
-    if (article.thumbnail_url && /^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/.test(article.thumbnail_url)) {
+    if (permittedImage(article.thumbnail_url)) {
       const image = node("img", "story-thumbnail");
       image.alt = "";
       image.width = 320;
@@ -765,9 +656,9 @@ function renderStories() {
     card.append(bottom);
     container.append(card);
   }
-  $("show-more").hidden = isSaved || !state.cursor;
-  $("brief-from-view").hidden = isSaved || !state.articles.length || !(state.topic !== "all" ||
-    $("region").value || $("language").value || $("coverage").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
+  $("show-more").hidden = isSaved || isForYou || !state.cursor;
+  $("brief-from-view").hidden = isSaved || isForYou || !state.articles.length || !(state.topic !== "all" ||
+    $("region").value || $("language").value || $("coverage").value || $("subject").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
   const context = [
     state.topics[state.topic],
     $("region").value && state.regions[$("region").value],
@@ -776,6 +667,7 @@ function renderStories() {
   status(
     "news-status",
     isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
+      isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} recent candidates · Ranked by interests, freshness, and source diversity` :
       [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context].join(" · "),
   );
 }
@@ -943,11 +835,12 @@ function newsParams() {
   });
   if ($("coverage").value) params.set("coverage", $("coverage").value);
   if ($("language").value) params.set("language", $("language").value);
+  if ($("subject").value) params.set("subject", $("subject").value);
   return params;
 }
 
 async function checkForUpdates() {
-  if (state.view === "saved" || document.hidden || $("mail-dialog").open || state.updateCheck ||
+  if (state.view !== "feed" || document.hidden || $("mail-dialog").open || state.updateCheck ||
       $("stories").getAttribute("aria-busy") === "true" || !state.feedKey) return;
   const params = newsParams();
   if (state.feedKey !== params.toString()) return;
@@ -970,8 +863,53 @@ async function checkForUpdates() {
   }
 }
 
+async function loadRecommendations() {
+  state.controller?.abort();
+  state.updateCheck?.abort();
+  const controller = new AbortController();
+  state.controller = controller;
+  $("stories").setAttribute("aria-busy", "true");
+  $("refresh").disabled = true;
+  $("show-more").hidden = true;
+  status("news-status", "Finding recent stories across your interests…");
+  syncURL();
+  try {
+    if (!state.sources.length) {
+      const catalog = await request("/api/sources", { signal: controller.signal });
+      if (state.controller !== controller) return;
+      renderCoverageControls(catalog);
+      updateSourceCatalog(catalog.sources);
+    }
+    const selected = preferences.request();
+    const data = await request("/api/recommendations", { method: "POST",
+      headers: { "Content-Type": "application/json" }, signal: controller.signal,
+      body: JSON.stringify({ ...selected, exclude_ids: [...readStories].slice(-100) }) });
+    if (state.controller !== controller || state.view !== "for-you") return;
+    state.recommendations = data.articles;
+    state.recommendationCandidates = data.total_candidates;
+    renderStories();
+  } catch (error) {
+    if (state.controller === controller && error.name !== "AbortError") {
+      const empty = node("div", "empty reading-empty");
+      const retry = node("button", "button secondary", "Try again");
+      retry.type = "button";
+      retry.addEventListener("click", () => loadRecommendations());
+      empty.append(node("strong", "", "Recommendations are temporarily unavailable"), retry);
+      $("stories").replaceChildren(empty);
+      status("news-status", error.message, true);
+    }
+  } finally {
+    if (state.controller === controller) {
+      $("stories").setAttribute("aria-busy", "false");
+      $("refresh").disabled = false;
+    }
+  }
+}
+
 async function loadNews(append = false, force = false) {
   if (state.view === "saved") return;
+  if (state.view === "for-you") return loadRecommendations();
+  if (state.view === "for-you") return loadRecommendations();
   clearTimeout(searchTimer);
   const searching = Boolean($("search").value.trim());
   if ($("sort").value === defaultSort(state.searching)) $("sort").value = defaultSort(searching);
@@ -1078,7 +1016,7 @@ for (const button of $("window-controls").children)
       peer.setAttribute("aria-pressed", String(peer === button));
     loadNews();
   });
-for (const id of ["region", "kind", "coverage", "language"]) $(id).addEventListener("change", () => loadNews());
+for (const id of ["region", "kind", "coverage", "language", "subject"]) $(id).addEventListener("change", () => loadNews());
 $("sort").addEventListener("change", () => {
   state.searching = Boolean($("search").value.trim());
   loadNews();
@@ -1101,11 +1039,13 @@ for (const view of ["feed", "for-you", "saved"]) {
     state.view = view;
     for (const peer of ["feed", "for-you", "saved"])
       $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = $("sort").hidden = $("refresh").hidden = view === "saved";
+    $("feed-controls").hidden = $("sort").hidden = view !== "feed";
+    $("refresh").hidden = view === "saved";
+    $("personalization").hidden = view !== "for-you";
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
-    if ((view === "feed" || view === "for-you") && !state.articles.length) loadNews();
+    if (view === "for-you" || (view === "feed" && !state.articles.length)) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
@@ -1114,7 +1054,7 @@ $("reset-filters").addEventListener("click", () => {
   state.publisher = "";
   state.hours = 12;
   state.searching = false;
-  for (const id of ["search", "region", "publisher", "coverage", "language"]) $(id).value = "";
+  for (const id of ["search", "region", "publisher", "coverage", "language", "subject"]) $(id).value = "";
   $("kind").value = "all";
   $("sort").value = "latest";
   reflectFilters();
@@ -1142,6 +1082,7 @@ $("brief-from-view").addEventListener("click", () => {
   $("digest-region").value = $("region").value;
   $("digest-language").value = $("language").value;
   $("digest-coverage").value = $("coverage").value;
+  $("digest-subject").value = $("subject").value;
   $("digest-window").value = String(state.hours);
   const source = state.publisher || (state.source !== "all" ? state.source : "");
   state.digestSources.clear();
@@ -1542,6 +1483,7 @@ $("digest-form").addEventListener("submit", async (event) => {
     ...($("digest-region").value ? { region: $("digest-region").value } : {}),
     ...($("digest-language").value ? { language: $("digest-language").value } : {}),
     ...($("digest-coverage").value ? { coverage: $("digest-coverage").value } : {}),
+    ...($("digest-subject").value ? { subject: $("digest-subject").value } : {}),
     persona: $("persona").value,
     style: $("digest-style").value,
     pinned_ids: [...state.pins.keys()],
@@ -2006,7 +1948,7 @@ initSavedViews($("saved-views"), {
 setTab("build");
 if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
-loadNews();
+loadNews().then(() => openLinkedArticle());
 loadHeadlines();
 loadTrending();
 window.addEventListener("hashchange", () => {
@@ -2016,7 +1958,7 @@ window.addEventListener("popstate", () => {
   clearTimeout(searchTimer);
   restoreURL();
   reflectFilters();
-  loadNews();
+  loadNews().then(() => openLinkedArticle());
 });
 
 for (const [id, type] of [["filter-high-signal", "reporting"], ["filter-articles", "article"]]) {
@@ -2048,13 +1990,10 @@ function storyMarkdown(article) {
   if (href) lines.push(`Source: <${href}>`);
   const excerpt = publishedExcerpt(article);
   if (excerpt) lines.push("", excerpt);
-  const why = article.whyItMatters || deriveWhyItMatters(article);
+  const why = deriveWhyItMatters(article);
   if (why) lines.push("", `Why it matters: ${why}`);
-  const takeaway = article.keyTakeaway || deriveKeyTakeaway(article, why);
+  const takeaway = deriveKeyTakeaway(article);
   if (takeaway) lines.push(`Key takeaway: ${takeaway}`);
-  if (article.full_text && article.full_text.length > (excerpt || "").length + 50) {
-    lines.push("", "### Article Content", "", article.full_text);
-  }
   return lines.join("\n");
 }
 
@@ -2080,7 +2019,50 @@ $("pin-all-saved").addEventListener("click", () => {
     state.pins.size === 10 ? "All 10 pin slots are in use." : "Your saved stories are already pinned.");
 });
 
-const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "" };
+const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "", controller: null };
+
+async function loadArticleDetails(article) {
+  dossier.controller?.abort();
+  const controller = dossier.controller = new AbortController();
+  $("dossier-related-section").hidden = true;
+  $("dossier-related").replaceChildren();
+  try {
+    const data = await request(`/api/articles/${encodeURIComponent(article.id)}`, { signal: controller.signal });
+    if (dossier.controller !== controller || dossier.article?.id !== article.id) return;
+    const container = $("dossier-related");
+    for (const related of data.related || []) {
+      const button = node("button", "related-story");
+      button.type = "button";
+      button.append(node("strong", "", related.title), node("span", "", `${related.publisher} · ${relativeTime(related.published_at)}`));
+      button.addEventListener("click", () => {
+        const existing = dossier.articles.findIndex((item) => item.id === related.id);
+        if (existing < 0) dossier.articles.push(related);
+        dossier.index = existing < 0 ? dossier.articles.length - 1 : existing;
+        renderDossier();
+        $("dossier-title").focus({ preventScroll: true });
+      });
+      container.append(button);
+    }
+    $("dossier-related-section").hidden = !container.children.length;
+  } catch (error) {
+    if (error.name !== "AbortError" && dossier.article?.id === article.id)
+      status("dossier-feedback", "Related coverage could not be loaded. The original source remains available.");
+  }
+}
+
+async function openLinkedArticle() {
+  const id = new URLSearchParams(location.search).get("article");
+  if (!id || $("dossier-drawer").open) return;
+  const local = [...state.articles, ...state.recommendations, ...saved.values()].find((article) => article.id === id);
+  if (local) return openDossier(local, $("cmd-palette-btn"));
+  try {
+    const data = await request(`/api/articles/${encodeURIComponent(id)}`);
+    if (new URLSearchParams(location.search).get("article") === id)
+      openDossier(data.article, $("cmd-palette-btn"));
+  } catch (error) {
+    status("news-status", error.message, true);
+  }
+}
 
 function openDossier(article, trigger) {
   if (!article || $("dossier-drawer").open) return;
@@ -2105,7 +2087,7 @@ function renderDossier() {
   const publisher = article.sourceName || article.publisher || "Original source";
   const region = publisherRegion(article);
   const timestamp = article.publishedAt || article.published_at;
-  const href = externalLink(article.sourceUrl || article.url, "").getAttribute("href");
+  const href = externalLink(article.original_url || article.sourceUrl || article.url, "").getAttribute("href");
   const summary = publishedExcerpt(article);
   const basis = article.summary_basis === "ai_feed_summary" ? "AI summary of publisher feed" : "Publisher excerpt";
 
@@ -2122,6 +2104,17 @@ function renderDossier() {
   $("dossier-source-mark").textContent = publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase();
   $("dossier-publisher").textContent = publisher;
   $("dossier-provenance").textContent = originalLanguage(article.language);
+  $("dossier-author").textContent = article.author ? `By ${article.author}` : "";
+  $("dossier-author").hidden = !article.author;
+  $("dossier-tags").replaceChildren(...(article.subjects || []).filter((id) => subjectLabels[id]).map((id) => {
+    const link = node("a", "meta-pill", subjectLabels[id]);
+    link.href = `/?${new URLSearchParams({ subject: id, window: "7d" })}#reading-room`;
+    return link;
+  }));
+  const discussion = externalLink(article.discussion_url, "").getAttribute("href");
+  $("dossier-discussion").hidden = !discussion;
+  if (discussion) $("dossier-discussion").href = discussion;
+  else $("dossier-discussion").removeAttribute("href");
   $("dossier-time").textContent = timestamp ? relativeTime(timestamp) : "";
   $("dossier-time").dateTime = timestamp || "";
   $("dossier-time").title = timestamp ? readableTime(timestamp) : "";
@@ -2131,48 +2124,16 @@ function renderDossier() {
 
   $("dossier-basis").textContent = summary ? basis : "Headline only";
   $("dossier-summary").textContent = summary || "Open the original publication for details.";
+  $("dossier-reading-notice").textContent = summary ?
+    "Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content." :
+    "Headline and source link only. The full article has not been retrieved or summarized.";
   $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
-  const fullText = (article.full_text || "").trim();
-  const fullBodyContainer = $("dossier-full-body");
-  if (fullBodyContainer) {
-    if (fullText && fullText.length > (summary || "").length + 50) {
-      fullBodyContainer.hidden = false;
-      fullBodyContainer.replaceChildren();
-      const rawParas = fullText.split(/\n\n+|(?<=[.!?])\s{2,}/).map((p) => p.trim()).filter((p) => p.length > 20);
-      const paragraphs = rawParas.length > 1 ? rawParas : (() => {
-        const sentences = fullText.match(/[^.!?]+[.!?]+(\s|$)/g) || [fullText];
-        const chunks = [];
-        let curr = [];
-        for (const s of sentences) {
-          curr.push(s.trim());
-          if (curr.join(" ").length > 300) {
-            chunks.push(curr.join(" "));
-            curr = [];
-          }
-        }
-        if (curr.length) chunks.push(curr.join(" "));
-        return chunks;
-      })();
-      for (const pText of paragraphs) {
-        const p = node("p", "dossier-paragraph", pText);
-        p.lang = article.language || "";
-        fullBodyContainer.append(p);
-      }
-      const notice = node("div", "dossier-syndication-notice");
-      const noteSpan = node("span", "", "Syndicated via ");
-      const strong = node("strong", "", publisher);
-      const postSpan = node("span", "", " · Full coverage available at original publisher.");
-      notice.append(noteSpan, strong, postSpan);
-      fullBodyContainer.append(notice);
-    } else {
-      fullBodyContainer.hidden = true;
-      fullBodyContainer.replaceChildren();
-    }
-  }
-  const effectiveWhy = article.whyItMatters || deriveWhyItMatters(article);
+  $("dossier-full-body").hidden = true;
+  $("dossier-full-body").replaceChildren();
+  const effectiveWhy = deriveWhyItMatters(article);
   $("dossier-why-section").hidden = !effectiveWhy;
   $("dossier-why-text").textContent = effectiveWhy || "";
-  const effectiveTakeaway = article.keyTakeaway || deriveKeyTakeaway(article, effectiveWhy);
+  const effectiveTakeaway = deriveKeyTakeaway(article);
   $("dossier-takeaways-section").hidden = !effectiveTakeaway;
   $("dossier-takeaways-list").replaceChildren(...(effectiveTakeaway ? [node("li", "", effectiveTakeaway)] : []));
   $("dossier-audit-url").textContent = href ? new URL(href).hostname : "Unavailable";
@@ -2182,6 +2143,10 @@ function renderDossier() {
   status("dossier-feedback", "");
   syncDossierActions();
   $("dossier-drawer").querySelector(".dossier-body").scrollTop = 0;
+  const url = new URL(location.href);
+  url.searchParams.set("article", article.id);
+  history.replaceState(null, "", url);
+  loadArticleDetails(article);
 }
 
 function syncDossierActions() {
@@ -2205,6 +2170,10 @@ function moveDossier(offset) {
 
 $("dossier-close").addEventListener("click", () => $("dossier-drawer").close());
 $("dossier-drawer").addEventListener("close", () => {
+  dossier.controller?.abort();
+  const url = new URL(location.href);
+  url.searchParams.delete("article");
+  history.replaceState(null, "", url);
   const fallback = $("stories").querySelector(`[data-story-card-id="${CSS.escape(dossier.openerId)}"] .card-dossier-btn`);
   const trigger = dossier.trigger?.isConnected && dossier.trigger.getClientRects().length ? dossier.trigger : fallback;
   (trigger || $("cmd-palette-btn")).focus({ preventScroll: true });
@@ -2221,6 +2190,16 @@ $("dossier-drawer").addEventListener("keydown", (event) => {
 });
 $("dossier-prev").addEventListener("click", () => moveDossier(-1));
 $("dossier-next").addEventListener("click", () => moveDossier(1));
+$("dossier-summarize").addEventListener("click", async () => {
+  const article = dossier.article;
+  if (!article || state.composing) return;
+  $("dossier-drawer").close();
+  openBuilder("build", $("nav-builder"));
+  const brief = await composeBrief({ edition: "personal", pinned_ids: [String(article.id)], top_n: 1,
+    hours: 720, persona: "engineer", style: "technical",
+    focus: "Summarize the supplied publisher excerpt. Preserve source attribution and state what cannot be established from this limited material." }, false);
+  if (brief) focusPreview();
+});
 $("dossier-pin-btn").addEventListener("click", () => {
   if (!state.pins.has(String(dossier.article.id)) && state.pins.size >= 10) {
     status("dossier-feedback", "All 10 pin slots are in use.", true);
@@ -2249,7 +2228,7 @@ $("dossier-copy-btn").addEventListener("click", async () => {
 $("dossier-share-btn")?.addEventListener("click", async () => {
   const article = dossier.article;
   if (!article) return;
-  const href = article.url || article.link || article.sourceUrl;
+  const href = `${location.origin}/?article=${encodeURIComponent(article.id)}#reading-room`;
   const title = article.title;
   if (navigator.share) {
     try {

@@ -37,6 +37,8 @@ def source_catalog(store=None):
         feed = {**s.public(), "region_id": region_id(s.region), "enabled": state.get("enabled", s.enabled),
                 "available": state.get("available"), "last_success": timestamp(state.get("last_success")),
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
+        feed["latest_published_at"] = state.get("latest_published_at")
+        feed["retained_count"] = state.get("retained_count", 0)
         feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
         result.append(feed)
     return result

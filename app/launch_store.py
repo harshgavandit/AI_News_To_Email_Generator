@@ -17,6 +17,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
+from app.article_metadata import metadata_for, restore_metadata
 
 schema = MetaData()
 articles = Table("brief_articles", schema,
@@ -26,8 +27,9 @@ articles = Table("brief_articles", schema,
     Column("publisher", String(140), nullable=False), Column("kind", String(24), nullable=False),
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
-    Column("search_publisher", Text))
-discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher)
+    Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text))
+discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
+                     articles.c.metadata_json, articles.c.subject_keys)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -73,16 +75,21 @@ class QuotaReached(Exception):
 
 
 def discovery_fields(article):
-    return {"topic": topic_for(article), **{f"search_{field}": search_text(article[field])
-                                           for field in ("title", "description", "publisher")}}
+    from app.intelligence import subjects_for
+    metadata = metadata_for(article)
+    publisher = " ".join([article["publisher"], metadata.get("author", ""), *metadata.get("tags", [])])
+    return {"topic": topic_for(article), "search_title": search_text(article["title"]),
+            "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
+            "subject_keys": "|" + "|".join(subjects_for(article)) + "|"}
 
 
 def backfill_discovery(conn):
     stmt = select(*(articles.c[key] for key in ("id", "source_id", "source", "title", "description", "publisher",
-                                               "category", "kind"))).where(articles.c.topic.is_(None))
+                                               "category", "kind", "metadata_json"))).where(
+                                                   or_(articles.c.topic.is_(None), articles.c.subject_keys.is_(None)))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
-        conn.execute(patch, [{"article_id": row["id"], **discovery_fields(row)} for row in rows])
+        conn.execute(patch, [{"article_id": row["id"], **discovery_fields(restore_metadata(row))} for row in rows])
 
 
 class Store:
@@ -133,7 +140,11 @@ class Store:
 
     def source_state(self):
         with self.engine.connect() as conn:
-            return {row.id: dict(row._mapping) for row in conn.execute(select(sources))}
+            latest = {row.source_id: {"latest_published_at": row.latest_published_at, "retained_count": row.retained_count}
+                      for row in conn.execute(select(articles.c.source_id,
+                          func.max(articles.c.published_at).label("latest_published_at"),
+                          func.count().label("retained_count")).group_by(articles.c.source_id))}
+            return {row.id: {**dict(row._mapping), **latest.get(row.id, {})} for row in conn.execute(select(sources))}
 
     def enable(self, source_id, enabled):
         with self.engine.begin() as conn:
@@ -152,9 +163,10 @@ class Store:
                 stmt = self.insert(articles)
                 values = [{**{k: a[k] for k in ("id", "url", "title", "description", "source", "publisher",
                                                  "category", "published_at")}, "source_id": source_id,
-                           "kind": a.get("kind", "news")} for a in items]
+                           "kind": a.get("kind", "news"),
+                           "metadata_json": json.dumps(metadata_for(a), ensure_ascii=False)} for a in items]
                 for article in values:
-                    article.update(discovery_fields(article))
+                    article.update(discovery_fields(restore_metadata(article)))
                 # Registry order owns overlapping publisher feeds regardless of refresh completion order.
                 fields = [c for c in articles.c if c.name != "id"]
                 changed = or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))
@@ -170,7 +182,7 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
 
     def query(self, hours, source="all", query="", kind="all", publisher="", source_ids=(), now=None,
-              topic="all", region="", coverage="", language=""):
+              topic="all", region="", coverage="", language="", subject=""):
         self.ensure_discovery_schema()
         now = now or datetime.now(UTC)
         cutoff = (now - timedelta(hours=hours)).isoformat()
@@ -189,6 +201,8 @@ class Store:
             stmt = stmt.where(articles.c.source_id.in_(catalog_filters(region, coverage, language)))
         if topic != "all":
             stmt = stmt.where(articles.c.topic == topic)
+        if subject:
+            stmt = stmt.where(articles.c.subject_keys.contains(f"|{subject}|", autoescape=True))
         if query:
             terms = search_terms(query) or (query,)
             text_columns = [articles.c[f"search_{key}"] for key in ("title", "description", "publisher")]
@@ -197,20 +211,22 @@ class Store:
         return stmt
 
     def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest",
-             coverage="", language=""):
-        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage, language)
+             coverage="", language="", subject=""):
+        fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage, language, subject)
         ranked = sort == "relevance" and bool(query)
         anchor, marker = page_window(cursor, fingerprint, ranked=ranked)
-        base = self.query(hours, query=query, kind=kind, publisher=publisher, coverage=coverage, now=anchor)
+        base = self.query(hours, query=query, kind=kind, publisher=publisher, coverage=coverage, now=anchor, subject=subject)
         stmt = self.query(hours, source, query, kind, publisher, now=anchor, topic=topic, region=region,
-                          coverage=coverage, language=language)
+                          coverage=coverage, language=language, subject=subject)
         columns = (articles.c.published_at, articles.c.id)
         if ranked:
-            title, name = articles.c.search_title, articles.c.search_publisher
+            title, name, desc = articles.c.search_title, articles.c.search_publisher, articles.c.search_description
             score = case((title.contains(query, autoescape=True), 10), else_=0)
+            score += case((desc.contains(query, autoescape=True), 3), else_=0)
             for term in search_terms(query) or (query,):
                 score += case((title.contains(term, autoescape=True), 3), else_=0)
                 score += case((name.contains(term, autoescape=True), 1), else_=0)
+                score += case((desc.contains(term, autoescape=True), 1), else_=0)
             stmt = stmt.add_columns(score.label("search_score"))
             columns = (score, *columns)
         with self.engine.connect() as conn:
@@ -230,12 +246,17 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
-    def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage=""):
+    def article(self, ident):
+        with self.engine.connect() as conn:
+            row = conn.execute(self.query(90 * 24).where(articles.c.id == ident)).mappings().first()
+            return dict(row) if row else None
+
+    def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject=""):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
         ranked = self.query(hours, source_ids=source_ids, topic=topic, region=region,
-                            language=language, coverage=coverage).add_columns(rank).subquery()
+                            language=language, coverage=coverage, subject=subject).add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
@@ -249,8 +270,9 @@ class Store:
             rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
             return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
 
-    def candidates(self, hours, source_ids, terms, *, topic="all", region="", language="", coverage=""):
-        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language, coverage=coverage)
+    def candidates(self, hours, source_ids, terms, *, topic="all", region="", language="", coverage="", subject=""):
+        stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language, coverage=coverage,
+                          subject=subject)
         order = (articles.c.published_at.desc(), articles.c.id.desc())
         with self.engine.connect() as conn:
             recent = conn.execute(stmt.order_by(*order).limit(150)).mappings().all()
