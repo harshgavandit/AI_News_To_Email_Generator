@@ -50,14 +50,14 @@
         </nav>
         <div class="site-tools">
           <button id="cmd-palette-btn" class="cmd-pill" type="button" aria-label="Quick search" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
-            <span>Quick search</span> <kbd aria-hidden="true">Ctrl K</kbd>
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8.5" r="4.5" /><path d="m12 12 3.6 3.6" /></svg><span>Quick search</span> <kbd aria-hidden="true">Ctrl K</kbd>
           </button>
           <select id="site-theme" class="theme-select" aria-label="Color theme" disabled>
             <option value="system">System</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
-          <button id="nav-builder" class="button primary" type="button" aria-controls="composer" aria-expanded="false">Build a brief</button>
+          <button id="nav-builder" class="button primary" type="button" aria-label="Build a brief" aria-controls="composer" aria-expanded="false"><span class="builder-label">Build a brief</span><span class="builder-label-short" aria-hidden="true">Brief</span></button>
         </div>
       </div>
     </header>
@@ -89,7 +89,7 @@
             <h1 id="hero-title">The technology desk.</h1>
             <p>Reporting, research, and ideas worth your attention.</p>
           </div>
-          <button type="button" id="masthead-briefing" class="button secondary">Read the daily briefing <span aria-hidden="true">↗</span></button>
+          <button type="button" id="masthead-briefing" class="edition-link" aria-label="Read the daily briefing"><span class="edition-stack" aria-hidden="true"><span></span></span><span>Daily briefing</span><span class="edition-arrow" aria-hidden="true">↗</span></button>
         </section>
       <div class="desk-layout">
         <section
@@ -192,10 +192,10 @@
                     <button type="button" data-hours="720" aria-label="Last 30 days" aria-pressed="false">30d</button>
                   </div>
                   <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">
-                    More filters <span id="filter-count" hidden></span>
+                    Filters <span id="filter-count" hidden></span>
                   </button>
                   <details id="saved-views" class="saved-views">
-                    <summary>Saved views</summary>
+                    <summary aria-label="Saved views"><span class="saved-views-long">Saved views</span><span class="saved-views-short" aria-hidden="true">Views</span></summary>
                     <div class="saved-views-panel">
                       <p class="saved-views-note">Saved in this browser.</p>
                       <form id="saved-view-form" class="saved-view-form">
@@ -242,6 +242,11 @@
                     <label for="language">Story language</label>
                     <select id="language"><option value="">All languages</option></select>
                   </div>
+                </div>
+                <div class="coverage-presets" role="group" aria-label="Coverage shortcuts">
+                  <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false">Independent reporting</button>
+                  <button id="filter-articles" class="signal-filter-button" type="button" aria-pressed="false">Articles &amp; tutorials</button>
+                  <button id="filter-releases" class="signal-filter-button" type="button" aria-pressed="false">Release notes</button>
                 </div>
                 <div id="source-filters" class="topic-controls source-filters" role="group" aria-label="Source collections"></div>
               </div>
@@ -315,18 +320,9 @@
                 <button id="layout-cards" type="button" aria-pressed="true">Cards</button>
                 <button id="layout-list" type="button" aria-pressed="false">List</button>
               </div>
-              <button id="filter-high-signal" class="signal-filter-button" type="button" aria-pressed="false">
-                Independent reporting
-              </button>
-              <button id="filter-articles" class="signal-filter-button" type="button" aria-pressed="false">
-                Articles &amp; tutorials
-              </button>
-              <button id="filter-releases" class="signal-filter-button" type="button" aria-pressed="false">
-                Release notes
-              </button>
               <button id="hide-read" type="button" class="signal-filter-button" aria-pressed="false">Hide read</button>
-              <button id="mark-all-read" class="text-button read-action-btn" type="button">
-                Mark page read
+              <button id="mark-all-read" class="text-button read-action-btn" type="button" aria-label="Mark page read">
+                Mark read
               </button>
             </div>
           </div>
@@ -502,6 +498,7 @@
               aria-labelledby="preview-tab"
             >
               <div id="preview-empty" class="preview-empty">
+                <span class="preview-document" aria-hidden="true"><span></span></span>
                 <h3>Your newsletter preview</h3>
                 <p>Generate a brief to review its stories before you copy, download, or send it.</p>
                 <button id="empty-build" type="button" class="button secondary">
@@ -570,10 +567,6 @@
       </div>
       </div>
       <aside class="intelligence-rail" aria-label="Intelligence and daily delivery">
-          <div id="trending-bar" class="trending-bar" aria-label="Trending Topics" hidden>
-            <span class="trending-title">On the radar</span>
-            <div id="trending-chips" class="trending-chips" role="group"></div>
-          </div>
       <section id="headlines" class="headlines" aria-labelledby="headlines-title" hidden>
         <div class="headline-header">
           <h2 id="headlines-title">Developing stories</h2>
@@ -581,6 +574,10 @@
         </div>
         <div id="headlines-content" class="headlines-content"></div>
       </section>
+        <div id="trending-bar" class="trending-bar" aria-label="Trending Topics" hidden>
+          <span class="trending-title">On the radar</span>
+          <div id="trending-chips" class="trending-chips" role="group"></div>
+        </div>
 
         <details class="daily-delivery">
           <summary>Get the daily brief <span aria-hidden="true">＋</span></summary>

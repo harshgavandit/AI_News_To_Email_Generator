@@ -10,8 +10,8 @@
 
 .builder-heading h2 {
   margin: 0;
-  font: 700 clamp(23px, 2.5vw, 30px)/1.2 var(--font-ui);
-  letter-spacing: -.025em;
+  font: 400 clamp(30px, 3vw, 41px)/1.03 var(--serif);
+  letter-spacing: -.018em;
 }
 
 .builder-heading p {
@@ -116,6 +116,7 @@
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 
 .brief-details[open] summary::after {
@@ -211,16 +212,25 @@
 .composer .preview-empty {
   display: grid;
   align-content: center;
-  justify-items: start;
-  gap: 10px;
-  min-height: 260px;
+  justify-items: center;
+  gap: 11px;
+  min-height: 315px;
   padding: clamp(18px, 4vw, 42px);
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(140deg, var(--surface-top), var(--surface-bottom));
+  background: radial-gradient(ellipse at 50% 4%, var(--wash), transparent 70%), var(--canvas);
   box-shadow: inset 0 1px 0 var(--edge-highlight);
-  text-align: left;
+  text-align: center;
 }
+.preview-document { display: grid; place-items: center; width: 82px; height: 78px; margin-block-end: 3px; perspective: 320px; }
+.preview-document > span { position: relative; width: 48px; height: 61px; border: 1px solid var(--accent-line); border-radius: 7px; background: linear-gradient(150deg, var(--paper), var(--surface-bottom)); box-shadow: inset 0 1px 0 var(--edge-highlight), 4px 4px 0 var(--wash), 5px 5px 0 var(--accent-line), 0 12px 22px -9px #122f2670; transform: rotateY(-13deg) rotateZ(-6deg); transition: transform var(--motion-panel) var(--ease-out); }
+.preview-document > span::before { content: ""; position: absolute; top: 10px; inset-inline-start: 9px; width: 13px; height: 9px; border-radius: 2px; background: var(--green); }
+.preview-document > span::after { content: ""; position: absolute; inset: 27px 9px auto; height: 3px; border-radius: 6px; background: var(--accent-line); box-shadow: 0 7px 0 var(--accent-line), 0 14px 0 var(--accent-line); }
+.preview-empty:focus-within .preview-document > span { transform: translateZ(9px) rotateY(0) rotateZ(0); }
+@media (hover: hover) and (pointer: fine) {
+  .preview-empty:has(.button:hover) .preview-document > span { transform: translateZ(9px) rotateY(0) rotateZ(0); }
+}
+@media (prefers-reduced-motion: reduce) { .preview-document > span { transform: none !important; } }
 
 .composer .preview-empty h3,
 .composer #preview-title {
@@ -331,6 +341,7 @@
   margin-bottom: 0;
   padding: clamp(16px, 2.8vw, 28px);
   border-radius: 10px;
+  box-shadow: inset 0 1px 0 var(--edge-highlight), var(--shadow-raised);
   overflow-wrap: anywhere;
 }
 

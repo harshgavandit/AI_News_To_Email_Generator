@@ -29,6 +29,10 @@
   --surface-bottom: #fafbf8;
   --control-surface: #ffffff;
   --edge-highlight: #ffffff;
+  --wash: #e9f1eb;
+  --canvas: #edf0ec;
+  --button-edge: #ffffff38;
+  --action-bottom: #174530;
   --shadow-small: 0 1px 2px #14291c06, 0 3px 8px #14291c03;
   --shadow-raised: 0 4px 8px #14291c07, 0 14px 28px -14px #14291c24;
   --shadow-overlay: 0 12px 32px #14291c18, 0 40px 100px -28px #14291c55;
@@ -50,6 +54,10 @@
   --surface-bottom: #1b251f;
   --control-surface: #18221c;
   --edge-highlight: #ffffff0d;
+  --wash: #24372b;
+  --canvas: #151f1a;
+  --button-edge: #ffffff46;
+  --action-bottom: #a4c599;
   --shadow-small: 0 1px 2px #0002, 0 3px 8px #0001;
   --shadow-raised: 0 4px 8px #0002, 0 14px 28px -14px #0008;
   --shadow-overlay: 0 12px 32px #0004, 0 40px 100px -28px #000a;
@@ -68,7 +76,8 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
   transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast) var(--ease-out);
 }
 .button { border-radius: 8px; letter-spacing: -.015em; }
-.button.primary { box-shadow: inset 0 1px 0 #ffffff24, 0 1px 2px #14291c18; }
+.button.primary { background: linear-gradient(180deg, var(--green), var(--action-bottom)); box-shadow: inset 0 1px 0 var(--button-edge), 0 2px 5px #14291c17; }
+.button.primary:not(:disabled):hover { background: var(--action-hover); }
 .button.secondary { background: var(--paper); box-shadow: var(--shadow-small); }
 .button:disabled { box-shadow: none; }
 .segmented { box-shadow: inset 0 1px 2px #14291c06; }
@@ -82,6 +91,8 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
 .site-header .site-nav a[aria-current="page"] { border-bottom-color: var(--green); }
 .site-tools .theme-select { width: auto; background-color: var(--control-surface); font-size: 12px; }
 .eyebrow { color: var(--green); }
+.site-footer { position: relative; }
+.site-footer::before { content: ""; position: absolute; inset: -1px 0 auto auto; width: 38px; height: 2px; background: var(--accent-line); }
 .site-footer a { text-underline-offset: 4px; }
 .site-footer p { margin: 0; }
 .skip { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-raised); }
@@ -109,4 +120,5 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
 }
 @media (forced-colors: active) {
   .button, .segmented button[aria-pressed="true"] { border: 1px solid ButtonText; }
+  :is(button, a):is([aria-pressed="true"], [aria-current="page"]) { outline: 1px solid Highlight; }
 }

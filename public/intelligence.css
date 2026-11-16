@@ -195,7 +195,7 @@
   justify-content: space-between;
   padding: 10px 24px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
+  background: linear-gradient(150deg, var(--wash), var(--surface-top) 72%);
 }
 
 .dossier-counter,
@@ -232,8 +232,8 @@
 
 .dossier-headline {
   margin: 12px 0;
-  font: 400 clamp(30px, 4.4vw, 38px)/1.13 var(--serif);
-  letter-spacing: -.025em;
+  font: 400 clamp(32px, 4.2vw, 42px)/1.09 var(--serif);
+  letter-spacing: -.018em;
   overflow-wrap: anywhere;
 }
 
@@ -280,7 +280,7 @@
 }
 
 .dossier-section-title {
-  margin: 0 0 5px;
+  margin: 0 0 8px;
   font-size: 13px;
   font-weight: 650;
 }

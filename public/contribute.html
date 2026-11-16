@@ -30,9 +30,16 @@
         <li><a href="#submit-title"><span aria-hidden="true">03</span><strong>Offer reading permission</strong><small>Submit your text for review</small></a></li>
       </ol>
       <div class="contribution-layout">
+        <aside class="contribution-panel" aria-labelledby="identity-title">
+          <h2 id="identity-title" tabindex="-1">Your verified inbox</h2><p>Verification identifies your submissions. It does not subscribe you to a newsletter.</p>
+          <div id="contribution-identity" hidden><strong id="contribution-email"></strong><button id="contribution-signout" type="button" class="text-button">Sign out</button></div>
+          <form id="contribution-challenge"><label for="contribution-email-input">Email address</label><input id="contribution-email-input" type="email" autocomplete="email" maxlength="254" required /><div id="contribution-captcha"></div><button id="contribution-send-code" class="button secondary" type="submit" disabled>Send verification code</button></form>
+          <form id="contribution-verify" hidden><label for="contribution-code">Six-digit code</label><input id="contribution-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required /><button type="submit" class="button primary">Verify inbox</button><button id="contribution-change-email" class="text-button" type="button">Use a different address</button></form>
+          <button id="contribution-retry-auth" class="text-button" type="button" hidden>Retry verification setup</button><p id="contribution-auth-status" class="status" role="status" aria-live="polite">Checking verification availability…</p>
+        </aside>
         <section class="contribution-panel" aria-labelledby="submit-title">
-          <h2 id="submit-title">Offer an article for in-platform reading</h2>
-          <form id="article-lookup" class="lookup-form"><label for="contribution-article">Informa AI article ID</label><p class="small">Open your article in the Reading Room and choose “Offer full-text reading permission” to fill this automatically.</p><div class="lookup-entry"><input id="contribution-article" pattern="[A-Za-z0-9_-]{1,40}" maxlength="40" required /><button type="submit" class="button secondary">Find article</button></div></form>
+          <h2 id="submit-title" tabindex="-1">Offer an article for in-platform reading</h2>
+          <form id="article-lookup" class="lookup-form" tabindex="-1"><label for="contribution-article">Informa AI article ID</label><p class="small">Open your article in the Reading Room and choose “Offer full-text reading permission” to fill this automatically.</p><div class="lookup-entry"><input id="contribution-article" pattern="[A-Za-z0-9_-]{1,40}" maxlength="40" required /><button type="submit" class="button secondary">Find article</button></div></form>
           <div id="contribution-selected" class="contribution-selected" hidden><strong id="contribution-title"></strong><a id="contribution-original" target="_blank" rel="noopener noreferrer">View original ↗</a></div>
           <p id="lookup-status" class="status" role="status"></p>
           <form id="contribution-form">
@@ -46,13 +53,6 @@
             </fieldset>
           </form><p id="contribution-status" class="status" role="status" aria-live="polite"></p>
         </section>
-        <aside class="contribution-panel" aria-labelledby="identity-title">
-          <h2 id="identity-title">Your verified inbox</h2><p>Verification identifies your submissions. It does not subscribe you to a newsletter.</p>
-          <div id="contribution-identity" hidden><strong id="contribution-email"></strong><button id="contribution-signout" type="button" class="text-button">Sign out</button></div>
-          <form id="contribution-challenge"><label for="contribution-email-input">Email address</label><input id="contribution-email-input" type="email" autocomplete="email" maxlength="254" required /><div id="contribution-captcha"></div><button id="contribution-send-code" class="button secondary" type="submit" disabled>Send verification code</button></form>
-          <form id="contribution-verify" hidden><label for="contribution-code">Six-digit code</label><input id="contribution-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required /><button type="submit" class="button primary">Verify inbox</button><button id="contribution-change-email" class="text-button" type="button">Use a different address</button></form>
-          <button id="contribution-retry-auth" class="text-button" type="button" hidden>Retry verification setup</button><p id="contribution-auth-status" class="status" role="status" aria-live="polite">Checking verification availability…</p>
-        </aside>
       </div>
       <section class="contribution-panel" aria-labelledby="submissions-title"><div class="contribution-heading"><h2 id="submissions-title">Your submissions</h2><button id="contribution-reload" type="button" class="text-button" disabled>Refresh</button></div><p id="contribution-list-status" class="status" role="status">Verify your inbox to see your private submissions.</p><div id="contribution-list" class="contribution-list"></div></section>
       <details id="editor-workspace" class="contribution-panel editorial-workspace"><summary>Owner editorial review</summary><p>Owner access is required. The key is held in this page’s memory for the current session and is never saved to browser storage.</p>
@@ -61,6 +61,9 @@
         <p id="editor-status" class="status" role="status" aria-live="polite"></p><div id="editor-list" class="contribution-list"></div><button id="editor-more" class="button secondary" type="button" hidden>Load more submissions</button>
       </details>
     </main>
-    <footer class="site-footer wrap"><a class="footer-brand" href="/">Informa AI</a><p>Discover · Analyze · Personalize · Automate</p><a href="/sources.html">Source directory</a></footer>
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col"><a class="footer-brand" href="/">Informa AI</a><p class="footer-pillars">Discover · Analyze · Personalize · Automate</p></div>
+      <nav class="footer-nav" aria-label="Footer"><a href="/#reading-room">Reading Room</a><a href="/sources.html">Source directory</a><a href="/#composer">Brief builder</a></nav>
+    </footer>
   </body>
 </html>
