@@ -87,14 +87,15 @@ DOMAIN_SIGNALS = (
         r"hardware accelerators?|wearables?|foldables?|game consoles?|"
         r"tsmc|asml|lithography|wafers?|silicon|photolithography|risc-v|arm architecture|"
         r"blackwell|hopper|gaudi|quantum processors?|microarchitecture|"
-        r"robotics|humanoid robots?|autonomous drones?|lidar|"
+        r"robotics|humanoid robots?|autonomous drones?|lidar|co-packaged optics|gate-all-around|gaa|"
         r"semicondutores?|procesadores?|processeurs?|halbleiter|grafikkarten?"
     )),
     ("ai", headline_pattern(
         r"ai|gen[ -]?ai|artificial intelligence|machine learning|deep learning|language models?|"
         r"llms?|chatgpt|openai|anthropic|claude (?:code|models?)|google gemini|deepmind|agentic|diffusion models?|"
         r"multimodal|frontier models?|reasoning models?|rag|fine-tuning|synthetic data|embedding models?|"
-        r"deepseek|mistral|grok|copilot|reinforcement learning|rlhf|"
+        r"deepseek|mistral|grok|copilot|reinforcement learning|rlhf|model context protocol|mcp|mixture of experts|moe|"
+        r"kv cache|test-time compute|chain-of-thought|transformer architecture|"
         r"intelig[eê]ncia artificial|intelligence artificielle|künstliche intelligenz"
     )),
     ("software", headline_pattern(
@@ -102,7 +103,7 @@ DOMAIN_SIGNALS = (
         r"linux|kubernetes|postgresql|sqlite|databases?|programming languages?|compilers?|rust|"
         r"devops|ci/cd|docker|containers?|microservices?|cloud-native|backend|frontend|"
         r"api(?:s)?|sdk(?:s)?|typescript|golang|webassembly|wasm|database engines?|redis|mongodb|graphql|git|"
-        r"react (?:native|\d+)|cloud computing|serverless|infrastructure as code|"
+        r"react (?:native|\d+)|cloud computing|serverless|infrastructure as code|bun|deno|zig|mojo|duckdb|parquet|arrow|grpc|protobuf|ebpf|opentelemetry|otel|"
         r"código abierto|c[oó]digo aberto|logiciel(?:s)?|code source ouvert"
     )),
     ("chips", headline_pattern(r"iphone|ipad|macbook|geforce|radeon|snapdragon|ryzen|hardware")),

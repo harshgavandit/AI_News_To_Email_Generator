@@ -80,9 +80,13 @@ DEFAULT_SOURCES = (
     Source("aws-ml", "aws-ml", "AWS Machine Learning", "engineering", "https://aws.amazon.com/blogs/machine-learning/feed/", ("aws.amazon.com",)),
     Source("langchain", "langchain", "LangChain Blog", "engineering", "https://www.langchain.com/blog/rss.xml", ("langchain.com", "blog.langchain.com")),
     Source("simon-willison", "simon-willison", "Simon Willison", "engineering", "https://simonwillison.net/atom/everything/", ("simonwillison.net",)),
+    Source("mistral-ai", "mistral-ai", "Mistral AI News", "news", "https://mistral.ai/news/index.xml", ("mistral.ai",), topic="ai", region="Europe"),
+    Source("bair-blog", "bair-blog", "Berkeley AI Research (BAIR)", "research", "https://bair.berkeley.edu/blog/feed.xml", ("bair.berkeley.edu",), topic="research"),
 
     # 2. Global Tech & Industry
     reporting("techcrunch", "TechCrunch", "https://techcrunch.com/feed/", "techcrunch.com", topic="startups"),
+    reporting("y-combinator", "Y Combinator Blog", "https://www.ycombinator.com/blog/rss/", "ycombinator.com", "www.ycombinator.com", topic="startups"),
+    reporting("venturebeat", "VentureBeat", "https://venturebeat.com/feed/", "venturebeat.com", topic="ai"),
     reporting("the-verge", "The Verge", "https://www.theverge.com/rss/index.xml", "theverge.com", topic="bigtech"),
     reporting("ars-technica", "Ars Technica", "https://feeds.arstechnica.com/arstechnica/index", "arstechnica.com", topic="software"),
     reporting("wired", "WIRED", "https://www.wired.com/feed/rss", "wired.com", topic="industry"),
@@ -189,6 +193,9 @@ DEFAULT_SOURCES = (
               topic="chips"),
     reporting("phoronix", "Phoronix", "https://www.phoronix.com/rss.php", "phoronix.com", topic="software"),
     reporting("techpowerup", "TechPowerUp", "https://www.techpowerup.com/rss/news", "techpowerup.com", topic="chips"),
+    reporting("toms-hardware", "Tom's Hardware", "https://www.tomshardware.com/feeds/all", "tomshardware.com", "www.tomshardware.com", topic="chips"),
+    Source("the-new-stack", "the-new-stack", "The New Stack", "engineering", "https://thenewstack.io/feed/", ("thenewstack.io",), topic="software"),
+    Source("stackoverflow-blog", "stackoverflow-blog", "Stack Overflow Blog", "engineering", "https://stackoverflow.blog/feed/", ("stackoverflow.blog",), topic="software"),
     reporting("smashing-magazine", "Smashing Magazine", "https://www.smashingmagazine.com/feed/", "smashingmagazine.com",
               topic="software", region="Europe"),
 

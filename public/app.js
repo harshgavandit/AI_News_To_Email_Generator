@@ -78,6 +78,92 @@ function publisherRegion(record) {
   return id === "Global" ? "Global" :
     record.region && record.region !== id ? record.region : state.regions[id] || id;
 }
+function deriveWhyItMatters(article) {
+  const text = `${article.title || ""} ${article.cleanSummary || article.description || ""}`.toLowerCase();
+  const topic = article.category || article.topic || "industry";
+  const region = article.region || "Global";
+  if (topic === "ai") {
+    if (/reasoning|benchmark|frontier|sota|gpt|claude|gemini|deepseek|model/.test(text))
+      return "Advances frontier AI reasoning benchmarks and model efficiency, raising the bar for production intelligence systems.";
+    if (/agent|agentic|workflow|automate|autonomous|tool|mcp/.test(text))
+      return "Accelerates the transition from prompt-based generation to autonomous agentic workflows executing multi-step enterprise tasks.";
+    if (/open[\s-]source|weights|llama|mistral|hugging face|fine-tuning/.test(text))
+      return "Lowers computational barriers for private cloud deployment, local fine-tuning, and open-weights developer ecosystems.";
+    if (/safety|alignment|guardrail|risk|red team|eval/.test(text))
+      return "Directly informs enterprise AI safety guardrails, governance frameworks, and compliance audits.";
+    return "Shapes the competitive frontier of artificial intelligence research, model capabilities, and enterprise software integration.";
+  }
+  if (topic === "security") {
+    if (/zero[\s-]day|0[\s-]day|cve|vulnerabilit|exploit|rce|remote code/.test(text))
+      return "Demands prioritized vulnerability triage, perimeter audits, and rapid patch deployment to mitigate active exploitation.";
+    if (/ransomware|extortion|encrypt|critical infrastructure/.test(text))
+      return "Highlights severe operational risk to business continuity and underscores the necessity of immutable backup architectures.";
+    if (/breach|leak|stolen|credential|password/.test(text))
+      return "Exposes customer identity data to secondary credential stuffing and necessitates immediate credential rotation.";
+    if (/nation[\s-]state|apt|espionage|china|russia|iran/.test(text))
+      return "Signals sophisticated state-sponsored cyber espionage targeting sensitive intellectual property and critical supply chains.";
+    return "Carries significant defensive implications for corporate IT perimeters, data privacy compliance, and threat posture.";
+  }
+  if (topic === "startups") {
+    if (/seed|series [a-e]|raised|funding|valuation|venture|round/.test(text))
+      return "Reflects venture capital deployment momentum and current valuation multiples in high-conviction technology verticals.";
+    if (/accelerator|incubator|y combinator|techstars/.test(text))
+      return "Provides early predictive signal on founder density, emerging technical paradigms, and upcoming seed-stage disruptors.";
+    if (/acquisition|bought|merger|exit|ipo/.test(text))
+      return "Provides liquidity benchmarks and strategic consolidation signals for investors and late-stage founders.";
+    return `Highlights regional innovation velocity and founder execution within the ${region} tech startup ecosystem.`;
+  }
+  if (topic === "software") {
+    if (/database|sql|nosql|postgres|redis|storage|vector/.test(text))
+      return "Improves data storage throughput, query latency, and horizontal scalability for modern distributed applications.";
+    if (/kubernetes|docker|cloud[\s-]native|container|devops|serverless/.test(text))
+      return "Standardizes cloud infrastructure orchestration, deployment velocity, and fault-tolerant microservice management.";
+    if (/framework|library|react|vue|typescript|rust|python|golang|bun|deno/.test(text))
+      return "Directly impacts developer productivity, memory safety guarantees, and modern application runtime performance.";
+    return "Enhances engineering productivity, system reliability, and architecture best practices across modern software stacks.";
+  }
+  if (topic === "chips") {
+    if (/gpu|nvidia|blackwell|hopper|accelerator|amd|ai chip/.test(text))
+      return "Determines global AI training and inference compute availability, data center power density, and cloud pricing.";
+    if (/tsmc|asml|lithography|foundry|wafer|packaging|node|\bnm\b/.test(text))
+      return "Dictates global semiconductor fabrication capacity, packaging lead times, and multi-year hardware product roadmaps.";
+    return "Drives per-watt compute efficiency, hardware acceleration, and silicon supply chain resilience worldwide.";
+  }
+  if (topic === "bigtech") {
+    if (/antitrust|lawsuit|regulat|monopoly|investigat|doj|ftc|eu/.test(text))
+      return "Threatens platform lock-in models and opens up competitive market space for challenger services and startups.";
+    if (/earnings|revenue|profit|quarter|forecast/.test(text))
+      return "Serves as an essential macro bellwether for enterprise IT expenditure and broader global technology market sentiment.";
+    return "Reverberates across the enterprise tech landscape, shifting market power and platform integration standards.";
+  }
+  if (topic === "research") {
+    return "Supplies empirical grounding and theoretical breakthroughs that will shape the next generation of commercial technologies.";
+  }
+  if (topic === "industry") {
+    return "Guides strategic enterprise compliance, global market entry, and technology policy alignment.";
+  }
+  if (topic === "outages") {
+    return "Tests enterprise resilience, redundant multi-region failovers, and cloud SLA enforcement during systemic downtime.";
+  }
+  if (topic === "video") {
+    return "Provides practitioner-led architecture breakdowns, live coding demonstrations, and tactical technical walkthroughs.";
+  }
+  return "Provides critical context for engineering leaders, investors, and technology decision-makers staying ahead of industry shifts.";
+}
+function deriveKeyTakeaway(article, why) {
+  if (article.keyTakeaway) return article.keyTakeaway;
+  const topic = article.category || article.topic || "industry";
+  if (topic === "ai") return "Track benchmark replication, API token pricing, and workflow integration roadmap.";
+  if (topic === "security") return "Audit affected endpoints, verify vendor patch availability, and inspect access logs.";
+  if (topic === "startups") return "Monitor follow-on funding rounds, talent migration, and product defensibility.";
+  if (topic === "software") return "Evaluate package upgrade path, breaking changes, and CI/CD test coverage.";
+  if (topic === "chips") return "Assess hardware procurement lead times and thermal/power budgets.";
+  if (topic === "bigtech") return "Review platform dependency exposure and vendor contract terms.";
+  if (topic === "research") return "Review open code repositories and benchmark methodology for verification.";
+  if (topic === "industry") return "Consult legal and compliance teams on jurisdictional exposure.";
+  if (topic === "outages") return "Check service status dashboard and test secondary failover regions.";
+  return "Incorporate this development into strategic technology planning and operational reviews.";
+}
 function normalizeEmail(value) {
   let [local, domain] = String(value || "")
     .trim()
@@ -465,6 +551,11 @@ function renderStories() {
     const date = node("time", "", relativeTime(timestamp));
     date.title = readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
+    const storySummary = article.cleanSummary || article.description || article.summary;
+    const whyItMatters = article.whyItMatters || deriveWhyItMatters(article);
+    const wordCount = (article.title + " " + (storySummary || "")).split(/\s+/).length;
+    const readingTime = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
+
     const badges = node("div", "story-meta-badges");
     badges.append(
       node(
@@ -472,6 +563,8 @@ function renderStories() {
         `source-badge ${Object.hasOwn(state.topics, topic) ? topic : ""}`,
         state.topics[topic] || article.topic_label || "Technology",
       ),
+      node("span", "meta-pill region-pill", publisherRegion(article)),
+      node("span", "meta-pill read-time-pill", `${readingTime}m read`),
     );
     top.append(badges, date);
     const heading = node("h3");
@@ -533,8 +626,7 @@ function renderStories() {
     bottom.append(actions);
     main.append(top, heading);
     card.append(main);
-    const storySummary = article.cleanSummary || article.description || article.summary;
-    if (article.whyItMatters) {
+    if (whyItMatters) {
       const perspectiveWrap = node("div", "story-perspectives");
       const tabGroup = node("div", "perspective-tabs");
       const tabSummary = node("button", "perspective-tab active", "Summary");
@@ -552,7 +644,7 @@ function renderStories() {
 
       const why = node("div", "why-matters-box");
       why.hidden = true;
-      why.textContent = article.whyItMatters;
+      why.textContent = whyItMatters;
 
       tabSummary.addEventListener("click", () => {
         tabSummary.classList.add("active");
@@ -1899,10 +1991,12 @@ function renderDossier() {
   $("dossier-basis").textContent = summary ? basis : "Headline only";
   $("dossier-summary").textContent = summary || "Open the original publication for details.";
   $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
-  $("dossier-why-section").hidden = !article.whyItMatters;
-  $("dossier-why-text").textContent = article.whyItMatters || "";
-  $("dossier-takeaways-section").hidden = !article.keyTakeaway;
-  $("dossier-takeaways-list").replaceChildren(...(article.keyTakeaway ? [node("li", "", article.keyTakeaway)] : []));
+  const effectiveWhy = article.whyItMatters || deriveWhyItMatters(article);
+  $("dossier-why-section").hidden = !effectiveWhy;
+  $("dossier-why-text").textContent = effectiveWhy || "";
+  const effectiveTakeaway = article.keyTakeaway || deriveKeyTakeaway(article, effectiveWhy);
+  $("dossier-takeaways-section").hidden = !effectiveTakeaway;
+  $("dossier-takeaways-list").replaceChildren(...(effectiveTakeaway ? [node("li", "", effectiveTakeaway)] : []));
   $("dossier-audit-url").textContent = href ? new URL(href).hostname : "Unavailable";
   $("dossier-audit-region").textContent = region || "Unspecified";
   $("dossier-topic-link").hidden = !Object.hasOwn(state.topics, topic);

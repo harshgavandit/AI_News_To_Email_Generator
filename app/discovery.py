@@ -93,10 +93,18 @@ def search_text(text):
 
 
 def relevance_score(article, query, terms):
-    title, description, publisher = (search_text(article.get(field, "")) for field in ("title", "description", "publisher"))
-    if not all(term in title or term in description or term in publisher for term in terms):
+    title = search_text(article.get("title", ""))
+    desc = search_text(article.get("cleanSummary") or article.get("description") or article.get("summary") or "")
+    publisher = search_text(article.get("publisher") or article.get("sourceName") or "")
+    category = search_text(article.get("category") or article.get("topic") or "")
+    why = search_text(article.get("whyItMatters", ""))
+    fields = (title, desc, publisher, category, why)
+    if not all(any(term in f for f in fields) for term in terms):
         return None
-    return 10 * int(query in title) + sum(3 * int(term in title) + int(term in publisher) for term in terms)
+    score = 10 * int(query in title) + 3 * int(query in desc)
+    for term in terms:
+        score += 3 * int(term in title) + int(term in desc) + int(term in publisher)
+    return score
 
 
 def page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage="", language=""):
