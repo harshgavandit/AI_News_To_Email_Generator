@@ -3,6 +3,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--paper);
+  box-shadow: var(--shadow-small);
 }
 .reading .desk-controls .toolbar:has(.saved-views) {
   flex-wrap: wrap;
@@ -28,6 +29,8 @@
   gap: 10px;
   padding: 0 14px 14px;
 }
+.saved-views[open] { border-color: var(--accent-line); }
+.saved-views[open] .saved-views-panel { animation: surface-enter var(--motion-panel) var(--ease-out); }
 .saved-views-panel :is(.saved-views-note, .saved-views-empty, .saved-views-status) {
   margin: 0;
   color: var(--muted);

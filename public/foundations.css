@@ -25,6 +25,16 @@
   --subtle: #f0f3ed;
   --lead: #edf3e9;
   --radius: 12px;
+  --surface-top: #ffffff;
+  --surface-bottom: #fafbf8;
+  --control-surface: #ffffff;
+  --edge-highlight: #ffffff;
+  --shadow-small: 0 1px 2px #14291c06, 0 3px 8px #14291c03;
+  --shadow-raised: 0 4px 8px #14291c07, 0 14px 28px -14px #14291c24;
+  --shadow-overlay: 0 12px 32px #14291c18, 0 40px 100px -28px #14291c55;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --motion-fast: 160ms;
+  --motion-panel: 240ms;
 }
 :root[data-theme="dark"] {
   --bg: #131b17;
@@ -36,11 +46,67 @@
   --sage: #293d2e;
   --subtle: #223027;
   --lead: #26392b;
+  --surface-top: #212e25;
+  --surface-bottom: #1b251f;
+  --control-surface: #18221c;
+  --edge-highlight: #ffffff0d;
+  --shadow-small: 0 1px 2px #0002, 0 3px 8px #0001;
+  --shadow-raised: 0 4px 8px #0002, 0 14px 28px -14px #0008;
+  --shadow-overlay: 0 12px 32px #0004, 0 40px 100px -28px #000a;
 }
 body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font-family: inherit; }
+button, summary, a { text-underline-offset: .2em; }
+button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button) { cursor: not-allowed; }
+:is(button, a)[aria-busy="true"] { cursor: progress; }
+::selection { background: var(--sage); color: var(--ink); }
+:is(input, textarea, select) { transition: border-color var(--motion-fast), background-color var(--motion-fast); }
+:is(input, textarea, select):not(:disabled):hover { border-color: var(--accent-line); }
+:is(input, textarea, select):focus-visible { border-color: var(--focus); }
+:is(input, textarea):user-invalid { border-color: var(--error); }
+.button, .cmd-pill, .theme-select, .dialog-close {
+  transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast) var(--ease-out);
+}
+.button { border-radius: 8px; letter-spacing: -.015em; }
+.button.primary { box-shadow: inset 0 1px 0 #ffffff24, 0 1px 2px #14291c18; }
+.button.secondary { background: var(--paper); box-shadow: var(--shadow-small); }
+.button:disabled { box-shadow: none; }
+.segmented { box-shadow: inset 0 1px 2px #14291c06; }
+.segmented button { transition: background-color var(--motion-fast), color var(--motion-fast); }
+.segmented button[aria-pressed="true"] { box-shadow: var(--shadow-small), 0 0 0 1px var(--line); }
+.site-header { background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom)); box-shadow: 0 1px 8px #14291c05; }
 .site-header .brand { letter-spacing: -.055em; }
-.site-header .brand-icon { border-radius: 8px; }
+.site-header .brand-icon { border-radius: 8px; transition: transform 240ms var(--ease-out); }
+.site-header .site-nav a { transition: color var(--motion-fast), border-color var(--motion-fast); }
+.site-header .site-nav a:hover { text-decoration: none; border-bottom-color: var(--accent-line); }
+.site-header .site-nav a[aria-current="page"] { border-bottom-color: var(--green); }
+.site-tools .theme-select { width: auto; background-color: var(--control-surface); font-size: 12px; }
+.eyebrow { color: var(--green); }
+.site-footer a { text-underline-offset: 4px; }
+.site-footer p { margin: 0; }
+.skip { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-raised); }
+@media (hover: hover) and (pointer: fine) {
+  .site-header .brand:hover .brand-icon { transform: perspective(400px) rotateY(-10deg) rotateZ(-3deg) translateY(-1px); }
+  .button:not(:disabled):hover { transform: translateY(-1px); }
+  :is(.button, .cmd-pill, .dialog-close):not(:disabled):active { transform: translateY(1px); }
+}
+/* Motion communicates a newly opened surface, without scroll listeners or loops. */
+@keyframes surface-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes drawer-enter {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 760px) {
+  :is(input:not([type="checkbox"], [type="radio"]), textarea, select) { font-size: 16px; }
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .site-header .brand .brand-icon, .button, .reading .story { transform: none !important; }
+}
+@media (forced-colors: active) {
+  .button, .segmented button[aria-pressed="true"] { border: 1px solid ButtonText; }
 }

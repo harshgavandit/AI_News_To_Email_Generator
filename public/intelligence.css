@@ -4,7 +4,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
-  background: var(--paper);
+  background: linear-gradient(140deg, var(--surface-top), var(--surface-bottom));
+  box-shadow: var(--shadow-small);
 }
 .personalization > p { margin: 0 0 12px; font-size: 14px; color: var(--muted); line-height: 1.65; }
 .personalization > p strong { color: var(--ink); }
@@ -12,7 +13,8 @@
 .personalization fieldset { border: 0; border-top: 1px solid var(--line); padding: 14px 0; margin: 12px 0 0; min-width: 0; }
 .personalization legend { font-size: 13px; font-weight: 650; padding-inline: 0 8px; }
 .preference-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 195px), 1fr)); gap: 5px 14px; }
-.preference-options label { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--ink); font-size: 13px; cursor: pointer; }
+.preference-options label { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--ink); font-size: 13px; cursor: pointer; border-radius: 6px; padding-inline: 7px; transition: background-color var(--motion-fast); }
+.preference-options label:has(input:checked) { background: var(--sage); }
 .preference-options input { width: 17px; height: 17px; flex: 0 0 17px; accent-color: var(--green); }
 .preference-sources { max-height: 240px; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
 .preference-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; }
@@ -69,18 +71,19 @@
   color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--line);
-  box-shadow: 0 14px 40px #0003;
+  box-shadow: var(--shadow-overlay);
 }
 
 .command-dialog::backdrop,
 .dossier-drawer::backdrop {
   background: rgb(10 17 14 / .58);
+  backdrop-filter: blur(3px);
 }
 
 .command-dialog {
   width: min(600px, calc(100% - 28px));
   max-height: min(580px, calc(100dvh - 32px));
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 0;
 }
 
@@ -88,6 +91,7 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
+  animation: surface-enter var(--motion-panel) var(--ease-out);
 }
 
 .command-input-row,
@@ -143,7 +147,9 @@
   font-size: 14px;
   font-weight: 550;
   overflow-wrap: anywhere;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
 }
+.command-item:hover { background: var(--subtle); }
 
 .command-item[aria-selected="true"] {
   background: var(--sage);
@@ -171,6 +177,7 @@
 .dossier-drawer[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  animation: drawer-enter var(--motion-panel) var(--ease-out);
 }
 
 .dossier-header,
@@ -186,8 +193,9 @@
 
 .dossier-header {
   justify-content: space-between;
-  padding: 8px 20px;
+  padding: 10px 24px;
   border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
 }
 
 .dossier-counter,
@@ -216,7 +224,7 @@
 }
 
 .dossier-body {
-  padding: 22px;
+  padding: 26px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -224,7 +232,7 @@
 
 .dossier-headline {
   margin: 12px 0;
-  font: 680 clamp(23px, 4.4vw, 32px)/1.25 var(--font-ui, system-ui);
+  font: 400 clamp(30px, 4.4vw, 38px)/1.13 var(--serif);
   letter-spacing: -.025em;
   overflow-wrap: anywhere;
 }
@@ -262,19 +270,19 @@
 
 .dossier-layers {
   display: grid;
-  gap: 14px;
-  margin-top: 18px;
+  gap: 22px;
+  margin-top: 24px;
 }
 
 .dossier-section {
-  padding-top: 13px;
+  padding-top: 20px;
   border-top: 1px solid var(--line);
 }
 
 .dossier-section-title {
   margin: 0 0 5px;
-  font-size: 15px;
-  font-weight: 680;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .dossier-text,
@@ -282,8 +290,8 @@
 .dossier-takeaways {
   margin: 0;
   color: var(--summary);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.8;
   overflow-wrap: anywhere;
 }
 
@@ -295,7 +303,7 @@
 .dossier-full-body {
   margin-top: 14px;
   padding: 14px 16px;
-  background: var(--surface);
+  background: var(--surface-bottom);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;
@@ -365,9 +373,9 @@
   align-items: center;
   gap: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--paper);
-  box-shadow: 0 8px 22px #0003;
+  border-radius: 14px;
+  background: linear-gradient(140deg, var(--surface-top), var(--surface-bottom));
+  box-shadow: var(--shadow-overlay);
 }
 
 .audio-info {
