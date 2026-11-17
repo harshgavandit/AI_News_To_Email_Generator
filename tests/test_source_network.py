@@ -128,9 +128,12 @@ def test_scholarly_metadata_preserves_dates_and_never_copies_abstract(monkeypatc
     assert "Copyrighted" not in str(stories)
 
 
-def test_related_official_feeds_do_not_inflate_independent_trends():
-    rows = [item(source, str(i), f"NVIDIA platform update number {i}") for i, source in enumerate(
-            ("aws-architecture", "aws-database", "aws-developer"))]
+@pytest.mark.parametrize("source_ids", [
+    ("aws-architecture", "aws-database", "aws-developer"),
+    ("project-zero", "android-developers", "google-security"),
+])
+def test_related_official_feeds_do_not_inflate_independent_trends(source_ids):
+    rows = [item(source, str(i), f"NVIDIA platform update number {i}") for i, source in enumerate(source_ids)]
     trend = next(row for row in extract_trending(rows)["trending"] if row["tag"] == "NVIDIA")
     assert trend["source_count"] == 1
 

@@ -46,7 +46,7 @@ class Source:
     def publisher_family(self):
         if self.group in {"medium", "dev", "hashnode", "youtube", "github-releases", "crossref"}:
             return self.group
-        for name, domains in (("google", ("google.com", "googleblog.com", "research.google", "deepmind.google")),
+        for name, domains in (("google", ("google.com", "googleblog.com", "research.google", "deepmind.google", "projectzero.google", "android.com")),
                               ("microsoft", ("microsoft.com", "visualstudio.com")),
                               ("amazon", ("amazon.com",)), ("nvidia", ("nvidia.com",)),
                               ("meta", ("fb.com",))):

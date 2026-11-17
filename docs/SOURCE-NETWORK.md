@@ -1,7 +1,7 @@
 # Reviewed source network
 
 Expanded November 17, 2026 from 191 to 477 source integrations. These are feed/API
-integrations, not 477 independent publishers. The catalog currently has 328
+integrations, not 477 independent publishers. The catalog currently has 326
 publisher-family keys, seven formats and 18 language codes. Related official
 Google, Microsoft, Amazon, NVIDIA and Meta feeds share a family for trend counts.
 Community and aggregation platforms are grouped conservatively.
