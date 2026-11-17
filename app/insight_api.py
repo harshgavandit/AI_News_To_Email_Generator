@@ -83,6 +83,7 @@ class ConversationRequest(BaseModel):
     question: str = Field(min_length=2, max_length=320)
     history: list[ConversationTurn] = Field(default_factory=list, max_length=8)
     context_ids: list[str] = Field(default_factory=list, max_length=8)
+    context_only: bool = False
     hours: Literal[24, 168, 720] = 168
     topic: str = "all"
     language: str = "en"
@@ -200,10 +201,12 @@ def converse(body: ConversationRequest, request: Request, response: Response):
     store = archive()
     admit_expensive(store, request, "source-conversation", 10, 600)
     context_rows = [public_article(row) for row in store.pinned_articles(body.context_ids)] if body.context_ids else []
+    if body.context_only and (not context_rows or len(context_rows) != len(body.context_ids)):
+        raise HTTPException(404, "This story is no longer available. Reopen it before asking a question.")
     previous_questions = [turn.content for turn in body.history if turn.role == "user"][-3:]
     retrieval_query = " ".join([*previous_questions, *(row["title"] for row in context_rows), body.question])
     result = research.research(store, question=body.question, retrieval_question=retrieval_query,
-        context_rows=context_rows, mode="analyze", language=body.language,
+        context_rows=context_rows, context_only=body.context_only, mode="analyze", language=body.language,
         filters={"hours": body.hours, "topic": body.topic})
     response.headers["Cache-Control"] = "private, no-store"
     return result

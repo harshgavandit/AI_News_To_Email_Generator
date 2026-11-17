@@ -80,6 +80,7 @@ test('inline story questions cite source evidence and discard an answer after ch
     document.getElementById('story-question').value = 'What changed?';
     submit();
     assert.deepEqual(body.context_ids, ['story-1', 'related-1']);
+    assert.equal(body.context_only, true);
     finish(answer);
     await until(() => document.querySelector('#story-question-answer a'));
     assert.equal(document.querySelector('#story-question-answer a').href, answer.evidence[0].url);

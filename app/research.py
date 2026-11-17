@@ -350,13 +350,16 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
     return answer
 
 
-def research(store, *, question, mode, filters, anchor=None, language="en", retrieval_question=None, context_rows=()):
+def research(store, *, question, mode, filters, anchor=None, language="en", retrieval_question=None, context_rows=(), context_only=False):
     scope = dict(filters)
     hours = scope.pop("hours")
     retrieval_question = retrieval_question or question
-    lexical = lexical_results(store, retrieval_question, hours, scope)
-    semantic, vector_status = vector_results(store, retrieval_question, hours, scope, anchor)
-    rows = select_evidence(lexical, semantic, anchor=anchor, question=retrieval_question)
+    if context_only:
+        rows, semantic, vector_status = list(context_rows[:8]), [], "not_requested"
+    else:
+        lexical = lexical_results(store, retrieval_question, hours, scope)
+        semantic, vector_status = vector_results(store, retrieval_question, hours, scope, anchor)
+        rows = select_evidence(lexical, semantic, anchor=anchor, question=retrieval_question)
     if mode == "global_compare" and rows:
         # Promote meaningful matches in other languages while retaining the top evidence.
         primary_language = rows[0]["language"]
@@ -373,7 +376,7 @@ def research(store, *, question, mode, filters, anchor=None, language="en", retr
     answer = (synthesize(store, mode, question, records, cacheable=bool(anchor), language=language)
               if mode != "search" else None)
     return {"evidence": records, "clusters": evidence_clusters(rows), "answer": answer,
-            "retrieval": "hybrid" if semantic else "keyword", "semantic_index": vector_status,
+            "retrieval": "source_context" if context_only else "hybrid" if semantic else "keyword", "semantic_index": vector_status,
             "scope": filters, "updated_at": datetime.now(UTC).isoformat()}
 
 

@@ -247,6 +247,18 @@ def test_conversation_retrieves_prior_source_context_but_keeps_provider_fallback
     assert result["answer"]["status"] == "unavailable"
     assert result["answer"]["limitations"]
 
+    # In-reader questions must not retrieve unrelated archive stories.
+    from app import research
+    def reject_search(*args, **kwargs):
+        raise AssertionError("Story-scoped questions must use supplied source context")
+    monkeypatch.setattr(research, "lexical_results", reject_search)
+    monkeypatch.setattr(research, "vector_results", reject_search)
+    scoped = insight_api.converse(insight_api.ConversationRequest.model_validate({
+        "question": "Which APIs were affected?", "context_ids": ["conversation-1"], "context_only": True,
+    }), request, Response())
+    assert [row["id"] for row in scoped["evidence"]] == ["conversation-1"]
+    assert scoped["retrieval"] == "source_context"
+
 
 def test_opted_in_radar_gets_personalized_morning_mail_and_history_after_acceptance(tmp_path, monkeypatch):
     from unittest.mock import Mock

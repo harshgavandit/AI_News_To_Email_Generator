@@ -25,7 +25,7 @@ export function createStoryQuestion(request, context, externalLink) {
       const data = await request("/api/intelligence/converse", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: active.signal,
         body: JSON.stringify({ question, history: [],
-          context_ids: [article.id, ...coverage.map(story => story.id)].slice(0, 8),
+          context_ids: [...new Set([article.id, ...coverage.map(story => story.id)])].slice(0, 8), context_only: true,
           hours: 720, topic: "all", language: "en" }),
       });
       if (controller !== active) return;
