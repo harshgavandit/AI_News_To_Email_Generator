@@ -378,7 +378,8 @@ def send(body: SendBody, request: Request):
     state, accepted = store.reserve_delivery(identity, [
         (f"mail:{mailbox}", day(), 3),
         *mail_capacity().policies(day(), "digests"),
-    ], windows=[(f"dispatch-ip:{ip}", 3600, 5), (f"mailbox-hour:{mailbox}", 3600, 5)])
+    ], windows=[(f"dispatch-ip:{ip}", 3600, 5), (f"mailbox-hour:{mailbox}", 3600, 5)],
+       event_mailbox=mailbox, event_history=payload.get("_catchup"))
     if state == "limited":
         if accepted is not None:
             raise HTTPException(429, "Delivery is limited to five requests per hour.",

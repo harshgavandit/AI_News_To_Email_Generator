@@ -2937,3 +2937,17 @@ window.addEventListener("keydown", (event) => {
     }
   }
 });
+
+if (new URLSearchParams(location.search).get("ai-catchup") === "1") {
+  try {
+    const preview = JSON.parse(sessionStorage.getItem("informa-ai-catchup-preview"));
+    sessionStorage.removeItem("informa-ai-catchup-preview");
+    if (preview?.digest?.edition === "catchup" && /^[A-Za-z0-9_-]{24,80}$/.test(preview.preview_id || "") &&
+        Number(preview.expires) > Date.now() / 1000 && Array.isArray(preview.digest.articles)) {
+      state.digest = preview;
+      renderDigest();
+      openBuilder("preview", $("world-preview"));
+      status("email-status", "Your personalized catch-up is ready. Verify your inbox to send it.");
+    }
+  } catch { /* Continue to the Reading Room if the temporary handoff is missing or expired. */ }
+}

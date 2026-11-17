@@ -58,6 +58,27 @@
 .research-trends li { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
 .research-trends button { text-align: start; text-transform: none; min-height: 32px; }
 #research-results:not(:empty) { margin-top: 16px; }
+.radar-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 10px; }
+.radar-controls label { color: var(--muted); font-size: .78rem; }
+.radar-controls select { display: block; margin-top: 4px; }
+.radar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+.radar-event, .development-item, .conversation-turn { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.radar-event h3 { margin-bottom: 5px; }
+.radar-event p, .development-item span { margin: 5px 0; font-size: .84rem; }
+.radar-event details, .development-item button { margin-top: 6px; }
+.timeline-entries { display: grid; gap: 8px; padding-inline-start: 22px; font-size: .82rem; }
+.development-list { margin: 0; padding-inline-start: 20px; }
+.development-list > li { padding: 10px 0; border-top: 1px solid var(--line); }
+.development-item { display: grid; gap: 6px; }
+.explanation-result { margin-top: 10px; padding: 10px 12px; border-inline-start: 3px solid var(--green); background: var(--wash); }
+.explanation-result blockquote { margin: 10px 0; }
+.explanation-result blockquote p { margin: 4px 0; }
+.conversation-desk { margin-top: 18px; }
+#conversation-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+#conversation-form label { grid-column: 1 / -1; }
+#conversation-question { min-width: 0; min-height: 44px; padding: 9px 11px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; }
+.conversation-turn { padding-bottom: 10px; }
+.conversation-turn h3 { margin-bottom: 8px; }
 @media (max-width: 920px) {
   .research-layout { grid-template-columns: minmax(0, 1fr); }
   .research-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -67,4 +88,5 @@
   .research-rail, .research-controls { grid-template-columns: minmax(0, 1fr); }
   .site-header .research-nav { grid-column: 1 / -1; gap: 14px; }
   .site-header .research-nav a { font-size: .75rem; min-height: 41px; }
+  #conversation-form { grid-template-columns: minmax(0, 1fr); }
 }

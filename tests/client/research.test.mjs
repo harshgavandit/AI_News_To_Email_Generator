@@ -35,7 +35,7 @@ test('article analysis keeps citations in the Research Desk and preserves origin
     const evidence = window.document.querySelector(citation.hash);
     assert.match(evidence.textContent, /Official advisory/);
     assert.equal(evidence.querySelector('h3 > a').href, 'https://example.org/advisory');
-    assert.equal(evidence.lastElementChild.href, 'https://informa.test/?article=s1#reading-room');
+    assert.equal(evidence.querySelector('a[href*="reading-room"]').href, 'https://informa.test/?article=s1#reading-room');
   } finally {
     window.close();
   }
@@ -84,4 +84,37 @@ test('Research Desk opts in, renders private source-linked alerts and marks the 
   } finally {
     window.close();
   }
+});
+
+test('technology radar prepares a personalized preview with an attributable update timeline', async () => {
+  const dom = new JSDOM(markup, { url: 'https://informa.test/research.html', runScripts: 'outside-only' });
+  const { window } = dom, { document } = window;
+  window.readingGroups = readingGroups;
+  let submitted;
+  const preview = { preview_id: 'p'.repeat(32), expires: Date.now() / 1000 + 300,
+    signature: '', source_basis: 'Publisher evidence', digest: { edition: 'catchup', articles: [] } };
+  window.fetch = async (path, options = {}) => {
+    if (path === '/api/intelligence/catchup') submitted = JSON.parse(options.body);
+    const data = path === '/api/intelligence/catchup' ? {
+      status: 'ready', message: 'One updated development is ready.', preview,
+      events: [{ id: 'e'.repeat(32), title: 'Cloud disruption has new reporting', change: 'updated', source_count: 2,
+        reasons: ['Matches cloud'], articles: [{ url: 'https://example.org/outage', publisher: 'Newsroom' }] }],
+    } : path.includes('/api/intelligence/events/') ? { entries: [], notice: 'Source timeline.' } : {};
+    return { ok: true, json: async () => data };
+  };
+  try {
+    window.eval(inboxScript);
+    window.eval(script);
+    document.getElementById('radar-role').value = 'engineer';
+    document.getElementById('radar-interests').value = 'cloud, Kubernetes';
+    document.getElementById('radar-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    assert.equal(submitted.profile.role, 'engineer');
+    assert.deepEqual(submitted.profile.interests, ['cloud', 'Kubernetes']);
+    assert.match(document.getElementById('radar-results').textContent, /Cloud disruption has new reporting/);
+    const handoff = document.querySelector('#radar-results a[href="/?ai-catchup=1#reading-room"]');
+    assert.ok(handoff);
+    handoff.click();
+    assert.equal(JSON.parse(window.sessionStorage.getItem('informa-ai-catchup-preview')).preview_id, preview.preview_id);
+  } finally { window.close(); }
 });

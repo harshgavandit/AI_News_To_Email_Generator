@@ -31,7 +31,7 @@ test('browser export only includes reading data and documented appearance choice
     storage.setItem('owner-token', 'must-not-export');
     const data = readBrowserData(storage);
     assert.equal(data['informa-theme'], 'dark');
-    assert.deepEqual(dataCounts(data), { bookmarks: 1, history: 0, interests: 2, views: 0, alerts: 1 });
+    assert.deepEqual(dataCounts(data), { bookmarks: 1, history: 0, interests: 2, views: 0, alerts: 1, radar: 0 });
     assert.equal(JSON.stringify(data).includes('must-not-export'), false);
   } finally { dom.window.close(); }
 });

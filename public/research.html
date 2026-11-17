@@ -58,8 +58,41 @@
           </form>
           <p id="research-status" class="research-status" role="status" aria-live="polite"></p>
           <div id="research-results" aria-busy="false"></div>
+          <section id="conversation-desk" class="research-panel conversation-desk" hidden aria-labelledby="conversation-title">
+            <p class="research-label">Source-grounded follow-up</p><h2 id="conversation-title">Keep exploring</h2>
+            <p>Follow-up questions use this session’s source list. The conversation is not saved to your account.</p>
+            <div id="conversation-transcript" aria-live="polite"></div>
+            <form id="conversation-form"><label for="conversation-question">Ask a follow-up</label><input id="conversation-question" required minlength="2" maxlength="320" placeholder="What does this mean for developers?" /><button class="button secondary" type="submit">Ask with sources</button></form>
+          </section>
         </div>
         <aside class="research-rail" aria-label="News monitoring">
+          <section class="research-panel" aria-labelledby="radar-title">
+            <p class="research-label">Personal intelligence</p>
+            <h2 id="radar-title">Your tech radar</h2>
+            <p>Choose a perspective, then catch up on new and updated developments from the archive.</p>
+            <form id="radar-form">
+              <label for="radar-role">Reader perspective</label>
+              <select id="radar-role"><option value="general">Technology reader</option><option value="engineer">Software engineer</option><option value="researcher">Researcher</option><option value="founder">Founder &amp; product leader</option><option value="security">Security practitioner</option></select>
+              <label for="radar-interests">Interests or technologies</label>
+              <input id="radar-interests" maxlength="360" placeholder="e.g. AI agents, Kubernetes, NVIDIA" />
+              <div class="radar-controls">
+                <label>Window<select id="radar-hours"><option value="24">24 hours</option><option value="168" selected>7 days</option><option value="720">30 days</option></select></label>
+                <label>Brief size<select id="radar-length"><option value="3">3 stories</option><option value="5" selected>5 stories</option><option value="10">10 stories</option></select></label>
+                <label>Explain in<select id="radar-language"><option value="en">English</option><option value="hi">Hindi</option><option value="mr">Marathi</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option><option value="ar">Arabic</option><option value="fa">Persian</option><option value="vi">Vietnamese</option><option value="tr">Turkish</option><option value="pl">Polish</option><option value="nl">Dutch</option></select></label>
+                <label>Detail<select id="radar-depth"><option value="simple">Simple</option><option value="developer">Developer</option><option value="technical">Technical</option></select></label>
+              </div>
+              <div class="radar-actions"><button class="button primary" type="submit">Catch me up ✦</button><button class="text-button" id="radar-save" type="button">Save to verified inbox</button></div>
+            </form>
+            <p id="radar-status" class="research-status" role="status" aria-live="polite"></p>
+            <div id="radar-results"></div>
+          </section>
+          <section class="research-panel" aria-labelledby="developments-title">
+            <p class="research-label">Across publishers</p>
+            <h2 id="developments-title">Developments</h2>
+            <p>Related reporting is grouped by evidence and shown with a publication timeline.</p>
+            <ol id="development-list" class="development-list" aria-label="Recent developments"></ol>
+            <p id="development-status" class="research-status" role="status"></p>
+          </section>
           <section class="research-panel" aria-labelledby="watch-title">
             <p class="research-label">Monitoring</p>
             <h2 id="watch-title">Topic alerts</h2>

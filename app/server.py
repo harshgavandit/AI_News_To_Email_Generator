@@ -57,6 +57,8 @@ from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
+from app import event_intelligence
+from app.insight_api import router as insight_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
@@ -65,6 +67,7 @@ app.include_router(workspace_router)
 app.include_router(syndication_router)
 app.include_router(discovery_router)
 app.include_router(monitoring.router)
+app.include_router(insight_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -677,8 +680,9 @@ def run_intelligence_check(store):
     try:
         watch_progress = run_monitoring_check(store, scheduled=True)
         progress = research_service.index_archive(store)
+        event_progress = event_intelligence.sync(store)
         brief = research_service.refresh_research_brief(store)
-        return {"status": "checked", **watch_progress, **progress, "brief_status": brief}
+        return {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief}
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
 

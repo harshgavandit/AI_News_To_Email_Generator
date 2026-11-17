@@ -199,6 +199,8 @@ def install_search_index(conn):
 
 class Store:
     def __init__(self, url):
+        # Register additive intelligence tables before creating a local archive.
+        from app import event_intelligence, radar_store  # noqa: F401
         if url.startswith(("postgres://", "postgresql://")):
             url = "postgresql+psycopg://" + url.split("://", 1)[1]
         self.engine = create_engine(url, pool_pre_ping=True, **(
@@ -216,6 +218,8 @@ class Store:
         if self.engine.dialect.name == "sqlite":
             schema.create_all(self.engine)
             self.ensure_discovery_schema()
+            self._event_tables_ready = True
+            self._radar_tables_ready = True
 
     def ensure_discovery_schema(self):
         # Existing deployments can upgrade in place. Old code can still write during rollout.
@@ -243,12 +247,16 @@ class Store:
     def migrate(self):
         schema.create_all(self.engine)
         self.ensure_discovery_schema()
+        self._event_tables_ready = True
+        self._radar_tables_ready = True
         with self.engine.begin() as conn:
             for index in article_indexes:
                 index.create(conn, checkfirst=True)
             backfill_discovery(conn)
         if self.engine.dialect.name == "postgresql":
             with self.engine.begin() as conn:
+                from app import vector_search
+                self._semantic_index_ready = vector_search.install(conn)
                 return install_search_index(conn)
         return "portable"
 
@@ -483,6 +491,8 @@ class Store:
                     set_={key: stmt.excluded[key] for key in ("encoder", "title", "description", "embedding")}),
                     [{"id": row["id"], "title": row["title"], "description": row["description"],
                       "encoder": encoder, "embedding": embedding} for row, embedding in rows])
+                from app import vector_search
+                vector_search.upsert(self, encoder, rows, conn=conn)
 
     def research_vector(self, row, encoder):
         with self.engine.connect() as conn:
@@ -669,6 +679,11 @@ class Store:
                     recipients.append(mailbox)
                     messages.append(message)
             if messages:
+                from app import radar_store
+                for mailbox, message in zip(recipients, messages, strict=True):
+                    history = message.pop("_informa_event_history", None)
+                    if history:
+                        radar_store.reserve_events(conn, self, ident, mailbox, history)
                 conn.execute(update(limits).where(limits.c.scope.in_(["digests", "outbound"]), limits.c.bucket == day)
                              .values(used=limits.c.used + len(messages)))
                 conn.execute(mail_batches.insert().values(id=ident, created=now, retry_at=now, state="pending",
@@ -805,7 +820,7 @@ class Store:
             payload = conn.scalar(select(previews.c.payload).where(previews.c.id == ident, previews.c.expires > time.time()))
         return json.loads(payload) if payload else None
 
-    def reserve_delivery(self, ident, policies, *, windows=()):
+    def reserve_delivery(self, ident, policies, *, windows=(), event_mailbox=None, event_history=None):
         """Atomically reserve recipient quota once for a preview and inbox."""
         try:
             with self.engine.begin() as conn:
@@ -813,6 +828,9 @@ class Store:
                 if conn.scalar(stmt.on_conflict_do_nothing(index_elements=[deliveries.c.id]).returning(deliveries.c.id)) is not None:
                     self._admit_windows(conn, windows)
                     self._admit(conn, policies)
+                    if event_mailbox and event_history:
+                        from app import radar_store
+                        radar_store.reserve_events(conn, self, ident, event_mailbox, event_history)
                     return "new", None
                 row = conn.execute(select(deliveries).where(deliveries.c.id == ident)).one()
                 if row.created < time.time() - 3600:
@@ -826,6 +844,13 @@ class Store:
     def record_delivery(self, ident, provider_id):
         with self.engine.begin() as conn:
             conn.execute(update(deliveries).where(deliveries.c.id == ident).values(provider_id=provider_id))
+            from app import radar_store
+            radar_store.accept_events(conn, self, ident)
+
+    def record_mail_batch_events(self, ident, mailboxes):
+        with self.engine.begin() as conn:
+            from app import radar_store
+            radar_store.accept_events(conn, self, ident, allowed_mailboxes=set(mailboxes))
 
     def get_summary(self, ident):
         with self.engine.connect() as conn:
@@ -922,6 +947,11 @@ class Store:
                 (feed_checks, feed_checks.c.checked < now - 7 * 86400),
             ):
                 conn.execute(delete(table).where(condition))
+            from app import event_intelligence, radar_store
+            if getattr(self, "_event_tables_ready", False):
+                event_intelligence.prune(conn, now)
+            if getattr(self, "_radar_tables_ready", False):
+                radar_store.prune(conn, now)
             if inspect(conn).has_table(research_vectors.name):
                 conn.execute(delete(research_vectors).where(
                     ~select(articles.c.id).where(articles.c.id == research_vectors.c.id).exists()))

@@ -219,6 +219,37 @@ test('daily briefing navigation, read state and modal brief pins work together',
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
+test('a Research Desk catch-up opens in the existing verified email delivery flow', async () => {
+  const env = mount(html, 'https://informa.test/?ai-catchup=1#reading-room');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const preview = { preview_id: 'catchup-preview-12345678901234567890', expires: Date.now() / 1000 + 600,
+    source_basis: 'Publisher evidence', digest: { edition: 'catchup', introduction: { greeting: 'Your technology catch-up', introduction: 'New developments.' },
+      articles: [{ title: 'Cloud outage update', publisher: 'Original publisher', topic_label: 'Cloud',
+        cleanSummary: 'The provider reported a service disruption.', sourceUrl: 'https://example.org/outage',
+        url: 'https://example.org/outage', summary_basis: 'publisher_excerpt' }], markdown: '# Catch-up', html: '<p>Catch-up</p>' } };
+  sessionStorage.setItem('informa-ai-catchup-preview', JSON.stringify(preview));
+  const deliveries = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const path = String(url);
+    let data = {};
+    if (path === '/api/mail/config') data = { enabled: true, verified: true, verified_email: 'reader@example.org' };
+    if (path === '/api/mail/send') { deliveries.push(JSON.parse(options.body)); data = { status: 'accepted', message: 'Accepted.' }; }
+    if (path.startsWith('/api/news')) data = { ...catalog, articles: [], total: 0, facets: {} };
+    return new Response(JSON.stringify(data), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?catchup=${Date.now()}`);
+    await until(() => document.querySelector('#preview .digest-item h3')?.textContent === 'Cloud outage update');
+    assert.equal(JSON.parse(sessionStorage.getItem('informa-ai-catchup-preview')), null);
+    document.getElementById('preview-email').value = 'reader@example.org';
+    document.getElementById('preview-send-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    await until(() => deliveries.length === 1);
+    assert.equal(deliveries[0].preview_id, preview.preview_id);
+    assert.equal(document.getElementById('email-status').textContent, 'Accepted.');
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
 test('monitoring views appear in the workspace and restore their search', async () => {
   const env = mount(html, 'https://informa.test/?q=kubernetes&window=7d');
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;

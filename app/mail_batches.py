@@ -1,5 +1,6 @@
 """Durable Resend batches for opted-in daily briefs."""
 import json
+import logging
 import os
 import secrets
 import time
@@ -14,6 +15,7 @@ from app.mail_capacity import batch_sender, mail_capacity
 MAX_BATCH_SIZE = 100
 MAX_BATCHES_PER_TICK = 10
 WORKER_LEASE = "morning-mail-lease"
+logger = logging.getLogger(__name__)
 
 
 def dispatch_batch(store, row):
@@ -34,11 +36,13 @@ def dispatch_batch(store, row):
             # An earlier attempt might have reached Resend. Its payload must stay identical.
             store.update_mail_batch(row["id"], "unconfirmed", row["attempts"], now)
             return 0, row["size"]
-        messages = [message for mailbox, message in zip(mailboxes, messages) if mailbox in active]
+        kept = [(mailbox, message) for mailbox, message in zip(mailboxes, messages) if mailbox in active]
+        mailboxes = [mailbox for mailbox, _ in kept]
+        messages = [message for _, message in kept]
         if not messages:
             store.update_mail_batch(row["id"], "cancelled", row["attempts"], now)
             return 0, 0
-        store.replace_unattempted_batch(row["id"], messages, [mailbox for mailbox in mailboxes if mailbox in active])
+        store.replace_unattempted_batch(row["id"], messages, mailboxes)
     store.update_mail_batch(row["id"], "pending", attempts, now + 30, size=len(messages))
     delay = 0
     try:
@@ -49,6 +53,7 @@ def dispatch_batch(store, row):
         if response.is_success:
             data = response.json().get("data", [])
             if len(data) == len(messages) and all(isinstance(item, dict) and item.get("id") for item in data):
+                store.record_mail_batch_events(row["id"], mailboxes)
                 store.update_mail_batch(row["id"], "accepted", attempts, now)
                 return len(messages), 0
         transient = status in (408, 409, 429) or status >= 500 or response.is_success
@@ -90,11 +95,33 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
 
                 def message_for(subscription):
                     url = build_unsubscribe_url(subscription["mailbox"])
-                    content = with_unsubscribe(brief, url, scheduled=True)
-                    return {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
+                    content = brief
+                    history = None
+                    from app import ai_insights, event_intelligence, radar_store
+                    profiles = radar_store.profiles(store, [subscription["mailbox"]])
+                    if saved_profile := profiles.get(subscription["mailbox"]):
+                        try:
+                            profile = ai_insights.RadarProfile.model_validate(saved_profile)
+                            seen = radar_store.histories(store, [subscription["mailbox"]]).get(subscription["mailbox"], {})
+                            events = event_intelligence.catalog(store, hours=24, limit=80)
+                            prepared = ai_insights.catchup(store, profile, seen, hours=24,
+                                allow_generate=False, pool=events)
+                            if prepared.get("brief"):
+                                content = prepared["brief"]
+                                history = content.get("_catchup")
+                        except Exception as error:
+                            # A profile/archive failure must not interrupt other subscribers.
+                            logger.warning("radar_batch_fallback error_type=%s", type(error).__name__)
+                            history = None
+                            content = brief
+                    content = with_unsubscribe(content, url, scheduled=True)
+                    message = {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
                             "text": content["markdown"], "html": content["html"], "headers": {
                                 "List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                            }}, next_morning(subscription["timezone"], moment)
+                            }}
+                    if history:
+                        message["_informa_event_history"] = history
+                    return message, next_morning(subscription["timezone"], moment)
 
                 batch_id = secrets.token_hex(24)
                 if not store.enqueue_morning_batch(batch_id, now, moment.date().isoformat(), mail_capacity(),

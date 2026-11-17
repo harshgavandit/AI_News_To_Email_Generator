@@ -19,6 +19,9 @@ let watchGeneration = 0;
 let watches = loadWatches();
 let inbox = null;
 let inboxBusy = false;
+let conversation = [];
+let conversationIds = [];
+const radarKey = readingGroups.radar.key;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -42,10 +45,11 @@ function dateLabel(value) {
   return Number.isFinite(date.valueOf()) ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date) : "";
 }
 
-async function api(path, body, signal) {
+async function api(path, body, signal, method) {
   const response = await fetch(path, {
     cache: "no-store", signal,
-    ...(body && { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+    ...((body || method) && { method: method || (body ? "POST" : "GET") }),
+    ...(body && { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (response.status === 429) throw new Error("Too many requests. Wait a moment and try again.");
   if (!response.ok) throw new Error(response.status === 404 ? "This story is no longer available in the archive." :
@@ -163,12 +167,38 @@ function render(data, titles) {
     const excerpt = element("p", row.excerpt || "Headline and source link only.");
     excerpt.dir = "auto";
     excerpt.lang = row.language;
+    const explain = element("button", "Explain this story", "text-button");
+    explain.type = "button";
+    explain.addEventListener("click", async () => {
+      explain.disabled = true;
+      const output = element("div", "", "explanation-result");
+      item.append(output);
+      output.setAttribute("role", "status");
+      output.textContent = "Checking the publisher excerpt…";
+      try {
+        const answer = await api("/api/intelligence/explain", { article_id: row.id,
+          language: byId("radar-language").value, depth: byId("radar-depth").value });
+        output.replaceChildren();
+        output.append(element("p", answer.answer.limitations, "research-note"));
+        for (const claim of answer.answer.claims || []) {
+          const note = element("blockquote", claim.text);
+          if (claim.kind === "analysis") note.prepend(element("span", "Interpretation · ", "research-label"));
+          note.append(element("p", `Source quote: “${claim.quote}”`, "research-meta"));
+          const source = answer.evidence.find((evidenceRow) => evidenceRow.id === claim.source_id);
+          if (source) note.append(link(`Read ${source.publisher} ↗`, source.url));
+          output.append(note);
+        }
+      } catch (error) { output.textContent = error.message; }
+      finally { explain.disabled = false; }
+    });
     item.append(heading, element("p", meta.filter(Boolean).join(" · "), "research-meta"), excerpt,
-      link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`));
+      link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`), explain);
     list.append(item);
   }
   evidence.append(list);
   results.append(evidence);
+  conversationIds = data.evidence.map((row) => row.id).slice(0, 8);
+  byId("conversation-desk").hidden = !data.evidence.length;
 }
 
 const taskLabels = { search: "Find sources", analyze: "Answer with sources", compare: "Compare coverage", brief: "Build a topic brief" };
@@ -207,8 +237,168 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   const q = question.value.trim();
   if (!q) { question.focus(); return; }
+  conversation = [];
+  byId("conversation-transcript").replaceChildren();
   search({ q, mode: mode.value, scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
 });
+
+byId("conversation-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = byId("conversation-question"), button = event.currentTarget.querySelector("button[type=submit]");
+  const prompt = input.value.trim();
+  if (!prompt || button.disabled) return;
+  button.disabled = true;
+  status.textContent = "Finding the next answer in the linked source evidence…";
+  try {
+    const data = await api("/api/intelligence/converse", {
+      question: prompt, history: conversation.slice(-8), context_ids: conversationIds.slice(0, 8),
+      hours: Number(byId("research-hours").value), topic: topic.value || "all", language: byId("radar-language").value,
+    });
+    conversation.push({ role: "user", content: prompt });
+    const exchange = element("article", "", "conversation-turn");
+    exchange.append(element("h3", prompt));
+    if (data.answer?.claims?.length) {
+      const claims = element("ul");
+      for (const claim of data.answer.claims) {
+        const item = element("li", claim.text);
+        for (const ident of claim.source_ids || []) {
+          const source = data.evidence.find((entry) => entry.id === ident);
+          if (source) item.append(" ", link(`[${source.publisher}] ↗`, source.url));
+        }
+        claims.append(item);
+      }
+      exchange.append(claims);
+    }
+    exchange.append(element("p", data.answer?.limitations || "No source excerpts support a follow-up answer.", "research-note"));
+    byId("conversation-transcript").append(exchange);
+    const answerText = (data.answer?.claims || []).map((claim) => claim.text).join(" ") || data.answer?.limitations || "No supported answer.";
+    conversation.push({ role: "assistant", content: answerText.slice(0, 600) });
+    conversation = conversation.slice(-8);
+    conversationIds = [...new Set([...conversationIds, ...(data.evidence || []).map((entry) => entry.id)])].slice(0, 8);
+    input.value = "";
+    status.textContent = `${data.evidence?.length || 0} linked sources used for this follow-up.`;
+  } catch (error) { status.textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+function radarProfile() {
+  return { name: "Reader", role: byId("radar-role").value,
+    interests: byId("radar-interests").value.split(/[,;\n]/).map((term) => term.trim()).filter(Boolean).slice(0, 12),
+    stack: [], topics: topic.value && topic.value !== "all" ? [topic.value] : [],
+    language: byId("radar-language").value, depth: byId("radar-depth").value,
+    length: Number(byId("radar-length").value) };
+}
+
+function loadRadarProfile(profile) {
+  if (!profile || typeof profile !== "object") return;
+  if ([...byId("radar-role").options].some((option) => option.value === profile.role)) byId("radar-role").value = profile.role;
+  if ([...byId("radar-language").options].some((option) => option.value === profile.language)) byId("radar-language").value = profile.language;
+  if ([...byId("radar-depth").options].some((option) => option.value === profile.depth)) byId("radar-depth").value = profile.depth;
+  if ([...byId("radar-length").options].some((option) => Number(option.value) === profile.length)) byId("radar-length").value = String(profile.length);
+  byId("radar-interests").value = [...(profile.interests || []), ...(profile.stack || [])].slice(0, 12).join(", ");
+}
+
+async function catchMeUp(event) {
+  event.preventDefault();
+  const button = byId("radar-form").querySelector('[type="submit"]');
+  const feedback = byId("radar-status");
+  button.disabled = true;
+  feedback.textContent = "Selecting new and updated stories…";
+  try {
+    await radarPreferencesReady;
+    const profile = radarProfile();
+    try { localStorage.setItem(radarKey, JSON.stringify(profile)); }
+    catch { /* Preferences remain active for this request if browser storage is unavailable. */ }
+    const data = await api("/api/intelligence/catchup", { profile, seen: radarSeen,
+      hours: Number(byId("radar-hours").value) });
+    feedback.textContent = data.message || `${data.events?.length || 0} developments ready. AI explanations are linked to publisher evidence.`;
+    const list = byId("radar-results");
+    list.replaceChildren();
+    for (const event of data.events || []) {
+      const row = element("article", "", "radar-event");
+      const heading = element("h3");
+      const story = event.articles?.[0];
+      if (story) heading.append(link(event.title, story.url));
+      else heading.textContent = event.title;
+      row.append(heading, element("p", `${event.change === "updated" ? "Updated" : "New development"} · ${event.source_count} publishers`, "research-meta"));
+      if (event.reasons?.length) row.append(element("p", event.reasons.join(" · ")));
+      const timeline = element("details");
+      const summary = element("summary", "View publication timeline");
+      timeline.append(summary);
+      summary.addEventListener("click", async () => {
+        if (timeline.dataset.loaded) return;
+        timeline.dataset.loaded = "true";
+        try {
+          const history = await api(`/api/intelligence/events/${encodeURIComponent(event.id)}`);
+          const entries = element("ol", "", "timeline-entries");
+          for (const item of history.entries || []) entries.append(element("li",
+            `${dateLabel(item.published_at)} · ${item.source.publisher}: ${item.title}`));
+          timeline.append(entries, element("p", history.notice, "research-meta"));
+        } catch (error) { timeline.append(element("p", error.message, "research-note")); }
+      });
+      row.append(timeline);
+      if (event.explanation?.claims?.length) {
+        row.append(element("p", event.explanation.claims.map((claim) => claim.text).join(" ")));
+        row.append(element("p", `Evidence quotes stay linked to the publisher. ${event.explanation.limitations || ""}`, "research-meta"));
+      }
+      list.append(row);
+    }
+    if (!data.events?.length) list.append(element("p", data.message || "No matching developments in this time range."));
+    if (data.preview) {
+      const handoff = element("a", "Email this catch-up ↗", "button primary");
+      handoff.href = "/?ai-catchup=1#reading-room";
+      handoff.addEventListener("click", () => {
+        try { sessionStorage.setItem("informa-ai-catchup-preview", JSON.stringify(data.preview)); }
+        catch { feedback.textContent = "This browser could not prepare the email preview. You can still read and share the source links above."; }
+      });
+      list.append(handoff);
+    }
+  } catch (error) { feedback.textContent = error.message; }
+  finally { button.disabled = false; }
+}
+
+byId("radar-form").addEventListener("submit", catchMeUp);
+byId("radar-save").addEventListener("click", async () => {
+  const button = byId("radar-save");
+  button.disabled = true;
+  try {
+    const data = await api("/api/mail/radar", radarProfile(), undefined, "PUT");
+    byId("radar-status").textContent = data.notice;
+  } catch {
+    byId("radar-status").textContent = "Verify your email from the home page first. Radar preferences stay in this browser until you save them to a verified inbox.";
+  } finally { button.disabled = false; }
+});
+
+let radarSeen = {};
+try { loadRadarProfile(JSON.parse(localStorage.getItem(radarKey))); } catch { /* Use the page defaults. */ }
+const radarPreferencesReady = api("/api/mail/radar").then(({ profile, seen }) => {
+  loadRadarProfile(profile);
+  radarSeen = seen || {};
+}).catch(() => { /* Public visitors can build a catch-up without a mailbox account. */ });
+
+api("/api/intelligence/events?hours=168&limit=8").then(({ events = [] }) => {
+  const list = byId("development-list");
+  list.replaceChildren();
+  for (const event of events) {
+    const item = element("li", "", "development-item");
+    item.append(element("strong", event.title), element("span", `${event.source_count} publishers · updated ${dateLabel(event.updated_at)}`, "research-meta"));
+    const open = element("button", "Open timeline", "text-button");
+    open.type = "button";
+    open.addEventListener("click", async () => {
+      try {
+        const timeline = await api(`/api/intelligence/events/${encodeURIComponent(event.id)}`);
+        item.replaceChildren(element("strong", timeline.title));
+        const entries = element("ol", "", "timeline-entries");
+        for (const entry of timeline.entries || []) entries.append(element("li",
+          `${dateLabel(entry.published_at)} · ${entry.source.publisher}: ${entry.title}`));
+        item.append(entries, element("p", timeline.notice, "research-meta"));
+      } catch (error) { byId("development-status").textContent = error.message; }
+    });
+    item.append(open);
+    list.append(item);
+  }
+  if (!events.length) byId("development-status").textContent = "Developments are being indexed as new coverage arrives.";
+}).catch(() => { byId("development-status").textContent = "Recent development timelines are temporarily unavailable."; });
 
 function loadWatches() {
   try {

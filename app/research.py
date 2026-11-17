@@ -37,6 +37,9 @@ For analyze, explain what happened, the technical context and practical implicat
 For compare, identify what sources agree on, coverage differences, and what is still unknown.
 For brief, summarize developments in order of reader impact and mention timing when supported.
 Return up to six short claims and a short note describing gaps in the evidence."""
+OUTPUT_LANGUAGES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "es": "Spanish", "fr": "French",
+    "de": "German", "pt": "Portuguese", "ja": "Japanese", "ko": "Korean", "zh": "Chinese",
+    "ar": "Arabic", "fa": "Persian", "vi": "Vietnamese", "tr": "Turkish", "pl": "Polish", "nl": "Dutch"}
 
 
 def bounded_setting(key, default, ceiling):
@@ -85,6 +88,8 @@ def index_archive(store):
         return {"index_status": "disabled", "indexed": 0}
     if not store.research_schema_exists():
         return {"index_status": "migration_required", "indexed": 0}
+    from app import vector_search
+    vector_search.backfill(store, encoder())
     rows = store.research_index_samples(encoder(), pending=True, hours=720, limit=96)
     if not rows:
         return {"index_status": "current", "indexed": 0}
@@ -138,9 +143,6 @@ def lexical_results(store, question, hours, filters, *, strict=False):
 def vector_results(store, question, hours, filters, anchor=None):
     if not vectors_enabled() or not store.research_schema_exists():
         return [], "disabled" if not vectors_enabled() else "migration_required"
-    samples = store.research_index_samples(encoder(), hours=min(hours, 720), **filters)
-    if not samples:
-        return [], "index_warming"
     if anchor:
         query_vector = store.research_vector(anchor, encoder())
         if not query_vector:
@@ -153,6 +155,14 @@ def vector_results(store, question, hours, filters, anchor=None):
         except Exception as error:
             logger.warning("research_query_provider_error type=%s", type(error).__name__)
             return [], "provider_unavailable"
+    from app import vector_search
+    indexed = vector_search.nearest(store, encoder(), query_vector, hours=min(hours, 720),
+        threshold=.53 if anchor else .42, **filters)
+    if indexed is not None:
+        return indexed, "ready" if indexed else "index_warming"
+    samples = store.research_index_samples(encoder(), hours=min(hours, 720), **filters)
+    if not samples:
+        return [], "index_warming"
     query = VECTOR_FORMAT.unpack(query_vector)
     scored = [(sum(x * y for x, y in zip(query, VECTOR_FORMAT.unpack(row["embedding"]))), row["id"])
               for row in samples if len(row["embedding"]) == VECTOR_FORMAT.size]
@@ -254,7 +264,7 @@ def validate_answer(answer, evidence):
     return answer.model_dump()
 
 
-def synthesize(store, mode, question, records, *, cacheable=False):
+def synthesize(store, mode, question, records, *, cacheable=False, language="en"):
     evidence = [row for row in records if row["excerpt"]][:8]
     empty = {"claims": [], "limitations": ""}
     if not evidence:
@@ -262,17 +272,18 @@ def synthesize(store, mode, question, records, *, cacheable=False):
     if not ai_enabled():
         return dict(empty, status="unavailable", limitations="AI analysis is unavailable. Explore the source evidence below.")
     model = (os.getenv("NEWS_AI_ANALYSIS_MODEL") or get_openai_model()) if mode == "compare" else get_openai_model()
+    system = INSTRUCTIONS + f"\nWrite the answer in {OUTPUT_LANGUAGES.get(language, 'English')}; preserve source names and uncertainty."
     payload = json.dumps({"task": mode, "question": question, "evidence": [
         {key: row[key] for key in ("id", "title", "publisher", "excerpt", "published_at")} for row in evidence]},
         ensure_ascii=False)
-    cache_key = hashlib.sha256(json.dumps(["research-v1", INSTRUCTIONS, model, payload]).encode()).hexdigest()
+    cache_key = hashlib.sha256(json.dumps(["research-v2", system, model, payload]).encode()).hexdigest()
     if cacheable and (cached := store.get_summary(cache_key)):
         return cached
     if not reserve(store, "answers", 180, 1500):
         return dict(empty, status="budget_limited", limitations="AI analysis reached its daily limit. Source evidence is still available.")
     schema = answer_schema(evidence)
     try:
-        response = generate_response(payload, INSTRUCTIONS, schema, max_tokens=1300, model=model)
+        response = generate_response(payload, system, schema, max_tokens=1300, model=model)
         answer = validate_answer(schema.model_validate_json(response), evidence)
     except Exception as error:
         logger.warning("research_answer_rejected type=%s", type(error).__name__)
@@ -282,14 +293,19 @@ def synthesize(store, mode, question, records, *, cacheable=False):
     return answer
 
 
-def research(store, *, question, mode, filters, anchor=None):
+def research(store, *, question, mode, filters, anchor=None, language="en", retrieval_question=None, context_rows=()):
     scope = dict(filters)
     hours = scope.pop("hours")
-    lexical = lexical_results(store, question, hours, scope)
-    semantic, vector_status = vector_results(store, question, hours, scope, anchor)
-    rows = select_evidence(lexical, semantic, anchor=anchor, question=question)
+    retrieval_question = retrieval_question or question
+    lexical = lexical_results(store, retrieval_question, hours, scope)
+    semantic, vector_status = vector_results(store, retrieval_question, hours, scope, anchor)
+    rows = select_evidence(lexical, semantic, anchor=anchor, question=retrieval_question)
+    if context_rows:
+        context_ids = {item["id"] for item in context_rows[:3]}
+        rows = [*context_rows[:3], *(row for row in rows if row["id"] not in context_ids)]
+        rows = rows[:12]
     records = [evidence_record(row) for row in rows]
-    answer = (synthesize(store, mode, question, records, cacheable=bool(anchor))
+    answer = (synthesize(store, mode, question, records, cacheable=bool(anchor), language=language)
               if mode != "search" else None)
     return {"evidence": records, "clusters": evidence_clusters(rows), "answer": answer,
             "retrieval": "hybrid" if semantic else "keyword", "semantic_index": vector_status,
