@@ -206,10 +206,10 @@ def topic_for(article):
         return "video"
     if kind == "status" or default == "outages":
         return "outages"
-    if kind == "research" or default == "research":
-        return "research"
     if source and source.coverage == "advisory":
         return default
+    if kind == "research" or default == "research":
+        return "research"
 
     title = normalize("NFKC", article.get("title") or "").translate(HYPHENS)
     if source:
@@ -256,7 +256,7 @@ def public_article(article):
     reading_time = article.get("reading_time_minutes") or max(1, (words_count + 199) // 200)
 
     private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
-                      "community_relevant", "source_eligible", "_reading_access", "_reading_content"}
+                      "community_relevant", "source_eligible", "_feed_ids", "_reading_access", "_reading_content"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }

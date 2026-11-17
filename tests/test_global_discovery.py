@@ -222,11 +222,15 @@ def test_archive_upgrade_backfills_legacy_rows_and_keeps_canonical_owner(legacy_
     assert "brief_articles_topic_page" in indexes
     if engine.dialect.name == "postgresql":
         assert search_index == "trigram" and "brief_articles_search_trgm" in indexes
-    store.ingest("anthropic-research", [dict(article, publisher="Anthropic Research")], True)
+    store.ingest("anthropic-research", [dict(article, publisher="Anthropic Research")], True,
+                 diagnostics={"observed": 2, "rejected": 1})
+    assert store.feed_diagnostics()["anthropic-research"]["observed"] == 2
+    assert store.article_feed_ids("legacy") == {"anthropic-news", "anthropic-research"}
     page = store.page(hours=24, source="all", query="sao paulo", kind="all", publisher="", limit=12, cursor=None)
     assert [(row["id"], row["source_id"], row["topic"]) for row in page["articles"]] == [
         ("legacy", "anthropic-news", "security")]
     store.enable("anthropic-news", False)
+    assert store.article_feed_ids("legacy") == {"anthropic-research"}
     store.ingest("anthropic-research", [dict(article, publisher="Anthropic Research")], True)
     assert store.pinned_articles(["legacy"])[0]["source_id"] == "anthropic-research"
     store.engine.dispose()
@@ -247,6 +251,29 @@ def test_conditional_feed_state_is_additive_and_preserves_archive_rows(legacy_ar
     assert metadata["etag"] == '"v1"'
     assert store.source_state()[source.id]["count"] == 1
     assert store.article(story_row["id"])["title"] == story_row["title"]
+    store.engine.dispose()
+
+
+def test_archive_discovery_ranks_followed_author_before_feed_sampling(legacy_archive, monkeypatch):
+    from app.article_metadata import author_identity
+
+    store = Store(legacy_archive)
+    store.migrate()
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    now = datetime.now(UTC)
+    records = [story("techcrunch", f"recent-{i}", f"Startup funding report {i}") for i in range(12)]
+    older = dict(story("techcrunch", "followed-author", "Startup funding in Nairobi"),
+                 published_at=(now - timedelta(days=42)).isoformat(), author="Njeri Wafula")
+    store.ingest("techcrunch", [*records, older], True)
+    with TestClient(server.app) as client:
+        result = client.post("/api/recommendations", json={"scope": {"hours": 2160, "publisher": "techcrunch"},
+                             "authors": [author_identity(older)], "q": "startup funding", "limit": 3})
+        assert result.status_code == 200, result.text
+        first = result.json()["articles"][0]
+        assert first["id"] == older["id"]
+        assert "From an author you follow" in first["recommendation_reasons"]
+        details = client.get("/api/articles/followed-author").json()
+        assert details["summary"]["basis"] == "publisher_excerpt" and details["summary"]["limited_source"]
     store.engine.dispose()
 
 

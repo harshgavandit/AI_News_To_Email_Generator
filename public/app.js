@@ -38,7 +38,7 @@ const state = {
   tab: "build",
   delivery: "email",
 };
-const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d" };
+const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d", 2160: "90d" };
 const defaultSort = (searching) => searching ? "relevance" : "latest";
 const node = (tag, className, text) => {
   const el = document.createElement(tag);
@@ -279,6 +279,24 @@ async function loadHeadlines() {
     // Browsing and search still work when the optional headlines request fails.
   }
 }
+
+async function loadSignals() {
+  try {
+    const data = await request("/api/signals");
+    const articles = data.articles || [];
+    $("signals-content").replaceChildren(...articles.slice(0, 6).map((article) => {
+      const item = node("article", "priority-signal");
+      const open = node("button", "", article.title);
+      open.type = "button";
+      open.dir = "auto";
+      open.addEventListener("click", () => openDossier(article, open));
+      item.append(node("span", "signal-type", article.signal_reason), open,
+        node("p", "muted", `${article.publisher} · ${relativeTime(article.published_at)}`));
+      return item;
+    }));
+    $("priority-signals").hidden = !articles.length;
+  } catch { /* Optional; search and reading continue when signals are unavailable. */ }
+}
 function readingFilters() {
   return {
     source: state.source,
@@ -296,6 +314,7 @@ function readingFilters() {
 }
 
 function syncURL() {
+  $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || state.view === "saved";
   const url = new URL(location.href);
   for (const [key, value] of Object.entries(readingFilters())) {
     if (!value || value === "all") url.searchParams.delete(key);
@@ -1244,6 +1263,7 @@ $("reset-filters").addEventListener("click", () => {
   loadNews();
 });
 $("search").addEventListener("input", () => {
+  $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || state.view === "saved";
   clearTimeout(searchTimer);
   $("clear-search").hidden = !$("search").value;
   searchTimer = setTimeout(() => loadNews(), 250);
@@ -1259,6 +1279,11 @@ $("clear-search").addEventListener("click", () => {
   $("search").focus();
 });
 $("show-more").addEventListener("click", () => loadNews(true));
+$("archive-search").addEventListener("click", () => {
+  state.hours = 2160;
+  reflectFilters();
+  loadNews();
+});
 $("brief-from-view").addEventListener("click", () => {
   $("digest-topic").value = state.topic === "all" ? "" : state.topic;
   $("digest-region").value = $("region").value;
@@ -2093,6 +2118,7 @@ function reflectTopic() {
   $("outage-links").hidden = state.topic !== "outages";
 }
 function reflectFilters() {
+  $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || state.view === "saved";
   reflectTopic();
   reflectWorkspace();
   for (const button of $("window-controls").children)
@@ -2148,6 +2174,7 @@ if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
 loadNews().then(() => openLinkedArticle());
 loadHeadlines();
+loadSignals();
 loadTrending();
 window.addEventListener("hashchange", () => {
   if (location.hash === "#composer") openBuilder("build", $("nav-builder"));
@@ -2267,6 +2294,25 @@ async function loadArticleDetails(article, details) {
     syncFollowActions();
     $("dossier-reading-access").textContent = data.article.reading_access?.label || "Publisher excerpt";
     $("dossier-reading-notice").textContent = data.reading_notice;
+    const highlights = data.summary?.highlights || [];
+    $("dossier-highlights").hidden = !highlights.length;
+    $("dossier-highlights-basis").textContent = data.summary?.limited_source ?
+      "Selected sentences from the publisher excerpt" : "Selected sentences from the article shared with permission";
+    $("dossier-highlights-list").replaceChildren(...highlights.map((text) => {
+      const line = node("li", "", text);
+      line.lang = data.article.language || "";
+      line.dir = "auto";
+      return line;
+    }));
+    $("dossier-indexed-by").textContent = (data.also_indexed_by || []).map((entry) => entry.label).join(", ");
+    $("dossier-indexed-by-row").hidden = !$("dossier-indexed-by").textContent;
+    const references = (data.article.references || []).filter((reference) => reference.url !== data.article.url);
+    $("dossier-references").hidden = !references.length;
+    $("dossier-reference-list").replaceChildren(...references.map((reference) => {
+      const line = node("li");
+      line.append(externalLink(reference.url, reference.label));
+      return line;
+    }));
     const body = $("dossier-full-body");
     body.replaceChildren();
     body.hidden = !data.reading?.html;
@@ -2315,6 +2361,7 @@ function openDossier(article, trigger, details) {
 }
 
 function renderDossier(details) {
+  $("dossier-references").hidden = true;
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
   const topic = article.category || article.topic;
@@ -2370,6 +2417,11 @@ function renderDossier(details) {
   $("dossier-summary").dir = $("dossier-summary").lang === "ar" ? "rtl" : "auto";
   $("dossier-full-body").hidden = true;
   $("dossier-full-body").replaceChildren();
+  $("dossier-highlights").hidden = true;
+  $("dossier-highlights").open = false;
+  $("dossier-highlights-list").replaceChildren();
+  $("dossier-indexed-by-row").hidden = true;
+  $("dossier-indexed-by").textContent = "";
   const effectiveWhy = deriveWhyItMatters(article);
   $("dossier-why-section").hidden = !effectiveWhy;
   $("dossier-why-text").textContent = effectiveWhy || "";

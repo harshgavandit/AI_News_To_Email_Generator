@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/saved-views.css" />
     <link rel="stylesheet" href="/foundations.css" />
     <link rel="stylesheet" href="/desk.css" />
+    <link rel="stylesheet" href="/polish.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -190,6 +191,7 @@
                     <button type="button" data-hours="24" aria-label="Last 24 hours" aria-pressed="false">24h</button>
                     <button type="button" data-hours="168" aria-label="Last 7 days" aria-pressed="false">7d</button>
                     <button type="button" data-hours="720" aria-label="Last 30 days" aria-pressed="false">30d</button>
+                    <button type="button" data-hours="2160" aria-label="Last 90 days" aria-pressed="false">90d</button>
                   </div>
                   <button id="filter-toggle" class="filter-button" type="button" aria-expanded="false" aria-controls="extra-filters">
                     Filters <span id="filter-count" hidden></span>
@@ -304,6 +306,7 @@
           <div class="results-line">
             <div class="reading-result-context">
               <p id="news-status" role="status" aria-live="polite">Loading stories…</p>
+              <button id="archive-search" class="text-button" type="button" hidden>Search across all 90 days →</button>
               <button id="reset-filters" type="button" class="text-button" hidden>Reset filters</button>
               <button id="brief-from-view" type="button" class="text-button" hidden>Build a brief for this view <span aria-hidden="true">↗</span></button>
               <button id="export-saved-md" type="button" class="text-button" hidden>Export Markdown</button>
@@ -567,6 +570,12 @@
       </div>
       </div>
       <aside class="intelligence-rail" aria-label="Intelligence and daily delivery">
+      <section id="priority-signals" class="priority-signals" aria-labelledby="signals-title" hidden>
+        <h2 id="signals-title">Priority signals</h2>
+        <p class="muted">Material developments from the last 24 hours</p>
+        <div id="signals-content"></div>
+        <p class="signal-notice">Selected from publisher headlines and excerpts. Open each source to assess its evidence.</p>
+      </section>
       <section id="headlines" class="headlines" aria-labelledby="headlines-title" hidden>
         <div class="headline-header">
           <h2 id="headlines-title">Developing stories</h2>
@@ -744,14 +753,21 @@
         <p id="dossier-author" class="dossier-author" hidden></p>
         <div id="dossier-tags" class="dossier-tags" aria-label="Article subjects"></div>
         <div class="dossier-actions-bar">
-          <button id="dossier-follow-author" class="button secondary" type="button" aria-pressed="false" hidden>Follow author</button>
-          <button id="dossier-follow-publication" class="button secondary" type="button" aria-pressed="false">Follow publication</button>
           <a id="dossier-external-link" class="button primary" target="_blank" rel="noopener noreferrer">
             Read original <span aria-hidden="true">↗</span>
           </a>
-          <button id="dossier-listen-btn" class="button secondary" type="button">Listen</button>
           <button id="dossier-summarize" class="button secondary" type="button">Create AI brief</button>
           <button id="dossier-stop-btn" class="button secondary" type="button" hidden>Stop</button>
+          <button id="dossier-save-btn" class="button secondary" type="button" aria-pressed="false">
+            Save story
+          </button>
+        </div>
+        <details class="reader-tools">
+          <summary>Reading tools &amp; follow options</summary>
+          <div class="dossier-actions-bar">
+          <button id="dossier-follow-author" class="button secondary" type="button" aria-pressed="false" hidden>Follow author</button>
+          <button id="dossier-follow-publication" class="button secondary" type="button" aria-pressed="false">Follow publication</button>
+          <button id="dossier-listen-btn" class="button secondary" type="button">Listen</button>
           <button id="dossier-share-btn" class="button secondary" type="button" aria-label="Share story">
             Share ↗
           </button>
@@ -762,15 +778,18 @@
           <button id="dossier-pin-btn" class="button secondary" type="button" aria-pressed="false">
             Pin to brief
           </button>
-          <button id="dossier-save-btn" class="button secondary" type="button" aria-pressed="false">
-            Save story
-          </button>
           <button id="dossier-copy-btn" class="button secondary" type="button">
             Copy Markdown
           </button>
-        </div>
+          </div>
+        </details>
         <p id="dossier-feedback" class="status" role="status"></p>
         <div class="dossier-layers">
+          <details id="dossier-highlights" class="dossier-section dossier-highlights" hidden>
+            <summary class="dossier-section-title">Story summary</summary>
+            <p id="dossier-highlights-basis" class="dossier-reading-notice"></p>
+            <ul id="dossier-highlights-list" class="dossier-takeaways"></ul>
+          </details>
           <section class="dossier-section">
             <h3 id="dossier-basis" class="dossier-section-title"></h3>
             <p id="dossier-summary" class="dossier-text" dir="auto"></p>
@@ -799,9 +818,15 @@
             <dl class="dossier-audit-grid">
               <div><dt>Source domain</dt><dd id="dossier-audit-url"></dd></div>
               <div><dt>Publisher region</dt><dd id="dossier-audit-region"></dd></div>
+              <div id="dossier-indexed-by-row" hidden><dt>Also indexed by</dt><dd id="dossier-indexed-by"></dd></div>
             </dl>
             <a id="dossier-topic-link" hidden>Browse more on this topic <span aria-hidden="true">→</span></a>
             <a id="dossier-contribute" class="dossier-contribute-link">Own this article? Offer full-text reading permission →</a>
+            <div id="dossier-references" hidden>
+              <h3 class="dossier-section-title">References supplied by the publisher</h3>
+              <p class="muted">Links from the feed excerpt; their contents have not been independently verified.</p>
+              <ul id="dossier-reference-list"></ul>
+            </div>
           </section>
         </div>
       </div>

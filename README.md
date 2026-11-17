@@ -2,11 +2,11 @@
 
 [Open Informa AI](https://ai-news-to-email-generator.vercel.app/)
 
-Browse global technology news, research, security advisories, developer articles, and official release notes. Sources include TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, selected Medium feeds, and public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags. Filter by topic, subject, publisher, region, language, source type, and time.
+Browse global technology news, research, security advisories, developer articles, and official release notes. Sources include TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, selected Medium feeds, and public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags across up to 90 days of retained stories. Filter by topic, subject, publisher, region, language, source type, and time.
 
 Use the Daily briefing for a five-story catch-up, or explore all stories, topics and saved monitoring views from the workspace navigation. Hide read stories from the loaded selection, compare supporting coverage, and pin a selection into the brief builder. The interface supports light and dark themes, card and list reading, and a compact mobile navigation.
 
-Open a story in the Reading Room to read its supplied excerpt, compare matching reports from other publishers, or pin those reports to a brief. Save articles, share a story link, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. Search and filters narrow the articles before personalization ranks them. Coverage and related links show what connected the records, such as closely matching headlines or a shared CVE identifier.
+Open a story in the Reading Room to see its publisher excerpt and related reporting. When enough text is available, the story summary highlights sentences from the excerpt or an article shared with permission. Save articles, share a story link, pin reports to a brief, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. Search and filters narrow the articles before personalization ranks them. Coverage and related links show what connected the records, such as closely matching headlines or a shared CVE identifier.
 
 Preview the Global Top 5 or tailor a brief by coverage and reader perspective. Pin articles to include them and export the result as Markdown, HTML, or an email file. Briefs identify whether each summary comes from a publisher excerpt, a headline, or AI synthesis. Verified inboxes can receive a brief or opt in to the scheduled Global Top 5 when email delivery is configured.
 

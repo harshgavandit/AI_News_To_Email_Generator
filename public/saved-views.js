@@ -94,7 +94,30 @@ export function initSavedViews(root, { readView, applyView, onChange = () => {} 
       removeButton.textContent = "Remove";
       removeButton.setAttribute("aria-label", `Remove saved view ${view.name}`);
       removeButton.addEventListener("click", () => remove(view));
-      row.append(open, removeButton);
+      const updateButton = document.createElement("button");
+      updateButton.type = "button";
+      updateButton.className = "saved-view-remove";
+      updateButton.textContent = "Update";
+      updateButton.setAttribute("aria-label", `Update saved view ${view.name} with current filters`);
+      updateButton.addEventListener("click", () => {
+        refresh();
+        const parameters = readView().toString();
+        if (parameters.length > maxParametersLength) {
+          feedback("These filters are too long to save.");
+          return;
+        }
+        if (!views.some(stored => nameKey(stored.name) === nameKey(view.name))) {
+          render();
+          nameInput.focus();
+          feedback("This view was already removed.");
+          return;
+        }
+        save(views.map(stored => nameKey(stored.name) === nameKey(view.name) ? { ...stored, parameters } : stored));
+        render();
+        summary.focus();
+        feedback(`Updated “${view.name}” with your current filters.`);
+      });
+      row.append(open, updateButton, removeButton);
       return row;
     });
     list.replaceChildren(...rows);

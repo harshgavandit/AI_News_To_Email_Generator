@@ -87,6 +87,8 @@ test('actual Reading Room module opens permitted text, follows its author and re
     const data = path.startsWith('/api/news') ? { ...catalog, articles: [article], total: 1, sources: catalog.sources, facets: {} } :
       path.startsWith('/api/articles/') ? { article: { ...article, reading_access: { mode: permitted ? 'full_text' : 'excerpt', label: permitted ? 'Full article · with permission' : 'Publisher excerpt' } }, related: [coverage], coverage: [coverage],
         reading: permitted ? { html: '<p>Licensed body supplied by the author.</p>', attribution: 'A Writer' } : null,
+        summary: { limited_source: !permitted, highlights: permitted ? ['Licensed body supplied by the author.'] : [] },
+        also_indexed_by: [{ id: 'medium-codex', label: 'CodeX feed' }],
         reading_notice: permitted ? 'Shared with permission.' : 'Publisher-supplied excerpt.' } :
       path === '/api/headlines' ? { articles: [], coverage: [] } : path === '/api/trending' ? { trending: [] } : {};
     return new Response(JSON.stringify(data), { status: 200 });
@@ -96,6 +98,10 @@ test('actual Reading Room module opens permitted text, follows its author and re
     await until(() => document.querySelector('.card-dossier-btn'));
     document.querySelector('.card-dossier-btn').click();
     await until(() => document.getElementById('dossier-full-body').textContent.includes('Licensed body'));
+    assert.equal(document.getElementById('dossier-highlights').hidden, false);
+    assert.match(document.getElementById('dossier-highlights-basis').textContent, /shared with permission/);
+    assert.equal(document.getElementById('dossier-indexed-by').textContent, 'CodeX feed');
+    document.getElementById('dossier-highlights').open = true;
     document.getElementById('dossier-follow-author').click();
     assert.equal(JSON.parse(localStorage.getItem('informa-interests-v1')).authors[0], authorKey);
     document.getElementById('dossier-close').click();
@@ -104,6 +110,9 @@ test('actual Reading Room module opens permitted text, follows its author and re
     await until(() => document.getElementById('dossier-reading-access').textContent === 'Publisher excerpt');
     assert.equal(document.getElementById('dossier-full-body').hidden, true);
     assert.equal(document.getElementById('dossier-full-body').textContent, '');
+    assert.equal(document.getElementById('dossier-highlights').hidden, true);
+    assert.equal(document.getElementById('dossier-highlights').open, false);
+    assert.equal(document.getElementById('dossier-highlights-list').textContent, '');
     assert.equal(document.querySelectorAll('#dossier-matches .related-story').length, 1);
     assert.equal(document.getElementById('dossier-related-section').hidden, true);
     document.getElementById('dossier-coverage-brief').click();
@@ -235,6 +244,18 @@ test('monitoring views appear in the workspace and restore their search', async 
     assert.equal(document.getElementById('search').value, 'kubernetes');
     assert(requests.at(-1).includes('q=kubernetes'));
     assert.equal(JSON.parse(localStorage.getItem('informa-saved-views-v1'))[0].name, 'Cloud watch');
+    document.getElementById('search').value = 'postgres';
+    document.querySelector('[aria-label="Update saved view Cloud watch with current filters"]').click();
+    const updated = JSON.parse(localStorage.getItem('informa-saved-views-v1'));
+    assert.equal(updated.length, 1);
+    assert.equal(new URLSearchParams(updated[0].parameters).get('q'), 'postgres');
+    document.getElementById('search').value = '';
+    document.querySelector('#sidebar-saved-views button').click();
+    assert.equal(document.getElementById('search').value, 'postgres');
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    document.getElementById('archive-search').click();
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    assert(requests.at(-1).includes('hours=2160'));
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 

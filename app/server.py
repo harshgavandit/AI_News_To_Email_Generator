@@ -46,6 +46,7 @@ from app.services.email import send_email
 from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
+from app.article_summary import article_summary
 from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
@@ -54,12 +55,14 @@ from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, subjects_for
 from app.syndication import router as syndication_router
+from app.discovery_health import router as discovery_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
 app.include_router(mail_events_router)
 app.include_router(workspace_router)
 app.include_router(syndication_router)
+app.include_router(discovery_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -67,13 +70,14 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v11")
-_news_cache = Cache("news-v16")
+_news_cache = Cache("news-v17")
 _headline_cache = Cache("headlines-v7")
-_trending_cache = Cache("trending-v5")
+_signals_cache = Cache("signals-v1")
+_trending_cache = Cache("trending-v6")
 _briefing_cache = Cache("briefing-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
-ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=15)
+ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=5)
 FEED_FILTERS = ("source", "publisher", "kind", "region", "coverage", "language")
 
 
@@ -120,6 +124,7 @@ class TimeWindow(IntEnum):
     day = 24
     week = 168
     month = 720
+    archive = 2160
 
 
 class DigestRequest(BaseModel):
@@ -353,10 +358,10 @@ class RecommendationRequest(BaseModel):
         return self
 
 
-def intelligence_candidates(store, hours=168, *, scope=None, query=""):
+def intelligence_candidates(store, hours=168, *, scope=None, query="", interests=None):
     filters = scope.model_dump(exclude={"hours"}) if scope else {}
     if store:
-        return store.world_candidates(hours, (), query=query, **filters)
+        return store.world_candidates(hours, (), query=query, interests=interests, **filters)
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=hours)
     result = []
@@ -387,9 +392,9 @@ def recommendations(body: RecommendationRequest, request: Request, response: Res
     rate_limit(request, "recommendations", 60)
     response.headers["Cache-Control"] = "no-store"
     query = search_text(body.q)
-    candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query)
+    candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query, interests=body)
     ranked = recommend(candidates, topics=body.topics, subjects=body.subjects, preferred_sources=body.sources,
-                       authors=body.authors, exclude_ids=body.exclude_ids, query=query, limit=body.limit)
+                       authors=body.authors, exclude_ids=body.exclude_ids, query=query, limit=body.limit, hours=body.scope.hours)
     if store and ranked["articles"]:
         enriched = store.with_reading_access(ranked["articles"])
         for article in enriched:
@@ -436,15 +441,18 @@ def article_details(article_id: str, response: Response):
     if store:
         related = store.with_reading_access(related)
         coverage = store.with_reading_access(coverage)
+    reading = raw.get("_reading_content")
+    seen_in = store.article_feed_ids(article_id) if store else raw.get("_feed_ids", ())
+    indexed_by = [dict(id=entry.id, label=entry.label) for entry in BY_ID.values()
+                  if entry.id in seen_in and entry.id != article.get("source_id")]
     response.headers["Cache-Control"] = "no-store"
     return {"article": article, "related": [public_article(item) for item in related],
             "coverage": [public_article(item) for item in coverage],
-            "reading": raw.get("_reading_content"),
+            "reading": reading,
             "reading_notice": ("Full text shared with permission from the rights holder. Original source and attribution are preserved."
-                if raw.get("_reading_content") else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
+                if reading else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
                 if article["has_excerpt"] else "Headline and source link only. The article body has not been retrieved or summarized."),
-            "summary": {"text": article["cleanSummary"], "basis": article["summary_basis"],
-                        "limited_source": True}}
+            "summary": article_summary(article, reading), "also_indexed_by": indexed_by}
 
 
 @app.get("/api/headlines")
@@ -463,6 +471,23 @@ def headlines(response: Response):
     response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
     if data["articles"]:
         response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30"
+    return data
+
+
+@app.get("/api/signals")
+def signals(response: Response):
+    from app.signals import priority_signals
+    store = get_store()
+    key = hashlib.sha256(str(store.engine.url if store else "rss").encode()).hexdigest()
+    data, _ = _signals_cache.get(key)
+    if data is None:
+        with _signals_cache.key_lock(key):
+            data, _ = _signals_cache.get(key)
+            if data is None:
+                rows = store.headline_candidates(24, include_primary=True, per_source=40) if store else collect_news()["articles"]
+                data = priority_signals(rows)
+                _signals_cache.put(key, data, ttl=60)
+    response.headers["Cache-Control"] = "public, max-age=30"
     return data
 
 

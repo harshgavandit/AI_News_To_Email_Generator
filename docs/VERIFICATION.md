@@ -1,5 +1,12 @@
 # Informa AI verification
 
+## Global discovery and story summaries — November 17, 2026
+
+- All 168 enabled integrations passed a live refresh into a disposable SQLite archive, including two valid feeds with zero eligible items. The refresh processed 5,550 source records in 49.18 seconds and retained 4,274 after deduplication and pruning. JetBrains Kotlin, JPCERT/CC Alerts, and arXiv Hardware Architecture returned 12, 6, and 16 eligible feed records respectively. Eighty-six retained article IDs occurred in two or more feeds.
+- Live-fed API checks covered 90-day ranked search, separate cursor pages, Arabic publisher filtering, source-based recommendations, article summaries and provenance, trending topics, the Daily briefing, and a five-story digest with HTML and Markdown. Twenty-five repeated requests for one uncached Kotlin query through the local SQLite API measured a 44.3 ms p95. This measures a single local query and dataset.
+- Chrome at 1440 and 375 CSS pixels checked the 90-day filter, article summary attribution, original-source links, saved-story persistence after navigation, and Arabic right-to-left reading. The Python suites exercise the archive upgrade and the approved, withdrawn, and revoked reading states against disposable SQLite and PostgreSQL databases. Browser client tests include permission-dependent summaries and removal of stale licensed content.
+- Production promotion, production-scale load, and live AI and email delivery were outside this validation run.
+
 ## Workspace and daily briefing update — November 16, 2026
 
 - The competitive review used public Particle, Trace and Feedly pages, published stylesheets, first-party documentation, and public product images. Computer Use stopped because it could not verify the browser URL on Windows. The redesigned desktop and mobile layouts therefore still need direct visual browser validation.

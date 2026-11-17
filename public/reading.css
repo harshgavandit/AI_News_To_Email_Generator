@@ -732,3 +732,11 @@
     font-size: 23px;
   }
 }
+.dossier-highlights > summary {
+  cursor: pointer;
+  margin: 0;
+}
+
+.dossier-highlights[open] > summary {
+  margin-bottom: 0.5rem;
+}

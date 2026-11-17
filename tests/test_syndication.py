@@ -93,12 +93,18 @@ def test_end_to_end_private_submission_approval_reading_and_withdrawal(workspace
     assert reading.headers["cache-control"] == "no-store"
     assert reading.json()["article"]["reading_access"]["mode"] == "full_text"
     assert "Practical database indexing" in reading.json()["reading"]["html"]
+    summary = reading.json()["summary"]
+    assert summary["basis"] == "licensed_article_extract" and not summary["limited_source"]
+    assert summary["highlights"] and all(line in reading.json()["reading"]["text"] for line in summary["highlights"])
+    assert len(summary["text"]) <= 400
     assert "writer@example.org" not in reading.text and "permission_evidence" not in reading.text
     page = owner.get("/api/news?source=medium").json()
     assert page["articles"][0]["reading_access"]["mode"] == "full_text"
     assert stranger.post(f"/api/mail/contributions/{ident}/withdraw").status_code == 404
     assert author.post(f"/api/mail/contributions/{ident}/withdraw").json()["state"] == "withdrawn"
-    assert stranger.get("/api/articles/permission-article").json()["reading"] is None
+    withdrawn = stranger.get("/api/articles/permission-article").json()
+    assert withdrawn["reading"] is None
+    assert withdrawn["summary"]["basis"] == "publisher_excerpt" and withdrawn["summary"]["limited_source"]
     assert owner.post(f"/api/admin/contributions/{ident}/review", json=review).status_code == 409
     with store.engine.connect() as conn:
         assert conn.scalar(select(reading_permissions.c.active)) is False

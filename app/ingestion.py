@@ -21,7 +21,9 @@ def refresh_sources(store, only=None, *, source_ids=None):
         futures = {}
         for source in active:
             saved = validators.get(source.id, {})
-            if source.integration == "rss":
+            if source.integration == "publisher-metadata":
+                future = pool.submit(read_feed, source, known_urls=store.source_article_urls(source.id))
+            elif source.integration == "rss":
                 # A targeted owner refresh requests a complete snapshot for recovery.
                 cached = saved if only is None and saved.get("feed_url") == source.url else {}
                 future = pool.submit(read_feed, source, validators=cached)
@@ -38,7 +40,9 @@ def refresh_sources(store, only=None, *, source_ids=None):
             store.ingest(source.id, items, status["available"], status.get("error"),
                          feed_url=source.url if source.integration == "rss" else None,
                          validators=status.get("validators"), unchanged=status.get("unchanged", False),
-                         retry_after=status.get("retry_after", 0))
+                         retry_after=status.get("retry_after", 0),
+                         diagnostics=({"observed": status["observed_entries"], "rejected": status["rejected_entries"]}
+                             if "observed_entries" in status else None))
     if only is None and source_ids is None:
         store.prune()
     return source_catalog(store)

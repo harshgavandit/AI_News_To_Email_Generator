@@ -19,7 +19,7 @@ from sqlalchemy.exc import DBAPIError
 from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
-from app.article_metadata import metadata_for, restore_metadata
+from app.article_metadata import author_identity, metadata_for, restore_metadata
 from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 
 schema = MetaData()
@@ -31,10 +31,10 @@ articles = Table("brief_articles", schema,
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
     Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
-    Column("community_relevant", Boolean), Column("source_eligible", Boolean))
+    Column("community_relevant", Boolean), Column("source_eligible", Boolean), Column("author_key", String(39)))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
                      articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
-                     articles.c.source_eligible)
+                     articles.c.source_eligible, articles.c.author_key)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -44,6 +44,19 @@ article_indexes = (
 search_document = (func.coalesce(articles.c.search_title, literal_column("''")) + literal_column("' '")
                    + func.coalesce(articles.c.search_description, literal_column("''")) + literal_column("' '")
                    + func.coalesce(articles.c.search_publisher, literal_column("''")))
+
+
+def search_rank(query):
+    title, publisher, excerpt = articles.c.search_title, articles.c.search_publisher, articles.c.search_description
+    score = case((title.contains(query, autoescape=True), 10), else_=0)
+    score += case((excerpt.contains(query, autoescape=True), 3), else_=0)
+    for term in search_terms(query) or (query,):
+        score += case((title.contains(term, autoescape=True), 3), else_=0)
+        score += case((publisher.contains(term, autoescape=True), 1), else_=0)
+        score += case((excerpt.contains(term, autoescape=True), 1), else_=0)
+    return score
+
+
 sources = Table("brief_sources", schema,
     Column("id", String(64), primary_key=True), Column("enabled", Boolean, nullable=False, default=True),
     Column("available", Boolean, nullable=False, default=False), Column("count", Integer, nullable=False, default=0),
@@ -55,6 +68,11 @@ feed_validators = Table("brief_feed_validators", schema,
 feed_retries = Table("brief_feed_retries", schema,
     Column("id", String(64), primary_key=True), Column("failures", Integer, nullable=False),
     Column("retry_at", Float, nullable=False))
+article_feeds = Table("brief_article_feeds", schema,
+    Column("article_id", String(40), primary_key=True), Column("source_id", String(64), primary_key=True))
+feed_diagnostics = Table("brief_feed_diagnostics", schema,
+    Column("id", String(64), primary_key=True), Column("observed", Integer, nullable=False),
+    Column("rejected", Integer, nullable=False), Column("updated", Float, nullable=False))
 limits = Table("brief_limits", schema, Column("scope", String(150), primary_key=True),
     Column("bucket", String(30), primary_key=True), Column("used", Integer, nullable=False),
     Column("touched", Float, nullable=False))
@@ -114,7 +132,7 @@ def discovery_fields(article):
     return {"topic": topic_for(article), "search_title": search_text(article["title"]),
             "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
             "subject_keys": "|" + "|".join(subjects_for(article)) + "|",
-            "source_eligible": eligible,
+            "source_eligible": eligible, "author_key": author_identity(article),
             "community_relevant": (dev_article_in_scope(article) if article["source_id"] in GENERAL_DEV_FEEDS else None)}
 
 
@@ -122,6 +140,7 @@ def backfill_discovery(conn):
     stmt = select(*(articles.c[key] for key in ("id", "url", "source_id", "source", "title", "description", "publisher",
                                                "category", "kind", "metadata_json"))).where(or_(
         articles.c.topic.is_(None), articles.c.subject_keys.is_(None), articles.c.source_eligible.is_(None),
+        articles.c.author_key.is_(None),
         and_(articles.c.source_id.in_(GENERAL_DEV_FEEDS), articles.c.community_relevant.is_(None))))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
@@ -242,7 +261,7 @@ class Store:
     def ensure_feed_state_schema(self):
         if not self._feed_state_ready:
             with self._schema_lock, self.engine.begin() as conn:
-                tables = (feed_validators, feed_retries)
+                tables = (feed_validators, feed_retries, article_feeds, feed_diagnostics)
                 inspector = inspect(conn)
                 if not all(inspector.has_table(table.name) for table in tables):
                     if conn.dialect.name == "postgresql":
@@ -270,7 +289,7 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
 
     def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None,
-               unchanged=False, retry_after=0):
+               unchanged=False, retry_after=0, diagnostics=None):
         self.ensure_feed_state_schema()
         if items and available:
             self.ensure_discovery_schema()
@@ -279,6 +298,10 @@ class Store:
         if available and not unchanged:
             state.update(last_success=now, count=len(items))
         with self.engine.begin() as conn:
+            if diagnostics and available:
+                stmt = self.insert(feed_diagnostics).values(id=source_id, updated=now, **diagnostics)
+                conn.execute(stmt.on_conflict_do_update(index_elements=[feed_diagnostics.c.id],
+                    set_={"updated": now, **diagnostics}))
             if unchanged:
                 conn.execute(update(sources).where(sources.c.id == source_id, sources.c.last_success.is_not(None))
                              .values(**state, last_success=now))
@@ -290,6 +313,8 @@ class Store:
                                                  "category", "published_at")}, "source_id": source_id,
                            "kind": a.get("kind", "news"),
                            "metadata_json": json.dumps(metadata_for(a), ensure_ascii=False)} for a in items]
+                values.sort(key=lambda row: row["id"])
+                ids = [row["id"] for row in values]
                 for article in values:
                     article.update(discovery_fields(restore_metadata(article)))
                 # Registry order owns overlapping publisher feeds regardless of refresh completion order.
@@ -300,9 +325,15 @@ class Store:
                     paused = select(sources.c.id).where(sources.c.id == articles.c.source_id,
                                                         sources.c.enabled.is_(False)).exists()
                     changed &= or_(articles.c.source_id.not_in([literal(ident) for ident in preferred]), paused)
+                # Preserve the original feed of an archived row before a preferred feed can replace it.
+                sightings = select(articles.c.id, articles.c.source_id).where(articles.c.id.in_(ids))
+                conn.execute(self.insert(article_feeds).from_select(["article_id", "source_id"], sightings)
+                             .on_conflict_do_nothing())
                 conn.execute(stmt.on_conflict_do_update(index_elements=[articles.c.id],
                     set_={c.name: stmt.excluded[c.name] for c in fields},
                     where=changed), values)
+                conn.execute(self.insert(article_feeds).on_conflict_do_nothing(),
+                             [{"article_id": ident, "source_id": source_id} for ident in ids])
             stmt = self.insert(sources).values(id=source_id, **state)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_=state))
             if available:
@@ -363,13 +394,7 @@ class Store:
                           coverage=coverage, language=language, subject=subject)
         columns = (articles.c.published_at, articles.c.id)
         if ranked:
-            title, name, desc = articles.c.search_title, articles.c.search_publisher, articles.c.search_description
-            score = case((title.contains(query, autoescape=True), 10), else_=0)
-            score += case((desc.contains(query, autoescape=True), 3), else_=0)
-            for term in search_terms(query) or (query,):
-                score += case((title.contains(term, autoescape=True), 3), else_=0)
-                score += case((name.contains(term, autoescape=True), 1), else_=0)
-                score += case((desc.contains(term, autoescape=True), 1), else_=0)
+            score = search_rank(query)
             stmt = stmt.add_columns(score.label("search_score"))
             columns = (score, *columns)
         with self.engine.connect() as conn:
@@ -395,6 +420,13 @@ class Store:
             result = dict(row) if row else None
         return self.with_reading_access([result], include_body=True)[0] if result else None
 
+    def article_feed_ids(self, ident):
+        self.ensure_feed_state_schema()
+        stmt = select(article_feeds.c.source_id).outerjoin(sources, article_feeds.c.source_id == sources.c.id).where(
+            article_feeds.c.article_id == ident, sources.c.enabled.is_not(False))
+        with self.engine.connect() as conn:
+            return set(conn.scalars(stmt))
+
     def related_candidates(self, ident, terms):
         if not terms:
             return []
@@ -407,25 +439,82 @@ class Store:
             return [dict(row) for row in conn.execute(stmt).mappings()]
 
     def world_candidates(self, hours, source_ids, *, topic="all", region="", language="", coverage="", subject="",
-                         source="all", publisher="", kind="all", query=""):
+                         source="all", publisher="", kind="all", query="", interests=None):
         # Limit each publisher within each topic so high-volume feeds cannot crowd out regional ones.
+        order = [articles.c.published_at.desc(), articles.c.id.desc()]
+        if interests is not None:
+            # Scale the preference weights to match the final ranker's search-score contribution.
+            boosts = [search_rank(query)] if query else []
+            if interests.authors:
+                boosts.append(case((articles.c.author_key.in_(interests.authors), 28), else_=0))
+            if interests.sources:
+                preferred = or_(articles.c.source_id.in_(interests.sources), articles.c.source.in_(interests.sources))
+                boosts.append(case((preferred, 16), else_=0))
+            if interests.subjects:
+                subject_match = or_(*(articles.c.subject_keys.contains(f"|{key}|", autoescape=True)
+                                      for key in interests.subjects))
+                boosts.append(case((subject_match, 16), else_=0))
+            if boosts:
+                order.insert(0, sum(boosts).desc())
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
-            order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("topic_rank")
-        ranked = self.query(hours, source=source, publisher=publisher, kind=kind, query=query,
-                            source_ids=source_ids, topic=topic, region=region,
-                            language=language, coverage=coverage, subject=subject).add_columns(rank).subquery()
+            order_by=order).label("topic_rank")
+        candidates = self.query(hours, source=source, publisher=publisher, kind=kind, query=query,
+                                source_ids=source_ids, topic=topic, region=region,
+                                language=language, coverage=coverage, subject=subject)
+        if interests and interests.exclude_ids:
+            candidates = candidates.where(articles.c.id.not_in(interests.exclude_ids))
+        ranked = candidates.add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
-    def headline_candidates(self, hours):
-        providers = [s.id for s in BY_ID.values() if s.coverage == "reporting" and s.kind != "video"]
+    def headline_candidates(self, hours, *, include_primary=False, per_source=10):
+        providers = [s.id for s in BY_ID.values() if s.coverage in (
+            {"reporting", "publisher", "advisory"} if include_primary else {"reporting"}) and s.kind != "video"]
         rank = func.row_number().over(partition_by=articles.c.source_id,
             order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("publisher_rank")
         ranked = self.query(hours).where(articles.c.source_id.in_(providers)).add_columns(rank).subquery()
         # A high-volume publisher cannot crowd quieter regional sources out of selection.
         with self.engine.connect() as conn:
-            rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= 10)).mappings()
+            rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= per_source)).mappings()
             return [{key: value for key, value in row.items() if key != "publisher_rank"} for row in rows]
+
+    def feed_diagnostics(self):
+        self.ensure_feed_state_schema()
+        with self.engine.connect() as conn:
+            return {row["id"]: dict(row) for row in conn.execute(select(feed_diagnostics)).mappings()}
+
+    def source_article_urls(self, source_id):
+        stmt = self.query(2160).where(or_(articles.c.source_id == source_id, articles.c.id.in_(
+            select(article_feeds.c.article_id).where(article_feeds.c.source_id == source_id))))
+        self.ensure_feed_state_schema()
+        with self.engine.connect() as conn:
+            return {row["url"] for row in conn.execute(stmt).mappings()}
+
+    def coverage_counts(self):
+        stmt = self.query(24).subquery()
+        with self.engine.connect() as conn:
+            return dict(conn.execute(select(stmt.c.topic, func.count()).group_by(stmt.c.topic)).all())
+
+    def lookup_url(self, url):
+        from app.news import canonical_url
+        canonical = canonical_url(url)
+        parts = urlsplit(canonical)
+        alternate = canonical.replace(parts.netloc, parts.netloc.removeprefix("www.") if parts.netloc.startswith("www.")
+                                      else "www." + parts.netloc, 1)
+        stmt = self.query(2160).where(or_(articles.c.url.in_((canonical, alternate)),
+            articles.c.metadata_json.contains(canonical, autoescape=True),
+            articles.c.metadata_json.contains(alternate, autoescape=True)))
+        with self.engine.connect() as conn:
+            matched = []
+            for row in conn.execute(stmt.limit(50)).mappings():
+                article = restore_metadata(row)
+                try:
+                    if any(canonical_url(value) in (canonical, alternate) for value in
+                           (article["url"], article.get("original_url", "")) if value):
+                        matched.append(article)
+                except ValueError:
+                    continue
+            return matched[:10]
 
     def candidates(self, hours, source_ids, terms, *, topic="all", region="", language="", coverage="", subject=""):
         stmt = self.query(hours, source_ids=source_ids, topic=topic, region=region, language=language, coverage=coverage,
@@ -728,6 +817,7 @@ class Store:
 
     def prune(self):
         self.ensure_discovery_schema()
+        self.ensure_feed_state_schema()
         now = time.time()
         cutoff = (datetime.now(UTC) - timedelta(days=90)).isoformat()
         with self.engine.begin() as conn:
@@ -739,6 +829,7 @@ class Store:
                 (summaries, summaries.c.created < now - 90 * 86400), (articles, articles.c.published_at < cutoff),
                 (mail_batches, mail_batches.c.created < now - 7 * 86400),
                 (mail_events, mail_events.c.received_at < now - 30 * 86400),
+                (article_feeds, ~select(articles.c.id).where(articles.c.id == article_feeds.c.article_id).exists()),
             ):
                 conn.execute(delete(table).where(condition))
 

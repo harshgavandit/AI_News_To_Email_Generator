@@ -45,7 +45,9 @@ function prepareCatalog(data) {
     const regionLabel = region === "Global" ? "Global" :
       source.region && source.region !== region ? source.region : labels.region[region];
     const location = [regionLabel, labels.language[source.language]].filter(Boolean).join(" · ");
-    const type = [labels.coverage[coverage], source.integration && source.integration !== "rss" ? "Official API" : "RSS / Atom"].filter(Boolean).join(" · ");
+    const type = [labels.coverage[coverage], source.integration === "news-sitemap" ? "Publisher news sitemap" :
+      source.integration === "publisher-metadata" ? "Publisher metadata" :
+      source.integration && source.integration !== "rss" ? "Official API" : "RSS / Atom"].filter(Boolean).join(" · ");
     const focus = labels.topic[source.topic];
     const keywords = normalize([source.label, location, labels.region[region], type, focus, statusLabels[freshness]].join(" "));
     return { ...source, freshness, region, coverage, location, type, focus, keywords };
@@ -204,3 +206,45 @@ element("source-reset").addEventListener("click", resetFilters);
 element("source-clear-empty").addEventListener("click", resetFilters);
 element("source-retry").addEventListener("click", loadSources);
 loadSources();
+
+async function loadCoverage() {
+  try {
+    const response = await fetch("/api/discovery/coverage", { signal: AbortSignal.timeout(20000) });
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    element("coverage-topics").replaceChildren(...data.topics.map((topic) => {
+      const card = node("a", "coverage-topic");
+      card.href = `/?${new URLSearchParams({topic: topic.id, window: "24h"})}#reading-room`;
+      card.append(node("strong", "", topic.label), node("span", "", `${number.format(topic.articles_24h)} stories · ${topic.fresh_feeds}/${topic.feeds} feeds current`));
+      return card;
+    }));
+  } catch { element("coverage-status").textContent = "Coverage counts are temporarily unavailable."; }
+}
+loadCoverage();
+
+element("story-check-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.currentTarget.querySelector("button");
+  button.disabled = true;
+  element("story-check-status").textContent = "Checking the archive…";
+  element("story-check-results").replaceChildren();
+  try {
+    const response = await fetch(`/api/discovery/check?${new URLSearchParams({url: element("story-check-url").value.trim()})}`, {signal: AbortSignal.timeout(20000)});
+    const data = await response.json();
+    if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Coverage check is unavailable.");
+    const labels = { indexed: "This story is indexed. Open it below; your reading filters may have hidden it.",
+      unsupported_source: "This publisher is not currently integrated. Paste the original publisher URL if you used a sharing link.",
+      awaiting_sync: "This publisher is integrated and awaiting its first synchronization.",
+      source_unavailable: "The publisher is integrated, but its sources are currently unavailable or paused.",
+      not_in_archive: "This article is not in the retained archive. The publisher’s feeds may omit it or it may be outside the 90-day window." };
+    element("story-check-status").textContent = labels[data.status] || "Coverage check completed.";
+    const content = element("story-check-results");
+    for (const article of data.articles || []) {
+      const link = node("a", "coverage-match", article.title);
+      link.href = `/?${new URLSearchParams({article: article.id})}#reading-room`;
+      content.append(link);
+    }
+    for (const source of data.sources || []) content.append(node("p", "muted", `${source.label}: ${statusLabels[source.freshness] || source.freshness}${source.retry_at ? ` · retry after ${fullDateTime.format(new Date(source.retry_at))}` : ""}`));
+  } catch (error) { element("story-check-status").textContent = error.message || "Could not check coverage. Try again."; }
+  finally { button.disabled = false; }
+});

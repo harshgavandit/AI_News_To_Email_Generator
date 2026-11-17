@@ -10,7 +10,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 `GET /api/news?hours=168&q=vector+search&sort=relevance&limit=12`
 
-- `hours` accepts `12`, `24`, `168`, or `720`.
+- `hours` accepts `12`, `24`, `168`, `720`, or `2160`. The 90-day window covers retained, previously ingested articles.
 - `topic`, `subject`, `source`, `publisher`, `kind`, `region`, `language`, and `coverage` can be combined. `GET /api/sources` returns `topics`, `subjects`, `regions`, `languages`, and `coverage_types` maps, plus provenance, integration type, last successful check, and latest retained publication time for each source. `region` describes the publisher's coverage. Use `coverage=article` for articles and tutorials, `source=medium` for selected Medium feeds, or `subject=cloud` for cloud infrastructure across topics.
 - `facets.topics`, `facets.regions`, and `facets.languages` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, feed excerpts, and retained author names and tags. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Archive and direct-feed search use the same weights. Relevance without a query uses newest-first order.
@@ -23,7 +23,7 @@ Reviewed source path and title constraints also apply to retained articles throu
 
 ## Reading and recommendations
 
-`GET /api/articles/{article_id}` returns an enabled, retained article, up to five related articles, a reading notice, and the source excerpt with `limited_source: true`. When an active, owner-approved reading permission exists, `reading` contains sanitized HTML, plain text and attribution; otherwise it is `null`. Missing or paused-source articles return `404`. Detail responses are `no-store` so withdrawn permissions are checked on the next read. There is no arbitrary URL fetch or automatic article extraction. The frontend uses `/?article=<id>#reading-room` for shareable reader links. These links resolve while the record remains in the archive (currently 90 days).
+`GET /api/articles/{article_id}` returns an enabled, retained article, up to five related articles, a reading notice and `summary`. The summary includes `text`, `basis`, `limited_source` and an array of short extractive `highlights`. `publisher_excerpt` uses supplied excerpt sentences, while `headline_only` has no highlights. An active, owner-approved permission makes `reading` available with sanitized HTML, plain text and attribution. Highlights from that body use `licensed_article_extract` with `limited_source: false`. `also_indexed_by` lists enabled secondary feeds that supplied the same archived ID. Missing or paused-source articles return `404`. Detail responses use `no-store` and check permission on each read. The frontend uses `/?article=<id>#reading-room` for shareable links during the article's archive retention.
 
 Article records may include `author`, `author_url`, `author_key`, `tags`, `original_url`, `discussion_url`, `points`, `comments_count`, and a reviewed `thumbnail_url`. These fields are bounded and sanitized before storage and on read. Images are loaded directly from reviewed hosts with no referrer. `reading_time_basis` distinguishes a publisher-provided article estimate from the excerpt. `reading_access.mode` is `excerpt`, `headline_only`, or `full_text`; full text requires a separate reviewed permission record and cannot be enabled by upstream metadata. List badges can retain their one-minute cache, while reading details always recheck permission. AI briefs continue to use publisher excerpts even when licensed text is available for reading.
 
@@ -37,7 +37,7 @@ Related results come from the last 30 days, using at most 200 archive candidates
 {"topics":["software","research"],"subjects":["cloud","open-source"],"sources":["dev","medium-codex"],"authors":[],"exclude_ids":[],"q":"Kubernetes","limit":24,"scope":{"hours":168,"coverage":"article"}}
 ```
 
-It ranks a bounded, publisher-and-topic-diverse pool. The optional `scope` accepts `hours` (12, 24, 168 or 720), `source`, `publisher`, `kind`, `topic`, `region`, `coverage`, `language`, and `subject` with the same IDs used by `/api/news`. Omit individual filters for all values. The default is seven days of all coverage. Search `q` and the scope are applied before the archive samples candidate rows. The response echoes `scope` and includes `articles`, `total_candidates`, `personalized`, `basis`, and `updated_at`. Each article includes `recommendation_reasons`. Interests, up to 50 followed source groups/feeds, and up to 30 validated author keys receive preference weights, with smaller freshness, excerpt-availability and engagement signals. A publisher diversity penalty and canonical URL deduplication reduce repetition. This ranking uses the supplied preferences and requires zero model calls. Browser interests stay local. Selected preferences and at most 100 excluded read IDs are submitted per request. Responses are `no-store` and the endpoint is rate limited.
+It ranks a bounded, publisher-and-topic-diverse pool. The optional `scope` accepts `hours` (12, 24, 168, 720 or 2160), `source`, `publisher`, `kind`, `topic`, `region`, `coverage`, `language`, and `subject` with the same IDs used by `/api/news`. Omit individual filters for all values. The default is seven days of all coverage. Search and scope narrow the archive before sampling. Within each publisher and topic, search relevance, followed authors, and preferred subjects can keep an older matching article in the sample. The response echoes `scope` and includes `articles`, `total_candidates`, `personalized`, `basis`, and `updated_at`. Each article includes `recommendation_reasons`. Interests, up to 50 followed source groups or feeds, and up to 30 validated author keys receive preference weights, with smaller freshness, excerpt-availability and engagement signals. Publisher diversity and canonical URL deduplication reduce repetition. Browser interests stay local. Selected preferences and at most 100 excluded read IDs are submitted per request. Responses are `no-store` and the endpoint is rate limited.
 
 ## Author reading permissions
 
@@ -52,7 +52,7 @@ The author workspace is `/contribute.html?article=<id>`. It reuses existing inbo
 
 Private responses are `no-store`. Raw Markdown stays in private review records; public HTML is rebuilt through a strict element/link allowlist. Scripts, images, embedded assets, forms, event handlers and styles are removed, with a second allowlist in the browser. The owner key stays in page memory and is cleared on lock. These routes do not create per-user email delivery privileges beyond the existing verified-inbox rules.
 
-`GET /api/trending` analyzes the recent, bounded pool across reporting, developer articles, research and community sources. Counts describe observed matching records, not global popularity. It excludes future-dated records and exact canonical duplicates. The returned `query` is derived from source text so the topic chip opens a searchable phrase. `source_count` gives the number of observed source feeds.
+`GET /api/trending` analyzes a bounded sample from the last 48 hours across reporting, developer articles, research and community sources. It excludes future-dated records and canonical duplicates. Trends use recent mentions, a shared advisory identifier, or tags supplied by at least three source groups. `basis` identifies the signal, `source_count` reports the number of source groups, and `query` opens the matching archive search.
 
 ## Build and deliver a brief
 
@@ -67,3 +67,11 @@ Story `summary_basis` is `ai_feed_summary`, `publisher_excerpt`, or `headline_on
 ## Health and job routes
 
 `GET /api/health` reports service liveness and configuration. `GET /api/ready` returns `503` if the archive is missing or lacks a fresh feed. Job routes require a configured scheduler token. See [release operations](LAUNCH.md) for setup, quotas, and delivery monitoring.
+
+## Coverage monitoring and priority signals
+
+- `GET /api/signals`: publisher-diverse material developments from 24 hours with explicit selection reasons; not independently verified alerts.
+- `GET /api/discovery/coverage`: topic story counts, source health and bounded ingestion diagnostics.
+- `GET /api/discovery/check?url=<publisher HTTPS URL>`: archive and source-health lookup, including community original links. Never fetches the submitted URL.
+
+See [coverage investigation](COVERAGE-REPAIR.md) for discovery boundaries and verification.

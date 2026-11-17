@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="/workspace.css" />
     <link rel="stylesheet" href="/foundations.css" />
     <link rel="stylesheet" href="/directory.css" />
+    <link rel="stylesheet" href="/polish.css" />
     <script type="module" src="/sources.js"></script>
   </head>
   <body>
@@ -61,6 +62,22 @@
           <div><dt>Languages</dt><dd id="source-language-count"></dd></div>
         </dl>
       </div>
+      <details class="coverage-overview">
+        <summary>Coverage by topic</summary>
+        <p>Feed focus and stories indexed in the last 24 hours. Feed health does not guarantee every article is captured.</p>
+        <div id="coverage-topics" class="coverage-topics"></div>
+        <p id="coverage-status" role="status"></p>
+      </details>
+      <details class="story-check">
+        <summary>Can’t find a story?</summary>
+        <p>Check an original publisher link against our 90-day archive and source health.</p>
+        <form id="story-check-form">
+          <label for="story-check-url">Original article URL</label>
+          <div class="story-check-input"><input id="story-check-url" type="url" maxlength="2048" required placeholder="https://publisher.com/article"><button class="button secondary" type="submit">Check coverage</button></div>
+        </form>
+        <p id="story-check-status" role="status"></p>
+        <div id="story-check-results"></div>
+      </details>
       <fieldset id="directory-filters" class="directory-filters" aria-label="Filter sources" disabled>
         <div class="directory-search-bar">
           <div class="directory-search" role="search" aria-label="Source directory">

@@ -2,8 +2,9 @@
 from datetime import UTC, datetime, timedelta
 import re
 from collections import Counter, defaultdict
+from app.coverage import topic_for
 from app.discovery import search_text
-from app.intelligence import deduplicate, references
+from app.intelligence import GENERIC_TERMS, deduplicate, references
 
 
 TRENDING_PATTERNS = (
@@ -31,6 +32,10 @@ TRENDING_PATTERNS = (
     ("DevOps & Containers", "software", r"\bdocker\b|containers?|ci/cd"),
     ("Agents & Tooling", "ai", r"\bagentic\b|ai agents?|tool[ -]use|mcp\b"),
 )
+COMPILED_PATTERNS = [(label, category, re.compile(pattern, re.I))
+                     for label, category, pattern in TRENDING_PATTERNS]
+GENERIC_TAGS = GENERIC_TERMS | {"ai", "dev", "programming", "webdev", "beginners", "discuss", "career",
+                               "tech", "news", "tutorials", "community", "articles", "developer tools"}
 
 
 def extract_trending(articles, *, hours=48, limit=10):
@@ -47,8 +52,8 @@ def extract_trending(articles, *, hours=48, limit=10):
     pool = deduplicate(pool)
 
     results = []
-    for label, category, pattern in TRENDING_PATTERNS:
-        matcher = re.compile(pattern, re.I)
+    curated_tags = set()
+    for label, category, matcher in COMPILED_PATTERNS:
         matched = [(a, matcher.search(" ".join([a.get("title", ""), a.get("cleanSummary") or a.get("description") or ""])))
                    for a in pool]
         matches = [(a, match) for a, match in matched if match]
@@ -60,12 +65,14 @@ def extract_trending(articles, *, hours=48, limit=10):
             f"{a.get('title', '')} {a.get('description', '')}") for term in query.split())]
         count = len(matching)
         if count > 0:
+            curated_tags.update(queries)
             results.append({
                 "tag": label,
                 "category": category,
                 "count": count,
                 "query": query,
-                "source_count": len({a.get("source_id") or a.get("source") for a in matching}),
+                "source_count": len({a.get("source") or a.get("source_id") for a in matching}),
+                "basis": "recent_mentions",
             })
 
     advisory_mentions = defaultdict(list)
@@ -77,10 +84,26 @@ def extract_trending(articles, *, hours=48, limit=10):
         if len(publishers) < 2:
             continue
         results.append({"tag": identifier, "category": "security", "count": len(mentions),
-                        "query": search_text(identifier), "source_count": len(publishers)})
-    results.sort(key=lambda t: (t["count"], t["source_count"]), reverse=True)
+                        "query": search_text(identifier), "source_count": len(publishers), "basis": "shared_advisory"})
+
+    observed = defaultdict(list)
+    for article in pool:
+        # Archive and API feeds expose these tags through the same search document as the headline.
+        tags = {search_text(tag) for tag in article.get("tags", ())}
+        for tag in sorted(tags - GENERIC_TAGS - curated_tags):
+            if 3 <= len(tag) <= 40 and len(tag.split()) <= 4 and any(char.isalpha() for char in tag):
+                observed[tag].append(article)
+    for tag, mentions in observed.items():
+        publishers = {article.get("source") for article in mentions if article.get("source")}
+        if len(publishers) >= 3:
+            category = Counter(topic_for(article) for article in mentions).most_common(1)[0][0]
+            results.append({"tag": tag, "category": category, "count": len(mentions), "query": tag,
+                            "source_count": len(publishers), "basis": "publisher_tags"})
+
+    results.sort(key=lambda row: (-row["source_count"], -row["count"], row["query"]))
     return {
         "trending": results[:limit],
         "total_analyzed": len(pool),
+        "window_hours": hours,
         "updated_at": now.isoformat(),
     }

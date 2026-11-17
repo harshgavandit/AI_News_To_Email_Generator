@@ -281,7 +281,15 @@ def test_cross_publisher_advisory_trend_and_preprint_deduplication():
         story("report", source_id="the-hacker-news", title=title),
     ])
     assert {"tag": "CVE-2026-12345", "query": "cve 2026 12345", "category": "security",
-            "count": 2, "source_count": 2} in result["trending"]
+            "count": 2, "source_count": 2, "basis": "shared_advisory"} in result["trending"]
+
+
+def test_trending_can_discover_a_tag_across_independent_source_groups():
+    posts = [dict(story(ident, source_id=source), tags=["Passkeys", "Beginners"]) for ident, source in
+             (("a", "dev-community"), ("b", "dev-latest"), ("c", "hashnode-discover"), ("d", "techcrunch"))]
+    trend = next(row for row in extract_trending(posts)["trending"] if row["query"] == "passkeys")
+    assert trend["source_count"] == 3 and trend["count"] == 4 and trend["basis"] == "publisher_tags"
+    assert all(row["query"] != "beginners" for row in extract_trending(posts)["trending"])
 
 
 def test_subject_classification_preserves_multidisciplinary_context():

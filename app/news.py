@@ -12,6 +12,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import feedparser
 import httpx
+from bs4 import BeautifulSoup
 
 from app.sources import DEFAULT_SOURCES, Source
 from app.sanitation import sanitize_story_excerpt, sanitize_text
@@ -25,7 +26,7 @@ _lock = threading.Lock()
 _refreshed = 0
 MAX_BYTES = 5_000_000
 FEED_WORKERS = 14
-TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", "wt_mc", ".tsrc", "__source"}
+TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", "wt_mc", ".tsrc", "__source", "shem"}
 TECH_SECTION = re.compile(r"\b(?:tech(?:nology|-science)?|artificial intelligence|ai)\b", re.I)
 TECH_HEADLINE = re.compile(
     r"\b(?:AI|LLM|NVIDIA|Jensen Huang|ChatGPT|OpenAI|Anthropic|Google|Microsoft|Apple|Meta|Amazon|TikTok|"
@@ -129,7 +130,7 @@ def fetch_bytes(url):
 
 async def fetch_with_deadline(url, validators=None):
     # The deadline covers DNS, connection, redirects and the response body.
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; InformaAI/1.0; +https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
+    headers = {"User-Agent": "InformaAI/1.1 (+https://github.com/harshgavandit/AI_News_To_Email_Generator)"}
     async with asyncio.timeout(10):
         async with httpx.AsyncClient(timeout=httpx.Timeout(10, connect=6), follow_redirects=False, trust_env=False) as client:
             for _ in range(3):
@@ -155,7 +156,23 @@ async def fetch_with_deadline(url, validators=None):
     raise ValueError("Too many feed redirects")
 
 
-def read_feed(task, *, validators=None):
+def read_feed(task, *, validators=None, known_urls=()):
+    if isinstance(task, Source) and task.integration == "publisher-metadata":
+        try:
+            from app.publisher_listing import read_listing
+            return read_listing(task, fetch_bytes, known_urls=known_urls)
+        except httpx.HTTPStatusError as error:
+            return [], {**task.public(), "available": False, "count": 0, **http_failure(error)}
+        except Exception:
+            return [], dict(task.public(), available=False, count=0, error="metadata_unavailable")
+    if isinstance(task, Source) and task.integration == "news-sitemap":
+        try:
+            from app.news_sitemap import read_news_sitemap
+            return read_news_sitemap(task, fetch_bytes)
+        except httpx.HTTPStatusError as error:
+            return [], {**task.public(), "available": False, "count": 0, **http_failure(error)}
+        except Exception:
+            return [], dict(task.public(), available=False, count=0, error="sitemap_unavailable")
     if isinstance(task, Source) and task.integration == "hashnode-api":
         from app.hashnode import read_hashnode
         return read_hashnode(task)
@@ -210,7 +227,14 @@ def read_feed(task, *, validators=None):
         for entry in parsed.entries[:200]:
             try:
                 # HN links to arbitrary external sites; retain the reviewed discussion URL.
-                url = canonical_url(entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", ""), medium=medium)
+                raw_link = entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", "")
+                # Older publisher feeds still advertise HTTP permalinks. Upgrade only
+                # reviewed hosts; this never fetches an article or relaxes URL validation.
+                candidate = urlsplit(raw_link)
+                if (candidate.scheme == "http" and candidate.hostname and candidate.hostname.removeprefix("www.") in allowed_hosts
+                        and not candidate.username and not candidate.password and candidate.port in (None, 80)):
+                    raw_link = urlunsplit(("https", candidate.hostname, candidate.path, candidate.query, ""))
+                url = canonical_url(raw_link, medium=medium)
                 parts = urlsplit(url)
                 host = parts.hostname.removeprefix("www.")
                 allowed_link = host in allowed_hosts or (medium and host.endswith(".medium.com"))
@@ -249,6 +273,8 @@ def read_feed(task, *, validators=None):
                 media_items = entry.get("media_thumbnail") or entry.get("media_content") or []
                 image = next((item.get("url", "") for item in media_items if isinstance(item, dict)), "")
                 story_record.update(metadata_for({"tags": tags,
+                    "references": [{"url": link.get("href"), "label": link.get_text(" ", strip=True)}
+                        for link in BeautifulSoup(raw_desc[:50000], "html.parser").select("a[href]")[:8]],
                     "author_url": s.author_url if not entry.get("author") or entry.get("author") == s.author_name else None,
                     "author": entry.get("author") or s.author_name,
                     "thumbnail_url": image, "original_url": entry.get("link") if s.id == "hacker-news" else None,
@@ -261,6 +287,7 @@ def read_feed(task, *, validators=None):
         if parsed.entries and not has_valid_entry:
             return [], dict(status, error="no_eligible_entries")
         return list(articles.values()), dict(status, available=True, count=len(articles),
+            observed_entries=len(parsed.entries), rejected_entries=min(200, len(parsed.entries)) - len(articles),
             latest_published_at=max((article["published_at"] for article in articles.values()), default=None))
     except httpx.HTTPStatusError as error:
         return [], {**status, **http_failure(error)}
@@ -300,9 +327,14 @@ def collect_news(*, force=False):
                     _cache[s.id] = (articles, status)
             _refreshed = time.monotonic()
         unique = {}
-        for items, _ in _cache.values():
+        for feed_id, (items, _) in _cache.items():
             for article in items:
-                unique.setdefault(article["id"], article)
+                ident = article["id"]
+                if ident in unique:
+                    first = unique[ident]
+                    unique[ident] = dict(first, _feed_ids=(*first.get("_feed_ids", ()), feed_id))
+                else:
+                    unique[ident] = article
         return {"articles": sorted(unique.values(), key=lambda a: (a["published_at"], a["id"]), reverse=True),
                 "sources": [status for _, status in _cache.values()],
                 "fetched_at": max((status["checked_at"] for _, status in _cache.values()), default=None)}

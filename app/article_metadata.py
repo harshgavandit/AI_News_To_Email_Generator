@@ -14,7 +14,7 @@ IMAGE_HOSTS = ("i.ytimg.com", "media.dev.to", "media2.dev.to", "cdn.hashnode.com
                "images.unsplash.com", "techcrunch.com", "theverge.com", "arstechnica.com",
                "cdn.arstechnica.net", "media.wired.com", "cdn.vox-cdn.com", "platform.theverge.com")
 METADATA_FIELDS = ("author", "author_url", "tags", "original_url", "discussion_url", "thumbnail_url", "points", "comments_count",
-                   "reading_time_minutes")
+                   "reading_time_minutes", "references")
 
 
 def public_link(value):
@@ -55,6 +55,21 @@ def metadata_for(article):
     for field in ("original_url", "discussion_url", "author_url"):
         if url := public_link(article.get(field)):
             metadata[field] = url
+    references = article.get("references")
+    if isinstance(references, (tuple, list)):
+        links = []
+        budget = 3500
+        for reference in references[:8]:
+            if not isinstance(reference, dict) or not (url := public_link(reference.get("url"))):
+                continue
+            label = sanitize_text(reference.get("label"), limit=100) or urlsplit(url).hostname
+            if len(url) + len(label) > budget:
+                continue
+            if url not in {item["url"] for item in links}:
+                links.append({"url": url, "label": label})
+                budget -= len(url) + len(label)
+        if links:
+            metadata["references"] = links
     if thumbnail := safe_thumbnail(article.get("thumbnail_url")):
         metadata["thumbnail_url"] = thumbnail
     for field in ("points", "comments_count", "reading_time_minutes"):

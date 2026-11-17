@@ -80,9 +80,11 @@ def deduplicate(articles):
     return result
 
 
-def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors=(), exclude_ids=(), query="", limit=24):
+def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors=(), exclude_ids=(), query="", limit=24,
+              hours=720):
     from app.coverage import public_article
     now = datetime.now(UTC)
+    earliest = now - timedelta(hours=hours)
     excluded = set(exclude_ids)
     phrase = search_text(query)
     terms = search_terms(phrase)
@@ -93,7 +95,7 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
             continue
         try:
             published = datetime.fromisoformat(article["published_at"])
-            if not now - timedelta(days=30) <= published <= now:
+            if not earliest <= published <= now:
                 continue
         except (ValueError, TypeError):
             continue
