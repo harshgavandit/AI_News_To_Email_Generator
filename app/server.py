@@ -763,7 +763,14 @@ def reader_refresh_scope(catalog, filters, *, force):
     cutoff = (now - ARCHIVE_REFRESH_INTERVAL).isoformat()
     active = [feed for feed in catalog if feed["enabled"] and (feed.get("retry_at") or "") <= now.isoformat()]
     checked = {feed["id"] for feed in active if feed["checked_at"]}
-    overdue = {feed["id"] for feed in active if (feed["checked_at"] or "") <= cutoff}
+    def feed_due(feed):
+        if feed["available"] is False:
+            return True
+        if feed.get("next_check_at"):
+            return feed["next_check_at"] <= now.isoformat()
+        return (feed["checked_at"] or "") <= cutoff
+
+    overdue = {feed["id"] for feed in active if feed_due(feed)}
     scoped_filters = {name: filters[name] for name in FEED_FILTERS}
     scoped = selected_feeds(active, **scoped_filters)
     if force and len(scoped) < len(active):

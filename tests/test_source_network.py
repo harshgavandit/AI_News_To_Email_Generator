@@ -147,3 +147,16 @@ def test_quiet_source_freshness_uses_its_declared_poll_interval():
     feed = {"available": True, "last_success": (now - timedelta(hours=2)).isoformat(), "refresh_minutes": 360}
     assert ingestion.source_freshness(feed, cutoff) == "fresh"
     assert ingestion.source_freshness({**feed, "refresh_minutes": 10}, cutoff) == "stale"
+
+
+def test_reader_does_not_claim_a_global_refresh_for_not_due_podcasts():
+    now = datetime.now(UTC)
+    catalog = [
+        {**BY_ID["bbc-tech"].public(), "checked_at": (now - timedelta(minutes=20)).isoformat(),
+         "available": True, "next_check_at": (now - timedelta(minutes=10)).isoformat()},
+        {**BY_ID["practicalai"].public(), "checked_at": (now - timedelta(minutes=6)).isoformat(),
+         "available": True, "next_check_at": (now + timedelta(minutes=54)).isoformat()},
+    ]
+    filters = {"source": "all", "publisher": "", "kind": "podcast", "region": "", "coverage": "", "language": ""}
+    assert server.reader_refresh_scope(catalog, filters, force=False) == set()
+    assert server.reader_refresh_scope(catalog, {**filters, "kind": "all"}, force=False) == set()
