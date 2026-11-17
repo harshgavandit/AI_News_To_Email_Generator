@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       feeds_only:
-        description: Run today's publisher refresh without sending morning mail
+        description: Run publisher synchronization without sending morning mail
         type: boolean
         default: true
       intelligence_only:
@@ -22,9 +22,9 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event.schedule == '30 2 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only)
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 8
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
@@ -36,8 +36,8 @@ jobs:
             echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
             exit 1
           fi
-          complete=false
-          for attempt in {1..24}; do
+          # Two bounded batches per tick; overdue feeds resume on the next tick.
+          for attempt in {1..2}; do
             result=$(curl --silent --show-error --fail --max-time 115 --retry 1 --retry-max-time 115 \
               --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
               <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
@@ -48,17 +48,12 @@ jobs:
               exit 0
             fi
             if jq -e '(.status == "complete" or .status == "refreshed") and .remaining == 0' <<< "$result" > /dev/null; then
-              complete=true
               break
             fi
             jq -e '.status == "already_started" or (.status == "refreshed" and .checked > 0 and .remaining > 0)' \
               <<< "$result" > /dev/null
             sleep 15
           done
-          if [[ "$complete" != true ]]; then
-            echo '::error::The daily refresh still has feeds waiting to be checked.'
-            exit 1
-          fi
           ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
             'https://ai-news-to-email-generator.vercel.app/api/ready')
           jq -e '.freshness.counts | select(.fresh > 0)' <<< "$ready"

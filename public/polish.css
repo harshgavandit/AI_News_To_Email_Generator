@@ -16,6 +16,8 @@ body { text-rendering: optimizeLegibility; }
 .coverage-topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .coverage-topic { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; text-decoration: none; }
 .coverage-topic span { color: var(--muted); font-size: 12px; }
+.coverage-topic .coverage-gap { color: var(--ink); font-weight: 600; }
+.coverage-attention { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
 .story-check label { display: block; margin-bottom: 8px; font-size: 13px; }
 .story-check-input { display: flex; gap: 8px; }
 .story-check-input input { flex: 1; min-width: 0; }

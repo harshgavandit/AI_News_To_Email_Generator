@@ -515,6 +515,6 @@ LANGUAGES = {code: label for code, label in (
     ("es-419", "Spanish (Latin America)"), ("nl", "Dutch"),
     ("zh-CN", "Chinese (Simplified)"), ("zh-TW", "Chinese (Traditional)"), ("ar", "Arabic"),
     ("und", "Not specified"),
-    ("tr", "Turkish"), ("pl", "Polish"),
+    ("tr", "Turkish"), ("pl", "Polish"), ("fa", "Persian"), ("vi", "Vietnamese"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}
 LANGUAGES.update({source.language: source.language for source in DEFAULT_SOURCES if source.language not in LANGUAGES})

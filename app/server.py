@@ -42,7 +42,7 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import daily_refresh_plan, feed_freshness, morning_refresh_at, refresh_sources, source_catalog
+from app.ingestion import daily_refresh_plan, feed_freshness, morning_refresh_at, refresh_mode, refresh_plan, refresh_sources, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
@@ -735,6 +735,8 @@ def mail_job_health(authorization: str | None = Header(default=None)):
 @app.get("/api/jobs/refresh")
 def refresh_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
+    if refresh_mode() == "adaptive":
+        return adaptive_refresh_job(source_store())
     now = datetime.now(timezone.utc)
     morning = morning_refresh_at(now)
     if now < morning:
@@ -765,6 +767,34 @@ def refresh_job(authorization: str | None = Header(default=None)):
         if not remaining:
             result["scheduled_at"] = next_morning
         return result
+    finally:
+        store.finish_refresh(lease)
+
+
+def adaptive_refresh_job(store):
+    lease = store.claim_refresh()
+    if lease is None:
+        return {"status": "already_started"}
+    try:
+        before = store.source_state(include_archive=False)
+        due = refresh_plan(before, due_only=True)
+        if not due:
+            return {"status": "complete", "mode": "adaptive", "checked": 0, "remaining": 0}
+        refresh_sources(store, due_only=True, maximum=64, per_host=12, include_archive=False, prune=False)
+        after = store.source_state(include_archive=False)
+        changed = [source.id for source in due if after.get(source.id, {}).get("checked") !=
+                   before.get(source.id, {}).get("checked")]
+        remaining = refresh_plan(after, due_only=True)
+        if not changed:
+            raise HTTPException(503, "The feed refresh batch made no progress.")
+        cleanup = store.claim_refresh(scheduled=True, scope="archive-cleanup")
+        if cleanup is not None:
+            try:
+                store.prune()
+            finally:
+                store.finish_refresh(cleanup, cooldown=3600, scope="archive-cleanup")
+        return {"status": "refreshed", "mode": "adaptive", "checked": len(changed),
+                "healthy": sum(after[ident]["available"] is True for ident in changed), "remaining": len(remaining)}
     finally:
         store.finish_refresh(lease)
 

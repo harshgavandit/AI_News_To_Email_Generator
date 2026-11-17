@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from collections import Counter, defaultdict
 import threading
 import time
+import os
 from urllib.parse import urlsplit
 
 from app.coverage import region_id
@@ -14,6 +15,10 @@ FRESH_FOR = timedelta(minutes=45)
 INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
 DAILY_REFRESH_GRACE = timedelta(minutes=45)
 HOST_GATES = defaultdict(lambda: threading.Semaphore(2))
+
+
+def refresh_mode():
+    return "daily" if os.getenv("FEED_REFRESH_MODE", "").casefold() == "daily" else "adaptive"
 
 
 def morning_refresh_at(now):
@@ -30,7 +35,7 @@ def daily_refresh_plan(state, morning, now):
     return ready, len(pending - ready)
 
 
-def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=None, now=None):
+def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=None, now=None, per_host=6):
     now = now or datetime.now(UTC).timestamp()
     candidates = [source for source in DEFAULT_SOURCES if (only is None or source.id == only)
         and state.get(source.id, {}).get("enabled", source.enabled)
@@ -45,7 +50,7 @@ def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=N
     selected, hosts = [], Counter()
     for source in candidates:
         host = urlsplit(source.url).hostname.removeprefix("www.")
-        if hosts[host] >= 6:
+        if hosts[host] >= per_host:
             continue
         selected.append(source)
         hosts[host] += 1
@@ -61,10 +66,11 @@ def timed_read(source, **kwargs):
     return items, dict(status, duration_ms=round((time.monotonic() - started) * 1000))
 
 
-def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximum=None, include_archive=True):
+def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximum=None, include_archive=True, per_host=6, prune=True):
     state = store.source_state(include_archive=False)
     now = datetime.now(UTC).timestamp()
-    active = refresh_plan(state, only=only, source_ids=source_ids, due_only=due_only, maximum=maximum, now=now)
+    active = refresh_plan(state, only=only, source_ids=source_ids, due_only=due_only, maximum=maximum, now=now,
+                          per_host=per_host)
     validators = store.current_feed_validators() if any(feed.integration == "rss" for feed in active) else {}
     with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
         futures = {}
@@ -93,7 +99,7 @@ def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximu
                          duration_ms=status.get("duration_ms"),
                          diagnostics=({"observed": status["observed_entries"], "rejected": status["rejected_entries"]}
                              if "observed_entries" in status else None))
-    if only is None and source_ids is None:
+    if prune and only is None and source_ids is None:
         store.prune()
     return source_catalog(store, include_archive=include_archive)
 
@@ -111,16 +117,21 @@ def source_catalog(store=None, *, include_archive=True):
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
         feed["retained_count"] = state.get("retained_count", 0)
-        feed.update(refresh_policy="daily", refresh_minutes=1440)
-        next_check = morning
-        if (state.get("checked") or 0) >= morning.timestamp():
-            next_check += timedelta(days=1)
+        mode = refresh_mode()
+        feed.update(refresh_policy=mode, refresh_minutes=1440 if mode == "daily" else s.poll_minutes)
         retry = state.get("retry_at") or 0
-        if retry > next_check.timestamp():
-            retry_time = datetime.fromtimestamp(retry, UTC)
-            next_check = morning_refresh_at(retry_time)
-            if next_check < retry_time:
+        if mode == "daily":
+            next_check = morning
+            if (state.get("checked") or 0) >= morning.timestamp():
                 next_check += timedelta(days=1)
+            if retry > next_check.timestamp():
+                retry_time = datetime.fromtimestamp(retry, UTC)
+                next_check = morning_refresh_at(retry_time)
+                if next_check < retry_time:
+                    next_check += timedelta(days=1)
+        else:
+            due = (state.get("checked") or 0) + s.poll_minutes * 60
+            next_check = datetime.fromtimestamp(max(now.timestamp(), due, retry), UTC)
         feed["next_check_at"] = next_check.isoformat()
         latest = feed["latest_published_at"]
         feed["content_status"] = ("no_retained_content" if not latest else

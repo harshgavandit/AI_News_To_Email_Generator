@@ -1,0 +1,2116 @@
+{
+  "checked_at": "2026-11-17T11:45:04.112350+00:00",
+  "approved_source_ids": [
+    "fastai-blog",
+    "ml-mastery",
+    "nicholas-carlini",
+    "sander-dieleman",
+    "matklad",
+    "hillel-wayne",
+    "computer-things",
+    "charity-majors",
+    "will-larson",
+    "rands",
+    "dhh",
+    "maggie-appleton",
+    "scylladb-blog",
+    "yugabyte-blog",
+    "duckdb-blog",
+    "pingcap-blog",
+    "oxide-blog",
+    "tailscale-blog",
+    "flyio-blog",
+    "salesforce-engineering",
+    "databricks-docs",
+    "rapid7-blog",
+    "wiz-research",
+    "huntress-blog",
+    "akamai-security",
+    "openssl-news",
+    "qiita-popular",
+    "naver-d2",
+    "kakao-tech",
+    "lycorp-tech",
+    "vnexpress-digital",
+    "shiftdelete",
+    "netzpolitik",
+    "sekurak",
+    "techmoran",
+    "innovation-village",
+    "zoomit",
+    "arxiv-cs-lg",
+    "arxiv-cs-cl",
+    "arxiv-cs-cv",
+    "arxiv-cs-ro",
+    "arxiv-cs-ds",
+    "arxiv-cs-db",
+    "arxiv-stat-ml",
+    "release-huggingface-peft",
+    "release-huggingface-datasets",
+    "release-huggingface-trl",
+    "release-openai-codex",
+    "release-anthropics-claude-code",
+    "release-google-gemini-gemini-cli",
+    "release-browser-use-browser-use",
+    "release-microsoft-playwright",
+    "release-microsoft-markitdown",
+    "release-docling-project-docling",
+    "release-agno-agi-agno",
+    "release-stanfordnlp-dspy",
+    "release-langfuse-langfuse",
+    "release-promptfoo-promptfoo",
+    "release-microsoft-semantic-kernel",
+    "release-cilium-cilium",
+    "release-traefik-traefik",
+    "release-envoyproxy-envoy",
+    "release-apache-airflow",
+    "release-apache-kafka",
+    "release-apache-spark",
+    "release-apache-flink",
+    "release-opensearch-project-opensearch",
+    "release-bentoml-bentoml",
+    "release-dask-dask",
+    "statquest",
+    "deeplearning-ai-video",
+    "mit-ocw-video",
+    "ben-eater",
+    "low-level",
+    "hussein-nasser",
+    "bytebytego-video",
+    "modal-blog",
+    "rocm-blog",
+    "timescale-blog",
+    "temporal-blog",
+    "confluent-blog",
+    "confluent-developer",
+    "android-developers",
+    "project-zero",
+    "securelist",
+    "niebezpiecznik",
+    "entrackr",
+    "twiml-podcast"
+  ],
+  "checks": [
+    {
+      "id": "modal-blog",
+      "url": "https://modal.com/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.179,
+      "pass_number": 2
+    },
+    {
+      "id": "baseten-blog",
+      "url": "https://www.baseten.co/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.671,
+      "pass_number": 2
+    },
+    {
+      "id": "databricks-blog",
+      "url": "https://www.databricks.com/blog/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.317,
+      "pass_number": 2
+    },
+    {
+      "id": "anyscale-blog",
+      "url": "https://www.anyscale.com/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.523,
+      "pass_number": 2
+    },
+    {
+      "id": "rocm-blog",
+      "url": "https://rocm.blogs.amd.com/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.093,
+      "pass_number": 2
+    },
+    {
+      "id": "alignment-anthropic",
+      "url": "https://alignment.anthropic.com/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.2,
+      "pass_number": 2
+    },
+    {
+      "id": "stanford-ai",
+      "url": "https://ai.stanford.edu/blog/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 6.177,
+      "pass_number": 2
+    },
+    {
+      "id": "fastai-blog",
+      "url": "https://www.fast.ai/index.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-11-15T14:00:00+00:00",
+      "sample_urls": [
+        "https://www.fast.ai/posts/2026-11-16-solveit-launch"
+      ],
+      "seconds": 0.423,
+      "pass_number": 2
+    },
+    {
+      "id": "ml-mastery",
+      "url": "https://machinelearningmastery.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T11:00:00+00:00",
+      "sample_urls": [
+        "https://machinelearningmastery.com/gradient-boosting-vs-random-forest-vs-neural-networks-a-2026-performance-benchmark",
+        "https://machinelearningmastery.com/serving-scikit-llm-pipelines-as-rest-apis-with-fastapi"
+      ],
+      "seconds": 0.212,
+      "pass_number": 2
+    },
+    {
+      "id": "analytics-vidhya",
+      "url": "https://www.analyticsvidhya.com/blog/feed/",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.424,
+      "pass_number": 2
+    },
+    {
+      "id": "google-developer-blog",
+      "url": "https://developers.googleblog.com/feeds/posts/default",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "no_eligible_entries",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.279,
+      "pass_number": 2
+    },
+    {
+      "id": "jeremy-jordan",
+      "url": "https://www.jeremyjordan.me/rss/",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-17T14:02:39+00:00",
+      "sample_urls": [],
+      "seconds": 0.179,
+      "pass_number": 2
+    },
+    {
+      "id": "shreya-shankar",
+      "url": "https://www.shreyashankar.com/blog/rss/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.24,
+      "pass_number": 2
+    },
+    {
+      "id": "nicholas-carlini",
+      "url": "https://nicholas.carlini.com/writing/feed.xml",
+      "status": "active",
+      "parsed_entries": 41,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-11-01T00:00:00+00:00",
+      "sample_urls": [
+        "https://nicholas.carlini.com/writing/2026/algorithmic-improvements-chess.html"
+      ],
+      "seconds": 1.078,
+      "pass_number": 2
+    },
+    {
+      "id": "deeplearning-batch",
+      "url": "https://www.deeplearning.ai/the-batch/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.098,
+      "pass_number": 2
+    },
+    {
+      "id": "mlops-community",
+      "url": "https://mlops.community/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.986,
+      "pass_number": 2
+    },
+    {
+      "id": "hazy-research",
+      "url": "https://hazyresearch.stanford.edu/blog/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.306,
+      "pass_number": 2
+    },
+    {
+      "id": "sebastian-ruder",
+      "url": "https://ruder.io/rss/",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-05-13T09:48:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.269,
+      "pass_number": 2
+    },
+    {
+      "id": "sander-dieleman",
+      "url": "https://sander.ai/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-08-23T23:00:00+00:00",
+      "sample_urls": [
+        "https://sander.ai/2026/08/24/continuous-dlms.html"
+      ],
+      "seconds": 0.778,
+      "pass_number": 2
+    },
+    {
+      "id": "the-gradient",
+      "url": "https://thegradient.pub/rss/",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-02-18T23:25:52+00:00",
+      "sample_urls": [],
+      "seconds": 1.968,
+      "pass_number": 2
+    },
+    {
+      "id": "dan-luu",
+      "url": "https://danluu.com/atom.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.974,
+      "pass_number": 2
+    },
+    {
+      "id": "matklad",
+      "url": "https://matklad.github.io/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-10-29T00:00:00+00:00",
+      "sample_urls": [
+        "https://matklad.github.io/2026/10/29/pub-calls-pub.html",
+        "https://matklad.github.io/2026/10/07/git-ref.html"
+      ],
+      "seconds": 0.424,
+      "pass_number": 2
+    },
+    {
+      "id": "hillel-wayne",
+      "url": "https://www.hillelwayne.com/index.xml",
+      "status": "active",
+      "parsed_entries": 17,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-01T00:00:00+00:00",
+      "sample_urls": [
+        "https://www.hillelwayne.com/post/predicate-logic"
+      ],
+      "seconds": 1.082,
+      "pass_number": 2
+    },
+    {
+      "id": "computer-things",
+      "url": "https://buttondown.com/hillelwayne/rss",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-03T18:06:44+00:00",
+      "sample_urls": [
+        "https://buttondown.com/hillelwayne/archive/new-article-annual-lfp-charity-discount",
+        "https://buttondown.com/hillelwayne/archive/nyc-new-webinar-differential-testing"
+      ],
+      "seconds": 1.555,
+      "pass_number": 2
+    },
+    {
+      "id": "charity-majors",
+      "url": "https://charity.wtf/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-08T18:50:46+00:00",
+      "sample_urls": [
+        "https://charity.wtf/p/if-your-team-is-happy-are-you-doing",
+        "https://charity.wtf/p/where-do-ai-norms-come-from"
+      ],
+      "seconds": 1.222,
+      "pass_number": 2
+    },
+    {
+      "id": "will-larson",
+      "url": "https://lethain.com/feeds/",
+      "status": "active",
+      "parsed_entries": 11,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-30T12:00:00+00:00",
+      "sample_urls": [
+        "https://lethain.com/adopting-verification-pattern",
+        "https://lethain.com/small-changes"
+      ],
+      "seconds": 0.221,
+      "pass_number": 2
+    },
+    {
+      "id": "rands",
+      "url": "https://randsinrepose.com/feed/",
+      "status": "active",
+      "parsed_entries": 23,
+      "recent_entries": 13,
+      "error": null,
+      "latest_published_at": "2026-11-17T03:36:01+00:00",
+      "sample_urls": [
+        "https://randsinrepose.com/archives/the-weather-particulars",
+        "https://randsinrepose.com/archives/rands-fall-housecleaning"
+      ],
+      "seconds": 1.096,
+      "pass_number": 2
+    },
+    {
+      "id": "dhh",
+      "url": "https://world.hey.com/dhh/feed.atom",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-10-24T12:53:44+00:00",
+      "sample_urls": [
+        "https://world.hey.com/dhh/seven-years-from-china-a63b03cc",
+        "https://world.hey.com/dhh/be-a-tech-bro-30db1962"
+      ],
+      "seconds": 0.973,
+      "pass_number": 2
+    },
+    {
+      "id": "maggie-appleton",
+      "url": "https://maggieappleton.com/rss.xml",
+      "status": "active",
+      "parsed_entries": 143,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-11-04T00:00:00+00:00",
+      "sample_urls": [
+        "https://maggieappleton.com/fortune-telling",
+        "https://maggieappleton.com/planning-agents"
+      ],
+      "seconds": 0.766,
+      "pass_number": 2
+    },
+    {
+      "id": "high-scalability",
+      "url": "https://highscalability.com/rss/",
+      "status": "dormant",
+      "parsed_entries": 12,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-05-09T18:55:21+00:00",
+      "sample_urls": [],
+      "seconds": 1.294,
+      "pass_number": 2
+    },
+    {
+      "id": "acm-queue",
+      "url": "https://queue.acm.org/rss/feeds/queuecontent.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.652,
+      "pass_number": 2
+    },
+    {
+      "id": "scylladb-blog",
+      "url": "https://www.scylladb.com/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 13,
+      "error": null,
+      "latest_published_at": "2026-11-11T12:53:56+00:00",
+      "sample_urls": [
+        "https://www.scylladb.com/2026/11/11/live-streaming-ipl-jiohotstar",
+        "https://www.scylladb.com/2026/11/03/finding-and-fixing-excessive-cloud-costs"
+      ],
+      "seconds": 0.53,
+      "pass_number": 2
+    },
+    {
+      "id": "yugabyte-blog",
+      "url": "https://www.yugabyte.com/blog/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T13:00:04+00:00",
+      "sample_urls": [
+        "https://www.yugabyte.com/blog/managing-distributed-schemas-with-confidence-atlas-now-supports-yugabytedb",
+        "https://www.yugabyte.com/blog/how-to-build-centralized-observability-in-dynatrace-for-yugabytedb-audit-and-query-logs"
+      ],
+      "seconds": 0.647,
+      "pass_number": 2
+    },
+    {
+      "id": "cockroach-labs",
+      "url": "https://www.cockroachlabs.com/blog/index.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.019,
+      "pass_number": 2
+    },
+    {
+      "id": "timescale-blog",
+      "url": "https://www.timescale.com/blog/rss/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.397,
+      "pass_number": 2
+    },
+    {
+      "id": "duckdb-blog",
+      "url": "https://duckdb.org/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:00:00+00:00",
+      "sample_urls": [
+        "https://duckdb.org/2026/11/17/duckdb-user-group-workshop-ai-powered-review-analysis.html",
+        "https://duckdb.org/2026/11/12/local-analytics-without-a-database-server.html"
+      ],
+      "seconds": 1.007,
+      "pass_number": 2
+    },
+    {
+      "id": "pingcap-blog",
+      "url": "https://www.pingcap.com/blog/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-10T18:43:16+00:00",
+      "sample_urls": [
+        "https://www.pingcap.com/blog/integrating-vector-search-into-tidb-for-ai-applications",
+        "https://www.pingcap.com/blog/llamaindex-vector-store"
+      ],
+      "seconds": 2.616,
+      "pass_number": 2
+    },
+    {
+      "id": "oxide-blog",
+      "url": "https://oxide.computer/blog/feed",
+      "status": "active",
+      "parsed_entries": 35,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-16T14:00:00+00:00",
+      "sample_urls": [
+        "https://oxide.computer/blog/oxide-micron-second-generation-cloud-computer",
+        "https://oxide.computer/blog/self-hosted-ai-agents"
+      ],
+      "seconds": 0.62,
+      "pass_number": 2
+    },
+    {
+      "id": "tailscale-blog",
+      "url": "https://tailscale.com/blog/index.xml",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-10T15:00:00+00:00",
+      "sample_urls": [
+        "https://tailscale.com/blog/skill-sharing-with-aperture",
+        "https://tailscale.com/blog/oauth-apps-ga"
+      ],
+      "seconds": 0.204,
+      "pass_number": 2
+    },
+    {
+      "id": "flyio-blog",
+      "url": "https://fly.io/blog/feed.xml",
+      "status": "active",
+      "parsed_entries": 40,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-13T00:00:00+00:00",
+      "sample_urls": [
+        "https://fly.io/blog/throwing-out-the-phonebook",
+        "https://fly.io/blog/well-that-wasnt-fun"
+      ],
+      "seconds": 2.22,
+      "pass_number": 2
+    },
+    {
+      "id": "honeycomb-blog",
+      "url": "https://www.honeycomb.io/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.545,
+      "pass_number": 2
+    },
+    {
+      "id": "temporal-blog",
+      "url": "https://temporal.io/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.119,
+      "pass_number": 2
+    },
+    {
+      "id": "confluent-blog",
+      "url": "https://www.confluent.io/blog/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.547,
+      "pass_number": 2
+    },
+    {
+      "id": "confluent-developer",
+      "url": "https://developer.confluent.io/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.509,
+      "pass_number": 2
+    },
+    {
+      "id": "salesforce-engineering",
+      "url": "https://engineering.salesforce.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T00:34:46+00:00",
+      "sample_urls": [
+        "https://engineering.salesforce.com/6-ai-agent-capabilities-to-evaluate-before-enterprise-deployment",
+        "https://engineering.salesforce.com/how-salesforce-scaled-engineering-ai-adoption-without-stifling-innovation"
+      ],
+      "seconds": 0.392,
+      "pass_number": 2
+    },
+    {
+      "id": "uber-engineering",
+      "url": "https://www.uber.com/blog/engineering/rss/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.141,
+      "pass_number": 2
+    },
+    {
+      "id": "paypal-engineering",
+      "url": "https://medium.com/feed/paypal-tech",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-15T21:19:29+00:00",
+      "sample_urls": [],
+      "seconds": 2.055,
+      "pass_number": 2
+    },
+    {
+      "id": "slack-api-changelog",
+      "url": "https://api.slack.com/changelog/rss",
+      "status": "dormant",
+      "parsed_entries": 71,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-05-29T07:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 2.2,
+      "pass_number": 2
+    },
+    {
+      "id": "databricks-docs",
+      "url": "https://docs.databricks.com/aws/en/feed.xml",
+      "status": "active",
+      "parsed_entries": 9,
+      "recent_entries": 9,
+      "error": null,
+      "latest_published_at": "2026-11-01T00:00:00+00:00",
+      "sample_urls": [
+        "https://docs.databricks.com/aws/en/release-notes/product/2026/november",
+        "https://docs.databricks.com/aws/en/release-notes/runtime/19"
+      ],
+      "seconds": 1.751,
+      "pass_number": 2
+    },
+    {
+      "id": "android-developers",
+      "url": "https://android-developers.googleblog.com/feeds/posts/default",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.746,
+      "pass_number": 2
+    },
+    {
+      "id": "project-zero",
+      "url": "https://googleprojectzero.blogspot.com/feeds/posts/default",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.739,
+      "pass_number": 2
+    },
+    {
+      "id": "sophos-news",
+      "url": "https://news.sophos.com/en-us/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.236,
+      "pass_number": 2
+    },
+    {
+      "id": "securelist",
+      "url": "https://securelist.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.659,
+      "pass_number": 2
+    },
+    {
+      "id": "rapid7-blog",
+      "url": "https://www.rapid7.com/blog/rss/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T18:14:14+00:00",
+      "sample_urls": [
+        "https://www.rapid7.com/blog/post/etr-rapid7-detected-exploitation-of-cve-2026-90436-against-atlassian-confluence-data-center-n-able-n-central-also-exploited",
+        "https://www.rapid7.com/blog/post/ve-from-view-only-access-to-container-root-five-vulnerabilities-in-onlyoffice-docs-fixed"
+      ],
+      "seconds": 2.021,
+      "pass_number": 2
+    },
+    {
+      "id": "wiz-research",
+      "url": "https://www.wiz.io/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 51,
+      "error": null,
+      "latest_published_at": "2026-11-16T17:02:41+00:00",
+      "sample_urls": [
+        "https://www.wiz.io/blog/introducing-wiz-ai-security-agent",
+        "https://www.wiz.io/blog/inside-green-agent-investigation"
+      ],
+      "seconds": 1.496,
+      "pass_number": 2
+    },
+    {
+      "id": "huntress-blog",
+      "url": "https://www.huntress.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 108,
+      "error": null,
+      "latest_published_at": "2026-11-16T18:00:00+00:00",
+      "sample_urls": [
+        "https://www.huntress.com/blog/cve-2026-84869-screenconnect-technician-exploitation",
+        "https://www.huntress.com/blog/security-insights-report"
+      ],
+      "seconds": 1.873,
+      "pass_number": 2
+    },
+    {
+      "id": "akamai-security",
+      "url": "https://feeds.feedburner.com/akamai/blog",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 70,
+      "error": null,
+      "latest_published_at": "2026-11-16T17:00:00+00:00",
+      "sample_urls": [
+        "https://www.akamai.com/blog/security/2026/nov/air-traffic-stopped-web-traffic-soared",
+        "https://www.akamai.com/blog/news/2026/nov/cisa-bod-26-04-akamais-strategic-blueprint-federal-security"
+      ],
+      "seconds": 3.145,
+      "pass_number": 2
+    },
+    {
+      "id": "openssl-news",
+      "url": "https://openssl-library.org/post/index.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-01T00:00:00+00:00",
+      "sample_urls": [
+        "https://openssl-library.org/post/2026-11-01-eol34-36",
+        "https://openssl-library.org/post/2026-10-23-openssl-41-final-release"
+      ],
+      "seconds": 1.416,
+      "pass_number": 2
+    },
+    {
+      "id": "qiita-popular",
+      "url": "https://qiita.com/popular-items/feed.atom",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-17T06:22:54+00:00",
+      "sample_urls": [
+        "https://qiita.com/kotowazaman/items/9ee7c475a475e7527b0e",
+        "https://qiita.com/nuco_d/items/b279477cbcdbe5921abd"
+      ],
+      "seconds": 1.197,
+      "pass_number": 2
+    },
+    {
+      "id": "naver-d2",
+      "url": "https://d2.naver.com/d2.atom",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T09:04:47+00:00",
+      "sample_urls": [
+        "https://d2.naver.com/helloworld/5976687",
+        "https://d2.naver.com/helloworld/9994827"
+      ],
+      "seconds": 2.547,
+      "pass_number": 2
+    },
+    {
+      "id": "kakao-tech",
+      "url": "https://tech.kakao.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T15:00:00+00:00",
+      "sample_urls": [
+        "https://tech.kakao.com/posts/849",
+        "https://tech.kakao.com/posts/847"
+      ],
+      "seconds": 2.402,
+      "pass_number": 2
+    },
+    {
+      "id": "lycorp-tech",
+      "url": "https://techblog.lycorp.co.jp/en/feed/index.xml",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-13T05:00:00+00:00",
+      "sample_urls": [
+        "https://techblog.lycorp.co.jp/en/reducing-ios-app-size-how-to-measure-diagnose-and-optimize",
+        "https://techblog.lycorp.co.jp/en/20260930b"
+      ],
+      "seconds": 1.17,
+      "pass_number": 2
+    },
+    {
+      "id": "vnexpress-digital",
+      "url": "https://vnexpress.net/rss/so-hoa.rss",
+      "status": "active",
+      "parsed_entries": 60,
+      "recent_entries": 60,
+      "error": null,
+      "latest_published_at": "2026-11-17T09:53:27+00:00",
+      "sample_urls": [
+        "https://vnexpress.net/viet-nam-can-don-luc-cho-chip-chuyen-dung-5145663.html",
+        "https://vnexpress.net/elon-musk-tiet-lo-sieu-ten-lua-starship-v4-se-lon-va-manh-hon-5145641.html"
+      ],
+      "seconds": 1.188,
+      "pass_number": 2
+    },
+    {
+      "id": "geekpark",
+      "url": "https://www.geekpark.net/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 10.02,
+      "pass_number": 2
+    },
+    {
+      "id": "pingwest",
+      "url": "https://www.pingwest.com/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.931,
+      "pass_number": 2
+    },
+    {
+      "id": "shiftdelete",
+      "url": "https://shiftdelete.net/feed",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 50,
+      "error": null,
+      "latest_published_at": "2026-11-17T11:19:26+00:00",
+      "sample_urls": [
+        "https://shiftdelete.net/honor-turkiye-telefon-uretimi-basladi-x7d",
+        "https://shiftdelete.net/redmi-note-18-5g-8888-mah-batarya"
+      ],
+      "seconds": 1.432,
+      "pass_number": 2
+    },
+    {
+      "id": "netzpolitik",
+      "url": "https://netzpolitik.org/feed/",
+      "status": "active",
+      "parsed_entries": 25,
+      "recent_entries": 25,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:13:40+00:00",
+      "sample_urls": [
+        "https://netzpolitik.org/2026/wir-brauchen-jetzt-deine-hilfe-uns-fehlen-noch-477-000-euro",
+        "https://netzpolitik.org/2026/plaene-der-bundesregierung-dutzende-organisationen-warnen-vor-ki-bei-migrationsverfahren"
+      ],
+      "seconds": 1.392,
+      "pass_number": 2
+    },
+    {
+      "id": "niebezpiecznik",
+      "url": "https://niebezpiecznik.pl/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.309,
+      "pass_number": 2
+    },
+    {
+      "id": "sekurak",
+      "url": "https://sekurak.pl/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:17:49+00:00",
+      "sample_urls": [
+        "https://sekurak.pl/deepfakeami-podszywali-sie-pod-prezesow-prawnikow-ukradli-129-milionow",
+        "https://sekurak.pl/wiadomo-co-bylo-przyczyna-ostatnich-giga-problemow-z-niedostepnoscia-outlooka-nieszczesliwy-zbieg-kilku-problemow-jednoczesnie"
+      ],
+      "seconds": 1.028,
+      "pass_number": 2
+    },
+    {
+      "id": "techmoran",
+      "url": "https://techmoran.com/feed/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-17T11:10:55+00:00",
+      "sample_urls": [
+        "https://techmoran.com/2026/11/17/mobile-money-betting-apps-and-regulation-how-africas-tech-boom-is-reshaping-gambling-rules",
+        "https://techmoran.com/2026/11/17/how-businesses-should-manage-long-term-assets"
+      ],
+      "seconds": 0.881,
+      "pass_number": 2
+    },
+    {
+      "id": "innovation-village",
+      "url": "https://innovation-village.com/feed/",
+      "status": "active",
+      "parsed_entries": 7,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-17T09:26:00+00:00",
+      "sample_urls": [
+        "https://innovation-village.com/telkom-delivers-stronger-earnings-as-mtn-explores-potential-takeover",
+        "https://innovation-village.com/vibe-jungle-secures-400k-to-democratize-ai-powered-music-and-film-production-in-africa"
+      ],
+      "seconds": 0.558,
+      "pass_number": 2
+    },
+    {
+      "id": "entrackr",
+      "url": "https://entrackr.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.506,
+      "pass_number": 2
+    },
+    {
+      "id": "zoomit",
+      "url": "https://www.zoomit.ir/feed/",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T11:11:08+00:00",
+      "sample_urls": [
+        "https://www.zoomit.ir/iran-news/471337-iran-ai-data-governance-development",
+        "https://www.zoomit.ir/health-medical/471037-new-bmi-method-obesity-diagnosis"
+      ],
+      "seconds": 1.51,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-lg",
+      "url": "https://rss.arxiv.org/rss/cs.LG",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18564",
+        "https://arxiv.org/abs/2611.18587"
+      ],
+      "seconds": 2.006,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-cl",
+      "url": "https://rss.arxiv.org/rss/cs.CL",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18583",
+        "https://arxiv.org/abs/2611.18585"
+      ],
+      "seconds": 0.963,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-cv",
+      "url": "https://rss.arxiv.org/rss/cs.CV",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18578",
+        "https://arxiv.org/abs/2611.18666"
+      ],
+      "seconds": 2.283,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-ro",
+      "url": "https://rss.arxiv.org/rss/cs.RO",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18702",
+        "https://arxiv.org/abs/2611.18855"
+      ],
+      "seconds": 2.634,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-ds",
+      "url": "https://rss.arxiv.org/rss/cs.DS",
+      "status": "active",
+      "parsed_entries": 57,
+      "recent_entries": 57,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.19018",
+        "https://arxiv.org/abs/2611.19278"
+      ],
+      "seconds": 2.115,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-cs-db",
+      "url": "https://rss.arxiv.org/rss/cs.DB",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18926",
+        "https://arxiv.org/abs/2611.19077"
+      ],
+      "seconds": 2.405,
+      "pass_number": 2
+    },
+    {
+      "id": "arxiv-stat-ml",
+      "url": "https://rss.arxiv.org/rss/stat.ML",
+      "status": "active",
+      "parsed_entries": 115,
+      "recent_entries": 115,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:00:00+00:00",
+      "sample_urls": [
+        "https://arxiv.org/abs/2611.18625",
+        "https://arxiv.org/abs/2611.18645"
+      ],
+      "seconds": 2.757,
+      "pass_number": 2
+    },
+    {
+      "id": "release-huggingface-smolagents",
+      "url": "https://github.com/huggingface/smolagents/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-05-29T05:09:47+00:00",
+      "sample_urls": [],
+      "seconds": 1.669,
+      "pass_number": 2
+    },
+    {
+      "id": "release-huggingface-peft",
+      "url": "https://github.com/huggingface/peft/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-13T10:11:36+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/peft/releases/tag/v0.21.3",
+        "https://github.com/huggingface/peft/releases/tag/v0.21.2"
+      ],
+      "seconds": 1.976,
+      "pass_number": 2
+    },
+    {
+      "id": "release-huggingface-datasets",
+      "url": "https://github.com/huggingface/datasets/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-11-09T21:40:43+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/datasets/releases/tag/5.2.0",
+        "https://github.com/huggingface/datasets/releases/tag/5.1.0"
+      ],
+      "seconds": 15.251,
+      "pass_number": 2
+    },
+    {
+      "id": "release-huggingface-trl",
+      "url": "https://github.com/huggingface/trl/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T15:37:19+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/trl/releases/tag/v1.18.0",
+        "https://github.com/huggingface/trl/releases/tag/v1.17.1"
+      ],
+      "seconds": 18.733,
+      "pass_number": 2
+    },
+    {
+      "id": "release-huggingface-text-generation-inference",
+      "url": "https://github.com/huggingface/text-generation-inference/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-12-19T14:35:25+00:00",
+      "sample_urls": [],
+      "seconds": 1.187,
+      "pass_number": 2
+    },
+    {
+      "id": "release-openai-codex",
+      "url": "https://github.com/openai/codex/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T04:30:04+00:00",
+      "sample_urls": [
+        "https://github.com/openai/codex/releases/tag/rust-v0.171.0-alpha.11",
+        "https://github.com/openai/codex/releases/tag/rust-v0.170.0-alpha.4.1"
+      ],
+      "seconds": 14.423,
+      "pass_number": 2
+    },
+    {
+      "id": "release-anthropics-claude-code",
+      "url": "https://github.com/anthropics/claude-code/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T22:11:05+00:00",
+      "sample_urls": [
+        "https://github.com/anthropics/claude-code/releases/tag/v2.1.326",
+        "https://github.com/anthropics/claude-code/releases/tag/v2.1.325"
+      ],
+      "seconds": 15.494,
+      "pass_number": 2
+    },
+    {
+      "id": "release-google-gemini-gemini-cli",
+      "url": "https://github.com/google-gemini/gemini-cli/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-10T21:17:07+00:00",
+      "sample_urls": [
+        "https://github.com/google-gemini/gemini-cli/releases/tag/v0.69.0-preview.0",
+        "https://github.com/google-gemini/gemini-cli/releases/tag/v0.68.0"
+      ],
+      "seconds": 16.101,
+      "pass_number": 2
+    },
+    {
+      "id": "release-continuedev-continue",
+      "url": "https://github.com/continuedev/continue/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-19T00:24:01+00:00",
+      "sample_urls": [],
+      "seconds": 16.088,
+      "pass_number": 2
+    },
+    {
+      "id": "release-aider-ai-aider",
+      "url": "https://github.com/Aider-AI/aider/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-02-12T00:42:25+00:00",
+      "sample_urls": [],
+      "seconds": 0.517,
+      "pass_number": 2
+    },
+    {
+      "id": "release-block-goose",
+      "url": "https://github.com/block/goose/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 13.153,
+      "pass_number": 2
+    },
+    {
+      "id": "release-browser-use-browser-use",
+      "url": "https://github.com/browser-use/browser-use/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:51:24+00:00",
+      "sample_urls": [
+        "https://github.com/browser-use/browser-use/releases/tag/1.0.6",
+        "https://github.com/browser-use/browser-use/releases/tag/1.0.5"
+      ],
+      "seconds": 0.548,
+      "pass_number": 2
+    },
+    {
+      "id": "release-microsoft-playwright",
+      "url": "https://github.com/microsoft/playwright/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-13T21:46:58+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/playwright/releases/tag/v1.65.1",
+        "https://github.com/microsoft/playwright/releases/tag/v1.65.0"
+      ],
+      "seconds": 0.666,
+      "pass_number": 2
+    },
+    {
+      "id": "release-microsoft-markitdown",
+      "url": "https://github.com/microsoft/markitdown/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-10-21T19:40:32+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/markitdown/releases/tag/v0.1.9",
+        "https://github.com/microsoft/markitdown/releases/tag/v0.1.8"
+      ],
+      "seconds": 1.229,
+      "pass_number": 2
+    },
+    {
+      "id": "release-docling-project-docling",
+      "url": "https://github.com/docling-project/docling/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-14T07:04:56+00:00",
+      "sample_urls": [
+        "https://github.com/docling-project/docling/releases/tag/v2.150.1",
+        "https://github.com/docling-project/docling/releases/tag/v2.150.0"
+      ],
+      "seconds": 0.88,
+      "pass_number": 2
+    },
+    {
+      "id": "release-agno-agi-agno",
+      "url": "https://github.com/agno-agi/agno/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T17:50:40+00:00",
+      "sample_urls": [
+        "https://github.com/agno-agi/agno/releases/tag/v3.2.0",
+        "https://github.com/agno-agi/agno/releases/tag/v3.1.12"
+      ],
+      "seconds": 1.196,
+      "pass_number": 2
+    },
+    {
+      "id": "release-stanfordnlp-dspy",
+      "url": "https://github.com/stanfordnlp/dspy/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-10T16:25:47+00:00",
+      "sample_urls": [
+        "https://github.com/stanfordnlp/dspy/releases/tag/3.5.0",
+        "https://github.com/stanfordnlp/dspy/releases/tag/3.4.1"
+      ],
+      "seconds": 2.699,
+      "pass_number": 2
+    },
+    {
+      "id": "release-arize-ai-phoenix",
+      "url": "https://github.com/arize-ai/phoenix/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.645,
+      "pass_number": 2
+    },
+    {
+      "id": "release-langfuse-langfuse",
+      "url": "https://github.com/langfuse/langfuse/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:26:13+00:00",
+      "sample_urls": [
+        "https://github.com/langfuse/langfuse/releases/tag/v4.81.0",
+        "https://github.com/langfuse/langfuse/releases/tag/v4.80.0"
+      ],
+      "seconds": 1.599,
+      "pass_number": 2
+    },
+    {
+      "id": "release-promptfoo-promptfoo",
+      "url": "https://github.com/promptfoo/promptfoo/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-10-25T01:53:11+00:00",
+      "sample_urls": [
+        "https://github.com/promptfoo/promptfoo/releases/tag/0.125.1",
+        "https://github.com/promptfoo/promptfoo/releases/tag/0.125.0"
+      ],
+      "seconds": 1.243,
+      "pass_number": 2
+    },
+    {
+      "id": "release-qwenlm-qwen-agent",
+      "url": "https://github.com/QwenLM/Qwen-Agent/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-05-29T09:36:00+00:00",
+      "sample_urls": [],
+      "seconds": 9.139,
+      "pass_number": 2
+    },
+    {
+      "id": "release-microsoft-semantic-kernel",
+      "url": "https://github.com/microsoft/semantic-kernel/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-07T01:00:07+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/semantic-kernel/releases/tag/dotnet-1.82.0",
+        "https://github.com/microsoft/semantic-kernel/releases/tag/python-1.47.0"
+      ],
+      "seconds": 1.335,
+      "pass_number": 2
+    },
+    {
+      "id": "release-cilium-cilium",
+      "url": "https://github.com/cilium/cilium/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T09:53:42+00:00",
+      "sample_urls": [
+        "https://github.com/cilium/cilium/releases/tag/1.20.5",
+        "https://github.com/cilium/cilium/releases/tag/1.19.11"
+      ],
+      "seconds": 2.562,
+      "pass_number": 2
+    },
+    {
+      "id": "release-traefik-traefik",
+      "url": "https://github.com/traefik/traefik/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T09:36:55+00:00",
+      "sample_urls": [
+        "https://github.com/traefik/traefik/releases/tag/v3.8.0-rc.3",
+        "https://github.com/traefik/traefik/releases/tag/v3.7.19"
+      ],
+      "seconds": 1.563,
+      "pass_number": 2
+    },
+    {
+      "id": "release-envoyproxy-envoy",
+      "url": "https://github.com/envoyproxy/envoy/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-03T16:09:28+00:00",
+      "sample_urls": [
+        "https://github.com/envoyproxy/envoy/releases/tag/v1.40.2",
+        "https://github.com/envoyproxy/envoy/releases/tag/v1.39.6"
+      ],
+      "seconds": 0.876,
+      "pass_number": 2
+    },
+    {
+      "id": "release-apache-airflow",
+      "url": "https://github.com/apache/airflow/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T09:25:44+00:00",
+      "sample_urls": [
+        "https://github.com/apache/airflow/releases/tag/ts-sdk%2F1.0.0",
+        "https://github.com/apache/airflow/releases/tag/java-sdk%2F1.0.0"
+      ],
+      "seconds": 1.179,
+      "pass_number": 2
+    },
+    {
+      "id": "release-apache-kafka",
+      "url": "https://github.com/apache/kafka/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-10-20T12:09:55+00:00",
+      "sample_urls": [
+        "https://github.com/apache/kafka/releases/tag/4.3.2",
+        "https://github.com/apache/kafka/releases/tag/4.4.0"
+      ],
+      "seconds": 0.478,
+      "pass_number": 2
+    },
+    {
+      "id": "release-apache-spark",
+      "url": "https://github.com/apache/spark/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T01:36:21+00:00",
+      "sample_urls": [
+        "https://github.com/apache/spark/releases/tag/v3.5.10-rc1",
+        "https://github.com/apache/spark/releases/tag/v4.3.0"
+      ],
+      "seconds": 0.527,
+      "pass_number": 2
+    },
+    {
+      "id": "release-apache-flink",
+      "url": "https://github.com/apache/flink/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-13T10:58:39+00:00",
+      "sample_urls": [
+        "https://github.com/apache/flink/releases/tag/release-2.3.1-rc2",
+        "https://github.com/apache/flink/releases/tag/release-2.3.1-rc1"
+      ],
+      "seconds": 0.522,
+      "pass_number": 2
+    },
+    {
+      "id": "release-opensearch-project-opensearch",
+      "url": "https://github.com/opensearch-project/OpenSearch/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-10-20T22:17:25+00:00",
+      "sample_urls": [
+        "https://github.com/opensearch-project/OpenSearch/releases/tag/2.19.7",
+        "https://github.com/opensearch-project/OpenSearch/releases/tag/3.9.0"
+      ],
+      "seconds": 1.894,
+      "pass_number": 2
+    },
+    {
+      "id": "release-bentoml-bentoml",
+      "url": "https://github.com/bentoml/BentoML/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-10-23T19:51:33+00:00",
+      "sample_urls": [
+        "https://github.com/bentoml/BentoML/releases/tag/v1.4.40"
+      ],
+      "seconds": 0.735,
+      "pass_number": 2
+    },
+    {
+      "id": "release-dask-dask",
+      "url": "https://github.com/dask/dask/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-08-24T19:22:50+00:00",
+      "sample_urls": [
+        "https://github.com/dask/dask/releases/tag/2026.8.0"
+      ],
+      "seconds": 1.174,
+      "pass_number": 2
+    },
+    {
+      "id": "release-polarsource-polar-rs",
+      "url": "https://github.com/polarsource/polar-rs/releases.atom",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.346,
+      "pass_number": 2
+    },
+    {
+      "id": "changelog-podcast",
+      "url": "https://changelog.com/podcast/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.908,
+      "pass_number": 2
+    },
+    {
+      "id": "shipit-podcast",
+      "url": "https://changelog.com/shipit/feed",
+      "status": "dormant",
+      "parsed_entries": 136,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-12-20T15:15:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.8,
+      "pass_number": 2
+    },
+    {
+      "id": "jsparty-podcast",
+      "url": "https://changelog.com/jsparty/feed",
+      "status": "dormant",
+      "parsed_entries": 200,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-02-13T20:20:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.639,
+      "pass_number": 2
+    },
+    {
+      "id": "gotime-podcast",
+      "url": "https://changelog.com/gotime/feed",
+      "status": "dormant",
+      "parsed_entries": 199,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-12-18T16:15:00+00:00",
+      "sample_urls": [],
+      "seconds": 2.459,
+      "pass_number": 2
+    },
+    {
+      "id": "syntax-podcast",
+      "url": "https://feed.syntax.fm/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.061,
+      "pass_number": 2
+    },
+    {
+      "id": "software-unscripted",
+      "url": "https://feeds.transistor.fm/software-unscripted",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.967,
+      "pass_number": 2
+    },
+    {
+      "id": "twiml-podcast",
+      "url": "https://twimlai.com/feed/podcast/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.206,
+      "pass_number": 2
+    },
+    {
+      "id": "statquest",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtYLUTtgS3k1Fg4y5tAhLbw",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 9,
+      "error": null,
+      "latest_published_at": "2026-11-16T05:00:36+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=4XqexiQSx_Y",
+        "https://www.youtube.com/watch?v=v7PUWJPqXWo"
+      ],
+      "seconds": 0.979,
+      "pass_number": 2
+    },
+    {
+      "id": "yannic-kilcher",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-03-06T22:07:33+00:00",
+      "sample_urls": [],
+      "seconds": 0.957,
+      "pass_number": 2
+    },
+    {
+      "id": "deeplearning-ai-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcIXc5mJsHVYTZR1maL5l9w",
+      "status": "active",
+      "parsed_entries": 9,
+      "recent_entries": 9,
+      "error": null,
+      "latest_published_at": "2026-11-11T11:00:19+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=0NbLVdCZHF0",
+        "https://www.youtube.com/watch?v=5__Fm2TnPcU"
+      ],
+      "seconds": 2.387,
+      "pass_number": 2
+    },
+    {
+      "id": "stanford-online-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCaUdaZVfN3vP9E_1CYlxYjw",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.579,
+      "pass_number": 2
+    },
+    {
+      "id": "mit-ocw-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCEBb1b_L6zDS3xTUrIALZOw",
+      "status": "active",
+      "parsed_entries": 14,
+      "recent_entries": 14,
+      "error": null,
+      "latest_published_at": "2026-11-13T15:13:31+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=8hiGWBQ94WU",
+        "https://www.youtube.com/watch?v=MUn9aT8lOXA"
+      ],
+      "seconds": 2.349,
+      "pass_number": 2
+    },
+    {
+      "id": "ben-eater",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCS0N5baNlQWJCUrhCEo8WlA",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-10-18T14:00:12+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=ou2RFTK86eA",
+        "https://www.youtube.com/watch?v=ZymtNiyGB_g"
+      ],
+      "seconds": 1.06,
+      "pass_number": 2
+    },
+    {
+      "id": "low-level",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC6biysICWOJ-C3P4Tyeggzg",
+      "status": "active",
+      "parsed_entries": 13,
+      "recent_entries": 13,
+      "error": null,
+      "latest_published_at": "2026-11-12T14:08:52+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=Z3xvjzlDWd8",
+        "https://www.youtube.com/watch?v=ErB1SRcksDc"
+      ],
+      "seconds": 0.537,
+      "pass_number": 2
+    },
+    {
+      "id": "hussein-nasser",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_ML5xP23TOWKUcc-oAE_Eg",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-22T15:00:07+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=MCbMko4IXKw",
+        "https://www.youtube.com/watch?v=rnJrc1QOFME"
+      ],
+      "seconds": 2.284,
+      "pass_number": 2
+    },
+    {
+      "id": "bytebytego-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZgt6AzoyjslHTC9dz0UoTw",
+      "status": "active",
+      "parsed_entries": 13,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-10-22T15:30:15+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=Dddv7P_k60o",
+        "https://www.youtube.com/watch?v=aVRjFZM23ak"
+      ],
+      "seconds": 0.904,
+      "pass_number": 2
+    },
+    {
+      "id": "modal-blog",
+      "url": "https://modal.com/blog/atom.xml",
+      "status": "active",
+      "parsed_entries": 157,
+      "recent_entries": 27,
+      "error": null,
+      "latest_published_at": "2026-11-13T00:00:00+00:00",
+      "sample_urls": [
+        "https://modal.com/blog/scaling-intelligence",
+        "https://modal.com/blog/sandbox-bursting"
+      ],
+      "seconds": 1.398,
+      "pass_number": 3
+    },
+    {
+      "id": "rocm-blog",
+      "url": "https://rocm.blogs.amd.com/blog/atom.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://rocm.blogs.amd.com/artificial-intelligence/mlperf-training-v6.1/README.html",
+        "https://rocm.blogs.amd.com/artificial-intelligence/mlperf-training6.1-repro/README.html"
+      ],
+      "seconds": 0.117,
+      "pass_number": 3
+    },
+    {
+      "id": "google-developer-blog",
+      "url": "https://developers.googleblog.com/feeds/posts/default/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "no_eligible_entries",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.813,
+      "pass_number": 3
+    },
+    {
+      "id": "shreya-shankar",
+      "url": "https://www.sh-reya.com/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 21,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-05-21T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.141,
+      "pass_number": 3
+    },
+    {
+      "id": "dan-luu",
+      "url": "https://danluu.com/atom.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.948,
+      "pass_number": 3
+    },
+    {
+      "id": "timescale-blog",
+      "url": "https://www.tigerdata.com/blog/rss",
+      "status": "active",
+      "parsed_entries": 1,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-11-03T22:29:38+00:00",
+      "sample_urls": [
+        "https://www.tigerdata.com/blog/timescaledb-enterprise-is-in-public-beta"
+      ],
+      "seconds": 0.124,
+      "pass_number": 3
+    },
+    {
+      "id": "temporal-blog",
+      "url": "https://temporal.io/blog/feed.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 47,
+      "error": null,
+      "latest_published_at": "2026-11-12T00:00:00+00:00",
+      "sample_urls": [
+        "https://temporal.io/blog/temporal-named-to-2026-ai-100",
+        "https://temporal.io/blog/running-doom-as-a-temporal-workflow"
+      ],
+      "seconds": 0.316,
+      "pass_number": 3
+    },
+    {
+      "id": "confluent-blog",
+      "url": "https://www.confluent.io/rss.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-04T15:55:22+00:00",
+      "sample_urls": [
+        "https://www.confluent.io/blog/2026-q4-confluent-bundle-launch",
+        "https://www.confluent.io/blog/a-tale-of-two-houses-streamhouse-lakehouse"
+      ],
+      "seconds": 0.099,
+      "pass_number": 3
+    },
+    {
+      "id": "confluent-developer",
+      "url": "https://developer.confluent.io/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 12,
+      "error": null,
+      "latest_published_at": "2026-11-05T00:00:00+00:00",
+      "sample_urls": [
+        "https://developer.confluent.io/blog/controller-checkpointing",
+        "https://developer.confluent.io/blog/kafka-consumer-offsets-in-flink"
+      ],
+      "seconds": 0.792,
+      "pass_number": 3
+    },
+    {
+      "id": "android-developers",
+      "url": "https://developer.android.com/static/blog/atom.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://developer.android.com/blog/posts/beyond-the-app-google-play-buyer-reach",
+        "https://developer.android.com/blog/posts/smileid-camerax-android-identity-verification"
+      ],
+      "seconds": 0.822,
+      "pass_number": 3
+    },
+    {
+      "id": "project-zero",
+      "url": "https://projectzero.google/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-13T08:00:00+00:00",
+      "sample_urls": [
+        "https://projectzero.google/2026/11/disclosure-policy.html",
+        "https://projectzero.google/2026/10/fuzzing-v-AI.html"
+      ],
+      "seconds": 0.845,
+      "pass_number": 3
+    },
+    {
+      "id": "securelist",
+      "url": "https://securelist.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T08:00:43+00:00",
+      "sample_urls": [
+        "https://securelist.com/operation-shadowcloud-graphdoor/122005",
+        "https://securelist.com/operation-shadowcloud-gitdoor/122004"
+      ],
+      "seconds": 1.372,
+      "pass_number": 3
+    },
+    {
+      "id": "geekpark",
+      "url": "https://www.geekpark.net/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 10.014,
+      "pass_number": 3
+    },
+    {
+      "id": "niebezpiecznik",
+      "url": "https://feeds.feedburner.com/niebezpiecznik/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-03T09:30:46+00:00",
+      "sample_urls": [
+        "https://niebezpiecznik.pl/post/zhakuj-rzadowe-systemy-to-ci-zaplaca",
+        "https://niebezpiecznik.pl/post/pracownicy-czuja-sie-zagrozeni-ale-laduja-dane-firm-do-ai-raport-eset"
+      ],
+      "seconds": 2.086,
+      "pass_number": 3
+    },
+    {
+      "id": "entrackr",
+      "url": "https://entrackr.com/rss",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-17T08:39:35+00:00",
+      "sample_urls": [
+        "https://entrackr.com/snippets/ai-video-production-startup-lemonpeel-raises-1-mn-in-pre-seed-round-led-by-shastra-vc-12816726",
+        "https://entrackr.com/snippets/ai-infra-startup-johnaic-raises-19-mn-in-pre-seed-round-12815778"
+      ],
+      "seconds": 0.188,
+      "pass_number": 3
+    },
+    {
+      "id": "changelog-podcast",
+      "url": "https://changelog.com/podcast/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.862,
+      "pass_number": 3
+    },
+    {
+      "id": "syntax-podcast",
+      "url": "https://feeds.megaphone.fm/FSI1483080183",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.501,
+      "pass_number": 3
+    },
+    {
+      "id": "twiml-podcast",
+      "url": "https://feeds.megaphone.fm/MLN2155636147",
+      "status": "active",
+      "parsed_entries": 198,
+      "recent_entries": 11,
+      "error": null,
+      "latest_published_at": "2026-11-10T16:21:00+00:00",
+      "sample_urls": [
+        "https://twimlai.com/podcast/twimlai/canva-tackling-ai-designs-most-frustrating-problem",
+        "https://twimlai.com/podcast/twimlai/can-ai-invent-just-help-scientists-work-faster"
+      ],
+      "seconds": 1.351,
+      "pass_number": 3
+    }
+  ]
+}

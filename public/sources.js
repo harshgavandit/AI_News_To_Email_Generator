@@ -253,8 +253,21 @@ async function loadCoverage() {
       const card = node("a", "coverage-topic");
       card.href = `/?${new URLSearchParams({topic: topic.id, window: "24h"})}#reading-room`;
       card.append(node("strong", "", topic.label), node("span", "", `${number.format(topic.articles_24h)} stories · ${topic.fresh_feeds}/${topic.feeds} feeds current`));
+      if (topic.gap) card.append(node("span", "coverage-gap", {
+        no_sources: "Coverage gap: no reviewed feeds", checks_overdue: "Feed checks need attention",
+        no_recent_stories: "No retained stories in the past 24h",
+      }[topic.gap] || "Coverage needs review"));
       return card;
     }));
+    const attention = data.attention;
+    if (attention) {
+      const panel = element("coverage-attention");
+      panel.hidden = false;
+      panel.replaceChildren(node("strong", "", "Source monitoring"), node("p", "",
+        `${number.format(attention.failed_sources)} failed checks · ${number.format(attention.overdue_sources)} overdue checks · ${number.format(attention.quiet_sources)} publishers quiet for 30 days.`));
+      panel.append(node("p", "", "A successful check confirms feed access. It does not mean a publisher has released a new story or that coverage is exhaustive."));
+    }
+    element("coverage-status").textContent = data.notice || "";
   } catch { element("coverage-status").textContent = "Coverage counts are temporarily unavailable."; }
 }
 loadCoverage();

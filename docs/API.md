@@ -37,7 +37,7 @@ Set `NEWS_AI_ANALYSIS_MODEL` to route coverage comparisons to a different config
 - `facets.topics`, `facets.regions`, and `facets.languages` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, feed excerpts, and retained author names and tags. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Archive and direct-feed search use the same weights. Relevance without a query uses newest-first order.
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
-- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` reloads the archive from its database. A source record includes `retry_at` while it is waiting for its next eligible check. Publisher requests belong to the protected daily sweep and owner refresh endpoints.
+- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` reloads the archive from its database. A source record includes `retry_at` while it is waiting for its next eligible check. Publisher requests belong to protected scheduled and owner refresh endpoints.
 
 The two broad DEV streams require a technical title, excerpt, or topic tag. The archive applies the same rule to previously retained posts, so search totals, recommendations, and reading details exclude out-of-scope records.
 
@@ -102,7 +102,13 @@ exports enabled RSS feeds. Owner-authenticated `POST /api/admin/refresh` accepts
 an optional `source_ids` JSON list of up to 12 reviewed IDs.
 
 - `GET /api/signals`: publisher-diverse material developments from 24 hours with explicit selection reasons; not independently verified alerts.
-- `GET /api/discovery/coverage`: topic story counts, source health and bounded ingestion diagnostics.
+- `GET /api/discovery/coverage`: topic story counts, source health and bounded ingestion diagnostics. Topic `gap` is `no_sources`, `checks_overdue`, `no_recent_stories`, or null. `attention` separates failed, overdue and quiet sources. `regions` reports enabled integration counts, current checks and conservative publisher-family counts.
 - `GET /api/discovery/check?url=<publisher HTTPS URL>`: archive and source-health lookup, including community original links. Never fetches the submitted URL.
 
 See [coverage investigation](COVERAGE-REPAIR.md) for discovery boundaries and verification.
+
+`GET /api/jobs/refresh` uses adaptive per-source cadence by default. It returns
+`mode: "adaptive"`, `checked`, `healthy` and `remaining` for a bounded batch.
+The database lease prevents overlapping workers; publisher backoff is respected.
+`FEED_REFRESH_MODE=daily` retains the optional morning sweep. Job authorization
+is required in either mode; public readers never submit upstream feed URLs.

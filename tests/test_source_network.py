@@ -14,7 +14,7 @@ from app.discovery import relevance_score, search_terms, search_text
 from app.launch_store import CLASSIFICATION_VERSION, Store, articles, feed_checks
 from app.sources import BY_ID, Source, load_source_pack, validate_source
 from app.trending import extract_trending
-from scripts.discover_source_feeds import discover
+from scripts.discover_source_feeds import discover, discover_many
 
 
 def item(source_id, ident="fixture", title="A technical update"):
@@ -140,6 +140,42 @@ def test_feed_discovery_returns_declared_safe_links_without_activation():
       <link rel="alternate" type="application/atom+xml" href="javascript:bad()">'''
     assert discover("https://publisher.example/blog", lambda _: body) == [
         {"url": "https://publisher.example/feed.xml", "type": "application/rss+xml", "discovered_from": "https://publisher.example/blog"}]
+
+
+def test_bulk_discovery_isolates_failures_and_requires_public_seed_pages():
+    def fetch(url):
+        if "broken" in url:
+            raise TimeoutError("upstream unavailable")
+        return b'<link rel="alternate" type="application/atom+xml" href="/atom.xml">'
+
+    report = discover_many(["https://publisher.example/blog", "https://broken.example/", "https://publisher.example/blog"], fetch)
+    assert report["activated"] is False and len(report["results"]) == 2
+    assert [row["status"] for row in report["results"]] == ["discovered", "unavailable"]
+    assert report["results"][1]["error"] == "TimeoutError"
+    for seeds in ([], ["http://publisher.example/"], ["https://127.0.0.1/"], "https://publisher.example/"):
+        with pytest.raises(ValueError):
+            discover_many(seeds, fetch)
+
+
+def test_coverage_distinguishes_failed_checks_quiet_publishers_and_missing_stories(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'coverage.db'}")
+    monkeypatch.setattr(discovery_health, "get_store", lambda: store)
+    source = BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    old_story = {**item(source.id, title="Cloud infrastructure architecture"),
+                 "published_at": (datetime.now(UTC) - timedelta(days=32)).isoformat()}
+    store.ingest(source.id, [old_story], True)
+    client = TestClient(server.app)
+    report = client.get("/api/discovery/coverage").json()
+    assert report["attention"]["failed_sources"] == 0
+    assert report["attention"]["quiet_sources"] == 1
+    assert next(topic for topic in report["topics"] if topic["id"] == "research")["gap"] == "no_sources"
+    assert next(topic for topic in report["topics"] if topic["id"] == source.topic)["gap"] == "no_recent_stories"
+    store.ingest(source.id, [], False, "fetch_failed")
+    failed = client.get("/api/discovery/coverage").json()
+    assert failed["attention"]["failed_sources"] == 1
+    assert next(topic for topic in failed["topics"] if topic["id"] == source.topic)["gap"] == "checks_overdue"
+    assert sum(region["sources"] for region in failed["regions"]) == 1
 
 
 def test_owner_refresh_batches_require_auth_and_only_accept_reviewed_ids(tmp_path, monkeypatch):

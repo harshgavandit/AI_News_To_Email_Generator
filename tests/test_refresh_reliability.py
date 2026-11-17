@@ -38,6 +38,7 @@ def test_direct_feed_rate_limits_preserve_previous_records(monkeypatch):
 
 @pytest.fixture
 def archive(tmp_path, monkeypatch):
+    monkeypatch.setenv("FEED_REFRESH_MODE", "daily")
     store = launch_store.connect(f"sqlite:///{tmp_path / 'refresh.db'}")
     monkeypatch.setattr(server, "get_store", lambda: store)
     monkeypatch.setenv("FEED_REFRESH_SECRET", "scoped-refresh-for-tests")
@@ -308,3 +309,63 @@ def test_morning_sweep_drains_host_limited_batches_once_at_eight(archive, monkey
     assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 8
     daily_clock(morning + timedelta(days=1, minutes=46))
     assert client.get("/api/ready").json()["freshness"]["counts"]["stale"] == 8
+
+
+def test_adaptive_refresh_runs_before_morning_and_drains_bounded_batches(archive, monkeypatch, daily_clock):
+    store, client = archive
+    monkeypatch.setenv("FEED_REFRESH_MODE", "adaptive")
+    daily_clock(datetime(2026, 11, 17, 1, tzinfo=UTC))
+    sources = ingestion.DEFAULT_SOURCES[:70]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
+    attempts, cleanups = [], []
+    monkeypatch.setattr(store, "prune", lambda: cleanups.append(True))
+
+    def fetch(source, **kwargs):
+        attempts.append(source.id)
+        return [], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
+    first = client.get("/api/jobs/refresh", headers=headers).json()
+    assert first["mode"] == "adaptive" and first["checked"] <= 64 and first["remaining"] > 0
+    for _ in range(4):
+        result = client.get("/api/jobs/refresh", headers=headers).json()
+        if result["remaining"] == 0:
+            break
+    assert result["remaining"] == 0
+    assert len(attempts) == len(set(attempts)) == 70
+    assert len(cleanups) == 1
+    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
+    feeds = ingestion.source_catalog(store)
+    assert all(feed["refresh_policy"] == "adaptive" for feed in feeds)
+    assert {feed["refresh_minutes"] for feed in feeds} != {1440}
+    assert all(feed["checked_at"] < feed["next_check_at"] for feed in feeds)
+
+
+def test_adaptive_refresh_respects_per_source_cadence_and_retry_after(archive, monkeypatch, daily_clock):
+    store, client = archive
+    monkeypatch.delenv("FEED_REFRESH_MODE", raising=False)
+    source = BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    moment = datetime(2026, 11, 17, 1, tzinfo=UTC)
+    daily_clock(moment)
+    replies = iter([(True, None, 0), (False, "rate_limited", 3600), (True, None, 0)])
+    calls = []
+
+    def fetch(feed, **kwargs):
+        calls.append(feed.id)
+        available, error, retry = next(replies)
+        return [], {"available": available, "error": error, "retry_after": retry}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
+    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 1
+    daily_clock(moment + timedelta(minutes=source.poll_minutes - 1))
+    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
+    daily_clock(moment + timedelta(minutes=source.poll_minutes))
+    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 0
+    assert len(calls) == 2
+    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
+    daily_clock(moment + timedelta(minutes=source.poll_minutes + 61))
+    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 1
+    assert len(calls) == 3

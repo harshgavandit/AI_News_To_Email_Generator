@@ -44,6 +44,10 @@ export const languageOptions = {
   "zh-CN": "Chinese (Simplified)",
   "zh-TW": "Chinese (Traditional)",
   ar: "Arabic",
+  fa: "Persian",
+  vi: "Vietnamese",
+  tr: "Turkish",
+  pl: "Polish",
   und: "Not specified",
 };
 

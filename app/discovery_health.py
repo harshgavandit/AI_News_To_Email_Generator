@@ -56,11 +56,23 @@ def coverage(response: Response):
     topics = []
     for key, label in TOPICS.items():
         feeds = [feed for feed in catalog if BY_ID[feed["id"]].topic == key and feed["enabled"]]
+        recent = counts.get(key, 0)
+        fresh = sum(feed["freshness"] == "fresh" for feed in feeds)
+        gap = ("no_sources" if not feeds else "checks_overdue" if not fresh else
+               "no_recent_stories" if not recent else None)
         topics.append({"id": key, "label": label, "feeds": len(feeds),
             "publisher_groups": len({feed["publisher_family"] for feed in feeds}),
-            "fresh_feeds": sum(feed["freshness"] == "fresh" for feed in feeds),
-            "articles_24h": counts.get(key, 0)})
+            "fresh_feeds": fresh, "articles_24h": recent, "gap": gap})
     return {"freshness": feed_freshness(catalog), "topics": topics,
+        "attention": {"topics": [topic for topic in topics if topic["gap"]],
+            "failed_sources": sum(feed["enabled"] and feed["freshness"] == "failed" for feed in catalog),
+            "overdue_sources": sum(feed["enabled"] and feed["freshness"] == "stale" for feed in catalog),
+            "quiet_sources": sum(feed["enabled"] and feed["content_status"] == "quiet" for feed in catalog)},
+        "regions": [{"id": key, "sources": len(feeds),
+            "fresh": sum(feed["freshness"] == "fresh" for feed in feeds),
+            "publisher_groups": len({feed["publisher_family"] for feed in feeds})}
+            for key in sorted({feed["region_id"] for feed in catalog})
+            if (feeds := [feed for feed in catalog if feed["enabled"] and feed["region_id"] == key])],
         "formats": [{"id": key, "label": label, "sources": sum(feed["format"] == key for feed in catalog),
                      "fresh": sum(feed["format"] == key and feed["freshness"] == "fresh" for feed in catalog)}
                     for key, label in FORMATS.items()],

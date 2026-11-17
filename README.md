@@ -4,6 +4,8 @@
 
 Browse global technology news, research, security advisories, developer articles, and official release notes. Sources include TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, selected Medium feeds, and public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags across up to 90 days of retained stories. Filter by topic, subject, publisher, region, language, source type, and time.
 
+The reviewed catalog contains 477 feed and API integrations, including independent technical writers, regional publications, research papers, project releases, newsletters, podcasts and video channels. The [source directory](https://ai-news-to-email-generator.vercel.app/sources.html) shows check history, publication freshness and coverage gaps. Scheduled batches check fast-moving feeds more often and leave quieter sources on longer intervals.
+
 Use the Daily briefing for a five-story catch-up, or explore all stories, topics and saved monitoring views from the workspace navigation. Hide read stories from the loaded selection, compare supporting coverage, and pin a selection into the brief builder. The interface supports light and dark themes, card and list reading, and a compact mobile navigation.
 
 Open the [Research Desk](https://ai-news-to-email-generator.vercel.app/research.html) to search publisher evidence, compare coverage, request cited analysis, and download research notes with source links. Opt in to background monitoring for up to six queries and review the private inbox when you return. The inbox updates after the archive and monitoring checks run. Delete watches and alerts under Privacy &amp; controls.
