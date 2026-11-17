@@ -127,6 +127,9 @@ class QuotaReached(Exception):
     pass
 
 
+CLASSIFICATION_VERSION = 3
+
+
 def discovery_fields(article):
     from app.intelligence import subjects_for
     from app.news import article_in_scope
@@ -139,7 +142,7 @@ def discovery_fields(article):
     return {"topic": topic_for(article), "search_title": search_text(article["title"]),
             "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
             "subject_keys": "|" + "|".join(subjects_for(article)) + "|",
-            "source_eligible": eligible, "author_key": author_identity(article), "classification_version": 2,
+            "source_eligible": eligible, "author_key": author_identity(article), "classification_version": CLASSIFICATION_VERSION,
             "community_relevant": (dev_article_in_scope(article) if article["source_id"] in GENERAL_DEV_FEEDS else None)}
 
 
@@ -148,7 +151,7 @@ def backfill_discovery(conn):
                                                "category", "kind", "metadata_json"))).where(or_(
         articles.c.topic.is_(None), articles.c.subject_keys.is_(None), articles.c.source_eligible.is_(None),
         articles.c.author_key.is_(None),
-        articles.c.classification_version.is_(None), articles.c.classification_version != 2,
+        articles.c.classification_version.is_(None), articles.c.classification_version != CLASSIFICATION_VERSION,
         and_(articles.c.source_id.in_(GENERAL_DEV_FEEDS), articles.c.community_relevant.is_(None))))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():

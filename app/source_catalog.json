@@ -498,13 +498,13 @@
     "hosts": [
       "darknetdiaries.com"
     ],
-    "topic": "ai",
+    "topic": "security",
     "format": "podcast",
     "coverage": "article",
     "kind": "podcast",
     "refresh_minutes": 60,
     "reviewed_at": "2026-11-17",
-    "collection": "AI engineering"
+    "collection": "Security"
   },
   {
     "id": "datadog-blog",

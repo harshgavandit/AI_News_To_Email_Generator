@@ -6,11 +6,12 @@ from xml.etree import ElementTree as ET
 
 from fastapi.testclient import TestClient
 import pytest
+from sqlalchemy import update
 
 from app import discovery_health, ingestion, scholarly, server
 from app.article_metadata import extract_technical_terms
 from app.discovery import relevance_score, search_terms, search_text
-from app.launch_store import Store, feed_checks
+from app.launch_store import CLASSIFICATION_VERSION, Store, articles, feed_checks
 from app.sources import BY_ID, Source, load_source_pack, validate_source
 from app.trending import extract_trending
 from scripts.discover_source_feeds import discover
@@ -34,6 +35,23 @@ def test_pack_rejects_duplicate_ids_and_nonpublic_endpoints(tmp_path):
         validate_source(Source(**{**row, "url": "https://127.0.0.1/private"}))
     with pytest.raises(ValueError):
         validate_source(Source(**{**row, "format": "unreviewed"}))
+
+
+def test_podcast_focus_repairs_existing_archive_classification(tmp_path):
+    store = Store(f"sqlite:///{tmp_path / 'podcast-classification.db'}")
+    source = BY_ID["darknet-diaries"]
+    assert source.topic == "security" and source.collection == "Security"
+    story = item(source.id, title="Jack Rhysider interviews a guest")
+    store.ingest(source.id, [story], True)
+    with store.engine.begin() as conn:
+        conn.execute(update(articles).where(articles.c.id == story["id"]).values(
+            topic="ai", classification_version=CLASSIFICATION_VERSION - 1))
+    store.migrate()
+    repaired = store.article(story["id"])
+    assert repaired["topic"] == "security"
+    assert repaired["classification_version"] == CLASSIFICATION_VERSION
+    store.migrate()
+    assert store.article(story["id"])["topic"] == "security"
 
 
 def test_due_plan_is_bounded_host_aware_and_fair(monkeypatch):
