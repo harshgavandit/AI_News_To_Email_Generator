@@ -105,16 +105,22 @@ def technology_record(ident, raw):
 
 
 def edition(store, ident, hours, question, language):
-    rows = eligible_rows(store, ident, hours, limit=24)
-    # Choose at least one item from represented source types before filling the context.
-    types = set()
+    rows = eligible_rows(store, ident, hours, limit=48)
+    # Keep first-party releases, security advisories and incident reports in the model's context.
+    source_types = {"release", "advisory", "status"}
+    direct = []
+    for kind in ("release", "advisory", "status"):
+        direct.extend([row for row in rows if row["record_kind"] == kind and row["entity_match"] != "mention"][:2])
+    selected = {row["id"] for row in direct}
+    represented = {row["record_kind"] for row in direct}
     diverse = []
     for row in rows:
-        if row["excerpt"] and row["record_kind"] not in types:
-            types.add(row["record_kind"])
+        kind = row["record_kind"]
+        if (row["excerpt"] or kind in source_types) and kind not in represented:
+            represented.add(kind)
+            selected.add(row["id"])
             diverse.append(row)
-    selected = {row["id"] for row in diverse}
-    evidence = [*diverse, *(row for row in rows if row["id"] not in selected)][:12]
+    evidence = [*direct, *diverse, *(row for row in rows if row["id"] not in selected)][:12]
     subject = TECHNOLOGIES[ident].name
     task = f"Subject: {subject}. Past {hours} hours. Question: {question or 'What changed?'}"
     return {"evidence": evidence, "answer": research.synthesize(store, "technology", task, evidence,

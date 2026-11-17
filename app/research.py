@@ -256,7 +256,12 @@ def numeric_tokens(text):
     return set(re.findall(r"\b\d+(?:[.,]\d+)*", normalized))
 
 
-def validate_answer(answer, evidence):
+def technology_title_evidence(row):
+    return row.get("record_kind") in {"release", "advisory", "status"} and row.get("entity_match") in {
+        "repository", "registered_source"}
+
+
+def validate_answer(answer, evidence, *, allow_technology_titles=False):
     by_id = {source["id"]: source for source in evidence}
     if not safe_prose(answer.limitations, 420) or len(answer.claims) > 6:
         raise ValueError("Invalid research response")
@@ -274,9 +279,13 @@ def validate_answer(answer, evidence):
                 raise ValueError("Expected a quote per citation")
             for ident, quote in zip(ids, claim.quotes, strict=True):
                 normalized = " ".join(quote.split())
-                excerpt = " ".join(by_id[ident]["excerpt"].split())
-                if not 12 <= len(normalized) <= 360 or normalized not in excerpt:
-                    raise ValueError("Comparison quote not found in excerpt")
+                source = by_id[ident]
+                excerpt = " ".join(source["excerpt"].split())
+                title = " ".join(source["title"].split())
+                quotes_title = (allow_technology_titles and claim.kind == "fact" and technology_title_evidence(source)
+                                and 8 <= len(normalized) <= 360 and normalized in title)
+                if not quotes_title and not (12 <= len(normalized) <= 360 and normalized in excerpt):
+                    raise ValueError("Citation quote not found in eligible evidence")
         if claim.kind in {"shared", "difference"}:
             cited_rows = [by_id[ident] for ident in ids]
             families = {row.get("publisher_family") or row["publisher"] for row in cited_rows}
@@ -289,7 +298,8 @@ def validate_answer(answer, evidence):
 
 
 def synthesize(store, mode, question, records, *, cacheable=False, language="en"):
-    evidence = [row for row in records if row["excerpt"]][:8]
+    technology_mode = mode == "technology"
+    evidence = [row for row in records if row["excerpt"] or (technology_mode and technology_title_evidence(row))][:8]
     empty = {"claims": [], "limitations": ""}
     if not evidence:
         return dict(empty, status="insufficient", limitations="The archive does not contain excerpts that answer this request.")
@@ -310,6 +320,12 @@ never infer independent verification from outlet count. Do not equate unrelated 
 unrelated tangents. If cross-language evidence is missing, state that limitation explicitly.
 Supply one short verbatim quote in the original language per cited excerpt, in the order of source_ids."""
         fields += ("language", "region", "coverage", "publisher_family")
+    elif technology_mode:
+        system += (" When detailed notes are missing, report any relevant release, advisory, or incident explicitly stated in the supplied source titles."
+                   " For each citation provide one verbatim quote in the original language. A title quote is allowed only for facts it explicitly states"
+                   " and only for release, advisory, or incident records from a registered source or project repository. A title does not establish"
+                   " what changed internally, who is affected, or how to respond. Identify those evidence gaps in limitations.")
+        fields += ("coverage", "language", "record_kind", "entity_match")
     elif quoted:
         system += " Supply one short verbatim quote from the original language per cited excerpt, in the order of source_ids. Label gaps explicitly."
         fields += ("coverage", "language", "record_kind", "entity_match")
@@ -324,7 +340,7 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
     schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted)
     try:
         response = generate_response(payload, system, schema, max_tokens=1300, model=model)
-        answer = validate_answer(schema.model_validate_json(response), evidence)
+        answer = validate_answer(schema.model_validate_json(response), evidence, allow_technology_titles=technology_mode)
     except Exception as error:
         reason = str(error).splitlines()[0][:100]
         logger.warning("research_answer_rejected type=%s reason=%s", type(error).__name__, reason)

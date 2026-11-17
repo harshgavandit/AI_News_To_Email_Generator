@@ -16,7 +16,7 @@ function mount(markup = html, url = 'https://informa.test/') {
   const dom = new JSDOM(markup, { url });
   dom.window.matchMedia = query => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} });
   const previous = new Map();
-  for (const name of ['window', 'document', 'localStorage', 'DOMParser', 'Node', 'location', 'history', 'navigator', 'getComputedStyle', 'CSS', 'matchMedia']) {
+  for (const name of ['window', 'document', 'localStorage', 'sessionStorage', 'DOMParser', 'Node', 'location', 'history', 'navigator', 'getComputedStyle', 'CSS', 'matchMedia']) {
     previous.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
     Object.defineProperty(globalThis, name, { configurable: true, writable: true,
       value: name === 'getComputedStyle' ? dom.window.getComputedStyle.bind(dom.window) : name === 'CSS' ? { escape: value => String(value) } : dom.window[name] });

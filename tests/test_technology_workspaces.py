@@ -68,6 +68,24 @@ def test_technology_page_grounding_and_radar_follow(archive, monkeypatch):
         assert any("Technology you follow: Kubernetes" in row["reasons"] for row in catchup["events"])
 
 
+def test_technology_answer_can_cite_exact_official_release_title(archive, monkeypatch):
+    release(archive, "headline", "1.34.0", "", title="Kubernetes v1.34.0")
+    monkeypatch.setattr(research, "ai_enabled", lambda: True)
+
+    def headline_answer(payload, system, schema, **options):
+        source = json.loads(payload)["evidence"][0]
+        assert source["record_kind"] == "release" and source["excerpt"] == ""
+        return json.dumps({"status": "answered", "limitations": "The release entry has no retained notes.", "claims": [
+            {"text": "Kubernetes v1.34.0 was listed as a release.", "kind": "fact", "source_ids": [source["id"]],
+             "quotes": [source["title"]]}]})
+
+    monkeypatch.setattr(research, "generate_response", headline_answer)
+    with TestClient(app) as browser:
+        response = browser.post("/api/intelligence/technologies/kubernetes/ask", json={})
+        assert response.status_code == 200
+        assert response.json()["answer"]["status"] == "answered"
+
+
 def test_draft_needs_review_and_background_checks_exact_filters(archive, monkeypatch):
     monkeypatch.setattr(research, "ai_enabled", lambda: True)
     rule = {"technology": "kubernetes", "event": "breaking", "version": "1.34.0", "region": ""}
