@@ -87,6 +87,12 @@ def test_server_registers_public_insight_routes():
     assert "/api/intelligence/converse" in paths
 
 
+def test_research_numeric_validation_normalizes_translated_decimal_digits():
+    from app import research
+
+    assert research.numeric_tokens("٢١٤ million") == research.numeric_tokens("214 million")
+
+
 def test_public_catchup_returns_a_signed_source_linked_preview(tmp_path, monkeypatch):
     from app import insight_api, server
 

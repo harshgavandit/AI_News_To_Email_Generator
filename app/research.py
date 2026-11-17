@@ -8,6 +8,7 @@ import math
 import os
 import re
 import struct
+import unicodedata
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, create_model
@@ -245,7 +246,9 @@ def safe_prose(text, limit):
 
 
 def numeric_tokens(text):
-    return set(re.findall(r"\b\d+(?:[.,]\d+)*", text.replace(",", "")))
+    normalized = "".join(str(unicodedata.decimal(char)) if char.isdecimal() else char
+                          for char in text.replace(",", ""))
+    return set(re.findall(r"\b\d+(?:[.,]\d+)*", normalized))
 
 
 def validate_answer(answer, evidence):
