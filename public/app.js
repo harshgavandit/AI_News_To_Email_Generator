@@ -119,6 +119,9 @@ $("edition-date").textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 
 const savedKey = "informa-saved-v1";
 const readKey = "informa-read-v1";
 const layoutKey = "informa-story-layout";
+window.addEventListener("storage", (event) => {
+  if (event.key === "informa-reader-reset") location.reload();
+});
 const preferences = createPreferences($("personalization"), () => {
   if (state.view === "for-you") loadNews();
   syncFollowActions();

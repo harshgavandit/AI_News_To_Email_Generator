@@ -6,4 +6,13 @@
   <url>
     <loc>https://ai-news-to-email-generator.vercel.app/sources.html</loc>
   </url>
+  <url>
+    <loc>https://ai-news-to-email-generator.vercel.app/about.html</loc>
+  </url>
+  <url>
+    <loc>https://ai-news-to-email-generator.vercel.app/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://ai-news-to-email-generator.vercel.app/trust.html</loc>
+  </url>
 </urlset>

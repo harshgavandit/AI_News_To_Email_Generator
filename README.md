@@ -14,6 +14,8 @@ The reader labels excerpts, headline-only records, and full articles shared with
 
 Hashnode discovery uses its free public feed endpoint, with bounded pagination and validation of dates and technology relevance. Publication-specific and individual-post API queries remain Pro-gated and are not used. Medium content comes from reviewed RSS feeds. No paywall bypass or automatic full-article extraction is performed. Coverage is limited to integrated sources and available history. Saved stories and followed lists stay on the originating browser.
 
+Meet the creator on [About](https://ai-news-to-email-generator.vercel.app/about.html), review [source standards](https://ai-news-to-email-generator.vercel.app/trust.html), and manage browser-stored reading data in [Privacy & controls](https://ai-news-to-email-generator.vercel.app/privacy.html). Export your browser data or selectively clear saved stories, read history, interests, and monitoring views. Optional audience analytics is off by default and respects Global Privacy Control and Do Not Track signals.
+
 ## Run locally
 
 Use Python 3.12 or later and Node.js 24.15 or later in the 24.x LTS line for frontend tests.

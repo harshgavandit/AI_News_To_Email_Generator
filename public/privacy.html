@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f6f7f4" />
+    <meta name="description" content="Understand your Informa AI data. Export or clear browser-stored reading lists, choose optional analytics, and learn how AI and email features handle information." />
+    <title>Privacy &amp; controls | Informa AI</title>
+    <link rel="canonical" href="https://ai-news-to-email-generator.vercel.app/privacy.html" />
+    <meta property="og:title" content="Privacy &amp; controls | Informa AI" />
+    <meta property="og:description" content="Understand your Informa AI data. Export or clear browser-stored reading lists, choose optional analytics, and learn how AI and email features handle information." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <script src="/theme.js"></script>
+    <script defer src="/analytics.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/polish.css" />
+    <link rel="stylesheet" href="/information.css" />
+    <script type="module" src="/privacy.js"></script>
+  </head>
+  <body class="information-page">
+    <a class="skip" href="#information-main">Skip to content</a>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a><a href="/sources.html">Sources</a><a href="/about.html">About</a>
+        </nav>
+        <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><a class="button primary" href="/#reading-room">Explore stories</a>
+        </div>
+      </div>
+    </header>
+    <main id="information-main" class="wrap information-main">
+      <nav class="information-nav" aria-label="About this platform"><a href="/about.html">About</a><a href="/privacy.html" aria-current="page">Privacy &amp; controls</a><a href="/trust.html">Source standards</a>
+      </nav>
+      <header class="information-hero">
+        <p class="eyebrow">Privacy &amp; controls</p>
+        <h1>Your reading space.<br />Your choices.</h1>
+        <p class="information-lead">Understand what stays in your browser, what a feature sends, and the controls available to you.</p>
+        <p>Browse without an account. Keep your saved stories and preferences on this device. Choose whether to use AI briefs, email delivery, and optional audience analytics.</p>
+        <p class="information-date">Updated <time datetime="2026-11-17">17 November 2026</time>
+        </p>
+      </header>
+      <section id="browser-controls" class="privacy-dashboard" aria-labelledby="browser-title">
+        <div class="section-heading">
+          <p class="eyebrow">On this device</p>
+          <h2 id="browser-title">Your browser data</h2>
+          <p id="privacy-storage-note" role="status">Enable JavaScript to inspect and manage this browser’s reading data.</p>
+        </div>
+        <div class="privacy-counts">
+          <div><strong id="count-bookmarks">—</strong><span>Saved stories</span>
+          </div>
+          <div><strong id="count-history">—</strong><span>Read stories</span>
+          </div>
+          <div><strong id="count-interests">—</strong><span>Interests &amp; follows</span>
+          </div>
+          <div><strong id="count-views">—</strong><span>Monitoring views</span>
+          </div>
+        </div>
+        <div class="privacy-action-row">
+          <div>
+            <h3>Take your reading data with you.</h3>
+            <p>Download your saved stories, read IDs, followed lists, monitoring views, appearance, and analytics choice as a JSON file. This export stays on your device and excludes email and author-review records.</p>
+          </div><button id="export-browser-data" class="button secondary" type="button">Download my browser data ↓</button>
+        </div>
+        <div class="privacy-action-row reset-row">
+          <div>
+            <h3>Start fresh, on your terms.</h3>
+            <p>Select what to clear. This affects this browser’s reading lists only. Export first if you want a copy. Other open Reading Room tabs will reload to apply the reset.</p>
+            <fieldset class="privacy-selections"><legend class="sr-only">Choose browser data to clear</legend><label><input type="checkbox" name="clear-group" value="bookmarks" />Saved stories</label><label><input type="checkbox" name="clear-group" value="history" />Read history</label><label><input type="checkbox" name="clear-group" value="interests" />Interests &amp; follows</label><label><input type="checkbox" name="clear-group" value="views" />Monitoring views</label>
+            </fieldset>
+          </div><button id="clear-browser-data" class="button secondary" type="button">Clear selected data</button>
+        </div>
+        <p id="privacy-status" class="status" role="status" aria-live="polite">
+        </p>
+        <noscript>
+          <p>These controls need JavaScript. You can also remove this site’s stored data in your browser settings.</p>
+        </noscript>
+      </section>
+      <section class="analytics-panel" aria-labelledby="analytics-title">
+        <div>
+          <p class="eyebrow">An optional choice</p>
+          <h2 id="analytics-title">Audience analytics</h2>
+          <p>Off by default. If you opt in, Vercel Web Analytics helps count visits and understand broad usage. Search terms, URL parameters, and fragments are removed from page-view URLs. We honor Global Privacy Control and Do Not Track signals for this optional feature.</p>
+          <p id="analytics-status" class="small" role="status">Optional analytics stays off until you choose to enable it.</p>
+        </div>
+        <div><label for="analytics-choice">Optional analytics in this browser</label><select id="analytics-choice"><option value="denied">Off</option><option value="granted">On</option></select>
+          <p class="small">Changing this choice reloads the page.</p>
+        </div>
+      </section>
+      <div class="information-layout">
+        <nav class="page-contents" aria-label="On this page"><span class="eyebrow">How data is handled</span><a href="#local-data">Browser storage</a><a href="#requests">Search &amp; AI</a><a href="#email-data">Email &amp; submissions</a><a href="#service-providers">Service providers</a><a href="#retention">Retention &amp; security</a><a href="#privacy-contact">Contact &amp; requests</a>
+        </nav>
+        <div class="information-prose">
+          <section id="local-data">
+            <h2>Your reading lists stay in this browser.</h2>
+            <p>Saved stories, read markers, interests, followed lists, named monitoring views, theme, and reading layout are stored in your browser. They are not synced to a reader account. Anyone with access to your browser profile may be able to see them.</p>
+            <p>Selected preferences are sent to the service when needed to retrieve recommendations. Browser storage is different from essential email-session cookies. Clearing reading lists here does not sign you out of email or delete server-side records.</p>
+          </section>
+          <section id="requests">
+            <h2>Search and AI use the information needed for the request.</h2>
+            <p>Search terms and filters are sent to Informa AI to find matching articles. Shared story and monitoring URLs can contain those filters, so review a link before sharing it.</p>
+            <p>When you request an AI brief, selected article titles and excerpts, along with the brief preferences you provide, may be sent to OpenAI for processing. Do not put sensitive personal information in free-text brief instructions. Ordinary story browsing does not require an AI request.</p>
+          </section>
+          <section id="email-data">
+            <h2>Email and author features are optional.</h2>
+            <p>Inbox verification uses your email address and a short-lived code. Verification alone does not subscribe you. Sending a brief or opting into scheduled delivery shares your address and message with the configured email provider. Scheduled delivery also stores your chosen timezone.</p>
+            <p>Email verification cookies expire after ten minutes for a pending challenge and seven days for a verified session. Verification cookies are restricted to the email feature. Unsubscribe using the link in a scheduled brief; signing out alone does not unsubscribe you.</p>
+            <p>If you submit an article, your name, verified email, submitted text, and permission evidence are retained for owner review. Approved article text and author attribution become public. Email and permission evidence remain private to the review process. You can withdraw reading permission in the <a href="/contribute.html">author workspace</a>; review records remain in the private archive.</p>
+          </section>
+          <section id="service-providers">
+            <h2>The services involved.</h2>
+            <ul>
+              <li><strong>Hosting:</strong> Vercel serves the site and processes requests. Hosting and security operations may retain request information, including network addresses and URLs, independently of optional analytics.</li>
+              <li><strong>AI:</strong> OpenAI processes material provided for requested AI briefs.</li>
+              <li><strong>Email and bot protection:</strong> Configured delivery providers handle verification and requested messages. Cloudflare Turnstile may process browser signals when the email feature asks for a bot check.</li>
+              <li><strong>Optional analytics:</strong> Vercel Web Analytics loads only with your choice enabled and no browser privacy signal requesting it be disabled. Its provider describes it as cookie-free. See <a href="https://vercel.com/docs/analytics/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel’s analytics privacy information ↗</a>.</li>
+              <li><strong>Publishers:</strong> Opening original links takes you to another service. Some article thumbnails are loaded from publisher or image hosts, which receive the image request. Their own privacy practices apply.</li>
+            </ul>
+          </section>
+          <section id="retention">
+            <h2>Practical protection, with honest limits.</h2>
+            <p>Production traffic uses HTTPS. The application restricts owner actions, checks incoming requests, and sanitizes displayed content. Email verification uses restricted session cookies. No internet service can promise absolute security.</p>
+            <p>Browser reading data stays until you remove it or your browser clears it. Routine cleanup removes news and cached summaries older than 90 days, delivery records older than 30 days, and source-check history older than seven days. Short-lived verification and preview records are cleaned after expiry. Cleanup runs periodically rather than at an exact deletion instant.</p>
+            <p>Subscriptions, delivery-suppression records, and permission-review records have separate operational purposes and are not removed by the browser reset. For access or removal requests involving server-side records, contact the creator. Hosting and service-provider retention may differ.</p>
+          </section>
+          <section id="privacy-contact" class="prose-contact">
+            <p class="eyebrow">A person you can reach</p>
+            <h2>Questions about your data?</h2>
+            <p>Contact Harsh Gavand about privacy, access, or removal requests. Include the feature involved and the email address you used, if relevant. Do not send passwords, access keys, or verification codes.</p><a class="button secondary" href="mailto:harshgavand2@gmail.com?subject=Informa%20AI%20privacy%20request">Contact Harsh ↗</a><a class="inline-link" href="/about.html#creator">Meet the creator →</a>
+          </section>
+        </div>
+      </div>
+      <dialog id="clear-data-dialog" class="privacy-dialog" aria-labelledby="clear-data-title">
+        <h2 id="clear-data-title">Clear the selected reading data?</h2>
+        <p>These browser-stored lists cannot be restored through Informa AI. Download an export first if you need a copy.</p>
+        <ul id="clear-data-list">
+        </ul>
+        <p>Email records, author submissions, appearance, and analytics choices are not affected.</p>
+        <div class="dialog-actions"><button id="cancel-clear-data" class="button secondary" type="button" autofocus>Keep my data</button><button id="confirm-clear-data" class="button primary" type="button">Clear selected data</button>
+        </div>
+      </dialog>
+    </main>
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col"><a class="footer-brand" href="/">Informa AI</a>
+        <p class="footer-pillars">An independent project by <a href="/about.html#creator">Harsh Gavand</a>
+        </p>
+      </div>
+      <nav class="footer-nav" aria-label="Footer"><a href="/#reading-room">Reading Room</a><a href="/sources.html">Source directory</a><a href="/contribute.html">For authors</a><a href="/about.html">About</a><a href="/privacy.html">Privacy &amp; controls</a><a href="/trust.html">Source standards</a><a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+      </nav>
+    </footer>
+  </body>
+</html>

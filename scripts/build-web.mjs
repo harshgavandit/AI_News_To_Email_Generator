@@ -23,14 +23,15 @@ for (const filename of readdirSync('public')) {
   if (new Set(ids).size !== ids.length) throw new Error(`Duplicate element IDs in ${filename}`);
   const entry = filename === 'index.html' ? ['app.js', /\$\("([^"\n]+)"\)/g] :
     filename === 'sources.html' ? ['sources.js', /element\("([^"\n]+)"\)/g] :
-    filename === 'contribute.html' ? ['contribute.js', /byId\("([^"\n]+)"\)/g] : null;
+    filename === 'contribute.html' ? ['contribute.js', /byId\("([^"\n]+)"\)/g] :
+    filename === 'privacy.html' ? ['privacy.js', /byId\("([^"\n]+)"\)/g] : null;
   if (entry) {
     const script = readFileSync(resolve('public', entry[0]), 'utf8');
     for (const match of script.matchAll(entry[1])) {
       if (!ids.includes(match[1])) throw new Error(`Missing element #${match[1]} referenced by ${entry[0]}`);
     }
   }
-  for (const match of html.matchAll(/(?:src|href)="(\/[^"?#]+\.(?:js|css|svg|jpg|png))"/g)) {
+  for (const match of html.matchAll(/(?:src|href)="(\/[^"?#]+\.(?:js|css|svg|jpg|webp|png|html))"/g)) {
     if (match[1].startsWith('/_vercel/')) continue;
     if (!existsSync(resolve('public', match[1].slice(1)))) {
       throw new Error(`Missing static asset ${match[1]} in ${filename}`);

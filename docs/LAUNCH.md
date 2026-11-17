@@ -6,7 +6,7 @@ Add the production URL as a URL-prefix property in Google Search Console using t
 
 The production homepage uses the Google HTML meta-tag verification method. Keep its `google-site-verification` tag in `public/index.html` while this Search Console property needs verification.
 
-Vercel Web Analytics is enabled for the linked Hobby project, and both public HTML pages load the Vercel insights script. Hobby includes up to 50,000 events monthly. Collection pauses at the limit rather than charging for extra events. Vercel anonymizes Web Analytics visitor data and does not use cookies. See [Vercel Analytics pricing and limits](https://vercel.com/docs/analytics/limits-and-pricing).
+Optional Vercel Web Analytics is off by default. Readers can opt in on `/privacy.html`; the shared loader checks the saved choice and honors Global Privacy Control and Do Not Track before loading the insights script. A `beforeSend` hook strips query parameters and fragments from event URLs and drops events when consent is withdrawn. Changing consent reloads the page, and other open tabs also reload to apply it. Hosting and security logs are separate from optional analytics. See [Vercel Analytics privacy information](https://vercel.com/docs/analytics/privacy-policy).
 
 The sitemap lists the two canonical public pages. API responses carry `X-Robots-Tag: noindex` while remaining available to crawlers that render the Reading Room. If the production domain changes, update both pages' canonical URLs, `public/robots.txt`, and `public/sitemap.xml` together.
 
