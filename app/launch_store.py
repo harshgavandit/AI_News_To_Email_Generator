@@ -9,7 +9,7 @@ from functools import lru_cache
 from urllib.parse import urlsplit
 
 from sqlalchemy import (
-    Boolean, Column, Float, Index, Integer, MetaData, String, Table, Text,
+    Boolean, Column, Float, Index, Integer, LargeBinary, MetaData, String, Table, Text,
     and_, bindparam, case, create_engine, delete, func, inspect, literal, literal_column, or_, select, tuple_, update,
 )
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -36,6 +36,10 @@ articles = Table("brief_articles", schema,
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
                      articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
                      articles.c.source_eligible, articles.c.author_key, articles.c.classification_version)
+research_vectors = Table("brief_research_vectors", schema,
+    Column("id", String(40), primary_key=True), Column("encoder", String(100), nullable=False),
+    Column("title", Text, nullable=False), Column("description", Text, nullable=False),
+    Column("embedding", LargeBinary, nullable=False))
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -427,6 +431,52 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(self.query(90 * 24).where(articles.c.id.in_(ids))).mappings()]
 
+    def research_matches(self, hours, terms, **filters):
+        if not terms:
+            return []
+        stmt = self.query(hours, **filters)
+        matches = [search_document.contains(term, autoescape=True) for term in terms]
+        score = sum(case((match, 1), else_=0) for match in matches)
+        title_score = sum(case((articles.c.search_title.contains(term, autoescape=True), 1), else_=0)
+                          for term in terms)
+        stmt = stmt.where(or_(*matches)).order_by(score.desc(), title_score.desc(),
+                                                  articles.c.published_at.desc(), articles.c.id).limit(96)
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(stmt).mappings()]
+
+    def research_schema_exists(self):
+        return inspect(self.engine).has_table(research_vectors.name)
+
+    def research_index_samples(self, encoder, *, limit=1200, pending=False, **filters):
+        joined = and_(articles.c.id == research_vectors.c.id, research_vectors.c.encoder == encoder,
+                      articles.c.title == research_vectors.c.title, articles.c.description == research_vectors.c.description)
+        stmt = self.query(**filters).outerjoin(research_vectors, joined)
+        if pending:
+            rank = func.row_number().over(partition_by=articles.c.source_id,
+                order_by=(articles.c.published_at.desc(), articles.c.id)).label("publisher_rank")
+            ranked = stmt.where(research_vectors.c.id.is_(None)).add_columns(rank).subquery()
+            stmt = select(ranked).order_by(ranked.c.publisher_rank, ranked.c.published_at.desc(), ranked.c.id)
+        else:
+            stmt = stmt.where(research_vectors.c.id.is_not(None)).with_only_columns(
+                articles.c.id, research_vectors.c.embedding).order_by(articles.c.published_at.desc(), articles.c.id)
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(stmt.limit(limit)).mappings()]
+
+    def save_research_vectors(self, encoder, rows):
+        if rows:
+            with self.engine.begin() as conn:
+                stmt = self.insert(research_vectors)
+                conn.execute(stmt.on_conflict_do_update(index_elements=[research_vectors.c.id],
+                    set_={key: stmt.excluded[key] for key in ("encoder", "title", "description", "embedding")}),
+                    [{"id": row["id"], "title": row["title"], "description": row["description"],
+                      "encoder": encoder, "embedding": embedding} for row, embedding in rows])
+
+    def research_vector(self, row, encoder):
+        with self.engine.connect() as conn:
+            return conn.scalar(select(research_vectors.c.embedding).where(research_vectors.c.id == row["id"],
+                research_vectors.c.encoder == encoder, research_vectors.c.title == row["title"],
+                research_vectors.c.description == row["description"]))
+
     def article(self, ident):
         with self.engine.connect() as conn:
             row = conn.execute(self.query(90 * 24).where(articles.c.id == ident)).mappings().first()
@@ -769,10 +819,12 @@ class Store:
             payload = conn.scalar(select(summaries.c.payload).where(summaries.c.id == ident))
         return json.loads(payload) if payload else None
 
-    def save_summary(self, ident, payload):
+    def save_summary(self, ident, payload, *, replace=False):
         with self.engine.begin() as conn:
             stmt = self.insert(summaries).values(id=ident, payload=json.dumps(payload), created=time.time())
-            conn.execute(stmt.on_conflict_do_nothing(index_elements=[summaries.c.id]))
+            conn.execute(stmt.on_conflict_do_update(index_elements=[summaries.c.id],
+                set_={"payload": stmt.excluded.payload, "created": stmt.excluded.created})
+                if replace else stmt.on_conflict_do_nothing(index_elements=[summaries.c.id]))
 
     def subscription(self, mailbox):
         with self.engine.connect() as conn:
@@ -857,6 +909,9 @@ class Store:
                 (feed_checks, feed_checks.c.checked < now - 7 * 86400),
             ):
                 conn.execute(delete(table).where(condition))
+            if inspect(conn).has_table(research_vectors.name):
+                conn.execute(delete(research_vectors).where(
+                    ~select(articles.c.id).where(articles.c.id == research_vectors.c.id).exists()))
 
 
 @lru_cache(maxsize=2)

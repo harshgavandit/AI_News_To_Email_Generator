@@ -1,0 +1,257 @@
+"""Research evaluations use an isolated archive and deterministic provider responses."""
+from datetime import UTC, datetime, timedelta
+import json
+import os
+from uuid import uuid4
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.engine import make_url
+
+from app import research, server
+from app.launch_store import Store, research_vectors
+from app.sources import BY_ID
+
+
+def article(ident, title, description, source_id="ars-technica", *, hours=1):
+    source = BY_ID[source_id]
+    return {"id": ident, "title": title, "description": description, "source": source.group,
+            "source_id": source_id, "publisher": source.label, "kind": source.kind,
+            "category": "Cybersecurity", "url": f"https://{source.hosts[0]}/{ident}",
+            "published_at": (datetime.now(UTC) - timedelta(hours=hours)).isoformat()}
+
+
+@pytest.fixture(params=["sqlite", "postgresql"])
+def research_database(request, tmp_path):
+    if request.param == "sqlite":
+        yield f"sqlite:///{tmp_path / 'research.db'}"
+        return
+    url = os.getenv("TEST_NEWS_POSTGRES_URL")
+    if not url:
+        pytest.skip("Set TEST_NEWS_POSTGRES_URL to a disposable PostgreSQL service")
+    schema = f"test_research_{uuid4().hex}"
+    admin = create_engine(url)
+    with admin.begin() as conn:
+        conn.exec_driver_sql(f"CREATE SCHEMA {schema}")
+    try:
+        yield make_url(url).update_query_dict({"options": f"-csearch_path={schema}"}).render_as_string(hide_password=False)
+    finally:
+        with admin.begin() as conn:
+            conn.exec_driver_sql(f"DROP SCHEMA {schema} CASCADE")
+        admin.dispose()
+
+
+@pytest.fixture
+def archive(monkeypatch, research_database):
+    store = Store(research_database)
+    store.migrate()
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("NEWS_AI_RESEARCH", "1")
+    monkeypatch.setenv("NEWS_AI_VECTORS", "0")
+    lead = "Northstar recalls Falcon battery packs after overheating reports"
+    for row in [
+        article("lead", lead, "Northstar announced a recall of 200 battery packs after overheating reports."),
+        article("second", lead + " surface", "The company confirmed that 200 packs are included.", "the-verge"),
+        article("unrelated", "New compiler for wearable devices", "A toolkit compiles programs to WebAssembly.", "wired"),
+        article("headline", "Avalanche scanners detect vulnerable endpoints", "", "bbc-tech"),
+    ]:
+        store.ingest(row["source_id"], [row], True)
+    yield store, TestClient(server.app)
+    store.engine.dispose()
+
+
+def activate(monkeypatch, *, vectors=False):
+    monkeypatch.setenv("OPENAI_API_KEY", "mock-provider-key")
+    if vectors:
+        monkeypatch.setenv("NEWS_AI_VECTORS", "1")
+
+
+def good_answer(prompt, _, schema, **kwargs):
+    source = json.loads(prompt)["evidence"][0]
+    return schema(status="answered", limitations="Only publisher excerpts were available.", claims=[
+        {"text": "Northstar recalled 200 battery packs.", "kind": "fact", "source_ids": [source["id"]]},
+    ]).model_dump_json()
+
+
+def test_keyword_fallback_preserves_evidence_and_clusters(archive):
+    _, client = archive
+    response = client.post("/api/intelligence/research", json={"q": "What happened with Northstar battery packs?", "mode": "analyze"})
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    data = response.json()
+    assert data["retrieval"] == "keyword"
+    assert data["answer"]["status"] == "unavailable"
+    assert {row["id"] for row in data["evidence"]} == {"lead", "second"}
+    assert set(data["clusters"][0]["article_ids"]) == {"lead", "second"}
+    assert all(row["url"].startswith("https://") for row in data["evidence"])
+
+
+def test_headline_only_cannot_trigger_synthesis(archive, monkeypatch):
+    _, client = archive
+    activate(monkeypatch)
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: pytest.fail("No excerpts to send"))
+    data = client.post("/api/intelligence/research", json={"article_id": "headline", "mode": "analyze"}).json()
+    assert data["answer"]["status"] == "insufficient"
+    assert data["answer"]["claims"] == []
+    assert data["evidence"][0]["excerpt"] == ""
+
+
+def test_citations_are_allowlisted_and_anchor_cache_is_reused(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch)
+    calls = []
+
+    def generate(prompt, system, schema, **kwargs):
+        calls.append(json.loads(prompt))
+        assert "untrusted data" in system
+        return good_answer(prompt, system, schema, **kwargs)
+
+    monkeypatch.setattr(research, "generate_response", generate)
+    body = {"article_id": "lead", "mode": "analyze"}
+    first = client.post("/api/intelligence/research", json=body).json()
+    second = client.post("/api/intelligence/research", json=body).json()
+    assert first["answer"] == second["answer"]
+    assert len(calls) == 1
+    assert first["answer"]["claims"][0]["source_ids"] == ["lead"]
+    assert client.post("/api/intelligence/research", json={**body, "q": "private question"}).status_code == 422
+    store.enable("ars-technica", False)
+    assert client.post("/api/intelligence/research", json=body).status_code == 404
+
+
+@pytest.mark.parametrize("ids, statement", [
+    (["fabricated"], "Northstar announced a recall."),
+    (["lead"], "Northstar recalled 999 battery packs."),
+    (["lead"], "Read our report at https://attacker.example."),
+    ([], "Northstar announced a recall."),
+])
+def test_citation_guardrails_reject_untrusted_output(archive, monkeypatch, ids, statement):
+    _, client = archive
+    activate(monkeypatch)
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: json.dumps({
+        "status": "answered", "limitations": "Only excerpts are available.",
+        "claims": [{"text": statement, "kind": "fact", "source_ids": ids}],
+    }))
+    result = client.post("/api/intelligence/research", json={"article_id": "lead", "mode": "analyze"}).json()
+    assert result["answer"]["status"] == "unavailable"
+    assert result["answer"]["claims"] == []
+    assert result["evidence"][0]["id"] == "lead"
+
+
+def mock_embedding(*, semantic):
+    return research.pack_vector([float(not semantic), float(semantic), *([0.0] * (research.DIMENSIONS - 2))])
+
+
+def test_job_indexes_archive_hybrid_search_honors_scope_and_changes(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch, vectors=True)
+    monkeypatch.setenv("CRON_SECRET", "research-test-job-secret")
+    monkeypatch.setattr(research, "embed", lambda texts: [
+        mock_embedding(semantic="wearable" in text or "wrist" in text) for text in texts])
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: json.dumps({
+        "status": "insufficient", "claims": [], "limitations": "This fixture only evaluates retrieval.",
+    }))
+    assert client.get("/api/jobs/intelligence").status_code == 401
+    response = client.get("/api/jobs/intelligence", headers={"Authorization": "Bearer research-test-job-secret"}).json()
+    assert response["indexed"] == 4
+    with store.engine.connect() as conn:
+        assert sum(len(row) for row in conn.scalars(select(research_vectors.c.embedding))) == 4 * research.VECTOR_FORMAT.size
+    body = {"q": "software for wrist computers", "mode": "search"}
+    data = client.post("/api/intelligence/research", json=body).json()
+    assert data["retrieval"] == "hybrid"
+    assert data["evidence"][0]["id"] == "unrelated"
+    assert data["evidence"][0]["match"] == "semantic"
+    assert client.post("/api/intelligence/research", json={**body, "scope": {"publisher": "bbc-tech"}}).json()["evidence"] == []
+    row = article("unrelated", "Handheld gaming computers announced", "A report about handheld computers.", "wired")
+    store.ingest("wired", [row], True)
+    updated = client.post("/api/intelligence/research", json=body).json()
+    assert updated["retrieval"] == "keyword"
+    assert all(item["match"] == "keyword" for item in updated["evidence"])
+    assert research.index_archive(store)["indexed"] == 1
+    assert research.index_archive(store)["index_status"] == "current"
+    store.enable("wired", False)
+    assert not any(row["id"] == "unrelated" for row in client.post("/api/intelligence/research", json=body).json()["evidence"])
+
+
+def test_scheduled_brief_validates_evidence_and_respects_source_pause(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch)
+
+    def generate(prompt, _, schema, **kwargs):
+        evidence = json.loads(prompt)["evidence"]
+        source = next(row for row in evidence if "200" in row["excerpt"])
+        return schema(status="answered", limitations="Published excerpts only.", claims=[
+            {"text": "A recall affected 200 battery packs.", "kind": "fact", "source_ids": [source["id"]]},
+        ]).model_dump_json()
+
+    monkeypatch.setattr(research, "generate_response", generate)
+    assert research.refresh_research_brief(store) == "answered"
+    assert research.refresh_research_brief(store) == "current"
+    data = client.get("/api/intelligence/daily").json()
+    assert data["status"] == "available"
+    assert data["brief"]["answer"]["status"] == "answered"
+    cited_id = data["brief"]["answer"]["claims"][0]["source_ids"][0]
+    store.enable(store.pinned_articles([cited_id])[0]["source_id"], False)
+    assert client.get("/api/intelligence/daily").json()["status"] == "pending"
+    assert research.refresh_research_brief(store) == "answered"
+    assert client.get("/api/intelligence/daily").json()["status"] == "available"
+
+
+def test_watch_requires_all_keywords_and_can_group_multiple_sources(archive):
+    _, client = archive
+    response = client.post("/api/intelligence/watch", json={"watches": [
+        {"id": "recall", "query": "Northstar overheating"},
+        {"id": "none", "query": "Northstar WebAssembly"},
+    ]}).json()
+    recall, none = response["watches"]
+    assert recall["clusters"][0]["coverage_count"] == 2
+    assert none["clusters"] == []
+
+
+def test_optional_saved_story_affinity_keeps_saved_ids_out_of_recommendations(archive):
+    store, client = archive
+    for item in [
+        article("saved-robot", "A survey of robotics control systems", "A review of robot control."),
+        article("robot-news", "New robotics control system announced", "A robotics engineering breakthrough.", "the-verge"),
+    ]:
+        store.ingest(item["source_id"], [item], True)
+    regular = client.post("/api/recommendations", json={}).json()
+    assert "saved-robot" in {row["id"] for row in regular["articles"]}
+    personalized = client.post("/api/recommendations", json={"saved_ids": ["saved-robot"]}).json()
+    assert "saved-robot" not in {row["id"] for row in personalized["articles"]}
+    recommended = next(row for row in personalized["articles"] if row["id"] == "robot-news")
+    assert any("saved story" in reason for reason in recommended["recommendation_reasons"])
+
+
+def test_daily_budget_keeps_archive_search_working(archive, monkeypatch):
+    _, client = archive
+    activate(monkeypatch)
+    monkeypatch.setenv("NEWS_AI_ANSWERS_DAILY", "0")
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: pytest.fail("Budget must prevent model calls"))
+    result = client.post("/api/intelligence/research", json={"q": "Northstar recall", "mode": "compare"}).json()
+    assert result["answer"]["status"] == "budget_limited"
+    assert result["evidence"]
+
+
+@pytest.mark.parametrize("available", [True, False])
+def test_vercel_cron_slot_checks_intelligence_without_changing_feed_health(archive, monkeypatch, available):
+    _, client = archive
+    activate(monkeypatch, vectors=True)
+    monkeypatch.setenv("CRON_SECRET", "research-test-job-secret")
+    monkeypatch.setattr(server, "refresh_sources", lambda *args, **kwargs: [
+        {"id": "ars-technica", "available": True, "enabled": True, "checked_at": "updated"},
+    ])
+
+    def index(store):
+        if not available:
+            raise ValueError("simulated index failure")
+        return {"index_status": "updated", "indexed": 4}
+
+    monkeypatch.setattr(research, "index_archive", index)
+    monkeypatch.setattr(research, "refresh_research_brief", lambda store: "current")
+    response = client.get("/api/jobs/refresh?slot=18", headers={"Authorization": "Bearer research-test-job-secret"})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "refreshed" and result["healthy"] == 1
+    assert result["intelligence"]["status"] == ("checked" if available else "unavailable")

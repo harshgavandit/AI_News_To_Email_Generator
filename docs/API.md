@@ -2,6 +2,25 @@
 
 The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`. JSON errors include a `detail` field. API responses include an `X-Request-ID` for log correlation. A `429` may include `Retry-After`.
 
+## Research and intelligence
+
+- `POST /api/intelligence/research` accepts `{"q":"Kubernetes security","mode":"search","scope":{"hours":168,"topic":"security"}}`. The full archive scope uses the same filters as recommendations. Modes are `search`, `analyze`, `compare`, and `brief`. To analyze a story, submit `{"article_id":"<id>","mode":"analyze"}`. That path uses a fixed analysis prompt and up to 30 days of related coverage.
+- Responses include original-source evidence, source match type, overlapping coverage clusters, index status, and optional cited claims. `retrieval=hybrid` means semantic matches were included. A provider failure, quota limit, or warming index leaves keyword results available. A claim distinguishes reported facts from interpretation. Citation IDs are limited to the supplied excerpt set.
+- `POST /api/intelligence/watch` accepts up to six `{"id":"watch-id","query":"Kubernetes security","topic":"all"}` entries in a `watches` array. It checks meaningful keyword matches in the past 48 hours and groups overlapping coverage. The Research Desk tracks newly observed groups locally while open.
+- `GET /api/intelligence/daily` returns the latest cited briefing for the past 24 hours when it has current, eligible evidence. A stale or invalidated briefing returns `pending`.
+- The protected `GET /api/jobs/intelligence` uses the existing job secret and a distributed lease. It updates changed vector records in batches of up to 96. It attempts a new briefing hourly. Job output reports index and brief health.
+- The existing recommendations endpoint accepts an optional list of up to eight retained `saved_ids`. It uses subjects from eligible articles to rank related coverage, with an explanation in the result. The Reading Room only submits them if the reader enables this preference.
+
+### Activation
+
+The existing Vercel hourly feed slots also run the intelligence check with a shared lease. This provides a fallback when GitHub delays scheduled jobs.
+
+Use the existing owner setup endpoint, `POST /api/admin/setup`, for the additive vector-table migration. Analysis uses the app's existing OpenAI configuration. Set `NEWS_AI_RESEARCH=0` to disable inference for these endpoints. Set `NEWS_AI_VECTORS=1` on the app to enable embeddings. The scheduled GitHub refresh workflow calls the protected intelligence job separately from feed and mail processing. Dispatch it with `intelligence_only=true` to run just the intelligence job. The always-on feed and mail worker can also call it every five minutes with `NEWS_AI_WORKER=1`.
+
+The semantic index covers the recent 30-day window. Each query scores at most 1,200 recent, eligible vectors after filtering, using the same binary representation on PostgreSQL and SQLite. Older records remain searchable by keyword up to existing archive retention. A cold index warms gradually from diverse sources. A generated answer is never required to show search results.
+
+Set `NEWS_AI_ANALYSIS_MODEL` to route coverage comparisons to a different configured model. `NEWS_AI_ANSWERS_DAILY`, `NEWS_AI_QUERIES_DAILY`, and `NEWS_AI_INDEX_BATCHES_DAILY` cap generation, query embeddings, and archive batches separately. Fixed article analyses and public briefings can be reused. Arbitrary questions and answers are not persisted by the application. The research service uses archived titles and publisher excerpts.
+
 ## Discover stories
 
 `GET /api/headlines` returns reviewed developing coverage and a ranked selection of recent articles from enabled reporting feeds. The homepage uses it independently of the Reading Room’s time window and sort.

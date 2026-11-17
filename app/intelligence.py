@@ -88,7 +88,7 @@ def deduplicate(articles):
 
 
 def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors=(), exclude_ids=(), query="", limit=24,
-              hours=720):
+              hours=720, related_subjects=()):
     from app.coverage import public_article
     now = datetime.now(UTC)
     earliest = now - timedelta(hours=hours)
@@ -122,6 +122,10 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
         if matches:
             score += 4
             reasons.append("Matches " + ", ".join(matches[:2]))
+        related = [SUBJECTS[key] for key in related_subjects if key not in subjects and key in article["subjects"]]
+        if related:
+            score += min(3, 1 + len(related))
+            reasons.append("Related to a saved story · " + related[0])
         if article["source"] in preferred_sources or article.get("source_id") in preferred_sources:
             score += 4
             reasons.append("From a source you follow")
@@ -146,8 +150,8 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
         ranked.append(article)
         counts[article["source"]] += 1
     return {"articles": ranked, "total_candidates": len(candidates), "updated_at": now.isoformat(),
-            "personalized": bool(topics or preferred_sources or subjects or authors),
-            "basis": "Selected interests, followed authors and publications; ranked by freshness with source diversity."}
+            "personalized": bool(topics or preferred_sources or subjects or authors or related_subjects),
+            "basis": "Selected interests, follows and optional saved-story topics, balanced with freshness and source diversity."}
 
 
 def references(article):

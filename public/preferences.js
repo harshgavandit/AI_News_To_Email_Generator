@@ -4,15 +4,19 @@ const valid = (key, value) => typeof value === "string" && (key === "authors" ? 
 
 export function createPreferences(container, onChange) {
   let preferences = Object.fromEntries(Object.keys(limits).map((key) => [key, []]));
+  let useSaved = false;
   const authorLabels = {};
   try {
     const stored = JSON.parse(localStorage.getItem(KEY) || "null");
+    useSaved = stored?.useSaved === true;
     for (const key of Object.keys(limits)) if (Array.isArray(stored?.[key]))
       preferences[key] = [...new Set(stored[key].filter((value) => valid(key, value)))].slice(0, limits[key]);
     for (const key of preferences.authors) if (typeof stored?.authorLabels?.[key] === "string")
       authorLabels[key] = stored.authorLabels[key].slice(0, 180);
   } catch { /* Session preferences remain available if storage is disabled. */ }
   const form = container.querySelector("form");
+  const savedOption = form.elements.namedItem("use-saved-stories");
+  if (savedOption) savedOption.checked = useSaved;
   const feedback = container.querySelector("[role=status]");
   let catalog = { topics: {}, subjects: {}, sources: {}, authors: { ...authorLabels } };
   const draft = () => Object.fromEntries(Object.keys(limits).map((key) => [key,
@@ -67,7 +71,7 @@ export function createPreferences(container, onChange) {
     for (const key of preferences.authors) authorLabels[key] = catalog.authors[key] || authorLabels[key] || "Followed author";
     const labels = Object.fromEntries(preferences.authors.map((key) => [key, authorLabels[key]]));
     try {
-      localStorage.setItem(KEY, JSON.stringify({ ...preferences, authorLabels: labels }));
+      localStorage.setItem(KEY, JSON.stringify({ ...preferences, authorLabels: labels, useSaved }));
       feedback.textContent = message + " Saved in this browser.";
     } catch { feedback.textContent = message + " Applied for this session; browser storage is unavailable."; }
     onChange();
@@ -94,16 +98,20 @@ export function createPreferences(container, onChange) {
       return;
     }
     preferences = selected;
+    useSaved = savedOption?.checked === true;
     persist("Preferences updated.");
   });
   for (const input of container.querySelectorAll("[data-search-preferences]")) input.addEventListener("input", filterOptions);
   container.querySelector("[data-clear-preferences]").addEventListener("click", () => {
     preferences = Object.fromEntries(Object.keys(limits).map((key) => [key, []]));
+    useSaved = false;
+    if (savedOption) savedOption.checked = false;
     render();
     persist("Interests and followed lists reset.");
   });
   return { update, request() { return Object.fromEntries(Object.keys(limits).map((key) => [key,
     key === "authors" ? [...preferences[key]] : preferences[key].filter((id) => Object.hasOwn(catalog[key], id))])); },
+    usesSavedStories() { return useSaved; },
     follows(key, value) { return preferences[key]?.includes(value) || false; },
     toggleAuthor(article) { return toggle("authors", article.author_key, `${article.author} · ${article.publisher}`); },
     togglePublication(article) { return toggle("sources", article.source_id || article.source, article.publisher); },

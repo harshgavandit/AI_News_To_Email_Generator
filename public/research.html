@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f7f4" />
+    <meta name="description" content="Research the technology news archive with semantic search, cited analysis, and topic alerts." />
+    <title>Research Desk · Informa AI</title>
+    <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <script src="/theme.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/research.css" />
+    <script type="module" src="/research.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#research-title">Skip to research</a>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav research-nav" aria-label="Main navigation">
+          <a href="/#reading-room">Reading Room</a>
+          <a href="/research.html" aria-current="page">Research Desk</a>
+          <a href="/sources.html">Sources</a>
+        </nav>
+        <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+      </div>
+    </header>
+    <main class="wrap research-main">
+      <section class="research-header" aria-labelledby="research-title">
+        <p class="research-label">Informa Intelligence</p>
+        <h1 id="research-title">Research Desk</h1>
+        <p>Explore what happened, compare coverage, and follow the evidence back to its source.</p>
+      </section>
+      <div class="research-layout">
+        <div class="research-workspace">
+          <form class="research-panel research-form" id="research-form">
+            <label for="research-question">Search or ask about technology news</label>
+            <textarea id="research-question" required maxlength="320" rows="2"
+              placeholder="What are the latest developments in AI coding agents?"></textarea>
+            <div class="research-controls">
+              <label>Time range
+                <select id="research-hours"><option value="24">Past 24 hours</option><option value="168" selected>Past 7 days</option><option value="720">Past 30 days</option><option value="2160">Past 90 days</option></select>
+              </label>
+              <label>Topic
+                <select id="research-topic"><option value="all">All topics</option></select>
+              </label>
+              <label>Task
+                <select id="research-mode"><option value="search">Find sources</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="brief">Build a topic brief</option></select>
+              </label>
+              <button class="button primary" id="research-submit" type="submit">Find sources</button>
+            </div>
+            <p class="research-privacy">Semantic search and AI analysis may send your query to OpenAI. <a href="/privacy.html">Privacy &amp; controls</a></p>
+          </form>
+          <p id="research-status" class="research-status" role="status" aria-live="polite"></p>
+          <div id="research-results" aria-busy="false"></div>
+        </div>
+        <aside class="research-rail" aria-label="News monitoring">
+          <section class="research-panel" aria-labelledby="watch-title">
+            <p class="research-label">Monitoring</p>
+            <h2 id="watch-title">Topic alerts</h2>
+            <p>Watch up to six keyword queries. Alerts check for new matches while this desk is open.</p>
+            <form id="watch-form">
+              <label for="watch-query" class="sr-only">Keywords to watch</label>
+              <input id="watch-query" type="search" required minlength="2" maxlength="150" placeholder="e.g. Kubernetes security" />
+              <button type="submit" class="button secondary">Watch</button>
+            </form>
+            <p id="watch-status" class="research-status" role="status"></p>
+            <div id="watch-list"></div>
+          </section>
+          <section class="research-panel daily-panel" aria-labelledby="research-daily-title">
+            <p class="research-label">Past 24 hours</p>
+            <h2 id="research-daily-title">Intelligence briefing</h2>
+            <p id="research-daily-status" role="status">Checking the latest edition…</p>
+            <button type="button" class="button secondary" id="show-daily" hidden>Read the cited brief</button>
+            <a id="daily-fallback" href="/#reading-room" hidden>Browse the latest stories ↗</a>
+          </section>
+          <section class="research-panel research-trends" aria-labelledby="research-trends-title" id="research-trends" hidden>
+            <p class="research-label">Across publishers</p>
+            <h2 id="research-trends-title">Trending topics</h2>
+            <ul id="research-trend-list"></ul>
+          </section>
+        </aside>
+      </div>
+      <noscript><p>Enable JavaScript to search, research, and watch news in this workspace.</p></noscript>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="footer-brand" href="/">Informa AI</a>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="/about.html">About</a><a href="/trust.html">Source standards</a><a href="/privacy.html">Privacy &amp; controls</a>
+      </nav>
+    </footer>
+  </body>
+</html>

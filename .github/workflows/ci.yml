@@ -66,8 +66,8 @@ jobs:
           python -m pip install uv
           uv sync --frozen
           uv run python -m scripts.check_mail_capacity --postgres
-      - name: Test the archive upgrade on PostgreSQL
+      - name: Test the archive upgrade and intelligence on PostgreSQL
         env:
           UV_PYTHON: '3.12'
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
-        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py
+        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py

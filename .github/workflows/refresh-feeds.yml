@@ -8,6 +8,10 @@ on:
         description: Refresh publisher feeds without sending morning mail
         type: boolean
         default: true
+      intelligence_only:
+        description: Update the search index and intelligence briefing only
+        type: boolean
+        default: false
 
 permissions: {}
 concurrency:
@@ -16,6 +20,7 @@ concurrency:
 
 jobs:
   refresh:
+    if: github.event_name != 'workflow_dispatch' || !inputs.intelligence_only
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -57,3 +62,26 @@ jobs:
             echo '::error::Morning mail backlog is more than 15 minutes old.'
             exit 1
           fi
+  intelligence:
+    if: github.event_name == 'schedule' || inputs.intelligence_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    steps:
+      - name: Update the semantic index and intelligence briefing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
+            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
+            exit 1
+          fi
+          result=$(curl --silent --show-error --fail --max-time 80 \
+            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/intelligence' \
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+          jq '{status, index_status, indexed, brief_status}' <<< "$result"
+          jq -e '(.status == "already_started") or (.status == "checked"
+            and (.index_status | IN("updated", "current", "disabled", "budget_limited"))
+            and (.brief_status | IN("answered", "current", "disabled", "insufficient", "budget_limited")))' \
+            <<< "$result" > /dev/null

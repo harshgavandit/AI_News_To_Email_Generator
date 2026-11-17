@@ -10,6 +10,8 @@ import smtplib
 import threading
 import time
 from collections import Counter, OrderedDict, deque
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 from pathlib import Path
@@ -56,6 +58,7 @@ from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, subjects_for
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
+from app import research as research_service
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
@@ -355,6 +358,7 @@ class RecommendationRequest(BaseModel):
     sources: list[str] = Field(default_factory=list, max_length=50)
     authors: list[Annotated[str, Field(pattern=r"^author-[a-f0-9]{32}$")]] = Field(default_factory=list, max_length=30)
     exclude_ids: list[str] = Field(default_factory=list, max_length=100)
+    saved_ids: list[Annotated[str, Field(pattern=r"^[a-zA-Z0-9_-]{1,40}$")]] = Field(default_factory=list, max_length=8)
     q: str = Field(default="", max_length=150)
     limit: int = Field(default=24, ge=1, le=50)
     scope: RecommendationScope = Field(default_factory=RecommendationScope)
@@ -368,6 +372,79 @@ class RecommendationRequest(BaseModel):
         if self.q.strip() and not search_terms(self.q):
             raise ValueError("Enter at least one letter or number to search.")
         return self
+
+
+class ResearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    q: str = Field(default="", max_length=320)
+    article_id: str = Field(default="", max_length=40, pattern=r"^[a-zA-Z0-9_-]*$")
+    mode: Literal["search", "analyze", "compare", "brief"] = "search"
+    scope: RecommendationScope = Field(default_factory=RecommendationScope)
+
+    @model_validator(mode="after")
+    def valid_question(self):
+        if (not self.article_id and not search_terms(self.q)) or (
+            self.article_id and (self.q or self.mode != "analyze")
+        ):
+            raise ValueError("Enter a question or analyze an archived article.")
+        return self
+
+
+class ResearchWatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,40}$")
+    query: str = Field(min_length=2, max_length=150)
+    topic: str = Field(default="all", max_length=24)
+
+    @model_validator(mode="after")
+    def valid_watch(self):
+        if self.topic not in ("all", *TOPICS) or not search_terms(self.query):
+            raise ValueError("Choose a supported topic and enter words to watch.")
+        return self
+
+
+class WatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    watches: list[ResearchWatch] = Field(min_length=1, max_length=6)
+
+
+@app.post("/api/intelligence/research")
+def archive_research(body: ResearchRequest, request: Request):
+    store = source_store()
+    admit_expensive(store, request, "archive-research", 12, 60)
+    scope = body.scope.model_dump()
+    anchor = None
+    question = body.q
+    if body.article_id:
+        pinned = store.pinned_articles([body.article_id])
+        if not pinned:
+            raise HTTPException(404, "This story is no longer in the available archive.")
+        anchor = pinned[0]
+        question = anchor["title"][:320]
+        # Article analysis uses current related coverage even for an older archive link.
+        scope = RecommendationScope(hours=TimeWindow.month).model_dump()
+    return research_service.research(store, question=question, mode=body.mode, filters=scope, anchor=anchor)
+
+
+@app.get("/api/intelligence/daily")
+def research_daily():
+    store = get_store()
+    saved = research_service.recent_research_brief(store) if store else None
+    return {"status": "available" if saved else "pending",
+            "brief": saved, "ai_available": research_service.ai_enabled()}
+
+
+@app.get("/api/intelligence/options")
+def research_options():
+    return {"topics": TOPICS}
+
+
+@app.post("/api/intelligence/watch")
+def research_watch(body: WatchRequest, request: Request):
+    store = source_store()
+    admit_expensive(store, request, "archive-watch", 8, 60)
+    return {"watches": research_service.watch_matches(store, body.watches),
+            "checked_at": datetime.now(timezone.utc).isoformat()}
 
 
 def intelligence_candidates(store, hours=168, *, scope=None, query="", interests=None):
@@ -404,9 +481,16 @@ def recommendations(body: RecommendationRequest, request: Request, response: Res
     rate_limit(request, "recommendations", 60)
     response.headers["Cache-Control"] = "no-store"
     query = search_text(body.q)
-    candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query, interests=body)
+    related_subjects = []
+    if store and body.saved_ids:
+        counts = Counter(subject for row in store.pinned_articles(body.saved_ids) for subject in subjects_for(row))
+        related_subjects = [subject for subject, _ in counts.most_common(6)]
+    sampling = body.model_copy(update={"subjects": list(dict.fromkeys([*body.subjects, *related_subjects])),
+                                       "exclude_ids": [*body.exclude_ids, *body.saved_ids]})
+    candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query, interests=sampling)
     ranked = recommend(candidates, topics=body.topics, subjects=body.subjects, preferred_sources=body.sources,
-                       authors=body.authors, exclude_ids=body.exclude_ids, query=query, limit=body.limit, hours=body.scope.hours)
+                       authors=body.authors, exclude_ids=sampling.exclude_ids, query=query, limit=body.limit,
+                       hours=body.scope.hours, related_subjects=related_subjects)
     if store and ranked["articles"]:
         enriched = store.with_reading_access(ranked["articles"])
         for article in enriched:
@@ -577,6 +661,33 @@ def require_job_secret(authorization):
         raise HTTPException(401, "Unauthorized.")
 
 
+@app.get("/api/jobs/intelligence")
+def research_job(authorization: str | None = Header(default=None)):
+    require_job_secret(authorization)
+    return run_intelligence_check(source_store())
+
+
+def run_intelligence_check(store):
+    lease_scope = "research-index-lease"
+    lease = store.claim_refresh(scheduled=True, scope=lease_scope)
+    if lease is None:
+        return {"status": "already_started"}
+    try:
+        progress = research_service.index_archive(store)
+        brief = research_service.refresh_research_brief(store)
+        return {"status": "checked", **progress, "brief_status": brief}
+    finally:
+        store.finish_refresh(lease, cooldown=240, scope=lease_scope)
+
+
+def check_intelligence_during_refresh(store):
+    try:
+        return run_intelligence_check(store)
+    except Exception as error:
+        logger.warning("scheduled_intelligence_failed error_type=%s", type(error).__name__)
+        return {"status": "unavailable"}
+
+
 @app.get("/api/jobs/morning")
 def morning_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
@@ -607,7 +718,8 @@ def mail_job_health(authorization: str | None = Header(default=None)):
 
 
 @app.get("/api/jobs/refresh")
-def refresh_job(authorization: str | None = Header(default=None)):
+def refresh_job(authorization: str | None = Header(default=None),
+                slot: Annotated[str | None, Query(pattern=r"^(?:[01][0-9]|2[0-3])$")] = None):
     require_job_secret(authorization)
     store = source_store()
     lease = store.claim_refresh(scheduled=True)
@@ -615,16 +727,23 @@ def refresh_job(authorization: str | None = Header(default=None)):
         return {"status": "already_started"}
     cooldown = 0
     try:
-        before = source_catalog(store, include_archive=False)
-        catalog = refresh_sources(store, due_only=True, maximum=128)
-        active = [s for s in catalog if s["enabled"]]
-        healthy = sum(s["available"] is True for s in active)
-        if not healthy:
-            raise HTTPException(503, "No enabled feed passed its latest check.")
-        cooldown = 240
-        previous = {feed["id"]: feed["checked_at"] for feed in before}
-        checked = sum(feed["checked_at"] != previous.get(feed["id"]) for feed in catalog)
-        return {"status": "refreshed", "sources": len(active), "healthy": healthy, "checked": checked}
+        # Existing Vercel cron slots keep intelligence moving when GitHub scheduling is delayed.
+        worker = ThreadPoolExecutor(max_workers=1) if slot is not None and research_service.ai_enabled() else nullcontext()
+        with worker as executor:
+            intelligence = executor.submit(check_intelligence_during_refresh, store) if executor else None
+            before = source_catalog(store, include_archive=False)
+            catalog = refresh_sources(store, due_only=True, maximum=128)
+            active = [s for s in catalog if s["enabled"]]
+            healthy = sum(s["available"] is True for s in active)
+            if not healthy:
+                raise HTTPException(503, "No enabled feed passed its latest check.")
+            cooldown = 240
+            previous = {feed["id"]: feed["checked_at"] for feed in before}
+            checked = sum(feed["checked_at"] != previous.get(feed["id"]) for feed in catalog)
+            result = {"status": "refreshed", "sources": len(active), "healthy": healthy, "checked": checked}
+            if intelligence:
+                result["intelligence"] = intelligence.result()
+            return result
     finally:
         store.finish_refresh(lease, cooldown=cooldown)
 

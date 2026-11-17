@@ -19,7 +19,7 @@ async function mount(markup, { saved, systemDark = false, blockedStorage = false
   return { dom, system(value) { media.matches = value; listener(); } };
 }
 
-for (const page of ['index.html', 'sources.html', 'contribute.html', 'about.html', 'privacy.html', 'trust.html']) {
+for (const page of ['index.html', 'sources.html', 'contribute.html', 'about.html', 'privacy.html', 'trust.html', 'research.html']) {
   test(`${page} enables theme selection and follows saved and system preferences`, async () => {
     const html = readFileSync(new URL(`../../public/${page}`, import.meta.url), 'utf8');
     const { dom, system } = await mount(html, { saved: 'dark' });

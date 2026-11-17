@@ -24,12 +24,13 @@ test('browser export only includes reading data and documented appearance choice
     const storage = dom.window.localStorage;
     storage.setItem('informa-saved-v1', '[{"id":"story","title":"Saved story"}]');
     storage.setItem('informa-interests-v1', '{"topics":["security"],"authors":["author-1"]}');
+    storage.setItem('informa-research-alerts-v1', '[{"id":"watch","query":"Kubernetes"}]');
     storage.setItem('informa-theme', 'dark');
     storage.setItem('unrelated-private-key', 'must-not-export');
     storage.setItem('owner-token', 'must-not-export');
     const data = readBrowserData(storage);
     assert.equal(data['informa-theme'], 'dark');
-    assert.deepEqual(dataCounts(data), { bookmarks: 1, history: 0, interests: 2, views: 0 });
+    assert.deepEqual(dataCounts(data), { bookmarks: 1, history: 0, interests: 2, views: 0, alerts: 1 });
     assert.equal(JSON.stringify(data).includes('must-not-export'), false);
   } finally { dom.window.close(); }
 });
@@ -43,7 +44,8 @@ test('selective reset preserves unrelated data, appearance, consent, and other r
     storage.setItem('unrelated-private-key', 'keep');
     assert.deepEqual(clearReadingData(storage, ['history', 'history']), ['Read history']);
     assert.equal(storage.getItem('informa-read-v1'), null);
-    for (const key of ['informa-saved-v1', 'informa-interests-v1', 'informa-saved-views-v1']) assert.equal(storage.getItem(key), '[]');
+    for (const key of ['informa-saved-v1', 'informa-interests-v1', 'informa-saved-views-v1', 'informa-research-alerts-v1'])
+      assert.equal(storage.getItem(key), '[]');
     assert.equal(storage.getItem('informa-theme'), 'dark');
     assert.equal(storage.getItem('informa-analytics-consent'), 'denied');
     assert.equal(storage.getItem('unrelated-private-key'), 'keep');

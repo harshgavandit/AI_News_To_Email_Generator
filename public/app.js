@@ -1080,7 +1080,8 @@ async function loadRecommendations() {
     const selected = preferences.request();
     const data = await request("/api/recommendations", { method: "POST",
       headers: { "Content-Type": "application/json" }, signal: controller.signal,
-      body: JSON.stringify({ ...selected, q, scope: { ...filters, hours: Number(hours) }, exclude_ids: [...readStories].slice(-100) }) });
+      body: JSON.stringify({ ...selected, q, scope: { ...filters, hours: Number(hours) }, exclude_ids: [...readStories].slice(-100),
+        ...(preferences.usesSavedStories() && { saved_ids: [...saved.keys()].slice(-8) }) }) });
     if (state.controller !== controller || state.view !== "for-you") return;
     state.recommendations = data.articles;
     state.recommendationCandidates = data.total_candidates;
@@ -2386,6 +2387,7 @@ function renderDossier(details) {
   $("dossier-coverage").hidden = !coverage;
   $("dossier-reading-access").textContent = article.reading_access?.label || (article.has_excerpt ? "Publisher excerpt" : "Headline & link");
   $("dossier-contribute").href = `/contribute.html?article=${encodeURIComponent(article.id)}`;
+  $("dossier-research").href = `/research.html?article=${encodeURIComponent(article.id)}`;
   syncFollowActions();
 
   $("dossier-title").textContent = article.title;
@@ -2741,6 +2743,7 @@ function openFeedCommand(configure) {
 
 function listCommands() {
   const actions = [
+    { label: "Open Research Desk", run: () => { location.href = "/research.html"; } },
     { label: "Build a personalized brief", run: () => $("nav-builder").click() },
     { label: "Read the daily briefing", run: () => $("view-briefing").click() },
     { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
@@ -2877,6 +2880,9 @@ function runCommand(item) {
 }
 
 $("cmd-palette-btn").querySelector("kbd").textContent = /Mac/i.test(navigator.platform) ? "⌘ K" : "Ctrl K";
+$("research-search-link").addEventListener("click", () => {
+  try { sessionStorage.setItem("informa-research-query", $("search").value.trim().slice(0, 150)); } catch { /* The desk can open without a query. */ }
+});
 $("cmd-palette-btn").addEventListener("click", openCommandPalette);
 $("command-close").addEventListener("click", () => $("command-dialog").close());
 $("command-dialog").addEventListener("close", () => {

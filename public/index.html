@@ -70,6 +70,7 @@
           <button type="button" data-workspace-view="saved"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" focusable="false"><path d="M5 3h10v14l-5-3-5 3V3Z" /></svg></span> Saved <span id="sidebar-saved-count" class="nav-count"></span></button>
         </nav>
         <div class="sidebar-section">
+          <a class="sidebar-secondary" href="/research.html">Research Desk ↗</a>
           <h2>Explore topics</h2>
           <div id="sidebar-topics" class="workspace-links" role="group" aria-label="Explore topics"></div>
         </div>
@@ -154,6 +155,7 @@
                 <fieldset><legend>Explore deeper</legend><div class="preference-options" data-preferences="subjects"></div></fieldset>
                 <fieldset><legend>Follow publications &amp; topic feeds <span class="muted">(up to 50)</span></legend><label for="preference-source-search">Find a publication</label><input id="preference-source-search" type="search" data-search-preferences="sources" placeholder="Medium, Netflix, Hashnode…" /><div class="preference-options preference-sources" data-preferences="sources"></div></fieldset>
                 <fieldset><legend>Follow authors <span class="muted">(up to 30)</span></legend><label for="preference-author-search">Find an author</label><input id="preference-author-search" type="search" data-search-preferences="authors" placeholder="Search authors in recent coverage" /><p class="small">You can also follow an author from any article. RSS author names are scoped to their publication feed.</p><div class="preference-options preference-sources" data-preferences="authors"></div></fieldset>
+                <fieldset><legend>Personalization</legend><label><input type="checkbox" name="use-saved-stories" /> Use topics from my saved stories</label><p class="small">For You can use up to eight saved story IDs to find related coverage.</p></fieldset>
                 <div class="preference-actions"><button class="button primary" type="submit">Update recommendations</button><button class="text-button" type="button" data-clear-preferences>Reset interests</button></div>
                 <p class="status" role="status" aria-live="polite">Your interests stay in this browser. Selected preferences are sent to rank stories when you open For You.</p>
               </form>
@@ -175,6 +177,7 @@
                     <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
                   </div>
                 </form>
+                <a id="research-search-link" class="text-button" href="/research.html">Research Desk ↗</a>
                 <div class="mobile-topic">
                   <label for="topic-mobile">Topic</label>
                   <select id="topic-mobile"><option value="">All topics</option></select>
@@ -801,6 +804,7 @@
             <p id="dossier-summary" class="dossier-text" dir="auto"></p>
             <div id="dossier-full-body" class="dossier-full-body" hidden></div>
             <p id="dossier-reading-notice" class="dossier-reading-notice">Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content.</p>
+            <a id="dossier-research" class="text-button" href="/research.html">Analyze this story and its coverage ↗</a>
           </section>
           <section id="dossier-why-section" class="dossier-section dossier-why-box" hidden>
             <h3 class="dossier-section-title">Why it matters</h3>

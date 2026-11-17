@@ -4,6 +4,7 @@ export const readingGroups = Object.freeze({
   history: { label: "Read history", key: "informa-read-v1" },
   interests: { label: "Interests & followed lists", key: "informa-interests-v1" },
   views: { label: "Monitoring views", key: "informa-saved-views-v1" },
+  alerts: { label: "Research topic alerts", key: "informa-research-alerts-v1" },
 });
 const exportKeys = [...Object.values(readingGroups).map(({ key }) => key),
   "informa-theme", "informa-story-layout", "informa-hide-read", "informa-analytics-consent"];
@@ -34,6 +35,7 @@ export function dataCounts(data) {
   return {
     bookmarks: count(readingGroups.bookmarks.key), history: count(readingGroups.history.key),
     views: count(readingGroups.views.key),
+    alerts: count(readingGroups.alerts.key),
     interests: ["topics", "subjects", "sources", "authors"].reduce((sum, key) =>
       sum + (Array.isArray(interests?.[key]) ? interests[key].length : 0), 0),
   };

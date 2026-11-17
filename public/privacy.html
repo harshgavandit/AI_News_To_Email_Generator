@@ -57,18 +57,20 @@
           </div>
           <div><strong id="count-views">—</strong><span>Monitoring views</span>
           </div>
+          <div><strong id="count-alerts">—</strong><span>Topic alerts</span>
+          </div>
         </div>
         <div class="privacy-action-row">
           <div>
             <h3>Take your reading data with you.</h3>
-            <p>Download your saved stories, read IDs, followed lists, monitoring views, appearance, and analytics choice as a JSON file. This export stays on your device and excludes email and author-review records.</p>
+            <p>Download your saved stories, read IDs, followed lists, monitoring views, topic alerts, appearance, and analytics choice as a JSON file. This export stays on your device and excludes email and author-review records.</p>
           </div><button id="export-browser-data" class="button secondary" type="button">Download my browser data ↓</button>
         </div>
         <div class="privacy-action-row reset-row">
           <div>
             <h3>Start fresh, on your terms.</h3>
             <p>Select what to clear. This affects this browser’s reading lists only. Export first if you want a copy. Other open Reading Room tabs will reload to apply the reset.</p>
-            <fieldset class="privacy-selections"><legend class="sr-only">Choose browser data to clear</legend><label><input type="checkbox" name="clear-group" value="bookmarks" />Saved stories</label><label><input type="checkbox" name="clear-group" value="history" />Read history</label><label><input type="checkbox" name="clear-group" value="interests" />Interests &amp; follows</label><label><input type="checkbox" name="clear-group" value="views" />Monitoring views</label>
+            <fieldset class="privacy-selections"><legend class="sr-only">Choose browser data to clear</legend><label><input type="checkbox" name="clear-group" value="bookmarks" />Saved stories</label><label><input type="checkbox" name="clear-group" value="history" />Read history</label><label><input type="checkbox" name="clear-group" value="interests" />Interests &amp; follows</label><label><input type="checkbox" name="clear-group" value="views" />Monitoring views</label><label><input type="checkbox" name="clear-group" value="alerts" />Topic alerts</label>
             </fieldset>
           </div><button id="clear-browser-data" class="button secondary" type="button">Clear selected data</button>
         </div>
@@ -101,7 +103,8 @@
           <section id="requests">
             <h2>Search and AI use the information needed for the request.</h2>
             <p>Search terms and filters are sent to Informa AI to find matching articles. Shared story and monitoring URLs can contain those filters, so review a link before sharing it.</p>
-            <p>When you request an AI brief, selected article titles and excerpts, along with the brief preferences you provide, may be sent to OpenAI for processing. Do not put sensitive personal information in free-text brief instructions. Ordinary story browsing does not require an AI request.</p>
+            <p>When you request AI analysis or a brief, selected article titles and excerpts and the instructions you submit may be sent to OpenAI. Semantic search may also send your query to OpenAI. Avoid including sensitive personal information. Informa AI does not save your research questions or answers in its archive.</p>
+            <p>Topic alerts are stored in this browser. While the Research Desk is open, it sends your watch keywords to Informa AI to check for matches. This check uses the archive directly.</p>
           </section>
           <section id="email-data">
             <h2>Email and author features are optional.</h2>
@@ -113,7 +116,7 @@
             <h2>The services involved.</h2>
             <ul>
               <li><strong>Hosting:</strong> Vercel serves the site and processes requests. Hosting and security operations may retain request information, including network addresses and URLs, independently of optional analytics.</li>
-              <li><strong>AI:</strong> OpenAI processes material provided for requested AI briefs.</li>
+              <li><strong>AI:</strong> OpenAI processes material used for AI briefs, research answers, and semantic search.</li>
               <li><strong>Email and bot protection:</strong> Configured delivery providers handle verification and requested messages. Cloudflare Turnstile may process browser signals when the email feature asks for a bot check.</li>
               <li><strong>Optional analytics:</strong> Vercel Web Analytics loads only with your choice enabled and no browser privacy signal requesting it be disabled. Its provider describes it as cookie-free. See <a href="https://vercel.com/docs/analytics/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel’s analytics privacy information ↗</a>.</li>
               <li><strong>Publishers:</strong> Opening original links takes you to another service. Some article thumbnails are loaded from publisher or image hosts, which receive the image request. Their own privacy practices apply.</li>

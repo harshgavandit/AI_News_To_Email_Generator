@@ -27,7 +27,7 @@ def get_client() -> OpenAI:
 
 
 def generate_response(prompt: str, system_prompt: str = "Return JSON.", response_model: type[BaseModel] | None = None,
-                      *, max_tokens: int = 2400) -> str:
+                      *, max_tokens: int = 2400, model: str | None = None) -> str:
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt[:24000]},
@@ -36,7 +36,7 @@ def generate_response(prompt: str, system_prompt: str = "Return JSON.", response
     started = time.monotonic()
     for attempt in range(2):
         try:
-            options = dict(model=get_openai_model(), messages=messages, max_completion_tokens=max_tokens)
+            options = dict(model=model or get_openai_model(), messages=messages, max_completion_tokens=max_tokens)
             if response_model:
                 completion = completions.parse(**options, response_format=response_model)
                 parsed = completion.choices[0].message.parsed
