@@ -289,7 +289,8 @@ def synthesize(store, mode, question, records, *, cacheable=False, language="en"
         response = generate_response(payload, system, schema, max_tokens=1300, model=model)
         answer = validate_answer(schema.model_validate_json(response), evidence)
     except Exception as error:
-        logger.warning("research_answer_rejected type=%s", type(error).__name__)
+        reason = str(error).splitlines()[0][:100]
+        logger.warning("research_answer_rejected type=%s reason=%s", type(error).__name__, reason)
         return dict(empty, status="unavailable", limitations="A cited answer could not be generated. Review the source evidence below.")
     if cacheable:
         store.save_summary(cache_key, answer)
