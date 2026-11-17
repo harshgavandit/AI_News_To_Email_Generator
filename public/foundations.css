@@ -15,42 +15,52 @@
 :root {
   --font-ui: "Instrument Sans", "Segoe UI", sans-serif;
   --serif: "Instrument Serif", Georgia, serif;
-  --light-background: #f6f7f4;
+  --light-background: #f5f6f3;
   --light-paper: #ffffff;
   --light-ink: #1c2b25;
-  --light-muted: #58675f;
-  --light-line: #dce3dc;
-  --light-green: #20583f;
-  --light-sage: #e9f0e8;
+  --light-muted: #57665e;
+  --light-line: #dce3dd;
+  --light-green: #20543e;
+  --light-sage: #e9f0e9;
+  --bg: var(--light-background);
+  --paper: var(--light-paper);
+  --ink: var(--light-ink);
+  --muted: var(--light-muted);
+  --line: var(--light-line);
+  --green: var(--light-green);
+  --sage: var(--light-sage);
   --subtle: #f0f3ed;
   --lead: #edf3e9;
   --radius: 12px;
   --surface-top: #ffffff;
-  --surface-bottom: #fafbf8;
+  --surface-bottom: #fcfdfb;
   --control-surface: #ffffff;
   --edge-highlight: #ffffff;
-  --wash: #e9f1eb;
+  --wash: #edf2ed;
   --canvas: #edf0ec;
   --button-edge: #ffffff38;
   --action-bottom: #174530;
-  --shadow-small: 0 1px 2px #14291c06, 0 3px 8px #14291c03;
-  --shadow-raised: 0 4px 8px #14291c07, 0 14px 28px -14px #14291c24;
+  --shadow-small: 0 1px 2px #14291c05, 0 4px 12px -6px #14291c12;
+  --shadow-raised: 0 2px 4px #14291c06, 0 14px 32px -16px #14291c32;
   --shadow-overlay: 0 12px 32px #14291c18, 0 40px 100px -28px #14291c55;
+  --shadow-focus: 0 0 0 3px var(--sage);
+  --radius-panel: 14px;
+  --radius-control: 8px;
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --motion-fast: 160ms;
-  --motion-panel: 240ms;
+  --motion-panel: 220ms;
 }
 :root[data-theme="dark"] {
   --bg: #131b17;
   --paper: #1b251f;
   --ink: #ebf0e8;
   --muted: #adbcaf;
-  --line: #36443a;
+  --line: #34463c;
   --green: #b1d5a6;
   --sage: #293d2e;
   --subtle: #223027;
   --lead: #26392b;
-  --surface-top: #212e25;
+  --surface-top: #202c25;
   --surface-bottom: #1b251f;
   --control-surface: #18221c;
   --edge-highlight: #ffffff0d;
@@ -58,12 +68,15 @@
   --canvas: #151f1a;
   --button-edge: #ffffff46;
   --action-bottom: #a4c599;
-  --shadow-small: 0 1px 2px #0002, 0 3px 8px #0001;
-  --shadow-raised: 0 4px 8px #0002, 0 14px 28px -14px #0008;
+  --shadow-small: 0 1px 2px #0002, 0 4px 12px -6px #0005;
+  --shadow-raised: 0 2px 4px #0003, 0 14px 32px -16px #0009;
   --shadow-overlay: 0 12px 32px #0004, 0 40px 100px -28px #000a;
 }
 body { font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+body { font-optical-sizing: auto; }
 button, input, select, textarea { font-family: inherit; }
+input, select, textarea { color: var(--ink); background-color: var(--control-surface); }
+input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
 button, summary, a { text-underline-offset: .2em; }
 button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button) { cursor: not-allowed; }
 :is(button, a)[aria-busy="true"] { cursor: progress; }
@@ -75,7 +88,7 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
 .button, .cmd-pill, .theme-select, .dialog-close {
   transition: background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast) var(--ease-out);
 }
-.button { border-radius: 8px; letter-spacing: -.015em; }
+.button { border-radius: var(--radius-control); letter-spacing: -.015em; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .button.primary { background: linear-gradient(180deg, var(--green), var(--action-bottom)); box-shadow: inset 0 1px 0 var(--button-edge), 0 2px 5px #14291c17; }
 .button.primary:not(:disabled):hover { background: var(--action-hover); }
 .button.secondary { background: var(--paper); box-shadow: var(--shadow-small); }
@@ -83,19 +96,31 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
 .segmented { box-shadow: inset 0 1px 2px #14291c06; }
 .segmented button { transition: background-color var(--motion-fast), color var(--motion-fast); }
 .segmented button[aria-pressed="true"] { box-shadow: var(--shadow-small), 0 0 0 1px var(--line); }
-.site-header { background: linear-gradient(180deg, var(--surface-top), var(--surface-bottom)); box-shadow: 0 1px 8px #14291c05; }
+.site-header { background: var(--paper); box-shadow: 0 1px 8px #14291c05; }
+@supports (backdrop-filter: blur(12px)) {
+  .site-header { background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(12px); }
+}
 .site-header .brand { letter-spacing: -.055em; }
 .site-header .brand-icon { border-radius: 8px; transition: transform 240ms var(--ease-out); }
 .site-header .site-nav a { transition: color var(--motion-fast), border-color var(--motion-fast); }
 .site-header .site-nav a:hover { text-decoration: none; border-bottom-color: var(--accent-line); }
 .site-header .site-nav a[aria-current="page"] { border-bottom-color: var(--green); }
 .site-tools .theme-select { width: auto; background-color: var(--control-surface); font-size: 12px; }
+.site-header .site-nav > a { position: relative; padding-inline: 2px; }
+.site-header .site-nav a[aria-current="page"] { color: var(--green); }
+.text-button { transition: color var(--motion-fast), background-color var(--motion-fast); }
+.text-button:hover { color: var(--green); }
 .eyebrow { color: var(--green); }
 .site-footer { position: relative; }
 .site-footer::before { content: ""; position: absolute; inset: -1px 0 auto auto; width: 38px; height: 2px; background: var(--accent-line); }
 .site-footer a { text-underline-offset: 4px; }
 .site-footer p { margin: 0; }
 .skip { color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-raised); }
+:is(dialog[open], .saved-views-panel, .source-popover) { box-shadow: var(--shadow-overlay); }
+dialog[open]:not(.dossier-drawer) { animation: surface-enter var(--motion-panel) var(--ease-out); }
+summary { list-style-position: inside; }
+summary::marker { color: var(--muted); font-size: .8em; }
+details[open] > summary::marker { color: var(--green); }
 @media (hover: hover) and (pointer: fine) {
   .site-header .brand:hover .brand-icon { transform: perspective(400px) rotateY(-10deg) rotateZ(-3deg) translateY(-1px); }
   .button:not(:disabled):hover { transform: translateY(-1px); }

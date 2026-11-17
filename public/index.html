@@ -23,6 +23,8 @@
     <meta name="twitter:description" content="Follow global tech reporting, research, and developer releases. Read the sources or get a brief in your inbox." />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
+    <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/launch.css" />
     <link rel="stylesheet" href="/workspace.css" />
@@ -45,6 +47,7 @@
         </a>
         <nav class="site-nav" aria-label="Main navigation">
           <a href="#reading-room" aria-current="page">Reading Room</a>
+          <a href="/research.html">Research Desk</a>
           <a href="/sources.html">Sources</a>
           <a href="/contribute.html">For authors</a>
         </nav>
@@ -170,14 +173,13 @@
             <div class="reading-discovery">
               <div class="discovery-fields">
                 <form id="story-search" class="reading-search" role="search">
-                  <label for="search">Search stories</label>
+                  <div class="reading-search-heading"><label for="search">Search stories</label><a id="research-search-link" class="text-button" href="/research.html">Research Desk ↗</a></div>
                   <div class="search-wrap">
                     <span class="reading-search-icon" aria-hidden="true"></span>
                     <input id="search" type="search" maxlength="150" placeholder="Topics, authors, companies, or headlines" />
                     <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
                   </div>
                 </form>
-                <a id="research-search-link" class="text-button" href="/research.html">Research Desk ↗</a>
                 <div class="mobile-topic">
                   <label for="topic-mobile">Topic</label>
                   <select id="topic-mobile"><option value="">All topics</option></select>
