@@ -235,7 +235,8 @@ def disable(request: Request, response: Response):
     if ident:
         with configured_store().engine.begin() as conn:
             begin_write(conn)
-            if active_profile(conn, ident, time.time(), lock=True):
+            if conn.execute(select(monitor_profiles.c.id).where(
+                monitor_profiles.c.id == ident).with_for_update()).first():
                 delete_profiles(conn, [ident])
     response.delete_cookie(COOKIE, path=COOKIE_PATH)
     response.headers["Cache-Control"] = "private, no-store"

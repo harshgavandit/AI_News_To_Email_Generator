@@ -1,5 +1,13 @@
 # Informa AI release operations
 
+## Research Desk and monitoring
+
+Apply `POST /api/admin/setup` before serving the alert inbox. The additive tables hold browser session hashes, watch terms, and source references. The worker shares the existing intelligence scheduler and processes a bounded batch with its own database lease. It runs before indexing and briefing generation, so provider availability does not determine whether watches are checked. Monitor `monitoring_status`, `watches_checked`, and `alerts_created` in job output.
+
+Readers opt in explicitly, can follow up to six queries, and can delete their background watches under Privacy & controls. Sessions expire after 30 days of browser inactivity, alerts expire after 14 days, and each inbox retains up to 60 alerts. A scheduler invocation checks at most 48 watches within a 30-second monitoring budget. Higher watch volume can lengthen the polling interval. Alert freshness also depends on the daily publisher refresh at 08:00 India time. Source references include publisher names and original article links, and independent reporting on one development can be grouped under one alert.
+
+The Research Desk can download source notes as Markdown. It displays the cached AI edition when available and a labeled publisher-evidence edition while that generation is pending. Existing OpenAI settings and quota controls continue to power semantic search and synthesis. Background watches, source selection, and trend-window comparisons run without model calls.
+
 ## Google Search
 
 Add the production URL as a URL-prefix property in Google Search Console using the site owner's Google account. If using HTML file verification, publish Google's supplied file unchanged under `public/` and keep it served after verification. Submit `sitemap.xml` in the property's Sitemaps report. Use URL Inspection to test and request indexing of the homepage and source directory.

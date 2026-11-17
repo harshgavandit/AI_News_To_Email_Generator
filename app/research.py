@@ -157,13 +157,13 @@ def vector_results(store, question, hours, filters, anchor=None):
     scored = [(sum(x * y for x, y in zip(query, VECTOR_FORMAT.unpack(row["embedding"]))), row["id"])
               for row in samples if len(row["embedding"]) == VECTOR_FORMAT.size]
     ids = [ident for score, ident in sorted(scored, reverse=True)[:32]
-           if score >= (0.53 if anchor else 0.34)]
+           if score >= (0.53 if anchor else 0.42)]
     by_id = {row["id"]: row for row in store.pinned_articles(ids)}
     # Eligibility is checked again when loading the records ranked above.
     return [by_id[ident] for ident in ids if ident in by_id], "ready"
 
 
-def select_evidence(lexical, semantic, *, anchor=None, limit=12):
+def select_evidence(lexical, semantic, *, anchor=None, limit=12, question=""):
     scores, articles = Counter(), {}
     keyword_ids = {row["id"] for row in lexical}
     semantic_ids = {row["id"] for row in semantic}
@@ -171,6 +171,13 @@ def select_evidence(lexical, semantic, *, anchor=None, limit=12):
         for rank, row in enumerate(group[:40]):
             articles[row["id"]] = row
             scores[row["id"]] += weight / (12 + rank)
+    terms = keywords(question) if question else ()
+    if terms:
+        for ident, row in articles.items():
+            matches, title_matches = keyword_rank(row, terms)
+            # Fusion can elevate a generic one-term match from both retrievers.
+            # Prefer evidence that addresses the complete question's vocabulary.
+            scores[ident] += .18 * (matches / len(terms)) ** 2 + .02 * title_matches / len(terms)
     picked = [public_article(anchor)] if anchor else []
     identities = {story_identity(row) for row in picked}
     publishers = Counter(row["publisher_family"] for row in picked)
@@ -280,7 +287,7 @@ def research(store, *, question, mode, filters, anchor=None):
     hours = scope.pop("hours")
     lexical = lexical_results(store, question, hours, scope)
     semantic, vector_status = vector_results(store, question, hours, scope, anchor)
-    rows = select_evidence(lexical, semantic, anchor=anchor)
+    rows = select_evidence(lexical, semantic, anchor=anchor, question=question)
     records = [evidence_record(row) for row in rows]
     answer = (synthesize(store, mode, question, records, cacheable=bool(anchor))
               if mode != "search" else None)

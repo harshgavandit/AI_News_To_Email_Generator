@@ -128,6 +128,19 @@ def test_expired_monitor_and_matching_terms_are_purged(archive):
         assert conn.execute(select(monitor_watches)).first() is None
 
 
+def test_cookie_holder_can_delete_an_expired_monitor_before_the_worker_purges_it(archive):
+    store, browser = archive
+    prefix = "/api/intelligence/inbox"
+    assert browser.post(prefix + "/enable", json={"watches": [
+        {"id": "expired", "query": "Kubernetes security"}]}).status_code == 201
+    with store.engine.begin() as conn:
+        conn.execute(monitor_profiles.update().values(expires=0))
+    assert browser.delete(prefix).status_code == 200
+    with store.engine.connect() as conn:
+        assert conn.execute(select(monitor_profiles)).first() is None
+        assert conn.execute(select(monitor_watches)).first() is None
+
+
 def test_research_daily_has_source_evidence_before_a_generated_edition(archive):
     _, browser = archive
     result = browser.get("/api/intelligence/daily").json()
@@ -210,6 +223,27 @@ def test_citation_guardrails_reject_untrusted_output(archive, monkeypatch, ids, 
 
 def mock_embedding(*, semantic):
     return research.pack_vector([float(not semantic), float(semantic), *([0.0] * (research.DIMENSIONS - 2))])
+
+
+def test_hybrid_fusion_prefers_the_complete_query_to_a_generic_shared_match():
+    precise = article("precise", "Kubernetes security controls for containers", "How workload controls restrict cluster access.")
+    partial = article("partial", "Security incident affects a computing facility", "A status page exposed credentials.", "wired")
+    results = research.select_evidence([precise, partial], [partial], question="Kubernetes security")
+    assert [row["id"] for row in results] == ["precise", "partial"]
+
+
+def test_semantic_retrieval_filters_weak_similarity_without_keyword_overlap(archive, monkeypatch):
+    store, _ = archive
+    activate(monkeypatch, vectors=True)
+    from math import sqrt
+    strong = research.pack_vector([.75, sqrt(1 - .75 ** 2), *([0.0] * (research.DIMENSIONS - 2))])
+    weak = research.pack_vector([.38, sqrt(1 - .38 ** 2), *([0.0] * (research.DIMENSIONS - 2))])
+    source_rows = store.pinned_articles(["lead", "unrelated"])
+    store.save_research_vectors(research.encoder(), [
+        (row, strong if row["id"] == "lead" else weak) for row in source_rows])
+    monkeypatch.setattr(research, "embed", lambda _: [mock_embedding(semantic=False)])
+    results, state = research.vector_results(store, "battery safety", 720, {})
+    assert state == "ready" and [row["id"] for row in results] == ["lead"]
 
 
 def test_job_indexes_archive_hybrid_search_honors_scope_and_changes(archive, monkeypatch):

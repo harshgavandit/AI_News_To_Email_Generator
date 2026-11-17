@@ -1,5 +1,12 @@
 # Informa AI verification
 
+## Persistent monitoring and research tools — November 17, 2026
+
+- Release `07cc13e` passed Python 3.12 and 3.14 CI, including the isolated PostgreSQL job. Local regression checks passed 237 Python tests and 34 frontend tests. Optional PostgreSQL cases are skipped locally and run in CI.
+- Production setup created the monitoring tables on PostgreSQL. An isolated session enrolled a watch, the worker checked it, a second session could not read it, stale revisions returned 409, and the session and test watch were deleted. A separate Chrome run verified consent, reload persistence, the 375px layout, Privacy-page deletion and an actual Markdown notes download containing source links.
+- A production research query returned 12 evidence records through hybrid retrieval with the semantic index ready. A live article analysis returned a cited claim consistent with the supplied publisher excerpt and disclosed its limited source context. Verification found overly broad ranking for a two-term query, leading to a follow-up that boosts full query coverage and excludes weak semantic similarities.
+- The public source briefing returned five source-linked records while the cached model edition was pending. Trend responses included equal-window publisher counts and rising-topic labels. Automated tests exercise grouping, duplicate alerts, retention, session isolation, conflicting edits and source eligibility.
+
 ## Global discovery and story summaries — November 17, 2026
 
 - All 168 enabled integrations passed a live refresh into a disposable SQLite archive, including two valid feeds with zero eligible items. The refresh processed 5,550 source records in 49.18 seconds and retained 4,274 after deduplication and pruning. JetBrains Kotlin, JPCERT/CC Alerts, and arXiv Hardware Architecture returned 12, 6, and 16 eligible feed records respectively. Eighty-six retained article IDs occurred in two or more feeds.
