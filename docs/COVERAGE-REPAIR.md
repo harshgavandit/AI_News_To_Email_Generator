@@ -7,7 +7,7 @@ No reported article was inserted manually.
 | --- | --- | --- |
 | VentureBeat security investigation | Publisher absent from registry; public feed and declared news sitemap returned HTTP 429. Other indexed publishers covered the event, but the default 12-hour view hid older reporting. | Register monitored publisher endpoints, integrate Google Threat Intelligence, show priority signals over 24 hours and offer explicit 90-day search. |
 | BBC Landeed / Fractal Analytics | No archive match; absent from checked Technology, Business, India and general feeds, but present in BBC's news sitemap. | Technology-filtered discovery across three reviewed BBC news sitemap partitions. |
-| TechCrunch Bharat Semi | Main RSS snapshot had only 20 stories and had rotated out the article; Startups section still contained it. | Five category feeds with canonical deduplication and feed provenance. |
+| TechCrunch Bharat Semi | Article predates the default 12-hour view. Main RSS snapshot had only 20 stories; Startups section still contained it. Production ownership by the original main feed indicates prior archive capture; an exact pre-change archive lookup was not performed. | Five category feeds with canonical deduplication and feed provenance. |
 | X link to Moneycontrol Nvidia / India article | Publisher absent; November 14 article omitted from shallow technology feed and current news sitemap, but still linked in the IT section. | RSS, news sitemap and robots-aware section metadata discovery. |
 
 ## Implementation
