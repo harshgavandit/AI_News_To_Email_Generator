@@ -1,11 +1,13 @@
 name: Refresh world tech feeds
 on:
   schedule:
+    # 08:00 in India (UTC+05:30).
+    - cron: '30 2 * * *'
     - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
-        description: Refresh publisher feeds without sending morning mail
+        description: Run today's publisher refresh without sending morning mail
         type: boolean
         default: true
       intelligence_only:
@@ -15,14 +17,14 @@ on:
 
 permissions: {}
 concurrency:
-  group: refresh-world-tech-feeds
+  group: world-tech-jobs-${{ github.event.schedule || 'manual' }}
   cancel-in-progress: false
 
 jobs:
   refresh:
-    if: github.event_name != 'workflow_dispatch' || !inputs.intelligence_only
+    if: github.event.schedule == '30 2 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
@@ -34,18 +36,43 @@ jobs:
             echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
             exit 1
           fi
-          result=$(curl --silent --show-error --fail --max-time 115 --retry 2 --retry-max-time 150 \
-            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
-            <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-          jq -e 'select(.status == "already_started" or (.status == "refreshed" and .healthy > 0))' <<< "$result"
+          complete=false
+          for attempt in {1..24}; do
+            result=$(curl --silent --show-error --fail --max-time 115 --retry 1 --retry-max-time 115 \
+              --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
+              <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+            jq . <<< "$result"
+            status=$(jq -r '.status' <<< "$result")
+            if [[ "$status" == "waiting" ]]; then
+              echo 'The daily refresh starts at 08:00 India time.'
+              exit 0
+            fi
+            if jq -e '(.status == "complete" or .status == "refreshed") and .remaining == 0' <<< "$result" > /dev/null; then
+              complete=true
+              break
+            fi
+            jq -e '.status == "already_started" or (.status == "refreshed" and .checked > 0 and .remaining > 0)' \
+              <<< "$result" > /dev/null
+            sleep 15
+          done
+          if [[ "$complete" != true ]]; then
+            echo '::error::The daily refresh still has feeds waiting to be checked.'
+            exit 1
+          fi
           ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
             'https://ai-news-to-email-generator.vercel.app/api/ready')
           jq -e '.freshness.counts | select(.fresh > 0)' <<< "$ready"
           if [[ $(jq -r '.status' <<< "$ready") == 'degraded' ]]; then
             echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
           fi
+  mail:
+    if: github.event.schedule == '*/5 * * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    steps:
       - name: Process opted-in morning briefs
-        if: github.event_name != 'workflow_dispatch' || !inputs.feeds_only
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +90,7 @@ jobs:
             exit 1
           fi
   intelligence:
-    if: github.event_name == 'schedule' || inputs.intelligence_only
+    if: github.event.schedule == '*/5 * * * *' || inputs.intelligence_only
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:

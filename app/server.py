@@ -10,8 +10,6 @@ import smtplib
 import threading
 import time
 from collections import Counter, OrderedDict, deque
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 from pathlib import Path
@@ -35,7 +33,6 @@ from app.mail_events import router as mail_events_router
 from app import public_mail
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
-from app.news import collect_news
 from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, TAGLINE
 from app.coverage import REGION_LABELS, TOPICS, article_source, public_article, region_id, region_matches, topic_for
 from app.discovery import (
@@ -45,7 +42,7 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import feed_freshness, refresh_sources, selected_feeds, source_catalog
+from app.ingestion import daily_refresh_plan, feed_freshness, morning_refresh_at, refresh_sources, source_catalog
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
@@ -80,7 +77,6 @@ _trending_cache = Cache("trending-v6")
 _briefing_cache = Cache("briefing-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
-ARCHIVE_REFRESH_INTERVAL = timedelta(minutes=5)
 FEED_FILTERS = ("source", "publisher", "kind", "region", "coverage", "language")
 
 
@@ -322,6 +318,11 @@ def readiness():
 @app.get("/api/sources")
 def sources():
     return {"sources": source_catalog(get_store()), **discovery_options()}
+
+
+def collect_news():
+    # An unconfigured archive must never turn public reads into a live publisher sweep.
+    return {"articles": [], "sources": source_catalog(), "fetched_at": None}
 
 
 def discovery_options():
@@ -680,14 +681,6 @@ def run_intelligence_check(store):
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
 
 
-def check_intelligence_during_refresh(store):
-    try:
-        return run_intelligence_check(store)
-    except Exception as error:
-        logger.warning("scheduled_intelligence_failed error_type=%s", type(error).__name__)
-        return {"status": "unavailable"}
-
-
 @app.get("/api/jobs/morning")
 def morning_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
@@ -718,34 +711,40 @@ def mail_job_health(authorization: str | None = Header(default=None)):
 
 
 @app.get("/api/jobs/refresh")
-def refresh_job(authorization: str | None = Header(default=None),
-                slot: Annotated[str | None, Query(pattern=r"^(?:[01][0-9]|2[0-3])$")] = None):
+def refresh_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
+    now = datetime.now(timezone.utc)
+    morning = morning_refresh_at(now)
+    if now < morning:
+        return {"status": "waiting", "scheduled_at": morning.isoformat()}
+
     store = source_store()
-    lease = store.claim_refresh(scheduled=True)
+    lease = store.claim_refresh()
     if lease is None:
         return {"status": "already_started"}
-    cooldown = 0
     try:
-        # Existing Vercel cron slots keep intelligence moving when GitHub scheduling is delayed.
-        worker = ThreadPoolExecutor(max_workers=1) if slot is not None and research_service.ai_enabled() else nullcontext()
-        with worker as executor:
-            intelligence = executor.submit(check_intelligence_during_refresh, store) if executor else None
-            before = source_catalog(store, include_archive=False)
-            catalog = refresh_sources(store, due_only=True, maximum=128)
-            active = [s for s in catalog if s["enabled"]]
-            healthy = sum(s["available"] is True for s in active)
-            if not healthy:
-                raise HTTPException(503, "No enabled feed passed its latest check.")
-            cooldown = 240
-            previous = {feed["id"]: feed["checked_at"] for feed in before}
-            checked = sum(feed["checked_at"] != previous.get(feed["id"]) for feed in catalog)
-            result = {"status": "refreshed", "sources": len(active), "healthy": healthy, "checked": checked}
-            if intelligence:
-                result["intelligence"] = intelligence.result()
-            return result
+        before = store.source_state(include_archive=False)
+        pending, deferred = daily_refresh_plan(before, morning, now)
+        next_morning = (morning + timedelta(days=1)).isoformat()
+        if not pending:
+            return {"status": "complete", "checked": 0, "remaining": 0,
+                    "deferred": deferred, "scheduled_at": next_morning}
+        refresh_sources(store, source_ids=pending, maximum=128, include_archive=False)
+        after = store.source_state(include_archive=False)
+        remaining, deferred = daily_refresh_plan(after, morning, datetime.now(timezone.utc))
+        checked = {source_id for source_id in pending if (after.get(source_id, {}).get("checked") or 0) >= morning.timestamp()}
+        if not remaining:
+            store.prune()
+        if not checked:
+            raise HTTPException(503, "The feed refresh batch made no progress.")
+        result = {"status": "refreshed", "checked": len(checked),
+                  "healthy": sum(after[source_id]["available"] is True for source_id in checked),
+                  "remaining": len(remaining), "deferred": deferred}
+        if not remaining:
+            result["scheduled_at"] = next_morning
+        return result
     finally:
-        store.finish_refresh(lease, cooldown=cooldown)
+        store.finish_refresh(lease)
 
 
 @app.post("/api/admin/refresh")
@@ -817,8 +816,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
             else:
                 response.headers["X-Cache"] = "MISS"
                 result = refresh_cached_page(store, filters, key if cacheable else None, force=force)
-            result = queue_archive_refresh(background, store, filters, key if cacheable else None, result, force=force)
-            if edge_cacheable and result["freshness"]["counts"]["fresh"] and not result.get("refresh_requested"):
+            if edge_cacheable and result["freshness"]["counts"]["fresh"]:
                 response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
                 response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30, stale-while-revalidate=30"
             return result
@@ -826,8 +824,7 @@ def news(request: Request, response: Response, background: BackgroundTasks,
         fingerprint = page_fingerprint(hours, source, q, kind, publisher, topic, region, sort, coverage, language, subject)
         ranked = sort == "relevance" and bool(q)
         now, marker = page_window(cursor, fingerprint, ranked=ranked)
-        payload = collect_news(force=True) if force else collect_news()
-        # A first request can refresh providers before the publication window begins.
+        payload = collect_news()
         if cursor is None:
             now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=hours)
@@ -875,63 +872,6 @@ def refresh_cached_page(store, filters, key, *, force=False):
             _news_cache.put(key, result, ttl=NEWS_PAGE_TTL, stale=NEWS_PAGE_TTL)
             return result
     return load_archive_page(store, filters)
-
-
-def reader_refresh_scope(catalog, filters, *, force):
-    now = datetime.now(timezone.utc)
-    cutoff = (now - ARCHIVE_REFRESH_INTERVAL).isoformat()
-    active = [feed for feed in catalog if feed["enabled"] and (feed.get("retry_at") or "") <= now.isoformat()]
-    checked = {feed["id"] for feed in active if feed["checked_at"]}
-    def feed_due(feed):
-        if feed["available"] is False:
-            return True
-        if feed.get("next_check_at"):
-            return feed["next_check_at"] <= now.isoformat()
-        return (feed["checked_at"] or "") <= cutoff
-
-    overdue = {feed["id"] for feed in active if feed_due(feed)}
-    scoped_filters = {name: filters[name] for name in FEED_FILTERS}
-    scoped = selected_feeds(active, **scoped_filters)
-    if force and len(scoped) < len(active):
-        return {feed["id"] for feed in scoped if feed["id"] in overdue or feed["available"] is False}
-    if active and (not checked or len(overdue) == len(active)):
-        return None
-    scoped_ids = {feed["id"] for feed in scoped}
-    pending = scoped_ids - checked if len(checked) * 2 >= len(active) else set()
-    scoped_checked = scoped_ids & checked
-    if pending or len(scoped_checked & overdue) * 2 > len(scoped_checked):
-        return scoped_ids & overdue
-    if not force:
-        return set()
-    return {feed["id"] for feed in scoped if feed["id"] in overdue or feed["available"] is False}
-
-
-def queue_archive_refresh(background, store, filters, key, page, *, force=False):
-    if not filters["cursor"] and reader_refresh_scope(page["sources"], filters, force=force) != set():
-        background.add_task(refresh_from_reader, store, filters, key, force=force)
-        page = dict(page, refresh_requested=True)
-    return page
-
-
-def refresh_from_reader(store, filters, key, *, force):
-    try:
-        lease = store.claim_refresh(scheduled=True)
-        if lease is None:
-            return
-        cooldown = 0
-        try:
-            # Recheck after claiming the lease. Another instance may have updated the archive.
-            scope = reader_refresh_scope(source_catalog(store, include_archive=False), filters, force=force)
-            if scope == set():
-                return
-            cooldown = 300
-            refresh_sources(store, source_ids=scope, due_only=not force, maximum=128)
-            if key:
-                refresh_cached_page(store, filters, key, force=True)
-        finally:
-            store.finish_refresh(lease, cooldown=cooldown)
-    except SQLAlchemyError:
-        logger.warning("Could not refresh feeds from the Reading Room")
 
 
 def load_archive_page(store, filters):

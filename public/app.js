@@ -1167,11 +1167,6 @@ async function loadNews(append = false, force = false) {
     renderSourceFilters();
     renderActiveFilters();
     renderHealth(data.freshness);
-    if (data.refresh_requested) {
-      if (force) setTimeout(() => {
-        if (state.controller === controller) checkForUpdates();
-      }, 9000);
-    }
     if (focusMore) $("stories").children[previousSize]?.querySelector("h3 a")?.focus();
   } catch (error) {
     if (state.controller === controller && error.name !== "AbortError" && state.view !== "saved") {

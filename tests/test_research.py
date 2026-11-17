@@ -232,26 +232,3 @@ def test_daily_budget_keeps_archive_search_working(archive, monkeypatch):
     result = client.post("/api/intelligence/research", json={"q": "Northstar recall", "mode": "compare"}).json()
     assert result["answer"]["status"] == "budget_limited"
     assert result["evidence"]
-
-
-@pytest.mark.parametrize("available", [True, False])
-def test_vercel_cron_slot_checks_intelligence_without_changing_feed_health(archive, monkeypatch, available):
-    _, client = archive
-    activate(monkeypatch, vectors=True)
-    monkeypatch.setenv("CRON_SECRET", "research-test-job-secret")
-    monkeypatch.setattr(server, "refresh_sources", lambda *args, **kwargs: [
-        {"id": "ars-technica", "available": True, "enabled": True, "checked_at": "updated"},
-    ])
-
-    def index(store):
-        if not available:
-            raise ValueError("simulated index failure")
-        return {"index_status": "updated", "indexed": 4}
-
-    monkeypatch.setattr(research, "index_archive", index)
-    monkeypatch.setattr(research, "refresh_research_brief", lambda store: "current")
-    response = client.get("/api/jobs/refresh?slot=18", headers={"Authorization": "Bearer research-test-job-secret"})
-    assert response.status_code == 200
-    result = response.json()
-    assert result["status"] == "refreshed" and result["healthy"] == 1
-    assert result["intelligence"]["status"] == ("checked" if available else "unavailable")

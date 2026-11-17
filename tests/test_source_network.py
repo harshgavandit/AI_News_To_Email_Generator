@@ -79,7 +79,6 @@ def test_check_history_opml_and_podcast_api(tmp_path, monkeypatch):
     assert history["checks"] == 2 and history["successful"] == 1 and history["average_duration_ms"] == 100
     monkeypatch.setattr(discovery_health, "get_store", lambda: store)
     monkeypatch.setattr(server, "get_store", lambda: store)
-    monkeypatch.setattr(server, "refresh_from_reader", lambda *args, **kwargs: None)
     client = TestClient(server.app)
     assert client.get(f"/api/discovery/sources/{source.id}/health").json()["history"]["checks"] == 2
     assert client.get("/api/discovery/sources/not-reviewed/health").status_code == 404
@@ -165,16 +164,3 @@ def test_quiet_source_freshness_uses_its_declared_poll_interval():
     feed = {"available": True, "last_success": (now - timedelta(hours=2)).isoformat(), "refresh_minutes": 360}
     assert ingestion.source_freshness(feed, cutoff) == "fresh"
     assert ingestion.source_freshness({**feed, "refresh_minutes": 10}, cutoff) == "stale"
-
-
-def test_reader_does_not_claim_a_global_refresh_for_not_due_podcasts():
-    now = datetime.now(UTC)
-    catalog = [
-        {**BY_ID["bbc-tech"].public(), "checked_at": (now - timedelta(minutes=20)).isoformat(),
-         "available": True, "next_check_at": (now - timedelta(minutes=10)).isoformat()},
-        {**BY_ID["practicalai"].public(), "checked_at": (now - timedelta(minutes=6)).isoformat(),
-         "available": True, "next_check_at": (now + timedelta(minutes=54)).isoformat()},
-    ]
-    filters = {"source": "all", "publisher": "", "kind": "podcast", "region": "", "coverage": "", "language": ""}
-    assert server.reader_refresh_scope(catalog, filters, force=False) == set()
-    assert server.reader_refresh_scope(catalog, {**filters, "kind": "all"}, force=False) == set()

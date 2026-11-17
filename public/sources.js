@@ -85,7 +85,10 @@ function sourceRow(source) {
   const coverage = node("div", "directory-coverage");
   if (source.focus) coverage.append(node("strong", "", source.focus));
   if (source.type) coverage.append(node("span", "", source.type));
-  if (source.format) coverage.append(node("span", "", `${source.format} · checks every ${source.refresh_minutes || 5} min`));
+  if (source.format) {
+    const schedule = source.refresh_policy === "daily" ? "daily refresh from 8:00 a.m. IST" : `checks every ${source.refresh_minutes || 5} min`;
+    coverage.append(node("span", "", `${source.format} · ${schedule}`));
+  }
 
   const health = node("div", "directory-health");
   health.append(node("span", `directory-state directory-state-${source.freshness}`, statusLabels[source.freshness]));

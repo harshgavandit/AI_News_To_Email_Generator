@@ -89,10 +89,11 @@ def test_front_page_uses_source_attribution_and_edge_cache_only_for_public_views
         assert [item["id"] for item in filtered.json()["articles"]] == [ident]
 
 
-def test_scheduler_uses_a_scoped_secret_and_reports_all_feed_failures(archive, monkeypatch):
+def test_scheduler_uses_a_scoped_secret_and_rejects_a_batch_without_progress(archive, monkeypatch):
     _, client = archive
     monkeypatch.delenv("CRON_SECRET", raising=False)
     monkeypatch.setenv("FEED_REFRESH_SECRET", "dedicated-test-refresh-secret")
+    monkeypatch.setattr(server, "morning_refresh_at", lambda now: now - timedelta(hours=1))
     monkeypatch.setattr(server, "refresh_sources", lambda store, **kwargs: [{"enabled": True, "available": False}])
     assert client.get("/api/jobs/refresh").status_code == 401
     headers = {"Authorization": "Bearer dedicated-test-refresh-secret"}

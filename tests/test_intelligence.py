@@ -177,7 +177,6 @@ def discovery_client(request, monkeypatch, tmp_path):
             store.ingest(item["source_id"], [item], True)
     monkeypatch.setattr(server, "get_store", lambda: store)
     monkeypatch.setattr(server, "collect_news", lambda: {"articles": rows, "sources": []})
-    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
     monkeypatch.delenv("UPSTASH_REDIS_REST_URL", raising=False)
     server._news_cache.clear()
     server._limits.clear()

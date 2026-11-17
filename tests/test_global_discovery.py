@@ -60,7 +60,6 @@ def test_facets_filter_relevance_and_counts_agree_across_storage_modes(with_arch
     ]
     store = Store(f"sqlite:///{tmp_path / 'global.db'}") if with_archive else None
     monkeypatch.setattr(server, "get_store", lambda: store)
-    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
     if store:
         for article in articles:
             store.ingest(article["source_id"], [article], True)
@@ -124,7 +123,6 @@ def test_native_language_search_facets_and_brief(with_archive, monkeypatch, tmp_
     ]
     store = Store(f"sqlite:///{tmp_path / 'language.db'}") if with_archive else None
     monkeypatch.setattr(server, "get_store", lambda: store)
-    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
     if store:
         for article in articles:
             store.ingest(article["source_id"], [article], True)
@@ -157,7 +155,6 @@ def test_article_source_filters_search_and_brief(with_archive, monkeypatch, tmp_
     ]
     store = Store(f"sqlite:///{tmp_path / 'articles.db'}") if with_archive else None
     monkeypatch.setattr(server, "get_store", lambda: store)
-    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
     if store:
         for article in articles:
             store.ingest(article["source_id"], [article], True)

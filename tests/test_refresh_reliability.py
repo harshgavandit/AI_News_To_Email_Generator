@@ -45,7 +45,26 @@ def archive(tmp_path, monkeypatch):
     return store, TestClient(server.app)
 
 
-def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch):
+@pytest.fixture
+def daily_clock(monkeypatch):
+    moment = datetime(2026, 11, 17, 3, tzinfo=UTC)
+
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return moment.astimezone(tz) if tz else moment.replace(tzinfo=None)
+
+    def set_time(value):
+        nonlocal moment
+        moment = value
+
+    monkeypatch.setattr(server, "datetime", Clock)
+    monkeypatch.setattr(ingestion, "datetime", Clock)
+    monkeypatch.setattr(launch_store.time, "time", lambda: moment.timestamp())
+    return set_time
+
+
+def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch, daily_clock):
     store, client = archive
     second_worker = launch_store.Store(str(store.engine.url))
     barrier = Barrier(2)
@@ -68,13 +87,12 @@ def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch
     assert store.claim_refresh() is None
 
 
-def test_failed_refresh_can_retry_and_preserves_successful_snapshot(archive, monkeypatch):
+def test_failed_daily_check_preserves_snapshot_until_a_targeted_retry(archive, monkeypatch, daily_clock):
     store, client = archive
+    daily_clock(datetime(2026, 11, 16, 3, tzinfo=UTC))
     store.ingest("bbc-tech", [], True)
-    with store.engine.begin() as conn:
-        conn.execute(launch_store.sources.update().where(launch_store.sources.c.id == "bbc-tech")
-                     .values(checked=(datetime.now(UTC) - timedelta(minutes=20)).timestamp()))
     previous = store.source_state()["bbc-tech"]["last_success"]
+    daily_clock(datetime(2026, 11, 17, 3, tzinfo=UTC))
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech"))
     outcomes = iter([(False, "fetch_failed"), (True, None)])
 
@@ -84,23 +102,25 @@ def test_failed_refresh_can_retry_and_preserves_successful_snapshot(archive, mon
 
     monkeypatch.setattr(ingestion, "read_feed", fetch)
     headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
-    assert client.get("/api/jobs/refresh", headers=headers).status_code == 503
+    result = client.get("/api/jobs/refresh", headers=headers).json()
+    assert (result["checked"], result["healthy"], result["remaining"]) == (1, 0, 0)
     assert store.source_state()["bbc-tech"]["last_success"] == previous
-    response = client.get("/api/jobs/refresh", headers=headers)
-    assert response.json() == {"status": "refreshed", "sources": 1, "healthy": 1, "checked": 1}
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "already_started"
+    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
+    owner = {"Authorization": "Bearer owner-key-for-tests"}
+    response = client.post("/api/admin/refresh?source=bbc-tech", headers=owner)
+    assert response.json()["sources"][0]["available"] is True
 
 
-def test_publisher_freshness_is_separate_from_overall_archive_health(archive, monkeypatch):
+def test_publisher_freshness_is_separate_from_overall_archive_health(archive, daily_clock):
     store, client = archive
-    now = datetime.now(UTC)
-    monkeypatch.setattr(launch_store.time, "time", lambda: (now - timedelta(hours=2)).timestamp())
+    now = datetime(2026, 11, 17, 8, tzinfo=UTC)
+    daily_clock(now - timedelta(days=1))
     store.ingest("bbc-tech", [], True)
-    monkeypatch.setattr(launch_store.time, "time", now.timestamp)
+    daily_clock(now)
     store.ingest("guardian-tech", [], True)
     bbc = client.get("/api/news", params={"publisher": "bbc-tech"}).json()["freshness"]
     assert bbc["status"] == "stale"
-    assert bbc["last_success"] == (now - timedelta(hours=2)).isoformat()
+    assert bbc["last_success"] == (now - timedelta(days=1)).isoformat()
     guardian = client.get("/api/news", params={"publisher": "guardian-tech"}).json()["freshness"]
     assert guardian["status"] == "fresh"
     assert guardian["counts"] == {"enabled": 1, "fresh": 1, "stale": 0, "failed": 0, "pending": 0}
@@ -183,7 +203,7 @@ def test_conditional_refresh_preserves_articles_through_not_modified_and_outage(
     assert store.source_state()[source.id]["available"] is True
 
 
-def test_region_freshness_and_retry_target_matching_feeds(archive, monkeypatch):
+def test_region_reload_reads_archive_and_only_owner_can_refresh_a_source(archive, monkeypatch):
     store, client = archive
     ids = {"tech-in-asia", "sifted", "bbc-tech"}
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id in ids))
@@ -199,24 +219,30 @@ def test_region_freshness_and_retry_target_matching_feeds(archive, monkeypatch):
     monkeypatch.setattr(ingestion, "read_feed", fetch)
     previous = client.get("/api/news?region=EU&force=true").json()
     assert previous["freshness"]["counts"] == {"enabled": 1, "fresh": 0, "stale": 0, "failed": 1, "pending": 0}
-    assert previous["refresh_requested"] is True
-    result = client.get("/api/news?region=EU").json()
+    assert not refreshed
+    assert client.post("/api/admin/refresh?source=sifted").status_code == 401
+    owner = {"Authorization": "Bearer owner-key-for-tests"}
+    assert client.post("/api/admin/refresh?source=sifted", headers=owner).status_code == 200
+    result = client.get("/api/news?region=EU&force=true").json()
     assert result["freshness"]["status"] == "fresh"
     assert refreshed == ["sifted"]
 
 
-def test_first_reader_can_start_an_empty_archive(archive, monkeypatch):
+def test_reader_cannot_start_a_publisher_fetch_even_on_an_empty_archive(archive, monkeypatch):
     _, client = archive
     source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
-    monkeypatch.setattr(ingestion, "read_feed", lambda _, **kwargs: ([], {"available": True}))
+    monkeypatch.setattr(ingestion, "read_feed", lambda _, **kwargs: pytest.fail("Reader polled a publisher"))
     first = client.get("/api/news?hours=12")
     assert first.json()["freshness"]["status"] == "pending"
     assert "Vercel-CDN-Cache-Control" not in first.headers
-    assert client.get("/api/news?hours=12").json()["freshness"]["status"] == "fresh"
+    assert client.get("/api/news?hours=12&force=true").json()["freshness"]["status"] == "pending"
+    monkeypatch.setattr(server, "get_store", lambda: None)
+    monkeypatch.setattr(news, "safe_read_feed", lambda _: pytest.fail("Missing archive polled a publisher"))
+    assert client.get("/api/news?hours=12&force=true").json()["articles"] == []
 
 
-def test_twelve_hour_view_excludes_older_stories_and_refreshes_stale_archive_once(archive, monkeypatch):
+def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch):
     store, client = archive
     now = datetime.now(UTC)
     source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
@@ -242,9 +268,43 @@ def test_twelve_hour_view_excludes_older_stories_and_refreshes_stale_archive_onc
     monkeypatch.setattr(ingestion, "read_feed", fetch)
     initial = client.get("/api/news?hours=12").json()
     assert [row["id"] for row in initial["articles"]] == ["recent"]
-    updated = client.get("/api/news?hours=12").json()
+    assert not fetched
+    owner = {"Authorization": "Bearer owner-key-for-tests"}
+    assert client.post("/api/admin/refresh?source=bbc-tech", headers=owner).status_code == 200
+    updated = client.get("/api/news?hours=12&force=true").json()
     assert [row["id"] for row in updated["articles"]] == ["newest", "recent"]
     assert client.get("/api/news?hours=24").json()["total"] == 3
     assert fetched == [source.id]
     preview = client.post("/api/digest", json={"edition": "world", "hours": 12}).json()
     assert {row["digest_id"] for row in preview["digest"]["articles"]} == {"newest", "recent"}
+
+
+def test_morning_sweep_drains_host_limited_batches_once_at_eight(archive, monkeypatch, daily_clock):
+    _, client = archive
+    github = tuple(source for source in ingestion.DEFAULT_SOURCES if source.group == "github-releases")[:8]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", github)
+    assert len(github) == 8
+    attempts = []
+
+    def fetch(source, **kwargs):
+        attempts.append(source.id)
+        return [], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", fetch)
+    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
+    morning = datetime(2026, 11, 17, 2, 30, tzinfo=UTC)
+    daily_clock(morning - timedelta(seconds=1))
+    assert client.get("/api/jobs/refresh", headers=headers).json() == {"status": "waiting", "scheduled_at": morning.isoformat()}
+    assert not attempts
+    daily_clock(morning)
+    first = client.get("/api/jobs/refresh", headers=headers).json()
+    assert (first["checked"], first["remaining"]) == (6, 2)
+    second = client.get("/api/jobs/refresh", headers=headers).json()
+    assert (second["checked"], second["remaining"]) == (2, 0)
+    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
+    assert len(attempts) == len(set(attempts)) == 8
+
+    daily_clock(morning + timedelta(hours=23))
+    assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 8
+    daily_clock(morning + timedelta(days=1, minutes=46))
+    assert client.get("/api/ready").json()["freshness"]["counts"]["stale"] == 8

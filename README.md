@@ -26,7 +26,7 @@ npm ci
 uv run uvicorn app.server:app --reload
 ```
 
-The Reading Room and Global Top 5 work with public feeds. Set `NEWS_DATABASE_URL=sqlite:///./informa.db` for a local archive. See [.env.example](.env.example) for AI and delivery settings.
+The Reading Room and Global Top 5 read the configured archive. Set `NEWS_DATABASE_URL=sqlite:///./informa.db` for an isolated local archive. Use the test fixtures for routine checks. See [.env.example](.env.example) for AI and delivery settings.
 
 ```sh
 npm run lint
@@ -36,7 +36,7 @@ uv run ruff check app tests scripts main.py
 uv run pytest -q
 ```
 
-Check live integrations without generating AI responses, sending email, or changing the archive:
+Run live integration checks only for a deliberate source diagnosis. These commands contact publishers. For a specific issue, select only the affected sources:
 
 ```sh
 uv run python -m scripts.check_sources

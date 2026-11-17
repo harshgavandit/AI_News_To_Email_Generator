@@ -1,6 +1,6 @@
 """Scheduled and admin-triggered refresh; browsing never waits on it with a store."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from collections import Counter, defaultdict
 import threading
 import time
@@ -11,7 +11,23 @@ from app.news import FEED_WORKERS, read_feed
 from app.sources import DEFAULT_SOURCES
 
 FRESH_FOR = timedelta(minutes=45)
+INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
+DAILY_REFRESH_GRACE = timedelta(minutes=45)
 HOST_GATES = defaultdict(lambda: threading.Semaphore(2))
+
+
+def morning_refresh_at(now):
+    return now.astimezone(INDIA_TIME).replace(hour=8, minute=0, second=0, microsecond=0).astimezone(UTC)
+
+
+def daily_refresh_plan(state, morning, now):
+    """One scheduled check per enabled source per India calendar day."""
+    pending = {source.id for source in DEFAULT_SOURCES
+               if state.get(source.id, {}).get("enabled", source.enabled)
+               and (state.get(source.id, {}).get("checked") or 0) < morning.timestamp()}
+    ready = {source_id for source_id in pending
+             if (state.get(source_id, {}).get("retry_at") or 0) <= now.timestamp()}
+    return ready, len(pending - ready)
 
 
 def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=None, now=None):
@@ -45,7 +61,7 @@ def timed_read(source, **kwargs):
     return items, dict(status, duration_ms=round((time.monotonic() - started) * 1000))
 
 
-def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximum=None):
+def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximum=None, include_archive=True):
     state = store.source_state(include_archive=False)
     now = datetime.now(UTC).timestamp()
     active = refresh_plan(state, only=only, source_ids=source_ids, due_only=due_only, maximum=maximum, now=now)
@@ -79,12 +95,13 @@ def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximu
                              if "observed_entries" in status else None))
     if only is None and source_ids is None:
         store.prune()
-    return source_catalog(store)
+    return source_catalog(store, include_archive=include_archive)
 
 
 def source_catalog(store=None, *, include_archive=True):
     states = store.source_state(include_archive=include_archive) if store else {}
     now = datetime.now(UTC)
+    morning = morning_refresh_at(now)
     cutoff = (now - FRESH_FOR).isoformat()
     result = []
     for s in DEFAULT_SOURCES:
@@ -94,8 +111,17 @@ def source_catalog(store=None, *, include_archive=True):
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
         feed["retained_count"] = state.get("retained_count", 0)
-        feed["next_check_at"] = timestamp(max((state.get("checked") or 0) + s.poll_minutes * 60,
-                                             state.get("retry_at") or 0)) if state.get("checked") else None
+        feed.update(refresh_policy="daily", refresh_minutes=1440)
+        next_check = morning
+        if (state.get("checked") or 0) >= morning.timestamp():
+            next_check += timedelta(days=1)
+        retry = state.get("retry_at") or 0
+        if retry > next_check.timestamp():
+            retry_time = datetime.fromtimestamp(retry, UTC)
+            next_check = morning_refresh_at(retry_time)
+            if next_check < retry_time:
+                next_check += timedelta(days=1)
+        feed["next_check_at"] = next_check.isoformat()
         latest = feed["latest_published_at"]
         feed["content_status"] = ("no_retained_content" if not latest else
             "quiet" if latest < (now - timedelta(days=30)).isoformat() else "recent")
@@ -117,9 +143,15 @@ def source_freshness(feed, cutoff):
         return "failed"
     if not feed.get("last_success"):
         return "pending"
-    tolerance = max(45, feed.get("refresh_minutes", 5) * 2)
-    deadline = (datetime.fromisoformat(cutoff) - timedelta(minutes=tolerance - 45)).isoformat()
-    return "stale" if feed["last_success"] < deadline else "fresh"
+    if feed.get("refresh_policy") == "daily":
+        adjusted_now = datetime.fromisoformat(cutoff) + FRESH_FOR - DAILY_REFRESH_GRACE
+        deadline = morning_refresh_at(adjusted_now)
+        if deadline > adjusted_now:
+            deadline -= timedelta(days=1)
+    else:
+        tolerance = max(45, feed.get("refresh_minutes", 5) * 2)
+        deadline = datetime.fromisoformat(cutoff) - timedelta(minutes=tolerance - 45)
+    return "stale" if datetime.fromisoformat(feed["last_success"]) < deadline else "fresh"
 
 
 def selected_feeds(catalog, *, source="all", publisher="", kind="all", region="", coverage="", language=""):

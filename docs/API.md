@@ -13,7 +13,7 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 ### Activation
 
-The existing Vercel hourly feed slots also run the intelligence check with a shared lease. This provides a fallback when GitHub delays scheduled jobs.
+The hourly Vercel slots run the intelligence check with a shared lease. This provides a fallback when GitHub delays scheduled jobs.
 
 Use the existing owner setup endpoint, `POST /api/admin/setup`, for the additive vector-table migration. Analysis uses the app's existing OpenAI configuration. Set `NEWS_AI_RESEARCH=0` to disable inference for these endpoints. Set `NEWS_AI_VECTORS=1` on the app to enable embeddings. The scheduled GitHub refresh workflow calls the protected intelligence job separately from feed and mail processing. Dispatch it with `intelligence_only=true` to run just the intelligence job. The always-on feed and mail worker can also call it every five minutes with `NEWS_AI_WORKER=1`.
 
@@ -34,7 +34,7 @@ Set `NEWS_AI_ANALYSIS_MODEL` to route coverage comparisons to a different config
 - `facets.topics`, `facets.regions`, and `facets.languages` count articles in the active publication window before pagination. Each facet applies the other filters while ignoring its own selection. `source_counts` counts stories by source group while ignoring the `source` selection.
 - `sort` accepts `latest`, `oldest`, or `relevance`. Search matches terms in titles, publisher names, feed excerpts, and retained author names and tags. It folds capitalization and Latin accents and tolerates punctuation such as the hyphen in `zero-day`. Relevance gives extra weight to titles with the full phrase. Archive and direct-feed search use the same weights. Relevance without a query uses newest-first order.
 - `limit` ranges from 1 to 50. Pass `next_cursor` with the same query, filters, and sort. The cursor keeps the original publication window, returned as `window_ends_at`, for up to 24 hours. Late-arriving stories and edits within that window can still change results.
-- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` bypasses the archive page cache and can retry matching failed or overdue feeds. A source record includes `retry_at` while it is waiting for its next eligible check. Direct RSS mode applies a per-process fetch cooldown. `refresh_requested` means a background task was requested and the response still represents the current archive.
+- `freshness` reports the selected feeds’ last check, last success, and counts, including the selected region. `force=true` reloads the archive from its database. A source record includes `retry_at` while it is waiting for its next eligible check. Publisher requests belong to the protected daily sweep and owner refresh endpoints.
 
 The two broad DEV streams require a technical title, excerpt, or topic tag. The archive applies the same rule to previously retained posts, so search totals, recommendations, and reading details exclude out-of-scope records.
 

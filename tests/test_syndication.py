@@ -49,7 +49,6 @@ def workspace(permission_database, monkeypatch):
     for module in (server, syndication, public_mail):
         monkeypatch.setattr(module, "get_store", lambda: store)
     monkeypatch.setattr(public_mail, "ready", lambda: True)
-    monkeypatch.setattr(server, "queue_archive_refresh", lambda _jobs, _store, _filters, _key, page, **_: page)
     server._news_cache.clear()
     store.ingest("medium-codex", [{"id": "permission-article", "source_id": "medium-codex", "source": "medium",
         "publisher": "CodeX on Medium", "kind": "engineering", "category": "Databases", "title": "An indexing guide",
