@@ -124,6 +124,10 @@ Index("brief_mail_batches_due", mail_batches.c.state, mail_batches.c.retry_at)
 mail_suppressions = Table("brief_mail_suppressions", schema, Column("mailbox", String(64), primary_key=True))
 mail_events = Table("brief_mail_events", schema, Column("id", String(64), primary_key=True),
     Column("kind", String(32), nullable=False), Column("received_at", Float, nullable=False, index=True))
+mail_outcomes = Table("brief_mail_outcomes", schema,
+    Column("id", String(64), primary_key=True), Column("provider_id", String(160), nullable=False, index=True),
+    Column("kind", String(32), nullable=False), Column("occurred_at", Float, nullable=False),
+    Column("received_at", Float, nullable=False))
 contributions = Table("brief_contributions", schema,
     Column("id", String(40), primary_key=True), Column("mailbox", String(64), nullable=False, index=True),
     Column("email", String(254), nullable=False), Column("article_id", String(40), nullable=False, index=True),
@@ -857,6 +861,28 @@ class Store:
             from app import radar_store
             radar_store.accept_events(conn, self, ident)
 
+    def delivery_status(self, ident):
+        with self.engine.connect() as conn:
+            row = conn.execute(select(deliveries).where(deliveries.c.id == ident)).first()
+            if not row:
+                return None
+            state, updated = ("accepted" if row.provider_id else "unconfirmed"), row.created
+            if row.provider_id:
+                # Terminal outcomes take precedence over delayed, out-of-order webhooks.
+                priority = {"email.sent": 0, "email.delivery_delayed": 1, "email.delivered": 2,
+                            "email.failed": 3, "email.bounced": 4, "email.suppressed": 5, "email.complained": 6}
+                events = conn.execute(select(mail_outcomes).where(mail_outcomes.c.provider_id == row.provider_id)).all()
+                if events:
+                    latest = max(events, key=lambda event: (priority.get(event.kind, -1), event.occurred_at))
+                    state = latest.kind.removeprefix("email.")
+                    updated = latest.occurred_at
+            return {"status": state, "updated_at": datetime.fromtimestamp(updated, UTC).isoformat()}
+
+    def mail_used(self, mailbox, bucket):
+        with self.engine.connect() as conn:
+            return conn.scalar(select(limits.c.used).where(
+                limits.c.scope == f"mail:{mailbox}", limits.c.bucket == bucket)) or 0
+
     def record_mail_batch_events(self, ident, mailboxes):
         with self.engine.begin() as conn:
             from app import radar_store
@@ -912,11 +938,16 @@ class Store:
         with self.engine.connect() as conn:
             return conn.scalar(select(mail_suppressions.c.mailbox).where(mail_suppressions.c.mailbox == mailbox)) is not None
 
-    def record_mail_event(self, ident, kind, mailboxes):
+    def record_mail_event(self, ident, kind, mailboxes, *, provider_id=None, occurred_at=None):
         with self.engine.begin() as conn:
             stmt = self.insert(mail_events).values(id=ident, kind=kind, received_at=time.time())
             inserted = conn.scalar(stmt.on_conflict_do_nothing().returning(mail_events.c.id))
-            if not inserted or not mailboxes:
+            if not inserted:
+                return
+            if provider_id:
+                conn.execute(self.insert(mail_outcomes).values(id=ident, provider_id=provider_id, kind=kind,
+                    occurred_at=occurred_at or time.time(), received_at=time.time()).on_conflict_do_nothing())
+            if not mailboxes:
                 return
             conn.execute(self.insert(mail_suppressions).values([{"mailbox": value} for value in sorted(mailboxes)])
                          .on_conflict_do_nothing())
@@ -953,6 +984,7 @@ class Store:
                 (summaries, summaries.c.created < now - 90 * 86400), (articles, articles.c.published_at < cutoff),
                 (mail_batches, mail_batches.c.created < now - 7 * 86400),
                 (mail_events, mail_events.c.received_at < now - 30 * 86400),
+                (mail_outcomes, mail_outcomes.c.received_at < now - 30 * 86400),
                 (article_feeds, ~select(articles.c.id).where(articles.c.id == article_feeds.c.article_id).exists()),
                 (feed_checks, feed_checks.c.checked < now - 7 * 86400),
             ):

@@ -58,6 +58,29 @@ def test_global_budget_defers_remaining_schedules(batch_store, monkeypatch):
     assert mail_capacity().digests == 45
 
 
+def test_resend_transient_retry_keeps_payload_and_idempotency_key(batch_store, monkeypatch):
+    post = Mock(side_effect=[httpx.ReadTimeout('lost response'), httpx.Response(200, json={'id': 'provider-1'},
+        request=httpx.Request('POST', 'https://api.resend.com/emails'))])
+    monkeypatch.setattr(public_mail.httpx, 'post', post)
+    assert public_mail.send_message('reader@example.org', 'Brief', 'Text', '<p>Brief</p>', 'stable-key') == 'provider-1'
+    assert post.call_count == 2
+    assert post.call_args_list[0] == post.call_args_list[1]
+    assert post.call_args.kwargs['headers']['Idempotency-Key'] == 'stable-key'
+
+
+def test_provider_acceptance_requires_a_message_id_and_rejections_are_not_retried(batch_store, monkeypatch):
+    post = Mock(return_value=httpx.Response(200, json={}, request=httpx.Request('POST', 'https://api.resend.com/emails')))
+    monkeypatch.setattr(public_mail.httpx, 'post', post)
+    with pytest.raises(OSError, match='did not confirm'):
+        public_mail.send_message('reader@example.org', 'Brief', 'Text', None, 'key')
+    assert post.call_count == 1
+    post.reset_mock()
+    post.return_value = httpx.Response(422, request=httpx.Request('POST', 'https://api.resend.com/emails'))
+    with pytest.raises(OSError, match='did not confirm'):
+        public_mail.send_message('reader@example.org', 'Brief', 'Text', None, 'key')
+    assert post.call_count == 1
+
+
 def test_signed_bounce_suppresses_inbox_and_replay_does_not_double_count(batch_store, monkeypatch):
     store = batch_store
     monkeypatch.setattr(mail_events, "get_store", lambda: store)

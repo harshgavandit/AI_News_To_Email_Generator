@@ -5,6 +5,8 @@ import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { createPreferences } from '../../public/preferences.js';
 import { readingContent } from '../../public/reading-content.js';
+import { createDeliveryStatus } from '../../public/delivery-status.js';
+import { createStoryQuestion } from '../../public/story-question.js';
 
 const html = readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
 const authorKey = `author-${'a'.repeat(32)}`;
@@ -31,6 +33,64 @@ async function until(check) {
   for (let i = 0; i < 100; i++) { if (check()) return; await delay(5); }
   assert.fail('Expected UI state did not arrive');
 }
+
+test('delivery receipt refresh never sends a brief and clears private status after verification expires', async () => {
+  const env = mount();
+  Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+  const requests = [];
+  let expired = false;
+  try {
+    const receipt = createDeliveryStatus(async url => {
+      requests.push(url);
+      if (expired) throw Object.assign(new Error('Verify your inbox'), { status: 401 });
+      return { status: 'delivered', remaining_today: 2, updated_at: '2026-11-17T10:00:00Z' };
+    }, value => value);
+    const preview = 'receipt-preview-123456789012345678';
+    receipt.track(preview);
+    await until(() => !document.getElementById('world-receipt').hidden);
+    assert.match(document.querySelector('#world-receipt .receipt-state').textContent, /Delivery confirmed/);
+    assert.match(document.querySelector('#email-receipt .receipt-detail').textContent, /2 of 3/);
+    assert.equal(sessionStorage.getItem('informa-mail-receipt'), preview);
+    expired = true;
+    document.querySelector('#email-receipt button').click();
+    await until(() => document.getElementById('world-receipt').hidden);
+    assert.equal(document.getElementById('email-receipt').hidden, true);
+    assert.equal(sessionStorage.getItem('informa-mail-receipt'), null);
+    assert(requests.every(url => url === `/api/mail/delivery/${preview}`));
+  } finally { env.close(); }
+});
+
+test('inline story questions cite source evidence and discard an answer after changing story', async () => {
+  const env = mount();
+  document.getElementById('dossier-drawer').showModal();
+  let finish, body;
+  const answer = { answer: { claims: [{ text: 'The publisher reported an API change.', source_ids: ['story-1'] }], limitations: 'Publisher excerpt only.' },
+    evidence: [{ id: 'story-1', publisher: 'Original publisher', url: 'https://publisher.example/change' }] };
+  try {
+    const question = createStoryQuestion(async (url, options) => {
+      assert.equal(url, '/api/intelligence/converse');
+      body = JSON.parse(options.body);
+      return new Promise(resolve => { finish = resolve; });
+    }, () => ({ article: { id: 'story-1' }, coverage: [{ id: 'related-1' }] }), (url, text) => {
+      const link = document.createElement('a'); link.href = url; link.textContent = text; return link;
+    });
+    const submit = () => document.getElementById('story-question-form').dispatchEvent(new window.Event('submit', { cancelable: true }));
+    document.getElementById('dossier-ask').click();
+    assert.equal(document.activeElement.id, 'story-question');
+    document.getElementById('story-question').value = 'What changed?';
+    submit();
+    assert.deepEqual(body.context_ids, ['story-1', 'related-1']);
+    finish(answer);
+    await until(() => document.querySelector('#story-question-answer a'));
+    assert.equal(document.querySelector('#story-question-answer a').href, answer.evidence[0].url);
+    submit();
+    question.reset();
+    finish(answer);
+    await delay(0);
+    assert.equal(document.getElementById('story-question-answer').textContent, '');
+    assert.equal(document.getElementById('story-question-panel').hidden, true);
+  } finally { env.close(); }
+});
 
 test('followed authors and individual feeds survive reload and incremental catalogue updates', () => {
   const env = mount();

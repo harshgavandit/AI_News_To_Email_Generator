@@ -244,3 +244,43 @@ body.sheet-open { overflow: hidden; }
   .composer.open { transition: none; }
   .edition-stack > span, .edition-arrow { transform: none !important; }
 }
+
+.daily-entry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.daily-entry-actions .edition-link { display: inline-flex; min-height: 44px; }
+.daily-entry-actions #masthead-explore { background: transparent; }
+.briefing-intro { display: block; }
+.briefing-overview { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.briefing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.briefing-actions .button { min-height: 44px; }
+#daily-delivery-slot .daily-delivery { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+#daily-delivery-slot .quick-send { max-width: 680px; }
+#daily-delivery-slot .email-action { grid-template-columns: minmax(0, 1fr) auto; }
+#daily-delivery-slot .quick-send :is(.small, .brief-description, .check-label) { max-width: none; }
+.delivery-receipt { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--accent-line); border-radius: 9px; background: var(--sage); overflow-wrap: anywhere; }
+.delivery-receipt .receipt-state { font-weight: 650; color: var(--ink); margin: 0 0 6px; }
+.delivery-receipt .receipt-detail { line-height: 1.6; margin: 0 0 8px; }
+.delivery-receipt button { min-height: 44px; }
+.story-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 20px; }
+.story-quick-actions .button { min-height: 44px; font-size: 12px; }
+.story-question-panel { margin: 16px 0 24px; padding: 18px; background: var(--sage); border: 1px solid var(--accent-line); border-radius: 10px; }
+.story-question-panel form { display: grid; gap: 10px; }
+.story-question-panel label { font-weight: 650; }
+.story-question-panel textarea { width: 100%; min-width: 0; font-size: 16px; resize: vertical; }
+.story-question-panel .button { min-height: 44px; justify-self: start; }
+.story-answer-claims { padding-inline-start: 20px; line-height: 1.65; }
+.story-answer-claims li { margin-block: 14px; overflow-wrap: anywhere; }
+.story-answer-claims p { margin-bottom: 4px; }
+.story-answer-claims a { color: var(--green); font-size: 13px; text-underline-offset: 3px; }
+@media (max-width: 760px) {
+  .desk-masthead { align-items: stretch; flex-direction: column; gap: 16px; }
+  .daily-entry-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .daily-entry-actions .edition-link { justify-content: center; padding-inline: 8px; font-size: 12px; }
+  .briefing-overview { display: block; }
+  .briefing-actions { margin-top: 16px; }
+  .briefing-actions .button { flex: 1 1 160px; }
+  #daily-delivery-slot .email-action { grid-template-columns: minmax(0, 1fr); }
+  .story-question-panel { padding: 14px; }
+  .story-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .story-quick-actions .button { width: 100%; min-width: 0; padding-inline: 8px; }
+  .story-quick-actions .button:last-child { grid-column: 1 / -1; }
+}

@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 import zoneinfo
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from email_validator import EmailNotValidError, validate_email
 
@@ -146,11 +146,20 @@ def verify_human(token, request):
 
 
 def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kwargs):
-    try:
-        return send_via_transport(recipient, subject, body, html, key, unsubscribe_url)
-    except (httpx.HTTPError, ValueError):
-        # SDK/HTTP exceptions can include request details and recipient data.
-        raise OSError("Mail transport did not confirm acceptance") from None
+    # Resend deduplicates this exact payload and key, including after a lost response.
+    attempts = 2 if os.getenv("RESEND_API_KEY") else 1
+    for attempt in range(attempts):
+        try:
+            return send_via_transport(recipient, subject, body, html, key, unsubscribe_url)
+        except httpx.HTTPError as error:
+            transient = isinstance(error, httpx.RequestError) or (
+                isinstance(error, httpx.HTTPStatusError) and error.response.status_code >= 500)
+            if transient and attempt + 1 < attempts:
+                continue
+            raise OSError("Mail transport did not confirm acceptance") from None
+        except ValueError:
+            # HTTP exceptions and invalid provider responses can contain private data.
+            raise OSError("Mail transport did not confirm acceptance") from None
 
 
 def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
@@ -178,7 +187,10 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
             timeout=15,
         )
         resp.raise_for_status()
-        return resp.json().get("id", key)
+        provider_id = resp.json().get("id")
+        if not isinstance(provider_id, str) or not 1 <= len(provider_id) <= 160:
+            raise ValueError("Missing provider acceptance")
+        return provider_id
 
     # 2. Postmark API
     if os.getenv("POSTMARK_SERVER_TOKEN"):
@@ -204,7 +216,11 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
             timeout=15,
         )
         resp.raise_for_status()
-        return resp.json().get("MessageID", key)
+        result = resp.json()
+        provider_id = result.get("MessageID")
+        if result.get("ErrorCode", 0) or not isinstance(provider_id, str) or not 1 <= len(provider_id) <= 160:
+            raise ValueError("Missing provider acceptance")
+        return provider_id
 
     # 3. SMTP URL
     smtp_url = os.getenv("SMTP_URL")
@@ -238,13 +254,17 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
             with smtplib.SMTP_SSL(parsed.hostname, port, timeout=15, context=ssl.create_default_context()) as smtp:
                 if parsed.username and parsed.password:
                     smtp.login(unquote(parsed.username), unquote(parsed.password))
-                smtp.send_message(msg)
+                refused = smtp.send_message(msg)
+                if refused:
+                    raise smtplib.SMTPRecipientsRefused(refused)
         else:
             with smtplib.SMTP(parsed.hostname, port, timeout=15) as smtp:
                 smtp.starttls(context=ssl.create_default_context())
                 if parsed.username and parsed.password:
                     smtp.login(unquote(parsed.username), unquote(parsed.password))
-                smtp.send_message(msg)
+                refused = smtp.send_message(msg)
+                if refused:
+                    raise smtplib.SMTPRecipientsRefused(refused)
         return key
 
     # 4. Gmail SMTP Fallback
@@ -263,7 +283,9 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
         msg.add_alternative(html, subtype="html")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15, context=ssl.create_default_context()) as smtp:
         smtp.login(sender, password)
-        smtp.send_message(msg)
+        refused = smtp.send_message(msg)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
     return key
 
 
@@ -288,9 +310,12 @@ class SendBody(StrictBody):
 
 
 @router.get("/config")
-def config(request: Request):
+def config(request: Request, response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
     enabled = ready() and bool(os.getenv("NEWS_DATABASE_URL"))
-    email = unseal("session", request.cookies.get(SESSION)) if enabled else None
+    email = verified_recipient(request) if enabled else None
+    store = get_store() if email else None
+    remaining = max(0, 3 - store.mail_used(digest_key("mailbox:" + email), day())) if store else None
     return {
         "enabled": enabled,
         "pilot": enabled and os.getenv("MAIL_PILOT_MODE") == "1",
@@ -299,7 +324,26 @@ def config(request: Request):
         "verified_email": email,
         "limit": 3,
         "timezone": "UTC",
+        "remaining_today": remaining,
+        "delivery_tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET")),
     }
+
+
+@router.get("/delivery/{preview_id}")
+def delivery_receipt(request: Request, response: Response,
+                     preview_id: str = Path(pattern=r"^[A-Za-z0-9_-]{24,80}$")):
+    store = required_store()
+    response.headers["Cache-Control"] = "private, no-store"
+    recipient = verified_recipient(request)
+    if not recipient:
+        raise HTTPException(401, "Verify your inbox to check this delivery.")
+    mailbox = digest_key("mailbox:" + recipient)
+    receipt = store.delivery_status(digest_key(f"delivery:{mailbox}:{preview_id}"))
+    if not receipt:
+        raise HTTPException(404, "No delivery attempt for this brief and verified inbox.")
+    return {**receipt, "remaining_today": max(0, 3 - store.mail_used(mailbox, day())),
+            "limit": 3, "timezone": "UTC",
+            "tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET"))}
 
 
 @router.post("/challenge")

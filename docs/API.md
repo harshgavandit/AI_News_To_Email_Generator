@@ -96,6 +96,10 @@ Story `summary_basis` is `ai_feed_summary`, `publisher_excerpt`, or `headline_on
 
 `POST /api/email` requires the owner bearer token and the signed, expiring digest response. The recipient is fixed by server configuration. The `/api/mail` routes verify an inbox before sending a stored preview and accept an explicit opt-in for the daily global edition. `/api/deliver/webhook` requires a verified inbox and accepts supported HTTPS Slack and Teams webhook URLs.
 
+`GET /api/mail/config` also reports `remaining_today` for the verified inbox, with a three-brief UTC daily limit. `GET /api/mail/delivery/{preview_id}` returns that inbox's delivery outcome, update timestamp, remaining allowance and whether provider webhook tracking is configured. It remains available after the preview expires, for the delivery record's 30-day retention. Another inbox receives 404 and a signed-out reader receives 401. Both responses use private, no-store caching and omit provider IDs and recipient addresses from receipts.
+
+Signed Resend events correlate `data.email_id` with the recorded provider ID. Delivered, delayed, failed, bounced and suppressed outcomes survive webhook replays and events that arrive before the send response. A delayed event cannot replace a terminal outcome. Bounces, complaints and suppressions pause further mail to that inbox. Gmail, SMTP and Postmark report provider acceptance through this receipt endpoint. Resend retries transient transport failures once with the identical payload and idempotency key. Ambiguous attempts retain their quota reservation and cannot initiate a second send of the same preview.
+
 ## Health and job routes
 
 `GET /api/health` reports service liveness and configuration. `GET /api/ready` returns `503` if the archive is missing or lacks a fresh feed. Job routes require a configured scheduler token. See [release operations](LAUNCH.md) for setup, quotas, and delivery monitoring.

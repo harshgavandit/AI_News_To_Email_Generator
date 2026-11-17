@@ -143,7 +143,7 @@ def submission_record(row, *, owner=False, include_body=False):
 @router.get("/api/mail/contributions/config")
 def contribution_config(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
-    config = public_mail.config(request)
+    config = public_mail.config(request, response)
     return {**config, "terms_version": TERMS_VERSION, "permission_statement": GRANT}
 
 

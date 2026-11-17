@@ -6,6 +6,7 @@ import hmac
 import json
 import os
 import time
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
@@ -33,7 +34,7 @@ def valid_signature(body: bytes, headers, secret: str) -> bool:
                for item in headers.get("svix-signature", "")[:4096].split())
 
 
-def record_event(ident, kind, addresses):
+def record_event(ident, kind, addresses, provider_id=None, occurred_at=None):
     store = get_store()
     if not store or len(os.getenv("MAIL_SESSION_SECRET", "")) < 32:
         raise HTTPException(503, "Mail event storage is temporarily unavailable.")
@@ -46,7 +47,8 @@ def record_event(ident, kind, addresses):
         except HTTPException:
             continue
         keys.add(public_mail.digest_key("mailbox:" + email))
-    store.record_mail_event(hashlib.sha256(ident.encode()).hexdigest(), kind, keys)
+    store.record_mail_event(hashlib.sha256(ident.encode()).hexdigest(), kind, keys,
+                            provider_id=provider_id, occurred_at=occurred_at)
 
 
 @router.post("/resend")
@@ -67,9 +69,22 @@ async def resend_event(request: Request):
         addresses = data.get("to", [])
         if not isinstance(addresses, list):
             raise TypeError
+        provider_id = data.get("email_id")
+        if provider_id is not None and (not isinstance(provider_id, str) or not 1 <= len(provider_id) <= 160):
+            raise TypeError
+        timestamp = event.get("created_at")
+        occurred_at = time.time()
+        if timestamp:
+            parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                raise ValueError
+            occurred_at = parsed.timestamp()
+        if not 0 < occurred_at <= time.time() + 300:
+            raise ValueError
     except (KeyError, ValueError, TypeError, AttributeError, UnicodeError):
         raise HTTPException(400, "Invalid mail event.") from None
     suppressed = kind in ("email.bounced", "email.complained", "email.suppressed")
-    if suppressed or kind in ("email.delivered", "email.delivery_delayed", "email.failed"):
-        await run_in_threadpool(record_event, request.headers["svix-id"], kind, addresses if suppressed else [])
+    if suppressed or kind in ("email.sent", "email.delivered", "email.delivery_delayed", "email.failed"):
+        await run_in_threadpool(record_event, request.headers["svix-id"], kind, addresses if suppressed else [],
+                               provider_id, occurred_at)
     return {"received": True}

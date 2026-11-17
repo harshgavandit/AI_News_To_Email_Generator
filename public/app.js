@@ -4,6 +4,8 @@ import { initSavedViews } from "./saved-views.js";
 import { createPreferences } from "./preferences.js";
 import { readingContent } from "./reading-content.js";
 import { readFeedback, toggleFeedback } from "./reader-feedback.js";
+import { createDeliveryStatus } from "./delivery-status.js";
+import { createStoryQuestion } from "./story-question.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -214,6 +216,9 @@ async function request(url, options = {}) {
         : "This request could not be completed. Check your settings and try again.",
     );
     error.status = response.status;
+    const retryAfter = Number(response.headers.get("Retry-After"));
+    if (response.status === 429 && Number.isFinite(retryAfter) && retryAfter > 0)
+      error.message += ` Try again after ${new Date(Date.now() + retryAfter * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
     throw error;
   }
   return data;
@@ -224,6 +229,7 @@ const jsonPost = (url, data) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+const deliveryStatus = createDeliveryStatus(request, readableTime);
 
 async function loadHeadlines() {
   try {
@@ -463,6 +469,16 @@ for (const button of document.querySelectorAll("[data-workspace-view]")) {
   });
 }
 $("masthead-briefing").addEventListener("click", () => $("view-briefing").click());
+$("masthead-explore").addEventListener("click", () => {
+  $("view-feed").click();
+  $("reading-room").scrollIntoView({ block: "start", behavior: "smooth" });
+  $("search").focus({ preventScroll: true });
+});
+$("daily-delivery-slot").append($("daily-delivery"));
+$("briefing-email").addEventListener("click", () => {
+  $("daily-delivery").open = true;
+  $("hero-email").focus();
+});
 $("sidebar-save-view").addEventListener("click", () => {
   if (["saved", "briefing"].includes(state.view)) $("view-feed").click();
   closeWorkspaceMenu();
@@ -1777,6 +1793,9 @@ function composeWorldBrief() {
       edition: "world",
       hours: 24,
       top_n: 5,
+      ...(state.view === "briefing" && state.briefing.length && {
+        pinned_ids: state.briefing.slice(0, 5).map(story => String(story.id)),
+      }),
       persona: "executive",
       style: "executive",
     },
@@ -1968,6 +1987,7 @@ async function performDelivery() {
     : "";
   status(pending.statusId, message + schedule);
   status("email-status", message + schedule);
+  if (pending.kind !== "webhook") deliveryStatus.track(pending.preview.preview_id);
   state.pending = null;
   if ($("mail-dialog").open) $("mail-dialog").close();
   return result;
@@ -2139,6 +2159,7 @@ $("send-brief").addEventListener("submit", (event) =>
 for (const id of ["different-email", "resend-code"])
   $(id).addEventListener("click", () => runMailAction(async () => {
     await jsonPost("/api/mail/logout", {});
+    deliveryStatus.clear();
     $("mail-code").value = "";
     mailStep("request-code");
     $("mail-address").focus();
@@ -2238,6 +2259,7 @@ loadNews().then(() => openLinkedArticle());
 loadHeadlines();
 loadSignals();
 loadTrending();
+deliveryStatus.restore();
 window.addEventListener("hashchange", () => {
   if (location.hash === "#composer") openBuilder("build", $("nav-builder"));
 });
@@ -2307,6 +2329,10 @@ $("pin-all-saved").addEventListener("click", () => {
 });
 
 const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "", controller: null };
+const storyQuestion = createStoryQuestion(request, () => ({ article: dossier.article, coverage: dossier.coverage || [] }), externalLink);
+const quickStoryActions = document.querySelector(".story-quick-actions");
+for (const id of ["dossier-share-btn", "dossier-pin-btn", "dossier-follow-publication"])
+  quickStoryActions.append($(id));
 
 function syncFollowActions() {
   if (!dossier.article) return;
@@ -2423,6 +2449,7 @@ function openDossier(article, trigger, details) {
 }
 
 function renderDossier(details) {
+  storyQuestion.reset();
   $("dossier-references").hidden = true;
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
@@ -2525,6 +2552,7 @@ function moveDossier(offset) {
 
 $("dossier-close").addEventListener("click", () => $("dossier-drawer").close());
 $("dossier-drawer").addEventListener("close", () => {
+  storyQuestion.reset();
   dossier.controller?.abort();
   if ($("hide-read").getAttribute("aria-pressed") === "true" && state.view !== "saved") renderStories();
   const url = new URL(location.href);
@@ -2805,6 +2833,7 @@ function listCommands() {
     { label: "Read the daily briefing", run: () => $("view-briefing").click() },
     { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
     { label: "Email the Global Top 5", run: () => {
+      $("view-briefing").click();
       $("world-form").closest("details").open = true;
       $("hero-email").focus();
     } },

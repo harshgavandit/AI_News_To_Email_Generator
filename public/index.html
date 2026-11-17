@@ -97,7 +97,10 @@
             <h1 id="hero-title">The technology desk.</h1>
             <p>Reporting, research, and ideas worth your attention.</p>
           </div>
-          <button type="button" id="masthead-briefing" class="edition-link" aria-label="Read the daily briefing"><span class="edition-stack" aria-hidden="true"><span></span></span><span>Daily briefing</span><span class="edition-arrow" aria-hidden="true">↗</span></button>
+          <div class="daily-entry-actions">
+            <button type="button" id="masthead-briefing" class="edition-link" aria-label="Read today's brief">Today’s brief <span aria-hidden="true">↗</span></button>
+            <button type="button" id="masthead-explore" class="edition-link">Explore stories</button>
+          </div>
         </section>
       <div class="desk-layout">
         <section
@@ -139,8 +142,8 @@
           </div>
           <div class="reading-stream">
             <div class="reading-views" role="group" aria-label="Reading Room view">
-              <button id="view-briefing" type="button" aria-pressed="false">Briefing</button>
-              <button id="view-feed" type="button" aria-pressed="true">All stories</button>
+              <button id="view-briefing" type="button" aria-pressed="false">Today’s brief</button>
+              <button id="view-feed" type="button" aria-pressed="true">Explore stories</button>
               <button id="view-for-you" type="button" aria-pressed="false">For You</button>
               <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
             </div>
@@ -178,9 +181,16 @@
             </details>
           </section>
           <section id="briefing-intro" class="briefing-intro" aria-label="About this briefing" hidden>
-            <div><span class="briefing-label">Your daily briefing</span><h3>A considered view of the last 24 hours.</h3>
-            <p id="briefing-context">Selecting a concise cross-section of technology reporting and research.</p></div>
-            <button type="button" id="briefing-pin" class="button secondary" hidden>Pin this selection</button>
+            <div class="briefing-overview">
+              <div><span class="briefing-label">Your daily briefing</span><h3>A considered view of the last 24 hours.</h3>
+                <p id="briefing-context">Selecting a concise cross-section of technology reporting and research.</p>
+              </div>
+              <div class="briefing-actions">
+                <button type="button" id="briefing-email" class="button primary">Get this brief by email</button>
+                <button type="button" id="briefing-pin" class="button secondary" hidden>Customize this selection</button>
+              </div>
+            </div>
+            <div id="daily-delivery-slot"></div>
           </section>
           <div id="feed-controls">
             <div class="reading-discovery">
@@ -555,7 +565,7 @@
                         <input id="preview-subscribe" type="checkbox" />
                         <span>Also send a daily brief at 8 AM in my local time</span>
                       </label>
-                      <button id="send" type="submit" class="button primary">Send to inbox</button>
+                      <button id="send" type="submit" class="button primary">Send to my inbox ↗</button>
                     </form>
                     <form id="webhook-form" hidden>
                       <div>
@@ -575,6 +585,10 @@
                   </div>
                 </details>
                 <p id="email-status" class="status" role="status"></p>
+                <section id="email-receipt" class="delivery-receipt" aria-label="Email delivery status" hidden>
+                  <p class="receipt-state" role="status"></p><p class="receipt-detail small"></p>
+                  <button type="button" class="text-button" data-check-delivery>Check delivery status</button>
+                </section>
                 <div class="preview-toolbar">
                   <div class="segmented" role="group" aria-label="Preview width">
                     <button id="preview-desktop" type="button" aria-pressed="true">Full width</button>
@@ -608,7 +622,7 @@
           <div id="trending-chips" class="trending-chips" role="group"></div>
         </div>
 
-        <details class="daily-delivery">
+        <details id="daily-delivery" class="daily-delivery">
           <summary>Get the daily brief <span aria-hidden="true">＋</span></summary>
         <form id="world-form" class="quick-send">
           <div class="brief-card-heading">
@@ -649,6 +663,10 @@
             aria-live="polite"
           ></p>
         </form>
+        <section id="world-receipt" class="delivery-receipt" aria-label="Daily brief delivery status" hidden>
+          <p class="receipt-state" role="status"></p><p class="receipt-detail small"></p>
+          <button type="button" class="text-button" data-check-delivery>Check delivery status</button>
+        </section>
         </details>
       </aside>
     </main>
@@ -781,11 +799,22 @@
             Read original <span aria-hidden="true">↗</span>
           </a>
           <button id="dossier-summarize" class="button secondary" type="button">Create AI brief</button>
+          <button id="dossier-ask" class="button secondary" type="button" aria-expanded="false" aria-controls="story-question-panel">Ask about this story</button>
           <button id="dossier-stop-btn" class="button secondary" type="button" hidden>Stop</button>
           <button id="dossier-save-btn" class="button secondary" type="button" aria-pressed="false">
             Save story
           </button>
         </div>
+        <div class="story-quick-actions" aria-label="Story actions"></div>
+        <section id="story-question-panel" class="story-question-panel" aria-label="Ask about this story" hidden>
+          <form id="story-question-form">
+            <label for="story-question">Your question</label>
+            <textarea id="story-question" rows="2" maxlength="320" required placeholder="What changed, and who is affected?"></textarea>
+            <button type="submit" class="button primary">Ask with sources</button>
+          </form>
+          <p id="story-question-status" class="status" role="status"></p>
+          <div id="story-question-answer"></div>
+        </section>
         <details class="reader-tools">
           <summary>Reading tools &amp; follow options</summary>
           <div class="dossier-actions-bar">
