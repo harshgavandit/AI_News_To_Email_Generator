@@ -22,6 +22,8 @@ const regionLabels = {
 };
 
 export const subjectLabels = {
+  agents: "AI agents & orchestration", llms: "LLMs & inference", "generative-ai": "Generative AI",
+  "machine-learning": "Machine learning & MLOps", devops: "DevOps & reliability",
   programming: "Programming", cloud: "Cloud & infrastructure", "open-source": "Open source",
   funding: "Funding & venture capital", acquisitions: "Mergers & acquisitions",
   quantum: "Quantum computing", robotics: "Robotics", data: "Data & databases",

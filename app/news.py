@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from app.sources import DEFAULT_SOURCES, Source
 from app.sanitation import sanitize_story_excerpt, sanitize_text
-from app.article_metadata import metadata_for
+from app.article_metadata import metadata_for, extract_technical_terms
 from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 
 # Compatibility for the original read_feed helper and tests.
@@ -39,7 +39,7 @@ SPONSORED_TITLE = re.compile(
     r"^(?:heise-angebot|anzeige|sponsored content|sponsored post|advertisement|partner content)\s*[:|]", re.I
 )
 MEDIUM_POST = re.compile(r"https://medium\.com/p/([a-f0-9]{8,16})\Z")
-BARE_VERSION = re.compile(r"\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", re.ASCII)
+BARE_VERSION = re.compile(r"v?\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", re.ASCII)
 ETAG = re.compile(r'(?:W/)?"[\x21\x23-\x7e]{0,480}"')
 
 
@@ -141,7 +141,10 @@ async def fetch_with_deadline(url, validators=None):
                         return FeedResponse(None, url)
                     if response.has_redirect_location:
                         target = str(response.next_request.url)
-                        if urlsplit(target).netloc != urlsplit(url).netloc or urlsplit(target).scheme != "https":
+                        destination, origin = urlsplit(target), urlsplit(url)
+                        if (destination.scheme != "https" or destination.username or destination.password
+                                or destination.port not in (None, 443)
+                                or (destination.hostname or "").removeprefix("www.") != (origin.hostname or "").removeprefix("www.")):
                             raise ValueError("Unexpected feed redirect")
                         url = target
                         continue
@@ -157,6 +160,14 @@ async def fetch_with_deadline(url, validators=None):
 
 
 def read_feed(task, *, validators=None, known_urls=()):
+    if isinstance(task, Source) and task.integration == "crossref-api":
+        try:
+            from app.scholarly import read_crossref
+            return read_crossref(task, fetch_bytes)
+        except httpx.HTTPStatusError as error:
+            return [], {**task.public(), "available": False, "count": 0, **http_failure(error)}
+        except Exception:
+            return [], dict(task.public(), available=False, count=0, error="metadata_unavailable")
     if isinstance(task, Source) and task.integration == "publisher-metadata":
         try:
             from app.publisher_listing import read_listing
@@ -273,6 +284,7 @@ def read_feed(task, *, validators=None, known_urls=()):
                 media_items = entry.get("media_thumbnail") or entry.get("media_content") or []
                 image = next((item.get("url", "") for item in media_items if isinstance(item, dict)), "")
                 story_record.update(metadata_for({"tags": tags,
+                    "technical_terms": extract_technical_terms(raw_desc),
                     "references": [{"url": link.get("href"), "label": link.get_text(" ", strip=True)}
                         for link in BeautifulSoup(raw_desc[:50000], "html.parser").select("a[href]")[:8]],
                     "author_url": s.author_url if not entry.get("author") or entry.get("author") == s.author_name else None,

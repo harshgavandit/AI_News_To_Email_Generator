@@ -1,5 +1,9 @@
 """Reviewed feed registry. Do not make arbitrary server-side URL fetches."""
 from dataclasses import dataclass
+import json
+from pathlib import Path
+import re
+from urllib.parse import urlsplit
 
 
 @dataclass(frozen=True)
@@ -22,6 +26,33 @@ class Source:
     author_name: str = ""
     author_url: str = ""
     sitemap_paths: tuple[str, ...] = ()
+    format: str = ""
+    refresh_minutes: int = 0
+    collection: str = ""
+    reviewed_at: str = ""
+
+    @property
+    def content_format(self):
+        return self.format or ("video" if self.kind == "video" else "podcast" if self.kind == "podcast" else
+            "paper" if self.coverage in {"journal", "preprint"} else "release" if self.coverage == "release" else
+            "news" if self.kind == "news" else "blog")
+
+    @property
+    def poll_minutes(self):
+        return self.refresh_minutes or (5 if self.coverage in {"advisory", "status"} else 10 if self.coverage == "reporting" else
+            60 if self.content_format in {"paper", "release", "podcast", "newsletter"} else 30)
+
+    @property
+    def publisher_family(self):
+        if self.group in {"medium", "dev", "hashnode", "youtube", "github-releases", "crossref"}:
+            return self.group
+        for name, domains in (("google", ("google.com", "googleblog.com", "research.google", "deepmind.google")),
+                              ("microsoft", ("microsoft.com", "visualstudio.com")),
+                              ("amazon", ("amazon.com",)), ("nvidia", ("nvidia.com",)),
+                              ("meta", ("fb.com",))):
+            if any(host == domain or host.endswith("." + domain) for host in self.hosts for domain in domains):
+                return name
+        return self.group
 
     def public(self):
         return {
@@ -39,6 +70,11 @@ class Source:
             "reading_policy": "excerpt",
             "author_name": self.author_name,
             "author_url": self.author_url,
+            "format": self.content_format,
+            "refresh_minutes": self.poll_minutes,
+            "collection": self.collection or self.topic,
+            "reviewed_at": self.reviewed_at or None,
+            "publisher_family": self.publisher_family,
         }
 
 
@@ -427,13 +463,58 @@ DEFAULT_SOURCES = (
 
 )
 
+def validate_source(source):
+    from app.article_metadata import public_link
+    endpoint = urlsplit(source.url)
+    if (not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", source.id)
+        or not public_link(source.url)
+        or endpoint.scheme != "https" or not endpoint.hostname or "." not in endpoint.hostname
+        or endpoint.username or endpoint.password or endpoint.port not in (None, 443)
+        or not all(re.fullmatch(r"[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", host) for host in source.hosts)
+        or not source.hosts or not source.label.strip()
+        or source.kind not in {"news", "research", "engineering", "video", "podcast", "status"}
+        or source.topic not in {"ai", "software", "startups", "security", "chips", "bigtech", "research", "industry", "outages", "video"}
+        or source.coverage not in {"reporting", "publisher", "article", "release", "advisory", "preprint", "journal", "discussion", "status"}
+        or source.content_format not in {"news", "blog", "newsletter", "paper", "release", "video", "podcast"}
+        or source.refresh_minutes not in range(0, 1441) or 0 < source.refresh_minutes < 5):
+        raise ValueError(f"Invalid or duplicate reviewed source: {source.id}")
+    return source
+
+
+def load_source_pack(path):
+    """Load reviewed configuration only. Importing a pack never fetches a URL."""
+    records = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(records, list) or len(records) > 1000:
+        raise ValueError("A source pack must be a bounded list")
+    result, ids, urls = [], set(), set()
+    for row in records:
+        source = Source(**{key: tuple(value) if key in {"hosts", "article_paths", "excluded_paths", "sitemap_paths"}
+                          else value for key, value in row.items()})
+        validate_source(source)
+        if source.id in ids or source.url in urls:
+            raise ValueError(f"Duplicate reviewed source: {source.id}")
+        result.append(source)
+        ids.add(source.id)
+        urls.add(source.url)
+    return tuple(result)
+
+
+SOURCE_PACK = Path(__file__).with_name("source_catalog.json")
+if SOURCE_PACK.exists():
+    additions = load_source_pack(SOURCE_PACK)
+    if {source.id for source in DEFAULT_SOURCES} & {source.id for source in additions}:
+        raise ValueError("Source pack IDs overlap the core registry")
+    DEFAULT_SOURCES += additions
+
 BY_ID = {source.id: source for source in DEFAULT_SOURCES}
 GROUPS = tuple(dict.fromkeys(s.group for s in DEFAULT_SOURCES))
-KINDS = ("all", "news", "research", "engineering", "video", "status")
+KINDS = ("all", "news", "research", "engineering", "video", "podcast", "status")
 LANGUAGES = {code: label for code, label in (
     ("en", "English"), ("fr", "French"), ("de", "German"), ("ja", "Japanese"), ("ko", "Korean"),
     ("pt-BR", "Portuguese (Brazil)"), ("es-MX", "Spanish (Mexico)"), ("es-ES", "Spanish (Spain)"),
     ("es-419", "Spanish (Latin America)"), ("nl", "Dutch"),
     ("zh-CN", "Chinese (Simplified)"), ("zh-TW", "Chinese (Traditional)"), ("ar", "Arabic"),
     ("und", "Not specified"),
+    ("tr", "Turkish"), ("pl", "Polish"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}
+LANGUAGES.update({source.language: source.language for source in DEFAULT_SOURCES if source.language not in LANGUAGES})

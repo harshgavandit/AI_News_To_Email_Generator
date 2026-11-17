@@ -16,7 +16,8 @@ def test_registry_has_expanded_sources_and_stable_channel_ids():
     from app.sources import DEFAULT_SOURCES
     assert len(DEFAULT_SOURCES) >= 35
     assert len({s.id for s in DEFAULT_SOURCES}) == len(DEFAULT_SOURCES)
-    assert len([s for s in DEFAULT_SOURCES if s.kind == 'video']) == 5
+    assert {'matthew-berman', 'ai-engineer', 'karpathy', 'two-minute-papers', 'hugging-face-video'} <= {
+        source.id for source in DEFAULT_SOURCES if source.kind == 'video'}
 
 
 def test_canonical_urls_keep_video_identity_and_remove_tracking():

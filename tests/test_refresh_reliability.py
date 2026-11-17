@@ -71,6 +71,9 @@ def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch
 def test_failed_refresh_can_retry_and_preserves_successful_snapshot(archive, monkeypatch):
     store, client = archive
     store.ingest("bbc-tech", [], True)
+    with store.engine.begin() as conn:
+        conn.execute(launch_store.sources.update().where(launch_store.sources.c.id == "bbc-tech")
+                     .values(checked=(datetime.now(UTC) - timedelta(minutes=20)).timestamp()))
     previous = store.source_state()["bbc-tech"]["last_success"]
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech"))
     outcomes = iter([(False, "fetch_failed"), (True, None)])
@@ -84,7 +87,7 @@ def test_failed_refresh_can_retry_and_preserves_successful_snapshot(archive, mon
     assert client.get("/api/jobs/refresh", headers=headers).status_code == 503
     assert store.source_state()["bbc-tech"]["last_success"] == previous
     response = client.get("/api/jobs/refresh", headers=headers)
-    assert response.json() == {"status": "refreshed", "sources": 1, "healthy": 1}
+    assert response.json() == {"status": "refreshed", "sources": 1, "healthy": 1, "checked": 1}
     assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "already_started"
 
 

@@ -12,6 +12,8 @@ from app.article_metadata import restore_metadata
 from app.discovery import relevance_score, search_terms, search_text
 
 SUBJECTS = {
+    "agents": "AI agents & orchestration", "llms": "LLMs & inference", "generative-ai": "Generative AI",
+    "machine-learning": "Machine learning & MLOps", "devops": "DevOps & reliability",
     "programming": "Programming", "cloud": "Cloud & infrastructure", "open-source": "Open source",
     "funding": "Funding & venture capital", "acquisitions": "Mergers & acquisitions",
     "quantum": "Quantum computing", "robotics": "Robotics", "data": "Data & databases",
@@ -19,6 +21,11 @@ SUBJECTS = {
     "climate": "Climate & energy tech",
 }
 SUBJECT_PATTERNS = {
+    "agents": r"agentic|ai agents?|multi[ -]agent|langgraph|crewai|autogen|agent orchestration|model context protocol|mcp",
+    "llms": r"llms?|large language models?|inference|vllm|llama\.cpp|sglang|tokenization|fine[ -]tuning|quantization",
+    "generative-ai": r"generative ai|genai|diffusion models?|text[ -]to[ -](?:image|video)|image generation|multimodal",
+    "machine-learning": r"machine learning|mlops|pytorch|tensorflow|scikit-learn|model training|neural networks?|feature stores?",
+    "devops": r"devops|site reliability|sre|ci/cd|observability|opentelemetry|terraform|opentofu|platform engineering|gitops",
     "programming": r"programming|compilers?|python|javascript|typescript|golang|rust|coding|ruby|java|c\+\+|c#|cs\.pl",
     "cloud": r"cloud|aws|azure|kubernetes|serverless|devops|docker|containers?|infrastructure|distributed systems?",
     "open-source": r"open[ -]source|open[ -]weights?|linux|github|gitlab|free software|código (?:aberto|abierto)",

@@ -6,6 +6,7 @@ to republish full articles, so the reader uses only short supplied excerpts.
 import ipaddress
 import hashlib
 import json
+import re
 from urllib.parse import urlsplit
 
 from app.sanitation import sanitize_text
@@ -14,7 +15,13 @@ IMAGE_HOSTS = ("i.ytimg.com", "media.dev.to", "media2.dev.to", "cdn.hashnode.com
                "images.unsplash.com", "techcrunch.com", "theverge.com", "arstechnica.com",
                "cdn.arstechnica.net", "media.wired.com", "cdn.vox-cdn.com", "platform.theverge.com")
 METADATA_FIELDS = ("author", "author_url", "tags", "original_url", "discussion_url", "thumbnail_url", "points", "comments_count",
-                   "reading_time_minutes", "references")
+                   "reading_time_minutes", "references", "technical_terms", "publication_date_precision")
+TECHNICAL_TERMS = re.compile(r"\b(?:CVE-\d{4}-\d{4,}|GHSA-[a-z0-9-]{14}|[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+)\b", re.I)
+
+
+def extract_technical_terms(text):
+    return list(dict.fromkeys(match[0] for match in TECHNICAL_TERMS.finditer(str(text)[:32000])
+                              if len(match[0]) <= 64))[:16]
 
 
 def public_link(value):
@@ -45,6 +52,13 @@ def safe_thumbnail(value):
 def metadata_for(article):
     """Use a small allowlist; never persist arbitrary upstream objects or HTML."""
     metadata = {}
+    if article.get("publication_date_precision") == "day":
+        metadata["publication_date_precision"] = "day"
+    terms = article.get("technical_terms")
+    if isinstance(terms, (list, tuple)):
+        clean = [term for term in terms[:16] if isinstance(term, str) and len(term) <= 64 and TECHNICAL_TERMS.fullmatch(term)]
+        if clean:
+            metadata["technical_terms"] = list(dict.fromkeys(clean))
     author = sanitize_text(article.get("author"), limit=140)
     if author:
         metadata["author"] = author
@@ -82,7 +96,7 @@ def metadata_for(article):
 def restore_metadata(article):
     result = dict(article)
     payload = result.pop("metadata_json", None)
-    if isinstance(payload, str) and len(payload) <= 12000:
+    if isinstance(payload, str) and len(payload) <= 16000:
         try:
             metadata = json.loads(payload)
             if isinstance(metadata, dict):

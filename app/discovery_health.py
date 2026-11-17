@@ -3,6 +3,7 @@ from typing import Annotated
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 from app.coverage import TOPICS, public_article
 from app.ingestion import feed_freshness, source_catalog
@@ -11,6 +12,36 @@ from app.news import canonical_url
 from app.sources import BY_ID
 
 router = APIRouter(prefix="/api/discovery")
+FORMATS = {"news": "News", "blog": "Technical blogs", "newsletter": "Newsletters", "paper": "Research papers",
+           "release": "Project releases", "video": "Video channels", "podcast": "Podcasts"}
+
+
+@router.get("/sources/{source_id}/health")
+def source_health(source_id: str, response: Response, hours: Annotated[int, Query(ge=1, le=168)] = 24):
+    if source_id not in BY_ID:
+        raise HTTPException(404, "Unknown reviewed source.")
+    store = get_store()
+    if not store:
+        raise HTTPException(503, "The persistent archive is unavailable.")
+    current = next(source for source in source_catalog(store) if source["id"] == source_id)
+    response.headers["Cache-Control"] = "no-store"
+    return {"source": current, "history": store.source_health_history(source_id, hours)}
+
+
+@router.get("/sources.opml")
+def export_sources():
+    root = Element("opml", version="2.0")
+    head = SubElement(root, "head")
+    SubElement(head, "title").text = "Informa AI reviewed source feeds"
+    body = SubElement(root, "body")
+    catalog = source_catalog(get_store(), include_archive=False)
+    for key, label in FORMATS.items():
+        category = SubElement(body, "outline", text=label, title=label)
+        for feed in catalog:
+            if feed["enabled"] and feed["format"] == key and feed["integration"] == "rss":
+                SubElement(category, "outline", type="rss", text=feed["label"], title=feed["label"], xmlUrl=feed["feed_url"])
+    return Response(tostring(root, encoding="utf-8", xml_declaration=True), media_type="text/x-opml",
+                    headers={"Content-Disposition": 'attachment; filename="informa-sources.opml"', "Cache-Control": "no-store"})
 
 
 @router.get("/coverage")
@@ -26,10 +57,13 @@ def coverage(response: Response):
     for key, label in TOPICS.items():
         feeds = [feed for feed in catalog if BY_ID[feed["id"]].topic == key and feed["enabled"]]
         topics.append({"id": key, "label": label, "feeds": len(feeds),
-            "publisher_groups": len({feed["source"] for feed in feeds}),
+            "publisher_groups": len({feed["publisher_family"] for feed in feeds}),
             "fresh_feeds": sum(feed["freshness"] == "fresh" for feed in feeds),
             "articles_24h": counts.get(key, 0)})
     return {"freshness": feed_freshness(catalog), "topics": topics,
+        "formats": [{"id": key, "label": label, "sources": sum(feed["format"] == key for feed in catalog),
+                     "fresh": sum(feed["format"] == key and feed["freshness"] == "fresh" for feed in catalog)}
+                    for key, label in FORMATS.items()],
         "feeds": [{"id": feed["id"], "label": feed["label"], "freshness": feed["freshness"],
             "integration": feed["integration"], "retained_count": feed["retained_count"],
             "observed_entries": diagnostics.get(feed["id"], {}).get("observed"),

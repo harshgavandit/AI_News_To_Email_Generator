@@ -31,10 +31,11 @@ articles = Table("brief_articles", schema,
     Column("category", String(100), nullable=False), Column("published_at", String(40), nullable=False, index=True),
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
     Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
-    Column("community_relevant", Boolean), Column("source_eligible", Boolean), Column("author_key", String(39)))
+    Column("community_relevant", Boolean), Column("source_eligible", Boolean), Column("author_key", String(39)),
+    Column("classification_version", Integer))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
                      articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
-                     articles.c.source_eligible, articles.c.author_key)
+                     articles.c.source_eligible, articles.c.author_key, articles.c.classification_version)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
@@ -73,6 +74,11 @@ article_feeds = Table("brief_article_feeds", schema,
 feed_diagnostics = Table("brief_feed_diagnostics", schema,
     Column("id", String(64), primary_key=True), Column("observed", Integer, nullable=False),
     Column("rejected", Integer, nullable=False), Column("updated", Float, nullable=False))
+feed_checks = Table("brief_feed_checks", schema,
+    Column("source_id", String(64), primary_key=True), Column("checked", Float, primary_key=True),
+    Column("available", Boolean, nullable=False), Column("count", Integer, nullable=False),
+    Column("unchanged", Boolean, nullable=False), Column("duration_ms", Integer), Column("error", String(60)))
+Index("brief_feed_checks_time", feed_checks.c.checked)
 limits = Table("brief_limits", schema, Column("scope", String(150), primary_key=True),
     Column("bucket", String(30), primary_key=True), Column("used", Integer, nullable=False),
     Column("touched", Float, nullable=False))
@@ -128,11 +134,12 @@ def discovery_fields(article):
     source = BY_ID.get(article["source_id"])
     path = urlsplit(article.get("url", "")).path
     eligible = not source or article_in_scope(source, path, article["title"], metadata.get("tags", []))
-    publisher = " ".join([article["publisher"], metadata.get("author", ""), *metadata.get("tags", [])])
+    publisher = " ".join([article["publisher"], metadata.get("author", ""), *metadata.get("tags", []),
+                          *metadata.get("technical_terms", [])])
     return {"topic": topic_for(article), "search_title": search_text(article["title"]),
             "search_description": search_text(article["description"]), "search_publisher": search_text(publisher),
             "subject_keys": "|" + "|".join(subjects_for(article)) + "|",
-            "source_eligible": eligible, "author_key": author_identity(article),
+            "source_eligible": eligible, "author_key": author_identity(article), "classification_version": 2,
             "community_relevant": (dev_article_in_scope(article) if article["source_id"] in GENERAL_DEV_FEEDS else None)}
 
 
@@ -141,6 +148,7 @@ def backfill_discovery(conn):
                                                "category", "kind", "metadata_json"))).where(or_(
         articles.c.topic.is_(None), articles.c.subject_keys.is_(None), articles.c.source_eligible.is_(None),
         articles.c.author_key.is_(None),
+        articles.c.classification_version.is_(None), articles.c.classification_version != 2,
         and_(articles.c.source_id.in_(GENERAL_DEV_FEEDS), articles.c.community_relevant.is_(None))))
     patch = update(articles).where(articles.c.id == bindparam("article_id"))
     while rows := conn.execute(stmt.order_by(articles.c.id).limit(500)).mappings().all():
@@ -261,7 +269,7 @@ class Store:
     def ensure_feed_state_schema(self):
         if not self._feed_state_ready:
             with self._schema_lock, self.engine.begin() as conn:
-                tables = (feed_validators, feed_retries, article_feeds, feed_diagnostics)
+                tables = (feed_validators, feed_retries, article_feeds, feed_diagnostics, feed_checks)
                 inspector = inspect(conn)
                 if not all(inspector.has_table(table.name) for table in tables):
                     if conn.dialect.name == "postgresql":
@@ -289,7 +297,7 @@ class Store:
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
 
     def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None,
-               unchanged=False, retry_after=0, diagnostics=None):
+               unchanged=False, retry_after=0, diagnostics=None, duration_ms=None):
         self.ensure_feed_state_schema()
         if items and available:
             self.ensure_discovery_schema()
@@ -298,6 +306,8 @@ class Store:
         if available and not unchanged:
             state.update(last_success=now, count=len(items))
         with self.engine.begin() as conn:
+            conn.execute(self.insert(feed_checks).values(source_id=source_id, checked=now, available=available,
+                count=len(items), unchanged=unchanged, duration_ms=duration_ms, error=error).on_conflict_do_nothing())
             if diagnostics and available:
                 stmt = self.insert(feed_diagnostics).values(id=source_id, updated=now, **diagnostics)
                 conn.execute(stmt.on_conflict_do_update(index_elements=[feed_diagnostics.c.id],
@@ -482,6 +492,17 @@ class Store:
         self.ensure_feed_state_schema()
         with self.engine.connect() as conn:
             return {row["id"]: dict(row) for row in conn.execute(select(feed_diagnostics)).mappings()}
+
+    def source_health_history(self, source_id, hours=24):
+        self.ensure_feed_state_schema()
+        conditions = (feed_checks.c.source_id == source_id, feed_checks.c.checked >= time.time() - hours * 3600)
+        with self.engine.connect() as conn:
+            totals = conn.execute(select(func.count().label("checks"),
+                func.sum(case((feed_checks.c.available.is_(True), 1), else_=0)).label("successful"),
+                func.avg(feed_checks.c.duration_ms).label("average_duration_ms")).where(*conditions)).mappings().one()
+            recent = [dict(row) for row in conn.execute(select(feed_checks).where(*conditions)
+                .order_by(feed_checks.c.checked.desc()).limit(50)).mappings()]
+            return {**dict(totals), "recent": recent, "hours": hours}
 
     def source_article_urls(self, source_id):
         stmt = self.query(2160).where(or_(articles.c.source_id == source_id, articles.c.id.in_(
@@ -830,6 +851,7 @@ class Store:
                 (mail_batches, mail_batches.c.created < now - 7 * 86400),
                 (mail_events, mail_events.c.received_at < now - 30 * 86400),
                 (article_feeds, ~select(articles.c.id).where(articles.c.id == article_feeds.c.article_id).exists()),
+                (feed_checks, feed_checks.c.checked < now - 7 * 86400),
             ):
                 conn.execute(delete(table).where(condition))
 

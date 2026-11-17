@@ -1,0 +1,3803 @@
+{
+  "reviewed_on": "2026-11-17",
+  "probe_results": [
+    {
+      "id": "latent-space",
+      "url": "https://www.latent.space/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:38:03+00:00",
+      "sample_urls": [
+        "https://latent.space/p/bfl",
+        "https://latent.space/p/ainews-the-no-ai-slop-manifesto"
+      ],
+      "seconds": 2.257
+    },
+    {
+      "id": "import-ai",
+      "url": "https://importai.substack.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 12,
+      "error": null,
+      "latest_published_at": "2026-11-16T14:01:15+00:00",
+      "sample_urls": [
+        "https://importai.substack.com/p/import-ai-481-ai-sub-contractors",
+        "https://importai.substack.com/p/import-ai-480-self-sustaining-space"
+      ],
+      "seconds": 0.38
+    },
+    {
+      "id": "interconnects",
+      "url": "https://www.interconnects.ai/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 16,
+      "error": null,
+      "latest_published_at": "2026-11-14T12:23:15+00:00",
+      "sample_urls": [
+        "https://www.interconnects.ai/p/open-source-ai-without-jensen",
+        "https://www.interconnects.ai/p/how-well-can-we-measure-open-model"
+      ],
+      "seconds": 0.628
+    },
+    {
+      "id": "ahead-of-ai",
+      "url": "https://magazine.sebastianraschka.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-15T12:10:37+00:00",
+      "sample_urls": [
+        "https://magazine.sebastianraschka.com/p/understanding-positional-embeddings",
+        "https://magazine.sebastianraschka.com/p/building-reasoning-models"
+      ],
+      "seconds": 0.994
+    },
+    {
+      "id": "understanding-ai",
+      "url": "https://www.understandingai.org/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 14,
+      "error": null,
+      "latest_published_at": "2026-11-05T15:16:59+00:00",
+      "sample_urls": [
+        "https://www.understandingai.org/p/this-robotics-concept-helps-explain",
+        "https://www.understandingai.org/p/anthropics-financials-are-surprisingly"
+      ],
+      "seconds": 0.306
+    },
+    {
+      "id": "one-useful-thing",
+      "url": "https://www.oneusefulthing.org/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-09T19:04:26+00:00",
+      "sample_urls": [
+        "https://www.oneusefulthing.org/p/fable-52-and-jagged-agi",
+        "https://www.oneusefulthing.org/p/30-months-on-the-exponential-in-charts"
+      ],
+      "seconds": 1.256
+    },
+    {
+      "id": "newsletter-pragmatic",
+      "url": "https://newsletter.pragmaticengineer.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T13:33:48+00:00",
+      "sample_urls": [
+        "https://newsletter.pragmaticengineer.com/p/software-engineering-after-code-becomes",
+        "https://newsletter.pragmaticengineer.com/p/the-pulse-what-can-we-learn-from-114"
+      ],
+      "seconds": 0.506
+    },
+    {
+      "id": "bytebytego",
+      "url": "https://blog.bytebytego.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:30:56+00:00",
+      "sample_urls": [
+        "https://blog.bytebytego.com/p/how-instacart-uses-llms-to-make-people",
+        "https://blog.bytebytego.com/p/last-call-for-enrollment-ai-engineering"
+      ],
+      "seconds": 1.13
+    },
+    {
+      "id": "newsletter-pointer",
+      "url": "https://www.pointer.io/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.515
+    },
+    {
+      "id": "tldr-tech",
+      "url": "https://tldr.tech/tech/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.523
+    },
+    {
+      "id": "benedict-evans",
+      "url": "https://www.ben-evans.com/benedictevans?format=rss",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-03T21:26:04+00:00",
+      "sample_urls": [
+        "https://www.ben-evans.com/benedictevans/2026/9/3/ai-tools-and-transformation"
+      ],
+      "seconds": 2.733
+    },
+    {
+      "id": "stratechery",
+      "url": "https://stratechery.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T11:02:49+00:00",
+      "sample_urls": [
+        "https://stratechery.com/2026/obituaries",
+        "https://stratechery.com/2026/the-end-of-jensen"
+      ],
+      "seconds": 0.919
+    },
+    {
+      "id": "semianalysis",
+      "url": "https://semianalysis.com/feed/",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-09-16T17:38:01+00:00",
+      "sample_urls": [],
+      "seconds": 0.982
+    },
+    {
+      "id": "bens-bites",
+      "url": "https://www.bensbites.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-12T14:03:11+00:00",
+      "sample_urls": [
+        "https://www.bensbites.com/p/to-the-man-with-ai-everything-looks",
+        "https://www.bensbites.com/p/how-i-got-seduced"
+      ],
+      "seconds": 1.103
+    },
+    {
+      "id": "swyx",
+      "url": "https://www.swyx.io/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 200,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-07-05T05:07:51+00:00",
+      "sample_urls": [],
+      "seconds": 1.912
+    },
+    {
+      "id": "lilian-weng",
+      "url": "https://lilianweng.github.io/index.xml",
+      "status": "dormant",
+      "parsed_entries": 53,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-07-04T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.743
+    },
+    {
+      "id": "chip-huyen",
+      "url": "https://huyenchip.com/feed.xml",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-01-16T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.982
+    },
+    {
+      "id": "eugene-yan",
+      "url": "https://eugeneyan.com/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 200,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-30T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.192
+    },
+    {
+      "id": "hamel-husain",
+      "url": "https://hamel.dev/index.xml",
+      "status": "active",
+      "parsed_entries": 13,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-20T07:00:00+00:00",
+      "sample_urls": [
+        "https://hamel.dev/blog/posts/decision-model-evals",
+        "https://hamel.dev/blog/posts/claude-auto-evals"
+      ],
+      "seconds": 0.673
+    },
+    {
+      "id": "jay-alammar",
+      "url": "https://jalammar.github.io/feed.xml",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-03-26T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.705
+    },
+    {
+      "id": "jay-mody",
+      "url": "https://jaykmody.com/feed.xml",
+      "status": "dormant",
+      "parsed_entries": 5,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2023-02-08T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.17
+    },
+    {
+      "id": "bair",
+      "url": "https://bair.berkeley.edu/blog/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-11-09T09:00:00+00:00",
+      "sample_urls": [
+        "https://bair.berkeley.edu/blog/2026/11/09/bair-at-corl-2026"
+      ],
+      "seconds": 1.95
+    },
+    {
+      "id": "stanford-hai",
+      "url": "https://hai.stanford.edu/news/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.713
+    },
+    {
+      "id": "ml-cmu",
+      "url": "https://blog.ml.cmu.edu/feed/",
+      "status": "dormant",
+      "parsed_entries": 1,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-08-10T21:52:23+00:00",
+      "sample_urls": [],
+      "seconds": 2.565
+    },
+    {
+      "id": "apple-ml",
+      "url": "https://machinelearning.apple.com/rss.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T00:00:00+00:00",
+      "sample_urls": [
+        "https://machinelearning.apple.com/research/theoretical-limits-alignment",
+        "https://machinelearning.apple.com/research/evaluating-evaluators-llm-judges"
+      ],
+      "seconds": 0.448
+    },
+    {
+      "id": "allen-ai",
+      "url": "https://allenai.org/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.75
+    },
+    {
+      "id": "mila",
+      "url": "https://mila.quebec/en/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 4.11
+    },
+    {
+      "id": "jmlr",
+      "url": "https://www.jmlr.org/jmlr.xml",
+      "status": "dormant",
+      "parsed_entries": 200,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-01-01T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.869
+    },
+    {
+      "id": "arxiv-cl",
+      "url": "https://rss.arxiv.org/rss/cs.CL",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.13
+    },
+    {
+      "id": "arxiv-lg",
+      "url": "https://rss.arxiv.org/rss/cs.LG",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.124
+    },
+    {
+      "id": "arxiv-cv",
+      "url": "https://rss.arxiv.org/rss/cs.CV",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.138
+    },
+    {
+      "id": "arxiv-ro",
+      "url": "https://rss.arxiv.org/rss/cs.RO",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.027
+    },
+    {
+      "id": "arxiv-ma",
+      "url": "https://rss.arxiv.org/rss/cs.MA",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.026
+    },
+    {
+      "id": "arxiv-ir",
+      "url": "https://rss.arxiv.org/rss/cs.IR",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.024
+    },
+    {
+      "id": "arxiv-ne",
+      "url": "https://rss.arxiv.org/rss/cs.NE",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.024
+    },
+    {
+      "id": "arxiv-db",
+      "url": "https://rss.arxiv.org/rss/cs.DB",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.022
+    },
+    {
+      "id": "arxiv-ds",
+      "url": "https://rss.arxiv.org/rss/cs.DS",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.022
+    },
+    {
+      "id": "arxiv-os",
+      "url": "https://rss.arxiv.org/rss/cs.OS",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.026
+    },
+    {
+      "id": "pytorch-blog",
+      "url": "https://pytorch.org/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.559
+    },
+    {
+      "id": "tensorflow-blog",
+      "url": "https://blog.tensorflow.org/feeds/posts/default",
+      "status": "dormant",
+      "parsed_entries": 25,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-08-19T16:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.091
+    },
+    {
+      "id": "jax-blog",
+      "url": "https://jax.readthedocs.io/en/latest/_feeds/posts.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.41
+    },
+    {
+      "id": "cohere",
+      "url": "https://cohere.com/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.032
+    },
+    {
+      "id": "mistral",
+      "url": "https://mistral.ai/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.975
+    },
+    {
+      "id": "ollama-blog",
+      "url": "https://ollama.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 63,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-10-24T00:00:00+00:00",
+      "sample_urls": [
+        "https://ollama.com/blog/speech-models",
+        "https://ollama.com/blog/clef"
+      ],
+      "seconds": 1.65
+    },
+    {
+      "id": "llamaindex-blog",
+      "url": "https://www.llamaindex.ai/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.355
+    },
+    {
+      "id": "llamaindex-medium",
+      "url": "https://medium.com/feed/llamaindex-blog",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-03-04T21:56:57+00:00",
+      "sample_urls": [],
+      "seconds": 0.683
+    },
+    {
+      "id": "crewai-blog",
+      "url": "https://blog.crewai.com/rss/",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-22T17:51:38+00:00",
+      "sample_urls": [],
+      "seconds": 0.291
+    },
+    {
+      "id": "modal-blog",
+      "url": "https://modal.com/blog/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.176
+    },
+    {
+      "id": "replicate-blog",
+      "url": "https://replicate.com/blog/rss",
+      "status": "active",
+      "parsed_entries": 125,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-11-03T00:00:00+00:00",
+      "sample_urls": [
+        "https://replicate.com/blog/which-minimax-h3-model",
+        "https://replicate.com/blog/kling-4"
+      ],
+      "seconds": 1.451
+    },
+    {
+      "id": "pinecone-blog",
+      "url": "https://www.pinecone.io/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 199,
+      "recent_entries": 18,
+      "error": null,
+      "latest_published_at": "2026-11-12T16:00:00+00:00",
+      "sample_urls": [
+        "https://www.pinecone.io/blog/integrated-embedding-google",
+        "https://www.pinecone.io/blog/integrated-embedding-openai"
+      ],
+      "seconds": 1.115
+    },
+    {
+      "id": "weaviate-blog",
+      "url": "https://weaviate.io/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 11,
+      "error": null,
+      "latest_published_at": "2026-10-30T00:00:00+00:00",
+      "sample_urls": [
+        "https://weaviate.io/blog/weaviate-1-40-release",
+        "https://weaviate.io/blog/graphql-api-deprecation"
+      ],
+      "seconds": 1.089
+    },
+    {
+      "id": "qdrant-blog",
+      "url": "https://qdrant.tech/blog/index.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 17,
+      "error": null,
+      "latest_published_at": "2026-11-11T01:00:00+00:00",
+      "sample_urls": [
+        "https://qdrant.tech/blog/embeddings-on-bare-metal",
+        "https://qdrant.tech/blog/qdrant-1.20-performance"
+      ],
+      "seconds": 0.593
+    },
+    {
+      "id": "milvus-blog",
+      "url": "https://milvus.io/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.032
+    },
+    {
+      "id": "wandb-blog",
+      "url": "https://wandb.ai/fully-connected/rss.xml",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 9,
+      "error": null,
+      "latest_published_at": "2026-11-05T16:50:52+00:00",
+      "sample_urls": [
+        "https://wandb.ai/wandb_fc/brc-fe/reports/Federated-Authentication-to-CoreWeave-Kubernetes-with-an-External-OIDC-Provider--VmlldzoxODE0NDE2Nw",
+        "https://wandb.ai/ai-team-articles/gpt-2.5/reports/Comparing-Modern-Transformer-Architectures-at-GPT-2-Scale-with-ARIA-and-W-B--VmlldzoxODAwMDI2Mw"
+      ],
+      "seconds": 0.616
+    },
+    {
+      "id": "huggingface-papers",
+      "url": "https://huggingface.co/papers/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.655
+    },
+    {
+      "id": "huggingface-community",
+      "url": "https://huggingface.co/blog/community/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.45
+    },
+    {
+      "id": "open-source-github",
+      "url": "https://github.blog/open-source/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-10T18:00:00+00:00",
+      "sample_urls": [
+        "https://github.blog/open-source/git/git-security-vulnerabilities-announced-7",
+        "https://github.blog/open-source/maintainers/accessibility-statements-now-have-a-home-on-github"
+      ],
+      "seconds": 0.441
+    },
+    {
+      "id": "gitlab-blog",
+      "url": "https://about.gitlab.com/atom.xml",
+      "status": "invalid_configuration"
+    },
+    {
+      "id": "uber-engineering",
+      "url": "https://www.uber.com/blog/engineering/rss/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.522
+    },
+    {
+      "id": "engineering-meta",
+      "url": "https://engineering.fb.com/feed/",
+      "status": "active",
+      "parsed_entries": 9,
+      "recent_entries": 9,
+      "error": null,
+      "latest_published_at": "2026-11-13T17:00:39+00:00",
+      "sample_urls": [
+        "https://engineering.fb.com/2026/11/13/android/cuttlefish-on-mac",
+        "https://engineering.fb.com/2026/11/11/ml-applications/intelligent-delivery-serve-better-ads"
+      ],
+      "seconds": 0.299
+    },
+    {
+      "id": "engineering-slack",
+      "url": "https://slack.engineering/feed/",
+      "status": "dormant",
+      "parsed_entries": 8,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-07-14T16:10:08+00:00",
+      "sample_urls": [],
+      "seconds": 0.313
+    },
+    {
+      "id": "engineering-discord",
+      "url": "https://discord.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 100,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://discord.com/blog/vice-city-theme-available-in-discord",
+        "https://discord.com/blog/discord-linux-a-year-of-upgrades"
+      ],
+      "seconds": 0.263
+    },
+    {
+      "id": "engineering-stripe",
+      "url": "https://stripe.com/blog/feed.rss",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-05T00:00:00+00:00",
+      "sample_urls": [
+        "https://stripe.com/blog/analyze-your-stripe-data-directly-with-your-agent",
+        "https://stripe.com/blog/stripe-on-stripe-what-we-learned-moving-1b-in-vendor-payments-to-global-payouts"
+      ],
+      "seconds": 0.357
+    },
+    {
+      "id": "engineering-shopify",
+      "url": "https://shopify.engineering/blog.atom",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 14,
+      "error": null,
+      "latest_published_at": "2026-11-12T14:57:16+00:00",
+      "sample_urls": [
+        "https://shopify.engineering/cyber-chaos-monkey",
+        "https://shopify.engineering/generative-discovery"
+      ],
+      "seconds": 0.428
+    },
+    {
+      "id": "engineering-linkedin",
+      "url": "https://www.linkedin.com/blog/engineering/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.75
+    },
+    {
+      "id": "engineering-dropbox",
+      "url": "https://dropbox.tech/feed",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-05T14:00:00+00:00",
+      "sample_urls": [
+        "https://dropbox.tech/machine-learning/how-two-engineer-side-projects-became-the-agent-taking-action-inside-dropbox",
+        "https://dropbox.tech/machine-learning/how-aiassisted-development-helped-us-build-the-new-dropbox-experience"
+      ],
+      "seconds": 1.708
+    },
+    {
+      "id": "engineering-pinterest",
+      "url": "https://medium.com/feed/pinterest-engineering",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:01:03+00:00",
+      "sample_urls": [
+        "https://medium.com/pinterest-engineering/rebuilding-guardian-how-pinterest-upgraded-its-real-time-abuse-platform-to-modern-infrastructure-56e45ee8f471?source=rss----4c5a5f6279b6---4",
+        "https://medium.com/pinterest-engineering/how-pinterest-improved-analytics-agent-compliance-with-loop-engineering-d3c52d0abaa2?source=rss----4c5a5f6279b6---4"
+      ],
+      "seconds": 0.613
+    },
+    {
+      "id": "engineering-lyft",
+      "url": "https://eng.lyft.com/feed",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-10T20:55:40+00:00",
+      "sample_urls": [
+        "https://eng.lyft.com/beyond-test-cards-a-fake-payment-provider-for-testing-at-scale-c69dddadb115?source=rss----25cd379abb8---4",
+        "https://eng.lyft.com/hiring-junior-engineers-1edc53e0fd5f?source=rss----25cd379abb8---4"
+      ],
+      "seconds": 0.724
+    },
+    {
+      "id": "engineering-grab",
+      "url": "https://engineering.grab.com/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-10-21T00:23:00+00:00",
+      "sample_urls": [
+        "https://engineering.grab.com/app-stability-at-scale-with-a-layered-defense",
+        "https://engineering.grab.com/grabmart-data-for-faster-disease-outbreak-detection"
+      ],
+      "seconds": 0.395
+    },
+    {
+      "id": "engineering-doordash",
+      "url": "https://careersatdoordash.com/engineering-blog/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.396
+    },
+    {
+      "id": "engineering-flickr",
+      "url": "https://code.flickr.net/feed/",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2022-02-14T17:23:51+00:00",
+      "sample_urls": [],
+      "seconds": 0.08
+    },
+    {
+      "id": "engineering-soundcloud",
+      "url": "https://developers.soundcloud.com/blog/blog.rss",
+      "status": "dormant",
+      "parsed_entries": 199,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-08-11T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 2.188
+    },
+    {
+      "id": "engineering-gusto",
+      "url": "https://engineering.gusto.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-16T19:01:53+00:00",
+      "sample_urls": [
+        "https://engineering.gusto.com/the-case-for-ai-guardrails-how-we-switched-ai-from-copy-pasta-to-building-the-way-we-want-c4559b820e65?source=rss----645edd256348---4",
+        "https://engineering.gusto.com/what-slash-commands-actually-do-76cf4c288f5c?source=rss----645edd256348---4"
+      ],
+      "seconds": 1.2
+    },
+    {
+      "id": "engineering-cloudflare",
+      "url": "https://research.cloudflare.com/index.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.157
+    },
+    {
+      "id": "aws-containers",
+      "url": "https://aws.amazon.com/blogs/containers/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:19:06+00:00",
+      "sample_urls": [
+        "https://aws.amazon.com/blogs/containers/high-quality-cost-effective-ai-image-generation-on-amazon-ecs",
+        "https://aws.amazon.com/blogs/containers/how-salesforce-efficiently-right-sizes-kubernetes-workloads-at-scale-on-amazon-eks"
+      ],
+      "seconds": 0.591
+    },
+    {
+      "id": "aws-architecture",
+      "url": "https://aws.amazon.com/blogs/architecture/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:03:26+00:00",
+      "sample_urls": [
+        "https://aws.amazon.com/blogs/architecture/announcing-updates-to-the-aws-well-architected-framework-3",
+        "https://aws.amazon.com/blogs/architecture/how-thermo-fisher-scientific-built-ai-powered-patient-matching-on-aws"
+      ],
+      "seconds": 0.69
+    },
+    {
+      "id": "aws-database",
+      "url": "https://aws.amazon.com/blogs/database/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T23:46:00+00:00",
+      "sample_urls": [
+        "https://aws.amazon.com/blogs/database/postgresql-large-objects-best-practices-for-amazon-aurora-and-rds",
+        "https://aws.amazon.com/blogs/database/exploring-new-features-of-apache-tinkerpop-3-8-x-in-amazon-neptune"
+      ],
+      "seconds": 2.142
+    },
+    {
+      "id": "aws-developer",
+      "url": "https://aws.amazon.com/blogs/developer/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 11,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:14:08+00:00",
+      "sample_urls": [
+        "https://aws.amazon.com/blogs/developer/introducing-smithy-idl-2-1",
+        "https://aws.amazon.com/blogs/developer/announcing-aws-sdk-for-net-4-1"
+      ],
+      "seconds": 1.853
+    },
+    {
+      "id": "azure-blog",
+      "url": "https://azure.microsoft.com/en-us/blog/feed/",
+      "status": "active",
+      "parsed_entries": 6,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-05T17:00:00+00:00",
+      "sample_urls": [
+        "https://azure.microsoft.com/en-us/blog/stop-treating-agents-as-one-off-projects-and-start-running-them-as-a-continuous-discipline",
+        "https://azure.microsoft.com/en-us/blog/designing-azure-silicon-on-azure-silicon-eda-workloads-on-cobalt-200"
+      ],
+      "seconds": 0.235
+    },
+    {
+      "id": "azure-devops",
+      "url": "https://devblogs.microsoft.com/devops/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-05T15:39:16+00:00",
+      "sample_urls": [
+        "https://devblogs.microsoft.com/devops/october-2026-node-js-vulnerabilities-azure-devops-security-guidance",
+        "https://devblogs.microsoft.com/devops/azure-devops-server-rc-26h2-is-now-available"
+      ],
+      "seconds": 0.234
+    },
+    {
+      "id": "dotnet-blog",
+      "url": "https://devblogs.microsoft.com/dotnet/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-10T16:11:00+00:00",
+      "sample_urls": [
+        "https://devblogs.microsoft.com/dotnet/announcing-dotnet-11",
+        "https://devblogs.microsoft.com/dotnet/dotnet-and-dotnet-framework-november-2026-servicing-updates"
+      ],
+      "seconds": 0.193
+    },
+    {
+      "id": "vscode-blog",
+      "url": "https://code.visualstudio.com/feed.xml",
+      "status": "active",
+      "parsed_entries": 48,
+      "recent_entries": 19,
+      "error": null,
+      "latest_published_at": "2026-11-11T17:00:00+00:00",
+      "sample_urls": [
+        "https://code.visualstudio.com/updates/v1_146",
+        "https://code.visualstudio.com/updates/v1_145"
+      ],
+      "seconds": 0.32
+    },
+    {
+      "id": "devblogs-python",
+      "url": "https://devblogs.microsoft.com/python/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-10-21T16:42:20+00:00",
+      "sample_urls": [
+        "https://devblogs.microsoft.com/python/announcing-tsp"
+      ],
+      "seconds": 0.32
+    },
+    {
+      "id": "devblogs-cpp",
+      "url": "https://devblogs.microsoft.com/cppblog/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T22:17:16+00:00",
+      "sample_urls": [
+        "https://devblogs.microsoft.com/cppblog/msvc-build-tools-version-14-52-now-generally-available",
+        "https://devblogs.microsoft.com/cppblog/msvc-build-tools-preview-updates-november-2026"
+      ],
+      "seconds": 0.351
+    },
+    {
+      "id": "redhat-blog",
+      "url": "https://developers.redhat.com/blog/feed",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T14:17:00+00:00",
+      "sample_urls": [
+        "https://developers.redhat.com/articles/2026/11/16/streamlining-red-hat-openshift-support-with-the-new-support-log-gather-operator",
+        "https://developers.redhat.com/articles/2026/11/13/day-life-nvidia-h100-red-hat-openshift-5"
+      ],
+      "seconds": 0.322
+    },
+    {
+      "id": "openshift-blog",
+      "url": "https://www.redhat.com/en/rss/blog/channel/red-hat-openshift",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-13T00:00:00+00:00",
+      "sample_urls": [
+        "https://www.redhat.com/en/blog/node-management-red-hat-openshift-5-bare-metal",
+        "https://www.redhat.com/en/blog/introducing-red-hat-advanced-cluster-security-kubernetes-5-bring-red-hat-enterprise-linux-virtual-machines-vulnerability-management"
+      ],
+      "seconds": 1.006
+    },
+    {
+      "id": "suse-blog",
+      "url": "https://www.suse.com/c/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.738
+    },
+    {
+      "id": "ubuntu-blog",
+      "url": "https://ubuntu.com/blog/feed",
+      "status": "active",
+      "parsed_entries": 12,
+      "recent_entries": 12,
+      "error": null,
+      "latest_published_at": "2026-11-13T09:31:00+00:00",
+      "sample_urls": [
+        "https://ubuntu.com//blog/from-desktop-to-cloud-to-road",
+        "https://ubuntu.com//blog/what-if-your-virtual-data-room-vdr-was-android-based"
+      ],
+      "seconds": 1.349
+    },
+    {
+      "id": "hashicorp-blog",
+      "url": "https://www.hashicorp.com/blog/feed.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-10T17:00:00+00:00",
+      "sample_urls": [
+        "https://www.hashicorp.com/blog/from-insight-to-action-improving-infrastructure-risk-posture-with-terraform-and-c",
+        "https://www.hashicorp.com/blog/consul-210-advancing-secure-resilient-connectivity-for-modern-and-agentic-applica"
+      ],
+      "seconds": 0.915
+    },
+    {
+      "id": "pulumi-blog",
+      "url": "https://www.pulumi.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 22,
+      "error": null,
+      "latest_published_at": "2026-11-09T00:00:00+00:00",
+      "sample_urls": [
+        "https://www.pulumi.com/blog/policy-exceptions",
+        "https://www.pulumi.com/blog/pulumi-at-kubecon-na-2026"
+      ],
+      "seconds": 2.345
+    },
+    {
+      "id": "crossplane-blog",
+      "url": "https://blog.crossplane.io/rss/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-30T17:05:51+00:00",
+      "sample_urls": [
+        "https://blog.crossplane.io/meet-crossplane-in-salt-lake-city-for-kubecon-na-2026",
+        "https://blog.crossplane.io/cutting-provider-memory-by-80-crossplane-runtime-v2-4-and-client-caching"
+      ],
+      "seconds": 3.249
+    },
+    {
+      "id": "cncf-blog",
+      "url": "https://www.cncf.io/feed/",
+      "status": "already_integrated"
+    },
+    {
+      "id": "openstack-blog",
+      "url": "https://openinfra.dev/blog/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.731
+    },
+    {
+      "id": "grafana-blog",
+      "url": "https://grafana.com/blog/index.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T17:14:29+00:00",
+      "sample_urls": [
+        "https://grafana.com/blog/whats-new-in-pyroscope-profile-more-of-your-workflows-troubleshoot-with-ai-agents-and-more",
+        "https://grafana.com/blog/an-early-look-at-the-grafana-ui-refresh-building-a-clearer-more-consistent-user-experience"
+      ],
+      "seconds": 1.735
+    },
+    {
+      "id": "prometheus-blog",
+      "url": "https://prometheus.io/blog/feed.xml",
+      "status": "active",
+      "parsed_entries": 60,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-21T00:00:00+00:00",
+      "sample_urls": [
+        "https://prometheus.io/blog/2026/09/21/otel-prometheus-interoperability-survey"
+      ],
+      "seconds": 2.077
+    },
+    {
+      "id": "datadog-blog",
+      "url": "https://www.datadoghq.com/blog/engineering/index.xml",
+      "status": "active",
+      "parsed_entries": 100,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-05T00:00:00+00:00",
+      "sample_urls": [
+        "https://www.datadoghq.com/blog/engineering/continuous-formal-spec-validation",
+        "https://www.datadoghq.com/blog/engineering/software-supply-chain-policy-enforcement"
+      ],
+      "seconds": 1.56
+    },
+    {
+      "id": "elastic-blog",
+      "url": "https://www.elastic.co/blog/feed",
+      "status": "active",
+      "parsed_entries": 40,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://www.elastic.co/blog/agile-combat-employment",
+        "https://www.elastic.co/blog/how-attackers-target-banks"
+      ],
+      "seconds": 1.555
+    },
+    {
+      "id": "confluent-blog",
+      "url": "https://www.confluent.io/blog/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.103
+    },
+    {
+      "id": "clickhouse-blog",
+      "url": "https://clickhouse.com/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.954
+    },
+    {
+      "id": "cockroach-blog",
+      "url": "https://www.cockroachlabs.com/blog/index.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.278
+    },
+    {
+      "id": "planetscale-blog",
+      "url": "https://planetscale.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 25,
+      "recent_entries": 25,
+      "error": null,
+      "latest_published_at": "2026-11-11T00:00:00+00:00",
+      "sample_urls": [
+        "https://planetscale.com/blog/migrate-from-heroku-to-planetscale",
+        "https://planetscale.com/blog/designing-a-reliable-unplanned-failover"
+      ],
+      "seconds": 4.06
+    },
+    {
+      "id": "neon-blog",
+      "url": "https://neon.com/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 40,
+      "error": null,
+      "latest_published_at": "2026-11-16T12:00:00+00:00",
+      "sample_urls": [
+        "https://neon.com/blog/the-agent-builds-the-app-the-user-claims-the-database-how-ideavo-does-it",
+        "https://neon.com/blog/mubit-neon-ai-gateway"
+      ],
+      "seconds": 1.171
+    },
+    {
+      "id": "supabase-blog",
+      "url": "https://supabase.com/rss.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 27,
+      "error": null,
+      "latest_published_at": "2026-11-10T07:00:00+00:00",
+      "sample_urls": [
+        "https://supabase.com/blog/set-up-supabase-for-every-expo-environment-in-one-command",
+        "https://supabase.com/blog/claude-issued-enterprise-managed-auth-for-mcp"
+      ],
+      "seconds": 0.964
+    },
+    {
+      "id": "turso-blog",
+      "url": "https://turso.tech/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.785
+    },
+    {
+      "id": "deno-blog",
+      "url": "https://deno.com/feed",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-10-09T15:00:00+00:00",
+      "sample_urls": [
+        "https://deno.com/blog/cloudflare"
+      ],
+      "seconds": 2.817
+    },
+    {
+      "id": "bun-blog",
+      "url": "https://bun.sh/rss.xml",
+      "status": "active",
+      "parsed_entries": 181,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-10-22T00:58:24+00:00",
+      "sample_urls": [
+        "https://bun.com/blog/bun-v1.4.4",
+        "https://bun.com/blog/bun-v1.4.3"
+      ],
+      "seconds": 0.812
+    },
+    {
+      "id": "v8-blog",
+      "url": "https://v8.dev/blog.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.637
+    },
+    {
+      "id": "webkit-blog",
+      "url": "https://webkit.org/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T23:45:44+00:00",
+      "sample_urls": [
+        "https://webkit.org/blog/18621/introducing-spatial-css-a-developer-preview",
+        "https://webkit.org/blog/18608/safari-on-apple-homeview"
+      ],
+      "seconds": 3.191
+    },
+    {
+      "id": "mozilla-security",
+      "url": "https://blog.mozilla.org/security/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-11-10T18:36:02+00:00",
+      "sample_urls": [
+        "https://blog.mozilla.org/security/2026/11/10/open-research-stronger-privacy-making-firefox-users-harder-to-fingerprint",
+        "https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates"
+      ],
+      "seconds": 2.437
+    },
+    {
+      "id": "chromium-blog",
+      "url": "https://blog.chromium.org/feeds/posts/default",
+      "status": "dormant",
+      "parsed_entries": 25,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-03-31T18:25:00+00:00",
+      "sample_urls": [],
+      "seconds": 2.58
+    },
+    {
+      "id": "webdev-blog",
+      "url": "https://web.dev/feed.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-10-02T07:00:00+00:00",
+      "sample_urls": [
+        "https://web.dev/blog/web-platform-09-2026?hl=en",
+        "https://web.dev/blog/baseline-digest-aug-2026?hl=en"
+      ],
+      "seconds": 2.422
+    },
+    {
+      "id": "chrome-developer",
+      "url": "https://developer.chrome.com/feeds/blog.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.163
+    },
+    {
+      "id": "react-blog",
+      "url": "https://react.dev/rss.xml",
+      "status": "active",
+      "parsed_entries": 24,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-09T00:00:00+00:00",
+      "sample_urls": [
+        "https://react.dev/blog/2026/09/09/react-19-3"
+      ],
+      "seconds": 0.198
+    },
+    {
+      "id": "vue-blog",
+      "url": "https://blog.vuejs.org/feed.rss",
+      "status": "dormant",
+      "parsed_entries": 15,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2024-09-01T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.24
+    },
+    {
+      "id": "svelte-blog",
+      "url": "https://svelte.dev/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 107,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-01T00:00:00+00:00",
+      "sample_urls": [
+        "https://svelte.dev/blog/whats-new-in-svelte-october-2026",
+        "https://svelte.dev/blog/sveltekit-3-is-here"
+      ],
+      "seconds": 1.785
+    },
+    {
+      "id": "astro-blog",
+      "url": "https://astro.build/rss.xml",
+      "status": "active",
+      "parsed_entries": 191,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-10-31T00:00:00+00:00",
+      "sample_urls": [
+        "https://astro.build/blog/whats-new-october-2026",
+        "https://astro.build/blog/astro-740"
+      ],
+      "seconds": 1.906
+    },
+    {
+      "id": "realpython",
+      "url": "https://realpython.com/atom.xml",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 40,
+      "error": null,
+      "latest_published_at": "2026-11-16T14:00:00+00:00",
+      "sample_urls": [
+        "https://realpython.com/python-project-for-agentic-coding",
+        "https://realpython.com/quizzes/python-project-for-agentic-coding"
+      ],
+      "seconds": 1.91
+    },
+    {
+      "id": "python-weekly",
+      "url": "https://www.pythonweekly.com/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.063
+    },
+    {
+      "id": "julia-evans",
+      "url": "https://jvns.ca/atom.xml",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-27T00:00:00+00:00",
+      "sample_urls": [
+        "https://jvns.ca/blog/2026/09/27/replacing-the-old-battery-on-rechargeable-bike-lights"
+      ],
+      "seconds": 0.893
+    },
+    {
+      "id": "dan-luu",
+      "url": "https://danluu.com/atom.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.952
+    },
+    {
+      "id": "brendan-gregg",
+      "url": "https://www.brendangregg.com/blog/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-02-06T13:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.994
+    },
+    {
+      "id": "bruce-schneier",
+      "url": "https://www.schneier.com/feed/atom/",
+      "status": "already_integrated"
+    },
+    {
+      "id": "troy-hunt",
+      "url": "https://www.troyhunt.com/rss/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T07:09:38+00:00",
+      "sample_urls": [
+        "https://www.troyhunt.com/weekly-update-530",
+        "https://www.troyhunt.com/finally-payment-by-bank-transfer-comes-to-have-i-been-pwned"
+      ],
+      "seconds": 0.46
+    },
+    {
+      "id": "portswigger-research",
+      "url": "https://portswigger.net/research/rss",
+      "status": "active",
+      "parsed_entries": 40,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-11T14:26:01+00:00",
+      "sample_urls": [
+        "https://portswigger.net/research/blind-trust-stealing-credentials-through-csp",
+        "https://portswigger.net/research/making-http-header-injection-critical-with-one-prompt"
+      ],
+      "seconds": 0.816
+    },
+    {
+      "id": "project-zero",
+      "url": "https://googleprojectzero.blogspot.com/feeds/posts/default",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.714
+    },
+    {
+      "id": "snyk-blog",
+      "url": "https://snyk.io/blog/feed/",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-09T00:00:00+00:00",
+      "sample_urls": [
+        "https://snyk.io/blog/governing-ai-coding-agents-evo-ads",
+        "https://snyk.io/blog/snyk-named-leader-forrester-wave-agentic-development-security-tools-q4-2026"
+      ],
+      "seconds": 0.448
+    },
+    {
+      "id": "socket-blog",
+      "url": "https://socket.dev/blog/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.748
+    },
+    {
+      "id": "trailofbits-blog",
+      "url": "https://blog.trailofbits.com/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 13,
+      "error": null,
+      "latest_published_at": "2026-11-06T12:00:00+00:00",
+      "sample_urls": [
+        "https://blog.trailofbits.com/2026/11/06/after-binance-check-what-your-signing-systems-can-approve",
+        "https://blog.trailofbits.com/2026/11/03/the-cryptography-behind-electronic-voting-and-why-paper-ballots-are-still-essential"
+      ],
+      "seconds": 1.442
+    },
+    {
+      "id": "oss-security",
+      "url": "https://openssf.org/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T19:52:21+00:00",
+      "sample_urls": [
+        "https://openssf.org/blog/2026/11/16/bridges-of-prague-open-source-summit-europe-2026-recap",
+        "https://openssf.org/blog/2026/11/09/the-ai-security-gap-hiding-in-routine-maintenance"
+      ],
+      "seconds": 0.538
+    },
+    {
+      "id": "cert-cc",
+      "url": "https://kb.cert.org/vulfeed/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:17:31+00:00",
+      "sample_urls": [
+        "https://kb.cert.org/vuls/id/604762",
+        "https://kb.cert.org/vuls/id/644655"
+      ],
+      "seconds": 2.012
+    },
+    {
+      "id": "sans-isc",
+      "url": "https://isc.sans.edu/rssfeed_full.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T02:05:15+00:00",
+      "sample_urls": [
+        "https://isc.sans.edu/diary/rss/33524",
+        "https://isc.sans.edu/diary/rss/33522"
+      ],
+      "seconds": 2.304
+    },
+    {
+      "id": "cert-au",
+      "url": "https://www.cyber.gov.au/rss/alerts-and-advisories.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 10.157
+    },
+    {
+      "id": "cert-in",
+      "url": "https://www.cert-in.org.in/RSS_Alerts.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "invalid_feed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.069
+    },
+    {
+      "id": "nist-news",
+      "url": "https://www.nist.gov/news-events/cybersecurity/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.915
+    },
+    {
+      "id": "techpoint-africa",
+      "url": "https://techpoint.africa/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.87
+    },
+    {
+      "id": "technext",
+      "url": "https://technext24.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T18:52:03+00:00",
+      "sample_urls": [
+        "https://technext24.com/news/paystack-processes-15b-annually-for-businesses",
+        "https://technext24.com/news/mtn-ihs-merger-closing-deadline-extended"
+      ],
+      "seconds": 1.625
+    },
+    {
+      "id": "weetracker",
+      "url": "https://weetracker.com/feed/",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:49:00+00:00",
+      "sample_urls": [
+        "https://weetracker.com/2026/11/16/raven-crisis-nigeria-fintech-trapped-deposits",
+        "https://weetracker.com/2026/11/16/eight-nigerian-startups-win-n5m-niya-cascador-programme"
+      ],
+      "seconds": 2.116
+    },
+    {
+      "id": "ventureburn",
+      "url": "https://ventureburn.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T01:35:57+00:00",
+      "sample_urls": [
+        "https://ventureburn.com/stark-future-raises-150m-electric-motorcycles",
+        "https://ventureburn.com/plural-raises-1bn-european-frontier-tech"
+      ],
+      "seconds": 1.16
+    },
+    {
+      "id": "magnitt",
+      "url": "https://magnitt.com/news/rss.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.374
+    },
+    {
+      "id": "wamda",
+      "url": "https://www.wamda.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:55:15+00:00",
+      "sample_urls": [
+        "https://www.wamda.com/2026/11/uae-vision-makers-secures-4-million-dual-round",
+        "https://www.wamda.com/2026/11/sabika-secures-new-investment-expand-gold-silver-trading-platform"
+      ],
+      "seconds": 1.522
+    },
+    {
+      "id": "menabytes",
+      "url": "https://www.menabytes.com/feed/",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-09-08T11:44:21+00:00",
+      "sample_urls": [],
+      "seconds": 1.289
+    },
+    {
+      "id": "startupscene",
+      "url": "https://thestartupscene.me/Rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.11
+    },
+    {
+      "id": "startupdaily",
+      "url": "https://www.startupdaily.net/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T04:55:55+00:00",
+      "sample_urls": [
+        "https://www.startupdaily.net/advice/opinion/the-chef-takes-risks-too-why-startups-should-back-spender-on-cgt",
+        "https://www.startupdaily.net/topic/politics-news-analysis/business-gets-behind-allegra-spenders-40-cgt-plan-as-labor-puts-their-trusts-in-greens-votes"
+      ],
+      "seconds": 0.798
+    },
+    {
+      "id": "startupsmart",
+      "url": "https://www.smartcompany.com.au/technology/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T05:20:01+00:00",
+      "sample_urls": [
+        "https://www.smartcompany.com.au/technology/behind-the-stars-review-gating-software-raises-questions",
+        "https://www.smartcompany.com.au/technology/global-microsoft-outage-continues-as-tech-giant-seeks-alternate-workstreams"
+      ],
+      "seconds": 1.353
+    },
+    {
+      "id": "techinasia-japan",
+      "url": "https://thebridge.jp/en/feed",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.339
+    },
+    {
+      "id": "eastwestdigital",
+      "url": "https://www.ewdn.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "upstream_unavailable",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.572
+    },
+    {
+      "id": "techsauce",
+      "url": "https://techsauce.co/en/feed",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T17:11:47+00:00",
+      "sample_urls": [
+        "https://techsauce.co/en/basedon/techsauce-thailand-tech-talent-connect-2026-deep-tech-visibility-en",
+        "https://techsauce.co/en/culture-transformation/transforming-hr-into-a-strategic-growth-driver-eng"
+      ],
+      "seconds": 0.518
+    },
+    {
+      "id": "vulcanpost",
+      "url": "https://vulcanpost.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:30:50+00:00",
+      "sample_urls": [
+        "https://vulcanpost.com/914440/singapore-graduates-earn-median-of-9250-after-35",
+        "https://vulcanpost.com/914339/tom-stefanie-singapore"
+      ],
+      "seconds": 0.833
+    },
+    {
+      "id": "dealstreetasia",
+      "url": "https://www.dealstreetasia.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "upstream_unavailable",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.231
+    },
+    {
+      "id": "startupnews-fyi",
+      "url": "https://entrackr.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.066
+    },
+    {
+      "id": "yourstory",
+      "url": "https://yourstory.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:47:08+00:00",
+      "sample_urls": [
+        "https://yourstory.com/2026/11/where-venture-capital-will-flow-across-indian-fintech-over-next-24-months",
+        "https://yourstory.com/2026/11/oho-living-tier-2-managed-rental-housing-startup-founder-story"
+      ],
+      "seconds": 0.173
+    },
+    {
+      "id": "analyticsindiamag",
+      "url": "https://analyticsindiamag.com/feed/",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 50,
+      "error": null,
+      "latest_published_at": "2026-11-17T04:13:32+00:00",
+      "sample_urls": [
+        "https://analyticsindiamag.com/ai-features/he-left-accenture-to-build-an-embedded-slmnow-it-ranks-among-the-worlds-best",
+        "https://analyticsindiamag.com/ai-news/alibaba-launches-qwen4-max-ai-model-with-focus-on-security"
+      ],
+      "seconds": 0.798
+    },
+    {
+      "id": "analyticsvidhya",
+      "url": "https://www.analyticsvidhya.com/blog/feed/",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.31
+    },
+    {
+      "id": "unite-ai",
+      "url": "https://www.unite.ai/feed/",
+      "status": "active",
+      "parsed_entries": 25,
+      "recent_entries": 25,
+      "error": null,
+      "latest_published_at": "2026-11-17T03:45:02+00:00",
+      "sample_urls": [
+        "https://www.unite.ai/mitac-proposes-two-server-ai-inference-architecture-at-sc26",
+        "https://www.unite.ai/mem-announces-ai-note-taking-shutdown-and-pauses-customer-billing"
+      ],
+      "seconds": 1.774
+    },
+    {
+      "id": "infoq",
+      "url": "https://feed.infoq.com/",
+      "status": "already_integrated"
+    },
+    {
+      "id": "lwn",
+      "url": "https://lwn.net/headlines/rss",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T15:06:04+00:00",
+      "sample_urls": [
+        "https://lwn.net/Articles/1102988",
+        "https://lwn.net/Articles/1107814"
+      ],
+      "seconds": 1.288
+    },
+    {
+      "id": "linuxfoundation",
+      "url": "https://www.linuxfoundation.org/blog/rss.xml",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-11T16:53:07+00:00",
+      "sample_urls": [
+        "https://www.linuxfoundation.org/blog/the-evolution-of-commercial-open-source-software",
+        "https://www.linuxfoundation.org/blog/lf-research-launches-2027-series-of-studies-and-opens-call-for-sponsors"
+      ],
+      "seconds": 0.214
+    },
+    {
+      "id": "itsfoss",
+      "url": "https://itsfoss.com/rss/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.261
+    },
+    {
+      "id": "opensourcecom",
+      "url": "https://opensource.com/feed",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2023-06-06T17:30:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.237
+    },
+    {
+      "id": "linuxgizmos",
+      "url": "https://linuxgizmos.com/feed/",
+      "status": "active",
+      "parsed_entries": 12,
+      "recent_entries": 12,
+      "error": null,
+      "latest_published_at": "2026-11-15T17:55:12+00:00",
+      "sample_urls": [
+        "https://linuxgizmos.com/fanless-mini-pc-packs-24-core-intel-cpu-and-dual-nvme-slots",
+        "https://linuxgizmos.com/librem-5-v2-linux-smartphone-adopts-eight-core-risc-v-processor"
+      ],
+      "seconds": 1.498
+    },
+    {
+      "id": "hackaday",
+      "url": "https://hackaday.com/blog/feed/",
+      "status": "active",
+      "parsed_entries": 7,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-17T06:00:50+00:00",
+      "sample_urls": [
+        "https://hackaday.com/2026/11/16/the-fastest-paddleboard-in-the-world",
+        "https://hackaday.com/2026/11/16/water-in-the-ancient-desert"
+      ],
+      "seconds": 0.046
+    },
+    {
+      "id": "cnx-software",
+      "url": "https://www.cnx-software.com/feed/",
+      "status": "active",
+      "parsed_entries": 32,
+      "recent_entries": 32,
+      "error": null,
+      "latest_published_at": "2026-11-17T04:47:19+00:00",
+      "sample_urls": [
+        "https://www.cnx-software.com/2026/11/17/forlinx-ok8275aa-c-a-qualcomm-qcs8275-industrial-sbc-with-12gb-lpddr5-256gb-ufs-storage",
+        "https://www.cnx-software.com/2026/11/17/rockchip-rk3668-switches-to-cortex-a725-and-cortex-a520-cores-engineering-samples-planned-for-q1-2027"
+      ],
+      "seconds": 0.439
+    },
+    {
+      "id": "robot-report",
+      "url": "https://www.therobotreport.com/feed/",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T23:49:56+00:00",
+      "sample_urls": [
+        "https://www.therobotreport.com/the-hidden-reason-most-robots-fail-on-the-factory-floor",
+        "https://www.therobotreport.com/agile-robots-raises-500m-to-increase-production-capacity"
+      ],
+      "seconds": 0.467
+    },
+    {
+      "id": "robohub",
+      "url": "https://robohub.org/feed/",
+      "status": "active",
+      "parsed_entries": 75,
+      "recent_entries": 41,
+      "error": null,
+      "latest_published_at": "2026-11-16T11:03:40+00:00",
+      "sample_urls": [
+        "https://robohub.org/watch-the-iros-2026-plenary-and-keynote-talks",
+        "https://robohub.org/robot-talk-episode-170-robots-in-the-real-world-with-daniela-shchegelskaya"
+      ],
+      "seconds": 1.397
+    },
+    {
+      "id": "roboticsbusinessreview",
+      "url": "https://www.roboticsbusinessreview.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.06
+    },
+    {
+      "id": "hackster",
+      "url": "https://www.hackster.io/news.rss",
+      "status": "active",
+      "parsed_entries": 25,
+      "recent_entries": 25,
+      "error": null,
+      "latest_published_at": "2026-11-16T17:03:32+00:00",
+      "sample_urls": [
+        "https://www.hackster.io/news/october-2026-open-hardware-certification-roundup-5e3ac701112d",
+        "https://www.hackster.io/news/giving-a-robot-dog-some-muscle-9e96b4682183"
+      ],
+      "seconds": 1.339
+    },
+    {
+      "id": "servethehome",
+      "url": "https://www.servethehome.com/feed/",
+      "status": "active",
+      "parsed_entries": 6,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:24:47+00:00",
+      "sample_urls": [
+        "https://www.servethehome.com/nvidia-and-lambda-disclose-first-production-co-packaged-optics-cluster-it-is-finally-real",
+        "https://www.servethehome.com/te-connectivity-at-ocp-summit-2026-the-interview"
+      ],
+      "seconds": 1.023
+    },
+    {
+      "id": "chipsandcheese",
+      "url": "https://chipsandcheese.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:32:28+00:00",
+      "sample_urls": [
+        "https://chipsandcheese.com/p/talking-venice-with-mahesh-subramony",
+        "https://chipsandcheese.com/p/talking-zen-6-with-mike-clark-at"
+      ],
+      "seconds": 0.328
+    },
+    {
+      "id": "hpcwire",
+      "url": "https://www.hpcwire.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.055
+    },
+    {
+      "id": "nextplatform",
+      "url": "https://www.nextplatform.com/feed/",
+      "status": "active",
+      "parsed_entries": 87,
+      "recent_entries": 63,
+      "error": null,
+      "latest_published_at": "2026-11-16T18:59:25+00:00",
+      "sample_urls": [
+        "https://www.nextplatform.com/hpc/2026/11/16/supercomputer-installs-take-a-dive-in-the-second-half-of-2026/5310221",
+        "https://www.nextplatform.com/compute/2026/11/14/cerebras-readies-cs-5-systems-for-2027-launch-as-it-bags-another-hyperscaler/5309932"
+      ],
+      "seconds": 1.082
+    },
+    {
+      "id": "techspot",
+      "url": "https://www.techspot.com/backend.xml",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:01:00+00:00",
+      "sample_urls": [
+        "https://www.techspot.com/news/114578-new-tool-bypasses-windows-11-cpu-restrictions-support.html",
+        "https://www.techspot.com/news/114577-kickstarter-speaker-plays-game-boy-soundtracks-straight-cartridge.html"
+      ],
+      "seconds": 0.506
+    },
+    {
+      "id": "notebookcheck",
+      "url": "https://www.notebookcheck.net/News.152.100.html?rss=1",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 200,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:47:00+00:00",
+      "sample_urls": [
+        "https://www.notebookcheck.net/This-AMD-powered-mini-PC-with-24-GB-RAM-is-now-240-off-on-Amazon.1452143.0.html",
+        "https://www.notebookcheck.net/Seiko-watch-from-Amazon-arrives-as-a-polythene-roll-buyer-wins-double-in-consumer-court.1452245.0.html"
+      ],
+      "seconds": 0.431
+    },
+    {
+      "id": "darknet-diaries",
+      "url": "https://feeds.megaphone.fm/darknetdiaries",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.509
+    },
+    {
+      "id": "practicalai",
+      "url": "https://changelog.com/practicalai/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.684
+    },
+    {
+      "id": "changelog-podcast",
+      "url": "https://changelog.com/podcast/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.534
+    },
+    {
+      "id": "changelog-news",
+      "url": "https://changelog.com/news/feed",
+      "status": "dormant",
+      "parsed_entries": 185,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-04-29T15:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 1.297
+    },
+    {
+      "id": "softwareengineeringdaily",
+      "url": "https://softwareengineeringdaily.com/feed/podcast/",
+      "status": "active",
+      "parsed_entries": 100,
+      "recent_entries": 25,
+      "error": null,
+      "latest_published_at": "2026-11-12T10:00:00+00:00",
+      "sample_urls": [
+        "https://softwareengineeringdaily.com/podcasts/fraud-prevention-in-the-age-of-ai-agents",
+        "https://softwareengineeringdaily.com/podcasts/gitlab-and-the-evolution-of-devsecops"
+      ],
+      "seconds": 0.581
+    },
+    {
+      "id": "softwareengineeringradio",
+      "url": "https://feeds.feedburner.com/se-radio",
+      "status": "active",
+      "parsed_entries": 198,
+      "recent_entries": 13,
+      "error": null,
+      "latest_published_at": "2026-11-12T00:53:00+00:00",
+      "sample_urls": [
+        "https://se-radio.net/2026/11/se-radio-746-marian-kamenistak-on-product-management-for-software-engineers",
+        "https://se-radio.net/2026/11/se-radio-745-andrew-tridgell-on-flight-control-software"
+      ],
+      "seconds": 2.231
+    },
+    {
+      "id": "mlstreettalk",
+      "url": "https://anchor.fm/s/1e4a1a00/podcast/rss",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.587
+    },
+    {
+      "id": "lexfridman",
+      "url": "https://lexfridman.com/feed/podcast/",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-10T23:52:44+00:00",
+      "sample_urls": [
+        "https://lexfridman.com/ukraine-war-preston-stewart-michael-kofman",
+        "https://lexfridman.com/math-ai-crisis"
+      ],
+      "seconds": 3.886
+    },
+    {
+      "id": "lastweekinaws",
+      "url": "https://www.lastweekinaws.com/feed/",
+      "status": "active",
+      "parsed_entries": 12,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-24T18:08:42+00:00",
+      "sample_urls": [
+        "https://www.lastweekinaws.com/blog/cloudwatch-omni-infinidash-review"
+      ],
+      "seconds": 0.385
+    },
+    {
+      "id": "sreweekly",
+      "url": "https://sreweekly.com/feed/",
+      "status": "active",
+      "parsed_entries": 5,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-16T02:53:30+00:00",
+      "sample_urls": [
+        "https://sreweekly.com/sre-weekly-issue-543",
+        "https://sreweekly.com/sre-weekly-issue-542"
+      ],
+      "seconds": 1.141
+    },
+    {
+      "id": "weeklypython",
+      "url": "https://pycoders.com/feed.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.811
+    },
+    {
+      "id": "javascriptweekly",
+      "url": "https://javascriptweekly.com/rss/",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-10T00:00:00+00:00",
+      "sample_urls": [
+        "https://javascriptweekly.com/issues/810",
+        "https://javascriptweekly.com/issues/809"
+      ],
+      "seconds": 0.798
+    },
+    {
+      "id": "golangweekly",
+      "url": "https://golangweekly.com/rss/",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-13T00:00:00+00:00",
+      "sample_urls": [
+        "https://golangweekly.com/issues/624",
+        "https://golangweekly.com/issues/623"
+      ],
+      "seconds": 0.963
+    },
+    {
+      "id": "rubyweekly",
+      "url": "https://rubyweekly.com/rss/",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-12T00:00:00+00:00",
+      "sample_urls": [
+        "https://rubyweekly.com/issues/826",
+        "https://rubyweekly.com/issues/825"
+      ],
+      "seconds": 0.801
+    },
+    {
+      "id": "postgresweekly",
+      "url": "https://postgresweekly.com/rss/",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-11T00:00:00+00:00",
+      "sample_urls": [
+        "https://postgresweekly.com/issues/673",
+        "https://postgresweekly.com/issues/672"
+      ],
+      "seconds": 1.073
+    },
+    {
+      "id": "frontendfocus",
+      "url": "https://frontendfoc.us/rss/",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-11T00:00:00+00:00",
+      "sample_urls": [
+        "https://frontendfoc.us/issues/766",
+        "https://frontendfoc.us/issues/765"
+      ],
+      "seconds": 1.178
+    },
+    {
+      "id": "thisweekinrust",
+      "url": "https://this-week-in-rust.org/rss.xml",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-11T05:00:00+00:00",
+      "sample_urls": [
+        "https://this-week-in-rust.org/blog/2026/11/11/this-week-in-rust-677",
+        "https://this-week-in-rust.org/blog/2026/11/04/this-week-in-rust-676"
+      ],
+      "seconds": 1.79
+    },
+    {
+      "id": "release-langchain-ai-langchain",
+      "url": "https://github.com/langchain-ai/langchain/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-15T22:38:06+00:00",
+      "sample_urls": [
+        "https://github.com/langchain-ai/langchain/releases/tag/langchain-xai%3D%3D1.4.0",
+        "https://github.com/langchain-ai/langchain/releases/tag/langchain-mistralai%3D%3D1.2.0"
+      ],
+      "seconds": 1.797
+    },
+    {
+      "id": "release-langchain-ai-langgraph",
+      "url": "https://github.com/langchain-ai/langgraph/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-14T01:43:55+00:00",
+      "sample_urls": [
+        "https://github.com/langchain-ai/langgraph/releases/tag/1.2.22",
+        "https://github.com/langchain-ai/langgraph/releases/tag/prebuilt%3D%3D1.1.2"
+      ],
+      "seconds": 1.486
+    },
+    {
+      "id": "release-run-llama-llama_index",
+      "url": "https://github.com/run-llama/llama_index/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-11-13T22:38:15+00:00",
+      "sample_urls": [
+        "https://github.com/run-llama/llama_index/releases/tag/v0.14.26",
+        "https://github.com/run-llama/llama_index/releases/tag/v0.14.25"
+      ],
+      "seconds": 33.531
+    },
+    {
+      "id": "release-crewaiinc-crewai",
+      "url": "https://github.com/crewAIInc/crewAI/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T18:42:07+00:00",
+      "sample_urls": [
+        "https://github.com/crewAIInc/crewAI/releases/tag/1.15.41",
+        "https://github.com/crewAIInc/crewAI/releases/tag/1.15.40"
+      ],
+      "seconds": 26.8
+    },
+    {
+      "id": "release-microsoft-autogen",
+      "url": "https://github.com/microsoft/autogen/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-09-30T06:18:26+00:00",
+      "sample_urls": [],
+      "seconds": 27.233
+    },
+    {
+      "id": "release-pydantic-pydantic-ai",
+      "url": "https://github.com/pydantic/pydantic-ai/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T02:27:06+00:00",
+      "sample_urls": [
+        "https://github.com/pydantic/pydantic-ai/releases/tag/v2.69.0",
+        "https://github.com/pydantic/pydantic-ai/releases/tag/clai2-bleeding"
+      ],
+      "seconds": 28.655
+    },
+    {
+      "id": "release-huggingface-transformers",
+      "url": "https://github.com/huggingface/transformers/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T14:10:57+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/transformers/releases/tag/v5.23.0",
+        "https://github.com/huggingface/transformers/releases/tag/v5.22.2"
+      ],
+      "seconds": 30.89
+    },
+    {
+      "id": "release-huggingface-diffusers",
+      "url": "https://github.com/huggingface/diffusers/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-12T06:38:33+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/diffusers/releases/tag/v0.43.0",
+        "https://github.com/huggingface/diffusers/releases/tag/v0.42.1"
+      ],
+      "seconds": 2.923
+    },
+    {
+      "id": "release-huggingface-accelerate",
+      "url": "https://github.com/huggingface/accelerate/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:01:44+00:00",
+      "sample_urls": [
+        "https://github.com/huggingface/accelerate/releases/tag/v1.16.0",
+        "https://github.com/huggingface/accelerate/releases/tag/v1.15.0"
+      ],
+      "seconds": 25.541
+    },
+    {
+      "id": "release-vllm-project-vllm",
+      "url": "https://github.com/vllm-project/vllm/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T23:50:15+00:00",
+      "sample_urls": [
+        "https://github.com/vllm-project/vllm/releases/tag/v0.34.0",
+        "https://github.com/vllm-project/vllm/releases/tag/v0.34.0rc4"
+      ],
+      "seconds": 1.743
+    },
+    {
+      "id": "release-sgl-project-sglang",
+      "url": "https://github.com/sgl-project/sglang/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-02T22:14:10+00:00",
+      "sample_urls": [
+        "https://github.com/sgl-project/sglang/releases/tag/v0.5.23",
+        "https://github.com/sgl-project/sglang/releases/tag/v0.5.22"
+      ],
+      "seconds": 28.863
+    },
+    {
+      "id": "release-ollama-ollama",
+      "url": "https://github.com/ollama/ollama/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T19:02:48+00:00",
+      "sample_urls": [
+        "https://github.com/ollama/ollama/releases/tag/v0.40.17-rc1",
+        "https://github.com/ollama/ollama/releases/tag/v0.40.17-rc0"
+      ],
+      "seconds": 0.903
+    },
+    {
+      "id": "release-ggerganov-llama-cpp",
+      "url": "https://github.com/ggerganov/llama.cpp/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.237
+    },
+    {
+      "id": "release-berriai-litellm",
+      "url": "https://github.com/BerriAI/litellm/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:57:41+00:00",
+      "sample_urls": [
+        "https://github.com/BerriAI/litellm/releases/tag/v1.108.10",
+        "https://github.com/BerriAI/litellm/releases/tag/v1.111.0-dev.4"
+      ],
+      "seconds": 1.589
+    },
+    {
+      "id": "release-openai-openai-python",
+      "url": "https://github.com/openai/openai-python/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T22:40:22+00:00",
+      "sample_urls": [
+        "https://github.com/openai/openai-python/releases/tag/v3.52.0",
+        "https://github.com/openai/openai-python/releases/tag/v3.51.0"
+      ],
+      "seconds": 25.811
+    },
+    {
+      "id": "release-openai-openai-agents-python",
+      "url": "https://github.com/openai/openai-agents-python/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T04:41:48+00:00",
+      "sample_urls": [
+        "https://github.com/openai/openai-agents-python/releases/tag/v0.24.0-alpha.8",
+        "https://github.com/openai/openai-agents-python/releases/tag/v0.24.0-alpha.7"
+      ],
+      "seconds": 1.018
+    },
+    {
+      "id": "release-anthropics-anthropic-sdk-python",
+      "url": "https://github.com/anthropics/anthropic-sdk-python/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:47:17+00:00",
+      "sample_urls": [
+        "https://github.com/anthropics/anthropic-sdk-python/releases/tag/v2.9.0",
+        "https://github.com/anthropics/anthropic-sdk-python/releases/tag/v2.8.0"
+      ],
+      "seconds": 0.484
+    },
+    {
+      "id": "release-modelcontextprotocol-python-sdk",
+      "url": "https://github.com/modelcontextprotocol/python-sdk/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-10-02T22:02:27+00:00",
+      "sample_urls": [
+        "https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.3.0",
+        "https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.2.0"
+      ],
+      "seconds": 0.947
+    },
+    {
+      "id": "release-google-adk-python",
+      "url": "https://github.com/google/adk-python/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T21:30:11+00:00",
+      "sample_urls": [
+        "https://github.com/google/adk-python/releases/tag/v2.14.1",
+        "https://github.com/google/adk-python/releases/tag/v2.14.0"
+      ],
+      "seconds": 1.026
+    },
+    {
+      "id": "release-google-gemini-generative-ai-python",
+      "url": "https://github.com/google-gemini/generative-ai-python/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.025
+    },
+    {
+      "id": "release-pytorch-pytorch",
+      "url": "https://github.com/pytorch/pytorch/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:52:56+00:00",
+      "sample_urls": [
+        "https://github.com/pytorch/pytorch/releases/tag/viable%2Fstrict%2F1794894650",
+        "https://github.com/pytorch/pytorch/releases/tag/viable%2Fstrict%2F1794891015"
+      ],
+      "seconds": 1.731
+    },
+    {
+      "id": "release-jax-ml-jax",
+      "url": "https://github.com/jax-ml/jax/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 3,
+      "error": null,
+      "latest_published_at": "2026-10-22T05:37:05+00:00",
+      "sample_urls": [
+        "https://github.com/jax-ml/jax/releases/tag/jax-v0.12.0.1",
+        "https://github.com/jax-ml/jax/releases/tag/jax-v0.12.0"
+      ],
+      "seconds": 0.716
+    },
+    {
+      "id": "release-tensorflow-tensorflow",
+      "url": "https://github.com/tensorflow/tensorflow/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-11-17T01:34:09+00:00",
+      "sample_urls": [
+        "https://github.com/tensorflow/tensorflow/releases/tag/v2.22.0-rc1",
+        "https://github.com/tensorflow/tensorflow/releases/tag/v2.22.0-rc0"
+      ],
+      "seconds": 0.488
+    },
+    {
+      "id": "release-scikit-learn-scikit-learn",
+      "url": "https://github.com/scikit-learn/scikit-learn/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-09-11T09:49:47+00:00",
+      "sample_urls": [
+        "https://github.com/scikit-learn/scikit-learn/releases/tag/1.9.1"
+      ],
+      "seconds": 0.447
+    },
+    {
+      "id": "release-ray-project-ray",
+      "url": "https://github.com/ray-project/ray/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-04T08:13:40+00:00",
+      "sample_urls": [
+        "https://github.com/ray-project/ray/releases/tag/ray-2.60.0",
+        "https://github.com/ray-project/ray/releases/tag/ray-2.59.1"
+      ],
+      "seconds": 2.724
+    },
+    {
+      "id": "release-mlflow-mlflow",
+      "url": "https://github.com/mlflow/mlflow/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T01:36:14+00:00",
+      "sample_urls": [
+        "https://github.com/mlflow/mlflow/releases/tag/model-catalog%2Flatest",
+        "https://github.com/mlflow/mlflow/releases/tag/ts%2Fv0.5.0"
+      ],
+      "seconds": 2.128
+    },
+    {
+      "id": "release-astral-sh-ruff",
+      "url": "https://github.com/astral-sh/ruff/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T17:55:55+00:00",
+      "sample_urls": [
+        "https://github.com/astral-sh/ruff/releases/tag/0.17.5",
+        "https://github.com/astral-sh/ruff/releases/tag/0.17.4"
+      ],
+      "seconds": 1.662
+    },
+    {
+      "id": "release-fastapi-fastapi",
+      "url": "https://github.com/fastapi/fastapi/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-15T09:50:02+00:00",
+      "sample_urls": [
+        "https://github.com/fastapi/fastapi/releases/tag/0.163.1",
+        "https://github.com/fastapi/fastapi/releases/tag/0.163.0"
+      ],
+      "seconds": 0.717
+    },
+    {
+      "id": "release-pydantic-pydantic",
+      "url": "https://github.com/pydantic/pydantic/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-05T09:18:42+00:00",
+      "sample_urls": [
+        "https://github.com/pydantic/pydantic/releases/tag/v2.14.3",
+        "https://github.com/pydantic/pydantic/releases/tag/core-v2.50.4"
+      ],
+      "seconds": 0.68
+    },
+    {
+      "id": "release-django-django",
+      "url": "https://github.com/django/django/releases.atom",
+      "status": "active",
+      "parsed_entries": 9,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-03T13:50:36+00:00",
+      "sample_urls": [
+        "https://github.com/django/django/releases/tag/6.1.3",
+        "https://github.com/django/django/releases/tag/6.0.10"
+      ],
+      "seconds": 0.537
+    },
+    {
+      "id": "release-pallets-flask",
+      "url": "https://github.com/pallets/flask/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-02-19T05:01:30+00:00",
+      "sample_urls": [],
+      "seconds": 0.564
+    },
+    {
+      "id": "release-vercel-next-js",
+      "url": "https://github.com/vercel/next.js/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T23:44:19+00:00",
+      "sample_urls": [
+        "https://github.com/vercel/next.js/releases/tag/v16.5.0-canary.53",
+        "https://github.com/vercel/next.js/releases/tag/v16.5.0-canary.52"
+      ],
+      "seconds": 0.894
+    },
+    {
+      "id": "release-facebook-react",
+      "url": "https://github.com/facebook/react/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.23
+    },
+    {
+      "id": "release-sveltejs-svelte",
+      "url": "https://github.com/sveltejs/svelte/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-10-26T18:15:06+00:00",
+      "sample_urls": [
+        "https://github.com/sveltejs/svelte/releases/tag/svelte%405.57.3",
+        "https://github.com/sveltejs/svelte/releases/tag/svelte%405.57.2"
+      ],
+      "seconds": 0.928
+    },
+    {
+      "id": "release-vitejs-vite",
+      "url": "https://github.com/vitejs/vite/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T07:18:47+00:00",
+      "sample_urls": [
+        "https://github.com/vitejs/vite/releases/tag/v8.4.0-beta.1",
+        "https://github.com/vitejs/vite/releases/tag/v8.3.8"
+      ],
+      "seconds": 0.719
+    },
+    {
+      "id": "release-microsoft-typescript",
+      "url": "https://github.com/microsoft/TypeScript/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 5,
+      "error": null,
+      "latest_published_at": "2026-11-06T16:43:43+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/TypeScript/releases/tag/vscode-typescript%2Fv1.0.2",
+        "https://github.com/microsoft/TypeScript/releases/tag/v7.1-beta"
+      ],
+      "seconds": 0.537
+    },
+    {
+      "id": "release-microsoft-vscode",
+      "url": "https://github.com/microsoft/vscode/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-11T10:07:14+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/vscode/releases/tag/1.146.0",
+        "https://github.com/microsoft/vscode/releases/tag/1.145.3"
+      ],
+      "seconds": 0.462
+    },
+    {
+      "id": "release-kubernetes-kubernetes",
+      "url": "https://github.com/kubernetes/kubernetes/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-06T04:34:14+00:00",
+      "sample_urls": [
+        "https://github.com/kubernetes/kubernetes/releases/tag/v1.38.0-beta.0",
+        "https://github.com/kubernetes/kubernetes/releases/tag/v1.38.0-alpha.3"
+      ],
+      "seconds": 0.524
+    },
+    {
+      "id": "release-helm-helm",
+      "url": "https://github.com/helm/helm/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 7,
+      "error": null,
+      "latest_published_at": "2026-11-16T02:49:16+00:00",
+      "sample_urls": [
+        "https://github.com/helm/helm/releases/tag/v4.3.2",
+        "https://github.com/helm/helm/releases/tag/v4.3.1"
+      ],
+      "seconds": 0.888
+    },
+    {
+      "id": "release-prometheus-prometheus",
+      "url": "https://github.com/prometheus/prometheus/releases.atom",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-05T16:00:55+00:00",
+      "sample_urls": [
+        "https://github.com/prometheus/prometheus/releases/tag/v0.316.0",
+        "https://github.com/prometheus/prometheus/releases/tag/v3.16.0-rc.4"
+      ],
+      "seconds": 0.733
+    },
+    {
+      "id": "release-grafana-grafana",
+      "url": "https://github.com/grafana/grafana/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-11T15:25:14+00:00",
+      "sample_urls": [
+        "https://github.com/grafana/grafana/releases/tag/v13.3.1",
+        "https://github.com/grafana/grafana/releases/tag/v13.2.6"
+      ],
+      "seconds": 0.796
+    },
+    {
+      "id": "release-argoproj-argo-cd",
+      "url": "https://github.com/argoproj/argo-cd/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-04T14:23:53+00:00",
+      "sample_urls": [
+        "https://github.com/argoproj/argo-cd/releases/tag/v3.6.1",
+        "https://github.com/argoproj/argo-cd/releases/tag/stable"
+      ],
+      "seconds": 1.636
+    },
+    {
+      "id": "release-opentofu-opentofu",
+      "url": "https://github.com/opentofu/opentofu/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-05T19:09:38+00:00",
+      "sample_urls": [
+        "https://github.com/opentofu/opentofu/releases/tag/v1.13.9",
+        "https://github.com/opentofu/opentofu/releases/tag/v1.12.12"
+      ],
+      "seconds": 0.54
+    },
+    {
+      "id": "release-pulumi-pulumi",
+      "url": "https://github.com/pulumi/pulumi/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T17:56:15+00:00",
+      "sample_urls": [
+        "https://github.com/pulumi/pulumi/releases/tag/v3.276.0",
+        "https://github.com/pulumi/pulumi/releases/tag/sdk%2Fv3.276.0"
+      ],
+      "seconds": 0.717
+    },
+    {
+      "id": "release-containers-podman",
+      "url": "https://github.com/containers/podman/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.831
+    },
+    {
+      "id": "release-duckdb-duckdb",
+      "url": "https://github.com/duckdb/duckdb/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-10-21T13:11:38+00:00",
+      "sample_urls": [
+        "https://github.com/duckdb/duckdb/releases/tag/v2.0.0",
+        "https://github.com/duckdb/duckdb/releases/tag/v1.5.6"
+      ],
+      "seconds": 3.753
+    },
+    {
+      "id": "release-clickhouse-clickhouse",
+      "url": "https://github.com/ClickHouse/ClickHouse/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T15:59:56+00:00",
+      "sample_urls": [
+        "https://github.com/ClickHouse/ClickHouse/releases/tag/v26.9.30.7-stable",
+        "https://github.com/ClickHouse/ClickHouse/releases/tag/v26.8.38.9-lts"
+      ],
+      "seconds": 0.52
+    },
+    {
+      "id": "release-redis-redis",
+      "url": "https://github.com/redis/redis/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T09:32:11+00:00",
+      "sample_urls": [
+        "https://github.com/redis/redis/releases/tag/8.12-rc3",
+        "https://github.com/redis/redis/releases/tag/8.12-rc2"
+      ],
+      "seconds": 0.746
+    },
+    {
+      "id": "release-valkey-io-valkey",
+      "url": "https://github.com/valkey-io/valkey/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-04T21:42:29+00:00",
+      "sample_urls": [
+        "https://github.com/valkey-io/valkey/releases/tag/9.2.0-rc2",
+        "https://github.com/valkey-io/valkey/releases/tag/9.1.3"
+      ],
+      "seconds": 1.367
+    },
+    {
+      "id": "release-qdrant-qdrant",
+      "url": "https://github.com/qdrant/qdrant/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 6,
+      "error": null,
+      "latest_published_at": "2026-11-16T13:53:57+00:00",
+      "sample_urls": [
+        "https://github.com/qdrant/qdrant/releases/tag/v1.20.2",
+        "https://github.com/qdrant/qdrant/releases/tag/v1.20.1"
+      ],
+      "seconds": 1.21
+    },
+    {
+      "id": "release-milvus-io-milvus",
+      "url": "https://github.com/milvus-io/milvus/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-11T08:06:25+00:00",
+      "sample_urls": [
+        "https://github.com/milvus-io/milvus/releases/tag/v3.0.6",
+        "https://github.com/milvus-io/milvus/releases/tag/pkg%2Fv3.0.6"
+      ],
+      "seconds": 0.702
+    },
+    {
+      "id": "release-weaviate-weaviate",
+      "url": "https://github.com/weaviate/weaviate/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T19:40:40+00:00",
+      "sample_urls": [
+        "https://github.com/weaviate/weaviate/releases/tag/v1.41.0-rc.0",
+        "https://github.com/weaviate/weaviate/releases/tag/v1.40.5"
+      ],
+      "seconds": 1.431
+    },
+    {
+      "id": "release-supabase-supabase",
+      "url": "https://github.com/supabase/supabase/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-05T14:24:51+00:00",
+      "sample_urls": [
+        "https://github.com/supabase/supabase/releases/tag/self-hosted%2Fv0.8.4",
+        "https://github.com/supabase/supabase/releases/tag/self-hosted%2Fv0.8.3"
+      ],
+      "seconds": 0.506
+    },
+    {
+      "id": "release-neondatabase-neon",
+      "url": "https://github.com/neondatabase/neon/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2025-07-29T11:01:51+00:00",
+      "sample_urls": [],
+      "seconds": 0.592
+    },
+    {
+      "id": "release-zed-industries-zed",
+      "url": "https://github.com/zed-industries/zed/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:03:37+00:00",
+      "sample_urls": [
+        "https://github.com/zed-industries/zed/releases/tag/nightly",
+        "https://github.com/zed-industries/zed/releases/tag/collab-staging"
+      ],
+      "seconds": 1.12
+    },
+    {
+      "id": "release-neovim-neovim",
+      "url": "https://github.com/neovim/neovim/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-17T05:17:38+00:00",
+      "sample_urls": [
+        "https://github.com/neovim/neovim/releases/tag/nightly",
+        "https://github.com/neovim/neovim/releases/tag/v0.12.6"
+      ],
+      "seconds": 0.524
+    },
+    {
+      "id": "practicalai",
+      "url": "https://feeds.transistor.fm/practical-ai-machine-learning-data-science-llm",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "no_eligible_entries",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.93
+    },
+    {
+      "id": "darknet-diaries",
+      "url": "https://podcast.darknetdiaries.com/",
+      "status": "active",
+      "parsed_entries": 178,
+      "recent_entries": 4,
+      "error": null,
+      "latest_published_at": "2026-11-03T08:00:00+00:00",
+      "sample_urls": [
+        "https://darknetdiaries.com/episode/182",
+        "https://darknetdiaries.com/episode/181"
+      ],
+      "seconds": 2.442
+    },
+    {
+      "id": "latent-podcast",
+      "url": "https://podcast.latent.space/feed.xml",
+      "status": "active",
+      "parsed_entries": 21,
+      "recent_entries": 21,
+      "error": null,
+      "latest_published_at": "2026-11-16T21:27:06+00:00",
+      "sample_urls": [
+        "https://latent.space/p/bfl",
+        "https://latent.space/p/arca"
+      ],
+      "seconds": 2.655
+    },
+    {
+      "id": "pytorch-blog",
+      "url": "https://pytorch.org/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:16:55+00:00",
+      "sample_urls": [
+        "https://pytorch.org/blog/2026-pytorch-foundation-contributor-awards",
+        "https://pytorch.org/blog/pytorch-ambassador-community-highlights-november-2026"
+      ],
+      "seconds": 2.368
+    },
+    {
+      "id": "clickhouse-blog",
+      "url": "https://clickhouse.com/rss.xml",
+      "status": "active",
+      "parsed_entries": 200,
+      "recent_entries": 100,
+      "error": null,
+      "latest_published_at": "2026-11-16T10:54:45+00:00",
+      "sample_urls": [
+        "https://clickhouse.com/blog/jsonbench-is-back-clickhouse-still-leads",
+        "https://clickhouse.com/blog/infinitas-learning-clickhouse-managed-postgres"
+      ],
+      "seconds": 1.56
+    },
+    {
+      "id": "socket-blog",
+      "url": "https://socket.dev/api/blog/feed.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-14T17:27:29+00:00",
+      "sample_urls": [
+        "https://socket.dev/blog/eslint-ends-paid-contributor-program",
+        "https://socket.dev/blog/japan-cyberattack-surge"
+      ],
+      "seconds": 0.35
+    },
+    {
+      "id": "ms-semantic-kernel",
+      "url": "https://devblogs.microsoft.com/semantic-kernel/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-04T15:35:49+00:00",
+      "sample_urls": [
+        "https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python",
+        "https://devblogs.microsoft.com/agent-framework/vector-stores-in-python-agent-framework-familiar-foundations-streamlined-for-agents"
+      ],
+      "seconds": 1.028
+    },
+    {
+      "id": "nvidia-ai-blog",
+      "url": "https://blogs.nvidia.com/blog/category/deep-learning/feed/",
+      "status": "active",
+      "parsed_entries": 18,
+      "recent_entries": 1,
+      "error": null,
+      "latest_published_at": "2026-10-15T15:00:24+00:00",
+      "sample_urls": [
+        "https://blogs.nvidia.com/blog/nemotron-3-5-super-vl"
+      ],
+      "seconds": 0.999
+    },
+    {
+      "id": "science-daily-computing",
+      "url": "https://www.sciencedaily.com/rss/computers_math.xml",
+      "status": "active",
+      "parsed_entries": 60,
+      "recent_entries": 60,
+      "error": null,
+      "latest_published_at": "2026-11-16T02:56:02+00:00",
+      "sample_urls": [
+        "https://www.sciencedaily.com/releases/2026/11/261114202232.htm",
+        "https://www.sciencedaily.com/releases/2026/11/261112230500.htm"
+      ],
+      "seconds": 2.466
+    },
+    {
+      "id": "physorg-tech",
+      "url": "https://phys.org/rss-feed/technology-news/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.776
+    },
+    {
+      "id": "acm-technews",
+      "url": "https://technews.acm.org/rss/rss.php",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.521
+    },
+    {
+      "id": "mit-csail",
+      "url": "https://www.csail.mit.edu/rss/news",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.785
+    },
+    {
+      "id": "arxiv-blog",
+      "url": "https://blog.arxiv.org/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-06T21:29:03+00:00",
+      "sample_urls": [
+        "https://blog.arxiv.org/2026/11/06/announcement-change-veterans-day",
+        "https://blog.arxiv.org/2026/10/21/scheduled-database-maintenance"
+      ],
+      "seconds": 1.485
+    },
+    {
+      "id": "ibm-research",
+      "url": "https://research.ibm.com/blog/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.86
+    },
+    {
+      "id": "docs-mdn",
+      "url": "https://developer.mozilla.org/en-US/blog/rss.xml",
+      "status": "dormant",
+      "parsed_entries": 71,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-06-15T00:00:00+00:00",
+      "sample_urls": [],
+      "seconds": 0.952
+    },
+    {
+      "id": "docs-aws",
+      "url": "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
+      "status": "active",
+      "parsed_entries": 100,
+      "recent_entries": 100,
+      "error": null,
+      "latest_published_at": "2026-11-16T22:07:00+00:00",
+      "sample_urls": [
+        "https://aws.amazon.com/about-aws/whats-new/2026/11/replication-deletes-amazon-ecr",
+        "https://aws.amazon.com/about-aws/whats-new/2026/11/ebs-snapshots-associate-kms-keys"
+      ],
+      "seconds": 1.306
+    },
+    {
+      "id": "docs-googlecloud",
+      "url": "https://cloud.google.com/feeds/gcp-release-notes.xml",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.018
+    },
+    {
+      "id": "computerphile",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 12,
+      "error": null,
+      "latest_published_at": "2026-11-12T14:59:29+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=BHOw09O3ZsI",
+        "https://www.youtube.com/watch?v=BmBw827GgFA"
+      ],
+      "seconds": 0.304
+    },
+    {
+      "id": "fireship",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-16T20:18:59+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=ytmawkPTP24",
+        "https://www.youtube.com/watch?v=SOwUWPtXQ9I"
+      ],
+      "seconds": 0.276
+    },
+    {
+      "id": "3blue1brown",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw",
+      "status": "active",
+      "parsed_entries": 4,
+      "recent_entries": 2,
+      "error": null,
+      "latest_published_at": "2026-10-16T16:15:20+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=LKrwhjOI8Nc",
+        "https://www.youtube.com/watch?v=Nbwv5wHQoj0"
+      ],
+      "seconds": 0.633
+    },
+    {
+      "id": "google-developers-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T17:00:11+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=vLAegkGGWrM",
+        "https://www.youtube.com/watch?v=rsOiZE19RVo"
+      ],
+      "seconds": 1.274
+    },
+    {
+      "id": "freecodecamp-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8butISFwT-Wl7EV0hUK0BQ",
+      "status": "active",
+      "parsed_entries": 15,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-10T12:00:39+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=ajfQWhGQGLE",
+        "https://www.youtube.com/watch?v=eHHxRJulX74"
+      ],
+      "seconds": 1.373
+    },
+    {
+      "id": "ycombinator-video",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcefcZRL2oaA_uBNeo5UOWg",
+      "status": "active",
+      "parsed_entries": 8,
+      "recent_entries": 8,
+      "error": null,
+      "latest_published_at": "2026-11-14T23:21:16+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=y1-9yeYLJUo",
+        "https://www.youtube.com/watch?v=iXWSYlAX5Lg"
+      ],
+      "seconds": 1.258
+    },
+    {
+      "id": "mit-ocw",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCEBb1b_L6zDS3xTUrIALZOw",
+      "status": "active",
+      "parsed_entries": 14,
+      "recent_entries": 14,
+      "error": null,
+      "latest_published_at": "2026-11-13T15:13:31+00:00",
+      "sample_urls": [
+        "https://www.youtube.com/watch?v=8hiGWBQ94WU",
+        "https://www.youtube.com/watch?v=MUn9aT8lOXA"
+      ],
+      "seconds": 1.484
+    },
+    {
+      "id": "release-ggml-org-llama-cpp",
+      "url": "https://github.com/ggml-org/llama.cpp/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T06:17:28+00:00",
+      "sample_urls": [
+        "https://github.com/ggml-org/llama.cpp/releases/tag/b12464",
+        "https://github.com/ggml-org/llama.cpp/releases/tag/b12463"
+      ],
+      "seconds": 1.428
+    },
+    {
+      "id": "release-facebook-react",
+      "url": "https://github.com/facebook/react/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 1.554
+    },
+    {
+      "id": "release-containers-podman",
+      "url": "https://github.com/containers/podman/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 2.096
+    },
+    {
+      "id": "release-huggingface-smolagents",
+      "url": "https://github.com/huggingface/smolagents/releases.atom",
+      "status": "dormant",
+      "parsed_entries": 10,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": "2026-05-29T05:09:47+00:00",
+      "sample_urls": [],
+      "seconds": 2.185
+    },
+    {
+      "id": "release-microsoft-agent-framework",
+      "url": "https://github.com/microsoft/agent-framework/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-13T08:28:16+00:00",
+      "sample_urls": [
+        "https://github.com/microsoft/agent-framework/releases/tag/python-1.26.0",
+        "https://github.com/microsoft/agent-framework/releases/tag/python-1.25.0"
+      ],
+      "seconds": 3.568
+    },
+    {
+      "id": "release-google-adk-python",
+      "url": "https://github.com/google/adk-python/releases.atom",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-12T21:30:11+00:00",
+      "sample_urls": [
+        "https://github.com/google/adk-python/releases/tag/v2.14.1",
+        "https://github.com/google/adk-python/releases/tag/v2.14.0"
+      ],
+      "seconds": 3.468
+    },
+    {
+      "id": "crossref-nature-mi",
+      "url": "https://api.crossref.org/journals/2522-5839/works?rows=30&sort=published&order=desc",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://doi.org/10.1038/s42256-026-01327-4",
+        "https://doi.org/10.1038/s42256-026-01335-4"
+      ],
+      "seconds": 4.415
+    },
+    {
+      "id": "crossref-science-robotics",
+      "url": "https://api.crossref.org/journals/2470-9476/works?rows=30&sort=published&order=desc",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "rate_limited",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.715
+    },
+    {
+      "id": "crossref-acm-surveys",
+      "url": "https://api.crossref.org/journals/0360-0300/works?rows=30&sort=published&order=desc",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-16T00:00:00+00:00",
+      "sample_urls": [
+        "https://doi.org/10.1145/3863944",
+        "https://doi.org/10.1145/3863940"
+      ],
+      "seconds": 9.072
+    },
+    {
+      "id": "crossref-jair",
+      "url": "https://api.crossref.org/journals/1076-9757/works?rows=30&sort=published&order=desc",
+      "status": "active",
+      "parsed_entries": 28,
+      "recent_entries": 28,
+      "error": null,
+      "latest_published_at": "2026-11-13T00:00:00+00:00",
+      "sample_urls": [
+        "https://doi.org/10.1613/jair.1.23727",
+        "https://doi.org/10.1613/jair.1.21094"
+      ],
+      "seconds": 6.486
+    },
+    {
+      "id": "crossref-ieee-pami",
+      "url": "https://api.crossref.org/journals/0162-8828/works?rows=30&sort=published&order=desc",
+      "status": "dormant",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": null,
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 9.12
+    },
+    {
+      "id": "eu-startups",
+      "url": "https://www.eu-startups.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.201
+    },
+    {
+      "id": "siliconcanals",
+      "url": "https://siliconcanals.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-09-22T14:30:40+00:00",
+      "sample_urls": [
+        "https://siliconcanals.com/d-researchers-tracked-the-passwords-154-people-used-online-for-an-average-of-147-days-and-found-them-logging-into-26-websites-with-fewer-than-10-unique-passwords-roughly-60-percent-were-reused",
+        "https://siliconcanals.com/d-a-telemarketer-refused-to-keep-his-webcam-on-for-nine-hours-a-day-while-working-from-home-and-was-fired-the-next-day-a-dutch-court-ruled-the-demand-invaded-his-privacy-and-ordered-his-employ"
+      ],
+      "seconds": 0.23
+    },
+    {
+      "id": "arcticstartup",
+      "url": "https://arcticstartup.com/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.188
+    },
+    {
+      "id": "techfundingnews",
+      "url": "https://techfundingnews.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-17T06:00:00+00:00",
+      "sample_urls": [
+        "https://techfundingnews.com/treat-raises-3m-pre-seed-ai-healthtech-helsinki",
+        "https://techfundingnews.com/previsia-raises-3-8m-ai-risk-prevention-seed"
+      ],
+      "seconds": 2.211
+    },
+    {
+      "id": "siliconrepublic",
+      "url": "https://www.siliconrepublic.com/feed",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T16:55:23+00:00",
+      "sample_urls": [
+        "https://www.siliconrepublic.com/comms/amazon-loses-40-satellites-boeing-lockheed-rocket-failure",
+        "https://www.siliconrepublic.com/jobs-news/auxilion-create-50-new-jobs-dublin-belfast-sheffield-careers"
+      ],
+      "seconds": 1.368
+    },
+    {
+      "id": "the-decoder",
+      "url": "https://the-decoder.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T19:42:13+00:00",
+      "sample_urls": [
+        "https://the-decoder.com/google-warns-that-fully-automated-cyberattacks-have-arrived-and-will-get-worse-fast",
+        "https://the-decoder.com/openais-gpt-6-astra-tackles-the-standard-models-toughest-math-problem-on-a-lattice"
+      ],
+      "seconds": 1.343
+    },
+    {
+      "id": "mobiletime",
+      "url": "https://www.mobiletime.com.br/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:58:35+00:00",
+      "sample_urls": [
+        "https://www.mobiletime.com.br/noticias/16/11/2026/cgi-br-regulacao-digital",
+        "https://www.mobiletime.com.br/noticias/16/11/2026/pl-de-mercados-digitais"
+      ],
+      "seconds": 2.168
+    },
+    {
+      "id": "startups-br",
+      "url": "https://startups.com.br/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.627
+    },
+    {
+      "id": "startupi",
+      "url": "https://startupi.com.br/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T08:00:00+00:00",
+      "sample_urls": [
+        "https://startupi.com.br/empresas-entidades-combustiveis-fosseis-delegacoes-cop31",
+        "https://startupi.com.br/marcha-ventures-preve-10-milhoes-aportes-startups-deep-techs"
+      ],
+      "seconds": 1.282
+    },
+    {
+      "id": "enter-co",
+      "url": "https://www.enter.co/feed/",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 30,
+      "error": null,
+      "latest_published_at": "2026-11-17T00:38:15+00:00",
+      "sample_urls": [
+        "https://www.enter.co/chips-bits/se-cayeron-united-airlines-bancos-ee-uu",
+        "https://www.enter.co/chips-bits/apps-software/los-robotaxis-de-amazon-ya-se-pueden-pedir-desde-uber"
+      ],
+      "seconds": 1.415
+    },
+    {
+      "id": "inside-tw",
+      "url": "https://www.inside.com.tw/feed",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "fetch_failed",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 10.017
+    },
+    {
+      "id": "ithome-tw",
+      "url": "https://www.ithome.com.tw/rss",
+      "status": "active",
+      "parsed_entries": 30,
+      "recent_entries": 15,
+      "error": null,
+      "latest_published_at": "2026-11-17T12:11:39+00:00",
+      "sample_urls": [
+        "https://www.ithome.com.tw/news/180562",
+        "https://www.ithome.com.tw/news/180547"
+      ],
+      "seconds": 0.845
+    },
+    {
+      "id": "gadgets360",
+      "url": "https://www.gadgets360.com/rss/news",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.047
+    },
+    {
+      "id": "propakistani",
+      "url": "https://propakistani.pk/feed/",
+      "status": "unavailable",
+      "parsed_entries": 0,
+      "recent_entries": 0,
+      "error": "access_denied",
+      "latest_published_at": null,
+      "sample_urls": [],
+      "seconds": 0.189
+    },
+    {
+      "id": "futurestartup",
+      "url": "https://futurestartup.com/feed/",
+      "status": "active",
+      "parsed_entries": 10,
+      "recent_entries": 10,
+      "error": null,
+      "latest_published_at": "2026-11-16T10:54:13+00:00",
+      "sample_urls": [
+        "https://futurestartup.com/2026/11/16/fs-letter-ai-in-manufacturing-the-order-of-things-and-other-interesting-reads",
+        "https://futurestartup.com/2026/11/15/trade-receivables-investment-bangladesh"
+      ],
+      "seconds": 0.541
+    },
+    {
+      "id": "webrazzi",
+      "url": "https://webrazzi.com/feed/",
+      "status": "active",
+      "parsed_entries": 20,
+      "recent_entries": 20,
+      "error": null,
+      "latest_published_at": "2026-11-16T14:30:00+00:00",
+      "sample_urls": [
+        "https://webrazzi.com/2026/11/16/stark-future-1-2-milyar-euro-degerleme-uzerinden-150-milyon-euro-yatirim-aldi",
+        "https://webrazzi.com/2026/11/16/apple-saglik-sorularinda-yapay-zeka-kullanimini-arastiriyor"
+      ],
+      "seconds": 0.818
+    },
+    {
+      "id": "spidersweb-pl",
+      "url": "https://spidersweb.pl/feed",
+      "status": "active",
+      "parsed_entries": 50,
+      "recent_entries": 50,
+      "error": null,
+      "latest_published_at": "2026-11-17T06:00:00+00:00",
+      "sample_urls": [
+        "https://spidersweb.pl/2026/11/ulepszylem-windows-11-jednym-zdaniem-tryb-jasny-ciemny.html",
+        "https://spidersweb.pl/2026/11/nju-swiatlowod-za-darmo-trzy-miesiace-abonament.html"
+      ],
+      "seconds": 1.481
+    }
+  ],
+  "note": "Endpoint probes are point-in-time observations. The reviewed catalog may include corrected URLs and selected quiet primary sources; current health is served by the application."
+}

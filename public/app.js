@@ -60,7 +60,8 @@ const readableTime = (value) =>
       })
     : "Not checked yet";
 const storyAge = new Intl.RelativeTimeFormat(undefined, { numeric: "always" });
-function relativeTime(value) {
+function relativeTime(value, precision) {
+  if (precision === "day") return new Date(value).toLocaleDateString(undefined, {dateStyle: "medium"});
   const minutes = Math.floor((Date.now() - Date.parse(value)) / 60_000);
   if (!Number.isFinite(minutes) || minutes < 0) return readableTime(value);
   if (minutes === 0) return "Just now";
@@ -257,7 +258,7 @@ async function loadHeadlines() {
         const heading = node("h3");
         if (article.language) heading.lang = article.language;
         heading.append(externalLink(article.url, article.title));
-        const date = node("time", "", relativeTime(article.published_at));
+        const date = node("time", "", relativeTime(article.published_at, article.publication_date_precision));
         date.dateTime = article.published_at;
         date.title = readableTime(article.published_at);
         const attribution = node("p", "muted", `${[article.publisher, publisherRegion(article)].filter(Boolean).join(" · ")} · `);
@@ -291,7 +292,7 @@ async function loadSignals() {
       open.dir = "auto";
       open.addEventListener("click", () => openDossier(article, open));
       item.append(node("span", "signal-type", article.signal_reason), open,
-        node("p", "muted", `${article.publisher} · ${relativeTime(article.published_at)}`));
+        node("p", "muted", `${article.publisher} · ${relativeTime(article.published_at, article.publication_date_precision)}`));
       return item;
     }));
     $("priority-signals").hidden = !articles.length;
@@ -620,8 +621,8 @@ function renderStories() {
     }
     const timestamp = article.publishedAt || article.published_at;
     const topic = article.category || article.topic;
-    const date = node("time", "", relativeTime(timestamp));
-    date.title = readableTime(timestamp);
+    const date = node("time", "", relativeTime(timestamp, article.publication_date_precision));
+    date.title = article.publication_date_precision === "day" ? relativeTime(timestamp, "day") : readableTime(timestamp);
     if (timestamp) date.dateTime = timestamp;
     const storySummary = article.cleanSummary || article.description || article.summary;
     const titleDirection = article.language === "ar" ? "rtl" : "auto";
@@ -668,7 +669,7 @@ function renderStories() {
     const sourceMark = node("span", "source-mark", publisher.replace(/^The\s+/i, "").slice(0, 1).toUpperCase());
     sourceMark.setAttribute("aria-hidden", "true");
     const attribution = node("div", "story-attribution");
-    const sourceType = article.kind === "video" ? "Creator video" :
+    const sourceType = article.kind === "video" ? "Creator video" : article.kind === "podcast" ? "Podcast episode" : article.content_format === "newsletter" ? "Newsletter article" :
       state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
     attribution.append(
       node("strong", "", publisher),
@@ -2265,7 +2266,7 @@ function renderDossierLinks(id, stories) {
     const title = node("strong", "", story.title);
     title.lang = story.language || "";
     title.dir = story.language === "ar" ? "rtl" : "auto";
-    button.append(title, node("span", "", `${story.publisher} · ${relativeTime(story.published_at)}`));
+    button.append(title, node("span", "", `${story.publisher} · ${relativeTime(story.published_at, story.publication_date_precision)}`));
     if (story.related_reason) button.append(node("span", "related-reason", story.related_reason));
     button.addEventListener("click", () => {
       const existing = dossier.articles.findIndex((item) => item.id === story.id);
@@ -2365,7 +2366,7 @@ function renderDossier(details) {
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
   const topic = article.category || article.topic;
-  const coverage = article.kind === "video" ? "Creator video" : state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
+  const coverage = article.kind === "video" ? "Creator video" : article.kind === "podcast" ? "Podcast episode" : article.content_format === "newsletter" ? "Newsletter article" : state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
   const publisher = article.sourceName || article.publisher || "Original source";
   const region = publisherRegion(article);
   const timestamp = article.publishedAt || article.published_at;
@@ -2401,7 +2402,7 @@ function renderDossier(details) {
   $("dossier-discussion").hidden = !discussion;
   if (discussion) $("dossier-discussion").href = discussion;
   else $("dossier-discussion").removeAttribute("href");
-  $("dossier-time").textContent = timestamp ? relativeTime(timestamp) : "";
+  $("dossier-time").textContent = timestamp ? relativeTime(timestamp, article.publication_date_precision) : "";
   $("dossier-time").dateTime = timestamp || "";
   $("dossier-time").title = timestamp ? readableTime(timestamp) : "";
   $("dossier-external-link").hidden = !href;

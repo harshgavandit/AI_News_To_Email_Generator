@@ -70,6 +70,15 @@ Story `summary_basis` is `ai_feed_summary`, `publisher_excerpt`, or `headline_on
 
 ## Coverage monitoring and priority signals
 
+The reviewed source network is documented in [SOURCE-NETWORK.md](SOURCE-NETWORK.md).
+Source records include `format`, `refresh_minutes`, `publisher_family`, `collection`,
+`reviewed_at`, `next_check_at` and `content_status`. Feed freshness accounts for
+the declared polling interval and measures successful synchronization, not new
+publication activity. `GET /api/discovery/sources/{id}/health?hours=24` exposes
+up to seven days of operational history. `GET /api/discovery/sources.opml`
+exports enabled RSS feeds. Owner-authenticated `POST /api/admin/refresh` accepts
+an optional `source_ids` JSON list of up to 12 reviewed IDs.
+
 - `GET /api/signals`: publisher-diverse material developments from 24 hours with explicit selection reasons; not independently verified alerts.
 - `GET /api/discovery/coverage`: topic story counts, source health and bounded ingestion diagnostics.
 - `GET /api/discovery/check?url=<publisher HTTPS URL>`: archive and source-health lookup, including community original links. Never fetches the submitted URL.

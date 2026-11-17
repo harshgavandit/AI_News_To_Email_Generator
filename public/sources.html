@@ -55,6 +55,7 @@
           <h1>Source directory</h1>
           <p>Browse publishers, research feeds, and advisories. See feed health and open recent stories.</p>
           <p class="directory-reading-note">Discover reviewed publications and public community feeds, including Medium and Hashnode. Publication schedules and available history vary. Full-text reading is available only where the rights holder’s permission has been reviewed.</p>
+          <a class="text-button" href="/api/discovery/sources.opml" download>Export reviewed RSS feeds (OPML) ↓</a>
         </div>
         <dl id="directory-overview" class="directory-overview" hidden>
           <div><dt>Feeds up to date</dt><dd id="source-fresh-count"></dd></div>
@@ -66,6 +67,7 @@
         <summary>Coverage by topic</summary>
         <p>Feed focus and stories indexed in the last 24 hours. Feed health does not guarantee every article is captured.</p>
         <div id="coverage-topics" class="coverage-topics"></div>
+        <div id="coverage-formats" class="coverage-formats" aria-label="Browse source formats"></div>
         <p id="coverage-status" role="status"></p>
       </details>
       <details class="story-check">
@@ -101,6 +103,9 @@
           </label>
           <label for="source-language">Feed language
             <select id="source-language"><option value="">All languages</option></select>
+          </label>
+          <label for="source-format">Format
+            <select id="source-format"><option value="">All formats</option></select>
           </label>
         </div>
       </fieldset>

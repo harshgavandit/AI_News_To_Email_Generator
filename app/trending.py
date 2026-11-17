@@ -5,6 +5,12 @@ from collections import Counter, defaultdict
 from app.coverage import topic_for
 from app.discovery import search_text
 from app.intelligence import GENERIC_TERMS, deduplicate, references
+from app.sources import BY_ID
+
+
+def publisher_family(article):
+    source = BY_ID.get(article.get("source_id"))
+    return source.publisher_family if source else article.get("source") or article.get("source_id")
 
 
 TRENDING_PATTERNS = (
@@ -71,7 +77,7 @@ def extract_trending(articles, *, hours=48, limit=10):
                 "category": category,
                 "count": count,
                 "query": query,
-                "source_count": len({a.get("source") or a.get("source_id") for a in matching}),
+                "source_count": len({publisher_family(a) for a in matching}),
                 "basis": "recent_mentions",
             })
 
@@ -80,7 +86,7 @@ def extract_trending(articles, *, hours=48, limit=10):
         for identifier in references(article):
             advisory_mentions[identifier].append(article)
     for identifier, mentions in advisory_mentions.items():
-        publishers = {item.get("source") for item in mentions if item.get("source")}
+        publishers = {publisher_family(item) for item in mentions if publisher_family(item)}
         if len(publishers) < 2:
             continue
         results.append({"tag": identifier, "category": "security", "count": len(mentions),
@@ -94,7 +100,7 @@ def extract_trending(articles, *, hours=48, limit=10):
             if 3 <= len(tag) <= 40 and len(tag.split()) <= 4 and any(char.isalpha() for char in tag):
                 observed[tag].append(article)
     for tag, mentions in observed.items():
-        publishers = {article.get("source") for article in mentions if article.get("source")}
+        publishers = {publisher_family(article) for article in mentions if publisher_family(article)}
         if len(publishers) >= 3:
             category = Counter(topic_for(article) for article in mentions).most_common(1)[0][0]
             results.append({"tag": tag, "category": category, "count": len(mentions), "query": tag,

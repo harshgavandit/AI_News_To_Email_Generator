@@ -175,6 +175,18 @@ class SourceUpdate(BaseModel):
     enabled: bool
 
 
+class SourceRefresh(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_ids: list[str] = Field(min_length=1, max_length=12)
+
+    @field_validator("source_ids")
+    @classmethod
+    def reviewed_sources(cls, values):
+        if any(value not in BY_ID for value in values):
+            raise ValueError("Choose reviewed source IDs.")
+        return list(dict.fromkeys(values))
+
+
 class EmailRequest(BaseModel):
     digest: dict
     signature: str = Field(max_length=128)
@@ -603,30 +615,36 @@ def refresh_job(authorization: str | None = Header(default=None)):
         return {"status": "already_started"}
     cooldown = 0
     try:
-        catalog = refresh_sources(store)
+        before = source_catalog(store, include_archive=False)
+        catalog = refresh_sources(store, due_only=True, maximum=128)
         active = [s for s in catalog if s["enabled"]]
         healthy = sum(s["available"] is True for s in active)
         if not healthy:
             raise HTTPException(503, "No enabled feed passed its latest check.")
         cooldown = 240
-        return {"status": "refreshed", "sources": len(active), "healthy": healthy}
+        previous = {feed["id"]: feed["checked_at"] for feed in before}
+        checked = sum(feed["checked_at"] != previous.get(feed["id"]) for feed in catalog)
+        return {"status": "refreshed", "sources": len(active), "healthy": healthy, "checked": checked}
     finally:
         store.finish_refresh(lease, cooldown=cooldown)
 
 
 @app.post("/api/admin/refresh")
-def refresh_admin(source: str | None = None, authorization: str | None = Header(default=None)):
+def refresh_admin(batch: SourceRefresh | None = None, source: str | None = None, authorization: str | None = Header(default=None)):
     require_owner(authorization)
     if source and source not in BY_ID:
         raise HTTPException(404, "Unknown source.")
+    if source and batch:
+        raise HTTPException(422, "Choose one source or a source batch.")
     store = source_store()
-    if not store.admit([("admin-refresh", str(int(time.time()) // 60), 1)]):
+    if not store.admit([("admin-refresh", str(int(time.time()) // 60), 4 if batch else 1)]):
         raise HTTPException(429, "Wait a minute before refreshing again.")
     lease = store.claim_refresh()
     if lease is None:
         raise HTTPException(429, "A feed refresh is already running.")
     try:
-        return {"sources": refresh_sources(store, source)}
+        return {"sources": refresh_sources(store, source, source_ids=set(batch.source_ids) if batch else None,
+                                           maximum=128 if source is None and batch is None else None)}
     finally:
         store.finish_refresh(lease)
 
@@ -781,7 +799,7 @@ def refresh_from_reader(store, filters, key, *, force):
             if scope == set():
                 return
             cooldown = 300
-            refresh_sources(store, source_ids=scope)
+            refresh_sources(store, source_ids=scope, due_only=not force, maximum=128)
             if key:
                 refresh_cached_page(store, filters, key, force=True)
         finally:

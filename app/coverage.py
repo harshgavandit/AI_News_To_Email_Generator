@@ -256,7 +256,7 @@ def public_article(article):
     reading_time = article.get("reading_time_minutes") or max(1, (words_count + 199) // 200)
 
     private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
-                      "community_relevant", "source_eligible", "_feed_ids", "_reading_access", "_reading_content"}
+                      "community_relevant", "source_eligible", "classification_version", "_feed_ids", "_reading_access", "_reading_content"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
@@ -268,6 +268,8 @@ def public_article(article):
         "region": region,
         "region_id": region_id(region),
         "sourceName": publisher,
+        "publisher_family": source.publisher_family if source else article.get("source", ""),
+        "content_format": source.content_format if source else "news",
         "sourceUrl": url,
         "publishedAt": published_at,
         "readingTimeMinutes": reading_time,

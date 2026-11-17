@@ -12,8 +12,12 @@ test('source coverage and article checks expose real results and recover after e
   let fail = false, checks = 0;
   globalThis.fetch = async url => {
     let data;
-    if (url === '/api/sources') data = {sources: []};
-    else if (url === '/api/discovery/coverage') data = {topics: [{id: 'security', label: 'Cybersecurity', articles_24h: 12, feeds: 3, fresh_feeds: 2}]};
+    if (url === '/api/sources') data = {sources: [{id: 'practicalai', label: 'Practical AI', source: 'practicalai', kind: 'podcast',
+      format: 'podcast', topic: 'ai', region: 'Global', language: 'en', coverage: 'article', freshness: 'fresh',
+      enabled: true, available: true, refresh_minutes: 60, feed_url: 'https://publisher.example/feed'}]};
+    else if (url === '/api/discovery/coverage') data = {topics: [{id: 'security', label: 'Cybersecurity', articles_24h: 12, feeds: 3, fresh_feeds: 2}],
+      formats: [{id: 'podcast', label: 'Podcasts', sources: 5}]};
+    else if (url.includes('/health')) data = {history: {checks: 4, successful: 3, hours: 24, average_duration_ms: 250}};
     else {
       checks++;
       assert.equal(new URL(url, 'https://informa.test').searchParams.get('url'), 'https://publisher.example/story');
@@ -27,6 +31,12 @@ test('source coverage and article checks expose real results and recover after e
     await import(`../../public/sources.js?coverage-test=${Date.now()}`);
     await until(() => document.querySelector('.coverage-topic'));
     assert.match(document.querySelector('.coverage-topic').textContent, /12 stories.*2\/3 feeds current/);
+    document.querySelector('#coverage-formats button').click();
+    assert.equal(document.getElementById('source-format').value, 'podcast');
+    const sourceHistory = document.querySelector('.source-history');
+    sourceHistory.open = true;
+    sourceHistory.dispatchEvent(new dom.window.Event('toggle'));
+    await until(() => sourceHistory.textContent.includes('3 of 4 checks'));
     document.getElementById('story-check-url').value = 'https://publisher.example/story';
     const form = document.getElementById('story-check-form');
     form.dispatchEvent(new dom.window.Event('submit', {cancelable: true}));

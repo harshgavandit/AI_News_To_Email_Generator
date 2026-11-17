@@ -28,6 +28,10 @@ body { text-rendering: optimizeLegibility; }
 .story-check-input { display: flex; gap: 8px; }
 .story-check-input input { flex: 1; min-width: 0; }
 .coverage-match { display: block; margin: 12px 0; }
+.coverage-formats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.source-history { font-size: 12px; margin-top: 8px; }
+.source-history summary { cursor: pointer; color: var(--green); padding-block: 4px; }
+.source-history p { max-width: 240px; line-height: 1.6; }
 @media (max-width: 760px) { .story-check-input { flex-direction: column; } .coverage-topics { grid-template-columns: 1fr; } }
 :is(h1, h2, h3) { text-wrap: pretty; }
 :is(button, a, summary, input, select, textarea):focus-visible {

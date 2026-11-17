@@ -99,7 +99,7 @@ def relevance_score(article, query, terms):
     title = search_text(article.get("title", ""))
     desc = search_text(article.get("cleanSummary") or article.get("description") or article.get("summary") or "")
     publisher = search_text(" ".join([article.get("publisher") or article.get("sourceName") or "",
-                                      article.get("author") or "", *article.get("tags", [])]))
+                                      article.get("author") or "", *article.get("tags", []), *article.get("technical_terms", [])]))
     fields = (title, desc, publisher)
     if not all(any(term in f for f in fields) for term in terms):
         return None

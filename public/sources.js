@@ -2,13 +2,14 @@ import { coverageLabels, fillOptions, languageOptions, regionId, regionOptions, 
 
 const element = (id) => document.getElementById(id);
 const statusLabels = {
-  fresh: "Up to date",
+  fresh: "Check successful",
   stale: "Check overdue",
   failed: "Last check failed",
   pending: "Awaiting first check",
   paused: "Paused",
 };
 const filters = [
+  ["format", "source-format", "All formats"],
   ["region", "source-region", "All regions"],
   ["topic", "source-topic", "All topics"],
   ["coverage", "source-coverage", "All source types"],
@@ -32,6 +33,7 @@ function node(tag, className, label) {
 
 function prepareCatalog(data) {
   const labels = {
+    format: {news: "News", blog: "Technical blogs", newsletter: "Newsletters", paper: "Research papers", release: "Project releases", video: "Video channels", podcast: "Podcasts"},
     region: regionOptions(data.regions),
     topic: topicOptions(data.topics),
     coverage: { ...(data.coverage_types || coverageLabels), creator: "Creator videos" },
@@ -49,8 +51,9 @@ function prepareCatalog(data) {
       source.integration === "publisher-metadata" ? "Publisher metadata" :
       source.integration && source.integration !== "rss" ? "Official API" : "RSS / Atom"].filter(Boolean).join(" · ");
     const focus = labels.topic[source.topic];
-    const keywords = normalize([source.label, location, labels.region[region], type, focus, statusLabels[freshness]].join(" "));
-    return { ...source, freshness, region, coverage, location, type, focus, keywords };
+    const format = source.format || (source.kind === "video" ? "video" : source.kind === "podcast" ? "podcast" : "blog");
+    const keywords = normalize([source.label, location, labels.region[region], type, focus, labels.format[format], source.collection, statusLabels[freshness]].join(" "));
+    return { ...source, format, freshness, region, coverage, location, type, focus, keywords };
   }).sort((a, b) => a.label.localeCompare(b.label));
   return { labels, sources };
 }
@@ -82,6 +85,7 @@ function sourceRow(source) {
   const coverage = node("div", "directory-coverage");
   if (source.focus) coverage.append(node("strong", "", source.focus));
   if (source.type) coverage.append(node("span", "", source.type));
+  if (source.format) coverage.append(node("span", "", `${source.format} · checks every ${source.refresh_minutes || 5} min`));
 
   const health = node("div", "directory-health");
   health.append(node("span", `directory-state directory-state-${source.freshness}`, statusLabels[source.freshness]));
@@ -96,6 +100,25 @@ function sourceRow(source) {
   const published = timestamp(source.latest_published_at, "Latest story");
   if (published) health.append(published);
   else if (source.checked_at && source.available) health.append(node("span", "directory-timestamp", "No retained stories"));
+  if (source.content_status === "quiet") health.append(node("span", "directory-timestamp", "No new retained stories in 30 days"));
+  const history = node("details", "source-history");
+  history.append(node("summary", "", "Check history"));
+  const historyText = node("p", "directory-timestamp");
+  historyText.setAttribute("role", "status");
+  history.append(historyText);
+  let loaded = false;
+  history.addEventListener("toggle", async () => {
+    if (!history.open || loaded) return;
+    historyText.textContent = "Loading recent checks…";
+    try {
+      const response = await fetch(`/api/discovery/sources/${encodeURIComponent(source.id)}/health`, {signal: AbortSignal.timeout(15000)});
+      if (!response.ok) throw new Error();
+      const {history: data} = await response.json();
+      historyText.textContent = data.checks ? `${data.successful} of ${data.checks} checks succeeded in ${data.hours}h${data.average_duration_ms !== null ? ` · average ${(data.average_duration_ms / 1000).toFixed(1)}s` : ""}.` : "No checks recorded in the last 24 hours.";
+      loaded = true;
+    } catch { historyText.textContent = "History is unavailable. Close and reopen to retry."; }
+  });
+  health.append(history);
 
   const links = node("div", "directory-links");
   if (source.enabled) {
@@ -212,6 +235,17 @@ async function loadCoverage() {
     const response = await fetch("/api/discovery/coverage", { signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error();
     const data = await response.json();
+    element("coverage-formats").replaceChildren(...(data.formats || []).map((format) => {
+      const button = node("button", "topic-chip", `${format.label} · ${format.sources}`);
+      button.type = "button";
+      button.addEventListener("click", () => {
+        element("source-format").value = format.id;
+        filterToggle.setAttribute("aria-expanded", "true");
+        render();
+        search.focus();
+      });
+      return button;
+    }));
     element("coverage-topics").replaceChildren(...data.topics.map((topic) => {
       const card = node("a", "coverage-topic");
       card.href = `/?${new URLSearchParams({topic: topic.id, window: "24h"})}#reading-room`;
