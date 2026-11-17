@@ -32,7 +32,7 @@ test('source coverage and article checks expose real results and recover after e
     await until(() => document.querySelector('.coverage-topic'));
     assert.match(document.querySelector('.coverage-topic').textContent, /12 stories.*2\/3 feeds current/);
     assert.match(document.querySelector('.coverage-gap').textContent, /need attention/);
-    assert.match(document.querySelector('#coverage-attention').textContent, /1 failed checks.*2 overdue checks.*4 publishers quiet/);
+    assert.match(document.querySelector('#coverage-attention').textContent, /Failed checks: 1.*Overdue checks: 2.*Sources quiet for 30 days: 4/);
     assert.equal(document.querySelector('#coverage-attention').hidden, false);
     document.querySelector('#coverage-formats button').click();
     assert.equal(document.getElementById('source-format').value, 'podcast');

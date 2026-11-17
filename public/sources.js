@@ -264,7 +264,7 @@ async function loadCoverage() {
       const panel = element("coverage-attention");
       panel.hidden = false;
       panel.replaceChildren(node("strong", "", "Source monitoring"), node("p", "",
-        `${number.format(attention.failed_sources)} failed checks · ${number.format(attention.overdue_sources)} overdue checks · ${number.format(attention.quiet_sources)} publishers quiet for 30 days.`));
+        `Failed checks: ${number.format(attention.failed_sources)} · Overdue checks: ${number.format(attention.overdue_sources)} · Sources quiet for 30 days: ${number.format(attention.quiet_sources)}.`));
       panel.append(node("p", "", "A successful check confirms feed access. It does not mean a publisher has released a new story or that coverage is exhaustive."));
     }
     element("coverage-status").textContent = data.notice || "";
