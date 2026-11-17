@@ -333,6 +333,8 @@ DEFAULT_SOURCES = (
              article_paths=("/astral-sh/uv/releases/tag/",)),
     releases("rust-releases", "Rust Releases", "https://github.com/rust-lang/rust/releases.atom", "github.com",
              article_paths=("/rust-lang/rust/releases/tag/",)),
+    releases("kubernetes-releases", "Kubernetes Releases", "https://github.com/kubernetes/kubernetes/releases.atom", "github.com",
+             article_paths=("/kubernetes/kubernetes/releases/tag/",)),
     Source("kubernetes-blog", "kubernetes-blog", "Kubernetes Blog", "engineering",
            "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software", article_paths=("/blog/",)),
     Source("python-blog", "python-blog", "Python Insider", "engineering",

@@ -1,6 +1,7 @@
 """Event grouping and private radar-history regressions."""
 from datetime import UTC, datetime, timedelta
 import time
+import pytest
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -36,6 +37,7 @@ def test_related_reporting_forms_one_event_without_treating_repetition_as_update
     assert catalog[0]["article_count"] == 2
     assert catalog[0]["digest_version"] == "1"
     assert len(event_intelligence.timeline(store, event_a)["entries"]) == 2
+    assert not event_intelligence.timeline(store, event_a, since=1)["changes"]
 
 
 def test_recent_revision_includes_its_older_anchor_in_the_short_window(tmp_path):
@@ -52,6 +54,12 @@ def test_recent_revision_includes_its_older_anchor_in_the_short_window(tmp_path)
     assert recent[0]["id"] == event
     assert recent[0]["digest_version"] == "2"
     assert recent[0]["articles"][0]["id"] == old["id"]
+    delta = event_intelligence.timeline(store, event, since=1)
+    assert delta["revision"] == "2"
+    assert [item["excerpt"] for item in delta["changes"]] == [revised["description"]]
+    catchup = ai_insights.catchup(store, ai_insights.RadarProfile(followed_events=[event]), {event: "1"}, hours=24)
+    assert "New since your last brief" in catchup["brief"]["html"]
+    assert revised["description"] == catchup["events"][0]["change_sources"][0]["excerpt"]
 
 
 def test_accepted_email_history_advances_only_after_provider_acceptance(tmp_path):
@@ -126,9 +134,95 @@ def test_explanation_requires_an_exact_publisher_quote_and_supported_numbers():
     invalid_quote = model.model_validate({"status": "answered", "limitations": "The excerpt does not include recovery times.",
         "claims": [{"text": "The provider recovered in 4 minutes.", "kind": "fact", "source_id": "source-1",
             "quote": "service was disrupted in three regions"}]})
-    import pytest
     with pytest.raises(ValueError):
         ai_insights.validate_explanation(invalid_quote, evidence)
+
+
+def test_exact_package_lookup_filters_withdrawn_records_and_reuses_cache(tmp_path, monkeypatch):
+    import httpx
+    from app import stack_intelligence
+
+    store = Store(f"sqlite:///{tmp_path / 'stack.sqlite'}")
+    calls = []
+
+    def query(url, *, json, timeout):
+        calls.append((url, json))
+        return httpx.Response(200, request=httpx.Request("POST", url), json={"vulns": [
+            {"id": "GHSA-test-one", "summary": "An advisory", "details": "Advisory excerpt."},
+            {"id": "GHSA-test-two", "withdrawn": "2024-08-01"},
+        ]})
+
+    monkeypatch.setattr(stack_intelligence.httpx, "post", query)
+    package = stack_intelligence.PackageCheck(ecosystem="npm", name="@example/library", version="1.2.3")
+    result = stack_intelligence.advisories(store, package)
+    assert [item["id"] for item in result["evidence"]] == ["GHSA-test-one"]
+    assert stack_intelligence.advisories(store, package) == result
+    assert calls == [("https://api.osv.dev/v1/query", {"package": {"ecosystem": "npm", "name": "@example/library"}, "version": "1.2.3"})]
+    rows = [{"title": "Compute incident in us-central1", "publisher": "Google Cloud Status", "coverage": "status"}]
+    assert stack_intelligence.mentions("Google Cloud | us-central1", rows)
+    assert not stack_intelligence.mentions("Google Cloud | europe-west1", rows)
+
+
+def test_global_comparison_validates_distinct_publisher_evidence():
+    from app import research
+
+    evidence = [
+        {"id": "one", "publisher": "First", "publisher_family": "publisher", "title": "Regional outage", "excerpt": "The operator restored service in the capital."},
+        {"id": "two", "publisher": "Second", "publisher_family": "publisher", "title": "Service interruption", "excerpt": "La empresa restableció el servicio en la capital."},
+    ]
+    schema = research.answer_schema(evidence, global_compare=True)
+    result = schema.model_validate({"status": "answered", "limitations": "Timing is unclear.", "claims": [
+        {"kind": "shared", "text": "The operator restored service in the capital.", "source_ids": ["one", "two"],
+         "quotes": ["restored service in the capital", "restableció el servicio en la capital"]}]})
+    with pytest.raises(ValueError, match="distinct evidence"):
+        research.validate_answer(result, evidence)
+    evidence[1]["publisher_family"] = "other-publisher"
+    assert research.validate_answer(result, evidence)["claims"][0]["kind"] == "shared"
+
+
+def test_technical_brief_uses_typed_sections_and_publisher_quotes(tmp_path, monkeypatch):
+    import json
+    from app import research
+
+    store = Store(f"sqlite:///{tmp_path / 'technical.sqlite'}")
+    evidence = [{"id": "release", "title": "New release", "excerpt": "The release removes the old cache adapter and documents a replacement."}]
+    monkeypatch.setattr(research, "ai_enabled", lambda: True)
+
+    def model(payload, system, schema, *, max_tokens):
+        assert "Do not infer a breaking change" in system
+        return json.dumps({"status": "answered", "limitations": "The excerpt does not list the migration steps.", "claims": [
+            {"kind": "breaking", "source_id": "release", "quote": "removes the old cache adapter", "text": "The release removes the old cache adapter."}]})
+
+    monkeypatch.setattr(ai_insights, "generate_response", model)
+    answer = ai_insights.technical_brief(store, evidence, "release", "en")
+    assert answer["claims"][0]["kind"] == "breaking"
+    assert ai_insights.technical_brief(store, evidence, "release", "en")["cached"]
+
+
+def test_explicit_feedback_affects_both_reading_and_email(tmp_path):
+    from app.intelligence import recommend
+    from app.reader_signals import ReaderFeedback
+
+    store = Store(f"sqlite:///{tmp_path / 'feedback.sqlite'}")
+    rows = [
+        story("liked", "Kubernetes publishes deployment guide", "Techniques for operating Kubernetes services.", "ars-technica"),
+        story("company", "NVIDIA publishes GPU architecture notes", "NVIDIA released a hardware explanation.", "the-verge"),
+    ]
+    for row in rows:
+        store.ingest(row["source_id"], [row], True)
+        event_intelligence.observe(store, row)
+    pool = event_intelligence.catalog(store)
+    company = next(event for event in pool if event["articles"][0]["id"] == "company")
+    other = next(event for event in pool if event["articles"][0]["id"] == "liked")
+    feedback = ReaderFeedback(companies=["NVIDIA"])
+    ranked = recommend(store.pinned_articles(["liked", "company"]), companies=feedback.companies)
+    assert ranked["articles"][0]["id"] == "company"
+    assert "a company you follow" in ranked["articles"][0]["recommendation_reasons"][0]
+    profile = ai_insights.RadarProfile(feedback=feedback)
+    assert ai_insights.rank_events(pool, profile, {})[0]["id"] == company["id"]
+    profile.feedback.muted_topics = [other["articles"][0]["topic"]]
+    brief = ai_insights.catchup(store, profile, {}, pool=pool, allow_generate=False)
+    assert other["id"] not in {event["id"] for event in brief["events"]}
 
 
 def test_conversation_retrieves_prior_source_context_but_keeps_provider_fallback(tmp_path, monkeypatch):

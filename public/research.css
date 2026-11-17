@@ -64,6 +64,12 @@
 .radar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
 .radar-event, .development-item, .conversation-turn { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .radar-event h3 { margin-bottom: 5px; }
+.research-panel summary { cursor: pointer; }
+#package-check-form { display: grid; gap: 8px; margin-top: 10px; }
+#package-check-form label { display: grid; gap: 4px; }
+#watch-rule-draft, #watch-rule-form { display: grid; gap: 8px; margin-block: 12px; }
+#watch-rule-draft label, #watch-rule-form label { display: grid; gap: 4px; }
+.research-controls > * { min-width: 0; }
 .radar-event p, .development-item span { margin: 5px 0; font-size: .84rem; }
 .radar-event details, .development-item button { margin-top: 6px; }
 .timeline-entries { display: grid; gap: 8px; padding-inline-start: 22px; font-size: .82rem; }

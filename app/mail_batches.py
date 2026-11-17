@@ -69,7 +69,7 @@ def dispatch_batch(store, row):
 
 
 def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
-    from app.mail_schedule import next_morning, with_unsubscribe, build_unsubscribe_url
+    from app.mail_schedule import next_morning, with_unsubscribe, build_unsubscribe_url, morning_event_loader, personalized_morning_brief
 
     sender = batch_sender()
     lease = store.claim_refresh(scope=WORKER_LEASE)
@@ -78,6 +78,7 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
         return result
     started = time.monotonic()
     brief = None
+    load_events = morning_event_loader(store)
     try:
         for index in range(maximum):
             if time.monotonic() - started > 65:
@@ -95,25 +96,11 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
 
                 def message_for(subscription):
                     url = build_unsubscribe_url(subscription["mailbox"])
-                    content = brief
-                    history = None
-                    from app import ai_insights, event_intelligence, radar_store
-                    profiles = radar_store.profiles(store, [subscription["mailbox"]])
-                    if saved_profile := profiles.get(subscription["mailbox"]):
-                        try:
-                            profile = ai_insights.RadarProfile.model_validate(saved_profile)
-                            seen = radar_store.histories(store, [subscription["mailbox"]]).get(subscription["mailbox"], {})
-                            events = event_intelligence.catalog(store, hours=24, limit=80)
-                            prepared = ai_insights.catchup(store, profile, seen, hours=24,
-                                allow_generate=False, pool=events)
-                            if prepared.get("brief"):
-                                content = prepared["brief"]
-                                history = content.get("_catchup")
-                        except Exception as error:
-                            # A profile/archive failure must not interrupt other subscribers.
-                            logger.warning("radar_batch_fallback error_type=%s", type(error).__name__)
-                            history = None
-                            content = brief
+                    content = personalized_morning_brief(store, subscription["mailbox"], brief, load_events)
+                    next_run = next_morning(subscription["timezone"], moment)
+                    if content is None:
+                        return None, next_run
+                    history = content.get("_catchup")
                     content = with_unsubscribe(content, url, scheduled=True)
                     message = {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
                             "text": content["markdown"], "html": content["html"], "headers": {
@@ -121,7 +108,7 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
                             }}
                     if history:
                         message["_informa_event_history"] = history
-                    return message, next_morning(subscription["timezone"], moment)
+                    return message, next_run
 
                 batch_id = secrets.token_hex(24)
                 if not store.enqueue_morning_batch(batch_id, now, moment.date().isoformat(), mail_capacity(),

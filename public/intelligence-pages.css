@@ -1,0 +1,24 @@
+.intelligence-page [hidden] { display: none !important; }
+.intelligence-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-block: 10px; }
+.intelligence-actions h2 { margin: 0; }
+.intelligence-actions a[aria-current] { outline: 2px solid var(--green); outline-offset: 2px; }
+.intelligence-actions button, .intelligence-actions a { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.technology-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); align-items: start; gap: clamp(12px, 3vw, 28px); }
+.intelligence-filter { flex: 0 1 160px; margin-inline-start: auto; font-size: .85rem; }
+.intelligence-section + .intelligence-section { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 14px; }
+.intelligence-answer article + article { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+.intelligence-citations { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: .78rem; }
+.intelligence-citations li, .intelligence-actions .button { white-space: normal; }
+.intelligence-page form label { display: grid; gap: 4px; }
+.intelligence-page form textarea { box-sizing: border-box; width: 100%; min-height: 70px; resize: vertical; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 8px; }
+.intelligence-page form > * + * { margin-top: 9px; }
+.intelligence-page .research-panel > h2 { overflow-wrap: anywhere; }
+.intelligence-page details { margin-block: 10px; }
+.intelligence-page .research-note { overflow-wrap: anywhere; }
+.intelligence-page .revision-list p { margin-block: 3px; }
+.intelligence-page .revision-list { padding-inline-start: 18px; }
+@media (max-width: 760px) {
+  .technology-layout { grid-template-columns: minmax(0, 1fr); }
+  .technology-layout .research-rail { grid-template-columns: minmax(0, 1fr); }
+  .intelligence-filter { margin-inline-start: 0; }
+}

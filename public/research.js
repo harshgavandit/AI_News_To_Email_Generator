@@ -1,5 +1,9 @@
 import { readingGroups } from "/privacy-data.js";
 import { monitorInbox } from "./monitor-inbox.js";
+import { readFeedback } from "./reader-feedback.js";
+import { followedTechnologies } from "./technology-follow.js";
+import { historyControl } from "./source-history.js";
+import { initRuleBuilder } from "./watch-rule-ui.js";
 
 const byId = (id) => document.getElementById(id);
 const form = byId("research-form");
@@ -22,6 +26,10 @@ let inboxBusy = false;
 let conversation = [];
 let conversationIds = [];
 const radarKey = readingGroups.radar.key;
+let followedEvents = [];
+let viewedRevisions = {};
+let inboxFeedback;
+let inboxTechnologies = [];
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -108,7 +116,9 @@ function render(data, titles) {
       for (const claim of data.answer.claims) {
         const item = element("li");
         const text = element("p", claim.text);
-        if (claim.kind === "analysis") item.append(element("span", "Interpretation", "research-label"));
+        const label = { analysis: "Interpretation", shared: "Reported by multiple outlets", single_source: "Single-source detail",
+          difference: "Difference in coverage", attributed: "Shared attribution" }[claim.kind];
+        if (label) item.append(element("span", label, "research-label"));
         for (const id of claim.source_ids.filter((value) => references.has(value))) {
           const citation = cite(id);
           citation.className = "research-cite";
@@ -116,6 +126,19 @@ function render(data, titles) {
           text.append(" ", citation);
         }
         item.append(text);
+        if (claim.quotes?.length) {
+          const quotes = element("details", "", "research-meta");
+          quotes.append(element("summary", "Read the original evidence"));
+          for (const [index, quote] of claim.quotes.entries()) {
+            const source = data.evidence[references.get(claim.source_ids[index]) - 1];
+            const excerpt = element("blockquote", quote);
+            excerpt.lang = source?.language || "";
+            excerpt.dir = "auto";
+            if (source) excerpt.append(element("footer", source.publisher));
+            quotes.append(excerpt);
+          }
+          item.append(quotes);
+        }
         claims.append(item);
       }
       answer.append(claims);
@@ -163,11 +186,12 @@ function render(data, titles) {
     original.target = "_blank";
     original.rel = "noopener noreferrer";
     heading.append(original);
-    const meta = [row.publisher, dateLabel(row.published_at), row.match?.includes("semantic") && "Meaning match"];
+    const meta = [row.publisher, row.region, row.language && languageName(row.language), dateLabel(row.published_at), row.match?.includes("semantic") && "Meaning match"];
     const excerpt = element("p", row.excerpt || "Headline and source link only.");
     excerpt.dir = "auto";
     excerpt.lang = row.language;
-    const explain = element("button", "Explain this story", "text-button");
+    const technical = ["release", "preprint", "journal"].includes(row.coverage);
+    const explain = element("button", technical ? "Build technical brief" : "Explain this story", "text-button");
     explain.type = "button";
     explain.addEventListener("click", async () => {
       explain.disabled = true;
@@ -177,22 +201,25 @@ function render(data, titles) {
       output.textContent = "Checking the publisher excerpt…";
       try {
         const answer = await api("/api/intelligence/explain", { article_id: row.id,
-          language: byId("radar-language").value, depth: byId("radar-depth").value });
+          language: byId("radar-language").value, depth: byId("radar-depth").value,
+          ...(technical && { format: "technical_brief" }) });
         output.replaceChildren();
-        output.append(element("p", answer.answer.limitations, "research-note"));
         for (const claim of answer.answer.claims || []) {
           const note = element("blockquote", claim.text);
-          if (claim.kind === "analysis") note.prepend(element("span", "Interpretation · ", "research-label"));
+          const label = answer.sections?.[claim.kind] || (claim.kind === "analysis" ? "Interpretation" : "");
+          if (label) note.prepend(element("p", label, "research-label"));
           note.append(element("p", `Source quote: “${claim.quote}”`, "research-meta"));
           const source = answer.evidence.find((evidenceRow) => evidenceRow.id === claim.source_id);
           if (source) note.append(link(`Read ${source.publisher} ↗`, source.url));
           output.append(note);
         }
+        output.append(element("p", answer.answer.limitations, "research-note"));
       } catch (error) { output.textContent = error.message; }
       finally { explain.disabled = false; }
     });
     item.append(heading, element("p", meta.filter(Boolean).join(" · "), "research-meta"), excerpt,
-      link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`), explain);
+      link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`), explain,
+      link("Save to a project", `/projects.html?source=${encodeURIComponent(row.id)}`), historyControl(row.id));
     list.append(item);
   }
   evidence.append(list);
@@ -201,7 +228,11 @@ function render(data, titles) {
   byId("conversation-desk").hidden = !data.evidence.length;
 }
 
-const taskLabels = { search: "Find sources", analyze: "Answer with sources", compare: "Compare coverage", brief: "Build a topic brief" };
+function languageName(code) {
+  try { return new Intl.DisplayNames(["en"], { type: "language" }).of(code); } catch { return code; }
+}
+
+const taskLabels = { search: "Find sources", analyze: "Answer with sources", compare: "Compare coverage", global_compare: "Compare across languages", brief: "Build a topic brief" };
 mode.addEventListener("change", () => { submit.textContent = taskLabels[mode.value]; });
 
 async function search(body) {
@@ -219,7 +250,7 @@ async function search(body) {
     status.textContent = data.evidence.length ?
       `${data.evidence.length} source${data.evidence.length === 1 ? "" : "s"} · ${label}` :
       "No matching sources. Try a different term, topic, or time range.";
-    render(data, { answer: body.mode === "compare" ? "AI coverage comparison" :
+    render(data, { answer: body.mode === "global_compare" ? "Cross-language coverage comparison" : body.mode === "compare" ? "AI coverage comparison" :
       body.mode === "brief" ? "AI topic briefing" : "AI analysis", evidence: "Source evidence",
       context: body.q || data.evidence[0]?.title });
     if (body.article_id && data.evidence.length) question.value = data.evidence[0].title.slice(0, 320);
@@ -239,7 +270,8 @@ form.addEventListener("submit", (event) => {
   if (!q) { question.focus(); return; }
   conversation = [];
   byId("conversation-transcript").replaceChildren();
-  search({ q, mode: mode.value, scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
+  search({ q, mode: mode.value, ...(mode.value === "global_compare" && { language: byId("radar-language").value }),
+    scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
 });
 
 byId("conversation-form").addEventListener("submit", async (event) => {
@@ -284,7 +316,9 @@ byId("conversation-form").addEventListener("submit", async (event) => {
 function radarProfile() {
   return { name: "Reader", role: byId("radar-role").value,
     interests: byId("radar-interests").value.split(/[,;\n]/).map((term) => term.trim()).filter(Boolean).slice(0, 12),
-    stack: [], topics: topic.value && topic.value !== "all" ? [topic.value] : [],
+    stack: byId("radar-stack").value.split(/[,;\n]/).map((term) => term.trim()).filter(Boolean).slice(0, 12),
+    topics: topic.value && topic.value !== "all" ? [topic.value] : [], followed_events: followedEvents,
+    feedback: readFeedback(inboxFeedback), followed_technologies: followedTechnologies(inboxTechnologies),
     language: byId("radar-language").value, depth: byId("radar-depth").value,
     length: Number(byId("radar-length").value) };
 }
@@ -295,7 +329,61 @@ function loadRadarProfile(profile) {
   if ([...byId("radar-language").options].some((option) => option.value === profile.language)) byId("radar-language").value = profile.language;
   if ([...byId("radar-depth").options].some((option) => option.value === profile.depth)) byId("radar-depth").value = profile.depth;
   if ([...byId("radar-length").options].some((option) => Number(option.value) === profile.length)) byId("radar-length").value = String(profile.length);
-  byId("radar-interests").value = [...(profile.interests || []), ...(profile.stack || [])].slice(0, 12).join(", ");
+  byId("radar-interests").value = (profile.interests || []).join(", ");
+  byId("radar-stack").value = (profile.stack || []).join(", ");
+  followedEvents = profile.followed_events || [];
+  viewedRevisions = profile.viewedRevisions || viewedRevisions;
+}
+
+function rememberRadar() {
+  try { localStorage.setItem(radarKey, JSON.stringify({ ...radarProfile(), viewedRevisions })); } catch { /* Session still works. */ }
+}
+
+function followButton(id) {
+  const button = element("button", "", "text-button");
+  button.type = "button";
+  button.dataset.followEvent = id;
+  const refresh = (control) => {
+    const active = followedEvents.includes(id);
+    control.textContent = active ? "Unfollow story" : "Follow story";
+    control.setAttribute("aria-pressed", String(active));
+  };
+  refresh(button);
+  button.addEventListener("click", () => {
+    if (followedEvents.includes(id)) followedEvents = followedEvents.filter((value) => value !== id);
+    else if (followedEvents.length < 40) followedEvents = [...followedEvents, id];
+    else { byId("development-status").textContent = "You can follow up to 40 stories."; return; }
+    rememberRadar();
+    for (const control of document.querySelectorAll("[data-follow-event]")) if (control.dataset.followEvent === id) refresh(control);
+  });
+  return button;
+}
+
+function timelineList(items) {
+  const entries = element("ol", "", "timeline-entries");
+  for (const item of items) {
+    const publisher = item.source?.publisher || item.publisher;
+    const row = element("li");
+    row.append(element("span", `${dateLabel(item.published_at)} · ${publisher} · `), link(item.title, item.source?.url || item.url));
+    if (item.reason === "source_revision") row.append(element("span", " · Publisher revised this item", "research-meta"));
+    if (item.excerpt) row.append(element("p", item.excerpt));
+    entries.append(row);
+  }
+  return entries;
+}
+
+async function showTimeline(eventId, target) {
+  const since = viewedRevisions[eventId];
+  const query = /^\d{1,10}$/.test(since) ? `?since=${since}` : "";
+  const history = await api(`/api/intelligence/events/${encodeURIComponent(eventId)}${query}`);
+  if (history.changes?.length) target.append(element("h4", "New since your last visit"), timelineList(history.changes));
+  else if (query && history.revision === since) target.append(element("p", "You’re up to date.", "research-meta"));
+  target.append(timelineList(history.entries || []), element("p", history.notice, "research-meta"));
+  if (history.revision) {
+    delete viewedRevisions[eventId];
+    viewedRevisions = Object.fromEntries([...Object.entries(viewedRevisions), [eventId, history.revision]].slice(-200));
+    rememberRadar();
+  }
 }
 
 async function catchMeUp(event) {
@@ -307,8 +395,7 @@ async function catchMeUp(event) {
   try {
     await radarPreferencesReady;
     const profile = radarProfile();
-    try { localStorage.setItem(radarKey, JSON.stringify(profile)); }
-    catch { /* Preferences remain active for this request if browser storage is unavailable. */ }
+    rememberRadar();
     const data = await api("/api/intelligence/catchup", { profile, seen: radarSeen,
       hours: Number(byId("radar-hours").value) });
     feedback.textContent = data.message || `${data.events?.length || 0} developments ready. AI explanations are linked to publisher evidence.`;
@@ -322,6 +409,8 @@ async function catchMeUp(event) {
       else heading.textContent = event.title;
       row.append(heading, element("p", `${event.change === "updated" ? "Updated" : "New development"} · ${event.source_count} publishers`, "research-meta"));
       if (event.reasons?.length) row.append(element("p", event.reasons.join(" · ")));
+      row.append(followButton(event.id));
+      if (event.change_sources?.length) row.append(element("h4", "New since your last brief"), timelineList(event.change_sources));
       const timeline = element("details");
       const summary = element("summary", "View publication timeline");
       timeline.append(summary);
@@ -329,11 +418,7 @@ async function catchMeUp(event) {
         if (timeline.dataset.loaded) return;
         timeline.dataset.loaded = "true";
         try {
-          const history = await api(`/api/intelligence/events/${encodeURIComponent(event.id)}`);
-          const entries = element("ol", "", "timeline-entries");
-          for (const item of history.entries || []) entries.append(element("li",
-            `${dateLabel(item.published_at)} · ${item.source.publisher}: ${item.title}`));
-          timeline.append(entries, element("p", history.notice, "research-meta"));
+          await showTimeline(event.id, timeline);
         } catch (error) { timeline.append(element("p", error.message, "research-note")); }
       });
       row.append(timeline);
@@ -358,10 +443,33 @@ async function catchMeUp(event) {
 }
 
 byId("radar-form").addEventListener("submit", catchMeUp);
+byId("package-check-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('[type="submit"]');
+  const feedback = byId("package-check-status");
+  const output = byId("package-check-results");
+  button.disabled = true;
+  output.replaceChildren();
+  feedback.textContent = "Checking published advisories…";
+  try {
+    const data = await api("/api/intelligence/package-check", Object.fromEntries(new FormData(form)));
+    feedback.textContent = data.evidence.length ? `${data.evidence.length} matching advisories${data.partial ? " in the results checked" : ""}.` :
+      `No matching advisories in the OSV results checked.${data.partial ? " Additional results may exist." : ""}`;
+    const catalog = new Map(data.evidence.map((item) => [item.id, item]));
+    for (const claim of data.answer?.claims || []) {
+      const source = catalog.get(claim.source_id);
+      if (source) output.append(element("p", claim.text), link(source.id, source.url));
+    }
+    if (data.evidence.length) output.append(timelineList(data.evidence));
+  } catch (error) { feedback.textContent = error.message; }
+  finally { button.disabled = false; }
+});
 byId("radar-save").addEventListener("click", async () => {
   const button = byId("radar-save");
   button.disabled = true;
   try {
+    rememberRadar();
     const data = await api("/api/mail/radar", radarProfile(), undefined, "PUT");
     byId("radar-status").textContent = data.notice;
   } catch {
@@ -370,15 +478,37 @@ byId("radar-save").addEventListener("click", async () => {
 });
 
 let radarSeen = {};
-try { loadRadarProfile(JSON.parse(localStorage.getItem(radarKey))); } catch { /* Use the page defaults. */ }
+let radarHasLocalProfile = false;
+let radarHasLocalFollows = false;
+try {
+  const saved = JSON.parse(localStorage.getItem(radarKey));
+  radarHasLocalProfile = Boolean(saved?.role);
+  radarHasLocalFollows = Array.isArray(saved?.followed_events);
+  loadRadarProfile(saved);
+} catch { /* Use the page defaults. */ }
 const radarPreferencesReady = api("/api/mail/radar").then(({ profile, seen }) => {
-  loadRadarProfile(profile);
+  const localFollows = followedEvents;
+  inboxFeedback = profile?.feedback;
+  inboxTechnologies = profile?.followed_technologies || [];
+  if (!radarHasLocalProfile) loadRadarProfile(profile);
+  else if (!radarHasLocalFollows) followedEvents = profile?.followed_events || localFollows;
   radarSeen = seen || {};
 }).catch(() => { /* Public visitors can build a catch-up without a mailbox account. */ });
 
-api("/api/intelligence/events?hours=168&limit=8").then(({ events = [] }) => {
+let followedOnly = false;
+let developmentsRequest = 0;
+async function loadDevelopments() {
+  const current = ++developmentsRequest;
   const list = byId("development-list");
+  const feedback = byId("development-status");
   list.replaceChildren();
+  feedback.textContent = followedOnly && !followedEvents.length ? "You haven’t followed a story yet." : "Loading developments…";
+  if (followedOnly && !followedEvents.length) return;
+  try {
+  const path = followedOnly ? `/api/intelligence/events?limit=40&followed=${encodeURIComponent(followedEvents.join(","))}` : "/api/intelligence/events?hours=168&limit=8";
+  const { events = [] } = await api(path);
+  if (current !== developmentsRequest) return;
+  feedback.textContent = "";
   for (const event of events) {
     const item = element("li", "", "development-item");
     item.append(element("strong", event.title), element("span", `${event.source_count} publishers · updated ${dateLabel(event.updated_at)}`, "research-meta"));
@@ -386,19 +516,24 @@ api("/api/intelligence/events?hours=168&limit=8").then(({ events = [] }) => {
     open.type = "button";
     open.addEventListener("click", async () => {
       try {
-        const timeline = await api(`/api/intelligence/events/${encodeURIComponent(event.id)}`);
-        item.replaceChildren(element("strong", timeline.title));
-        const entries = element("ol", "", "timeline-entries");
-        for (const entry of timeline.entries || []) entries.append(element("li",
-          `${dateLabel(entry.published_at)} · ${entry.source.publisher}: ${entry.title}`));
-        item.append(entries, element("p", timeline.notice, "research-meta"));
-      } catch (error) { byId("development-status").textContent = error.message; }
+        open.disabled = true;
+        await showTimeline(event.id, item);
+        open.remove();
+      } catch (error) { feedback.textContent = error.message; open.disabled = false; }
     });
-    item.append(open);
+    item.append(open, followButton(event.id));
     list.append(item);
   }
-  if (!events.length) byId("development-status").textContent = "Developments are being indexed as new coverage arrives.";
-}).catch(() => { byId("development-status").textContent = "Recent development timelines are temporarily unavailable."; });
+  if (!events.length) feedback.textContent = followedOnly ? "No followed stories are still in the archive." : "Developments are being indexed as new coverage arrives.";
+  } catch { if (current === developmentsRequest) feedback.textContent = "Development timelines are temporarily unavailable."; }
+}
+byId("show-followed-developments").addEventListener("click", ({ currentTarget }) => {
+  followedOnly = !followedOnly;
+  currentTarget.setAttribute("aria-pressed", String(followedOnly));
+  currentTarget.textContent = followedOnly ? "Show recent developments" : "Show followed stories";
+  loadDevelopments();
+});
+radarPreferencesReady.then(loadDevelopments);
 
 function loadWatches() {
   try {
@@ -507,7 +642,7 @@ function syncInbox(data) {
   byId("monitor-results").hidden = !data.active;
   byId("watch-description").textContent = data.active
     ? "New alerts appear here after the archive updates and your watches are checked."
-    : "Watch up to six keyword queries. Browser-only alerts check while this desk is open.";
+    : "Watch up to six keyword queries or technology rules. Browser-only alerts check while this desk is open.";
   watches = data.active ? data.watches : loadWatches();
   renderWatches();
   if (!data.active) return;
@@ -557,7 +692,7 @@ async function refreshInbox() {
   } finally { inboxBusy = false; }
 }
 
-const settings = (rows) => rows.map(({ id, query, topic: watchTopic }) => ({ id, query, topic: watchTopic || "all" }));
+const settings = (rows) => rows.map(({ id, query, topic: watchTopic, rule }) => ({ id, query, topic: watchTopic || "all", ...(rule && { rule }) }));
 
 async function writeInbox(path, options, feedback) {
   if (inboxBusy) {
@@ -611,6 +746,13 @@ document.addEventListener("visibilitychange", checkWatches);
 setInterval(checkWatches, 60000);
 renderWatches();
 refreshInbox().then(checkWatches);
+initRuleBuilder(async (watch) => {
+  if (watches.length >= 6) throw new Error("Remove an alert before adding another.");
+  if (watches.some((existing) => existing.query === watch.query && existing.rule)) throw new Error("This technology rule is already saved.");
+  const saved = await replaceWatches([...watches, { ...watch, seen: null, matches: [] }]);
+  if (saved && !inbox?.active) checkWatches();
+  return saved;
+});
 
 api("/api/intelligence/options").then((options) => {
   for (const [id, label] of Object.entries(options.topics || {})) {

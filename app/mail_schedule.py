@@ -1,6 +1,7 @@
 """Automated daily morning delivery scheduler for subscribed mailboxes."""
 from datetime import UTC, datetime, timedelta
 from html import escape
+import logging
 import os
 import smtplib
 import time
@@ -11,6 +12,8 @@ from app.brand import DAILY_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import batch_sender, mail_capacity
 from app.web_digest import public_site, safe_email_html, safe_href
+
+logger = logging.getLogger(__name__)
 
 
 def next_morning(timezone_str: str, dt: datetime | None = None) -> float:
@@ -55,6 +58,35 @@ def with_unsubscribe(brief, url, *, scheduled=False):
     return dict(brief, html=html, markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
 
 
+def personalized_morning_brief(store, mailbox, fallback, load_events):
+    from app import ai_insights, radar_store
+    try:
+        saved = radar_store.profiles(store, [mailbox]).get(mailbox)
+        if not saved:
+            return fallback
+        profile = ai_insights.RadarProfile.model_validate(saved)
+        seen = radar_store.histories(store, [mailbox]).get(mailbox, {})
+        result = ai_insights.catchup(store, profile, seen, hours=24, allow_generate=False, pool=load_events())
+        if result.get("brief"):
+            return result["brief"]
+        if result["status"] in {"empty", "caught_up"}:
+            return None
+    except Exception as error:
+        logger.warning("radar_mail_fallback error_type=%s", type(error).__name__)
+    return fallback
+
+
+def morning_event_loader(store):
+    from functools import lru_cache
+    from app import event_intelligence
+
+    @lru_cache(maxsize=1)
+    def load():
+        return event_intelligence.catalog(store, hours=24, limit=160)
+
+    return load
+
+
 def run_due_subscriptions(generate_fn):
     """Run due morning briefs for active subscriptions with atomic claiming and retry safety."""
     store = get_store()
@@ -69,6 +101,7 @@ def run_due_subscriptions(generate_fn):
     if not due:
         return {"sent": 0, "unconfirmed": 0}
     brief = generate_fn()
+    load_events = morning_event_loader(store)
     sent = 0
     unconfirmed = 0
 
@@ -85,7 +118,14 @@ def run_due_subscriptions(generate_fn):
 
         ident = public_mail.digest_key(f"daily:{mailbox}:{sub['next_run']}")
         day = public_mail.day()
-        state, _ = store.reserve_delivery(ident, [(f"mail:{mailbox}", day, 3), *mail_capacity().policies(day, "digests")])
+        content = personalized_morning_brief(store, mailbox, brief, load_events)
+        if content is None:
+            store.reschedule_subscription(mailbox, next_run)
+            continue
+        history = content.get("_catchup")
+        policies = [(f"mail:{mailbox}", day, 3), *mail_capacity().policies(day, "digests")]
+        state, _ = store.reserve_delivery(ident, policies,
+            **({"event_mailbox": mailbox, "event_history": history} if history else {}))
         if state != "new":
             store.reschedule_subscription(mailbox, next_run)
             continue
@@ -93,7 +133,7 @@ def run_due_subscriptions(generate_fn):
         store.reschedule_subscription(mailbox, next_run)
         if not store.subscription(mailbox)["enabled"]:
             continue
-        message = with_unsubscribe(brief, unsub_url, scheduled=True)
+        message = with_unsubscribe(content, unsub_url, scheduled=True)
         try:
             accepted = public_mail.send_message(
                 email,

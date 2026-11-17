@@ -7,6 +7,23 @@ import { readingGroups } from '../../public/privacy-data.js';
 const markup = readFileSync(new URL('../../public/research.html', import.meta.url), 'utf8');
 const script = readFileSync(new URL('../../public/research.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/gm, '');
 const inboxScript = readFileSync(new URL('../../public/monitor-inbox.js', import.meta.url), 'utf8').replace('export async', 'async');
+const feedbackScript = readFileSync(new URL('../../public/reader-feedback.js', import.meta.url), 'utf8')
+  .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
+function mountResearch(window) {
+  window.eval(inboxScript);
+  window.eval(`(() => { ${feedbackScript}\nwindow.readFeedback = readFeedback; })()`);
+  for (const [file, bindings] of [
+    ['technology-follow.js', ['followedTechnologies']],
+    ['evidence-ui.js', ['node', 'requestJSON', 'answerBlock', 'sourceLink', 'sourceList']],
+    ['source-history.js', ['historyControl']],
+    ['watch-rule-ui.js', ['initRuleBuilder']],
+  ]) {
+    const code = readFileSync(new URL(`../../public/${file}`, import.meta.url), 'utf8')
+      .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
+    window.eval(`(() => { ${code}\nObject.assign(window, { ${bindings.join(', ')} }); })()`);
+  }
+  window.eval(script);
+}
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 test('article analysis keeps citations in the Research Desk and preserves original attribution', async () => {
@@ -26,8 +43,7 @@ test('article analysis keeps citations in the Research Desk and preserves origin
     return { ok: true, json: async () => data };
   };
   try {
-    window.eval(inboxScript);
-    window.eval(script);
+    mountResearch(window);
     await flush();
     assert.deepEqual(requests, [{ article_id: 's1', mode: 'analyze' }]);
     const citation = window.document.querySelector('a[aria-label="Source 1"]');
@@ -67,8 +83,7 @@ test('Research Desk opts in, renders private source-linked alerts and marks the 
     return { ok: true, json: async () => structuredClone(path.includes('/inbox') ? state : {}) };
   };
   try {
-    window.eval(inboxScript);
-    window.eval(script);
+    mountResearch(window);
     await flush();
     assert.equal(document.getElementById('monitor-opt-in').hidden, false);
     assert.equal(consented, false);
@@ -103,8 +118,7 @@ test('technology radar prepares a personalized preview with an attributable upda
     return { ok: true, json: async () => data };
   };
   try {
-    window.eval(inboxScript);
-    window.eval(script);
+    mountResearch(window);
     document.getElementById('radar-role').value = 'engineer';
     document.getElementById('radar-interests').value = 'cloud, Kubernetes';
     document.getElementById('radar-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
@@ -116,5 +130,61 @@ test('technology radar prepares a personalized preview with an attributable upda
     assert.ok(handoff);
     handoff.click();
     assert.equal(JSON.parse(window.sessionStorage.getItem('informa-ai-catchup-preview')).preview_id, preview.preview_id);
+  } finally { window.close(); }
+});
+
+test('followed story revisions, package results, and multilingual technical evidence render from API responses', async () => {
+  const dom = new JSDOM(markup, { url: 'https://informa.test/research.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  const { document } = window;
+  window.readingGroups = readingGroups;
+  const eventId = 'e'.repeat(32);
+  window.localStorage.setItem(readingGroups.radar.key, JSON.stringify({ viewedRevisions: { [eventId]: '1' } }));
+  const source = { id: 'release', title: 'uv removes an adapter', excerpt: 'The release removes its old adapter.',
+    publisher: 'uv Releases', language: 'en', coverage: 'release', url: 'https://example.org/release', published_at: '2026-11-17' };
+  const requests = [];
+  window.fetch = async (path, options = {}) => {
+    requests.push({ path, body: options.body && JSON.parse(options.body) });
+    let data = {};
+    if (path.includes(`/events/${eventId}`)) data = { revision: '2', entries: [source], changes: [source] };
+    else if (path.includes('/events?')) data = { events: [{ id: eventId, title: source.title, source_count: 1, updated_at: source.published_at }] };
+    else if (path.endsWith('/package-check')) data = { evidence: [source], partial: false };
+    else if (path.endsWith('/research')) data = { evidence: [source], answer: { status: 'answered', limitations: 'One excerpt.',
+      claims: [{ kind: 'single_source', source_ids: [source.id], quotes: [source.excerpt], text: source.excerpt }] } };
+    else if (path.endsWith('/explain')) data = { evidence: [source], sections: { breaking: 'Breaking changes' },
+      answer: { claims: [{ kind: 'breaking', text: source.excerpt, quote: source.excerpt, source_id: source.id }] } };
+    return { ok: true, json: async () => data };
+  };
+  try {
+    mountResearch(window);
+    await flush();
+    document.querySelector('[data-follow-event]').click();
+    assert.equal(document.querySelector('[data-follow-event]').textContent, 'Unfollow story');
+    document.getElementById('show-followed-developments').click();
+    await flush();
+    assert.ok(requests.some(({ path }) => path.includes(`followed=${eventId}`)));
+    [...document.querySelectorAll('#development-list button')].find((button) => button.textContent === 'Open timeline').click();
+    await flush();
+    assert.match(document.getElementById('development-list').textContent, /New since your last visit/);
+    assert.ok(requests.some(({ path }) => path.endsWith(`${eventId}?since=1`)));
+
+    const form = document.getElementById('package-check-form');
+    form.elements.namedItem('name').value = 'uv';
+    form.elements.namedItem('version').value = '0.5.0';
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    assert.match(document.getElementById('package-check-status').textContent, /1 matching advisor/);
+    assert.equal(requests.find(({ path }) => path.endsWith('/package-check')).body.version, '0.5.0');
+
+    document.getElementById('research-question').value = 'uv changes';
+    document.getElementById('research-mode').value = 'global_compare';
+    document.getElementById('research-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    await flush();
+    assert.match(document.getElementById('research-results').textContent, /Cross-language coverage comparison/);
+    assert.match(document.getElementById('research-results').textContent, /Read the original evidence/);
+    [...document.querySelectorAll('#research-results button')].find((button) => button.textContent === 'Build technical brief').click();
+    await flush();
+    assert.match(document.getElementById('research-results').textContent, /Breaking changes/);
+    assert.equal(requests.find(({ path }) => path.endsWith('/explain')).body.format, 'technical_brief');
   } finally { window.close(); }
 });

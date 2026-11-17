@@ -15,6 +15,7 @@ from app.coverage import TOPICS
 from app.discovery import search_terms
 from app.launch_store import monitor_alerts, monitor_profiles, monitor_watches
 from app.research import watch_matches
+from app import watch_rules
 
 
 router = APIRouter(prefix="/api/intelligence/inbox")
@@ -32,11 +33,15 @@ class Watch(BaseModel):
     id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,40}$")
     query: str = Field(min_length=2, max_length=150)
     topic: str = Field(default="all", max_length=24)
+    rule: watch_rules.Rule | None = None
 
     @model_validator(mode="after")
     def validate_scope(self):
         if self.topic not in ("all", *TOPICS) or not search_terms(self.query):
             raise ValueError("Choose a topic and enter words to watch.")
+        if self.rule:
+            self.topic = "all"
+            self.query = watch_rules.describe(self.rule)
         return self
 
 
@@ -47,7 +52,7 @@ class WatchList(BaseModel):
     @model_validator(mode="after")
     def unique_watches(self):
         if len({watch.id for watch in self.watches}) != len(self.watches) or len({
-            (search_terms(watch.query), watch.topic) for watch in self.watches
+            (search_terms(watch.query), watch.topic, watch.rule.model_dump_json() if watch.rule else "") for watch in self.watches
         }) != len(self.watches):
             raise ValueError("Each watch must be unique.")
         return self
@@ -105,7 +110,27 @@ def active_profile(conn, ident, now, *, lock=False):
 
 
 def watch_values(ident, watch, now):
-    return {"profile_id": ident, **watch.model_dump(), "created": now, "next_check": now, "checked": None}
+    return {"profile_id": ident, **watch.model_dump(exclude={"rule"}), "created": now, "next_check": now, "checked": None}
+
+
+def rules_available(conn):
+    return inspect(conn).has_table(watch_rules.rules.name)
+
+
+def write_rules(conn, ident, watches):
+    values = [{"profile_id": ident, "watch_id": watch.id, "rule": watch.rule.model_dump_json()}
+              for watch in watches if watch.rule]
+    if values:
+        if not rules_available(conn):
+            raise HTTPException(503, "Technology watch rules are being prepared.")
+        conn.execute(watch_rules.rules.insert(), values)
+
+
+def stored_rules(conn, ident):
+    if not rules_available(conn):
+        return {}
+    table = watch_rules.rules
+    return dict(conn.execute(select(table.c.watch_id, table.c.rule).where(table.c.profile_id == ident)).all())
 
 
 def snapshot(store, ident, now):
@@ -122,6 +147,10 @@ def snapshot(store, ident, now):
                        "updated": row["updated"], "unread": row["read_at"] is None,
                        "sources": json.loads(row["evidence"])} for row in alerts]
         watch_rows = [{key: row[key] for key in ("id", "query", "topic", "checked")} for row in watches]
+        filters = stored_rules(conn, ident)
+        for row in watch_rows:
+            if row["id"] in filters:
+                row["rule"] = json.loads(filters[row["id"]])
         return {"available": True, "active": True, "revision": profile["revision"], "watches": watch_rows,
                 "alerts": alert_rows, "unread": sum(row["unread"] for row in alert_rows)}
 
@@ -169,6 +198,7 @@ def enable(body: WatchList, request: Request, response: Response):
         conn.execute(monitor_profiles.insert().values(id=ident, expires=now + INACTIVITY, revision=0))
         if body.watches:
             conn.execute(monitor_watches.insert(), [watch_values(ident, watch, now) for watch in body.watches])
+            write_rules(conn, ident, body.watches)
     set_cookie(response, request, token)
     response.headers["Cache-Control"] = "private, no-store"
     return snapshot(store, ident, now)
@@ -192,17 +222,23 @@ def save_watches(body: WatchUpdate, request: Request, response: Response):
             raise HTTPException(409, "The watches changed in another tab. Reload this list before editing.")
         prior = {row["id"]: row for row in conn.execute(select(monitor_watches).where(
             monitor_watches.c.profile_id == ident)).mappings()}
+        prior_rules = stored_rules(conn, ident)
         stable = {watch.id for watch in body.watches if watch.id in prior and
-                  (watch.query, watch.topic) == (prior[watch.id]["query"], prior[watch.id]["topic"])}
+                  (watch.query, watch.topic) == (prior[watch.id]["query"], prior[watch.id]["topic"]) and
+                  (watch.rule.model_dump_json() if watch.rule else None) == prior_rules.get(watch.id)}
         removed = set(prior) - stable
         if removed:
             conn.execute(delete(monitor_watches).where(monitor_watches.c.profile_id == ident,
                                                        monitor_watches.c.id.in_(removed)))
             conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
                                                      monitor_alerts.c.watch_id.in_(removed)))
+            if prior_rules:
+                table = watch_rules.rules
+                conn.execute(delete(table).where(table.c.profile_id == ident, table.c.watch_id.in_(removed)))
         additions = [watch_values(ident, watch, now) for watch in body.watches if watch.id not in stable]
         if additions:
             conn.execute(monitor_watches.insert(), additions)
+            write_rules(conn, ident, [watch for watch in body.watches if watch.id not in stable])
         conn.execute(update(monitor_profiles).where(monitor_profiles.c.id == ident).values(revision=body.revision + 1))
     response.headers["Cache-Control"] = "private, no-store"
     return snapshot(store, ident, now)
@@ -223,6 +259,10 @@ def mark_read(request: Request, response: Response):
 
 
 def delete_profiles(conn, ids):
+    from app import research_projects
+    research_projects.remove_profiles(conn, ids)
+    if rules_available(conn):
+        conn.execute(delete(watch_rules.rules).where(watch_rules.rules.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_watches).where(monitor_watches.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_profiles).where(monitor_profiles.c.id.in_(ids)))
@@ -302,8 +342,12 @@ def run_monitoring(store, *, now=None):
             delete_profiles(conn, expired)
         old_alerts = select(monitor_alerts.c.id).where(monitor_alerts.c.created < now - RETENTION).limit(400)
         conn.execute(delete(monitor_alerts).where(monitor_alerts.c.id.in_(old_alerts)))
-        due = conn.execute(select(monitor_watches).join(monitor_profiles,
-            monitor_profiles.c.id == monitor_watches.c.profile_id).where(monitor_profiles.c.expires > now,
+        scope = select(monitor_watches).join(monitor_profiles, monitor_profiles.c.id == monitor_watches.c.profile_id)
+        if rules_available(conn):
+            table = watch_rules.rules
+            scope = scope.outerjoin(table, (table.c.profile_id == monitor_watches.c.profile_id) &
+                (table.c.watch_id == monitor_watches.c.id)).add_columns(table.c.rule)
+        due = conn.execute(scope.where(monitor_profiles.c.expires > now,
             monitor_watches.c.next_check <= now).order_by(monitor_watches.c.next_check,
             monitor_watches.c.profile_id, monitor_watches.c.id).limit(48)).mappings().all()
     known, checked, created = {}, 0, 0
@@ -311,9 +355,11 @@ def run_monitoring(store, *, now=None):
     for row in due:
         if time.monotonic() >= deadline:
             break
-        key = (search_terms(row["query"]), row["topic"])
+        rule_json = row.get("rule")
+        key = (search_terms(row["query"]), row["topic"], rule_json)
         if key not in known:
-            known[key], = watch_matches(store, [Watch(id=row["id"], query=row["query"], topic=row["topic"])])
+            rule = watch_rules.Rule.model_validate_json(rule_json) if rule_json else None
+            known[key], = watch_matches(store, [Watch(id=row["id"], query=row["query"], topic=row["topic"], rule=rule)])
         created += persist_matches(store, row, known[key], now)
         checked += 1
     return {"monitoring_status": "checked", "watches_checked": checked, "alerts_created": created}

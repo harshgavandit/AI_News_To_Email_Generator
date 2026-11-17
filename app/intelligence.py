@@ -88,8 +88,9 @@ def deduplicate(articles):
 
 
 def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors=(), exclude_ids=(), query="", limit=24,
-              hours=720, related_subjects=()):
+              hours=720, related_subjects=(), liked_subjects=(), muted_topics=(), companies=()):
     from app.coverage import public_article
+    from app.reader_signals import company_matches
     now = datetime.now(UTC)
     earliest = now - timedelta(hours=hours)
     excluded = set(exclude_ids)
@@ -98,7 +99,7 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
     candidates = []
     for raw in articles:
         article = public_article(raw)
-        if article["id"] in excluded:
+        if article["id"] in excluded or article["topic"] in muted_topics:
             continue
         try:
             published = datetime.fromisoformat(article["published_at"])
@@ -126,6 +127,13 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
         if related:
             score += min(3, 1 + len(related))
             reasons.append("Related to a saved story · " + related[0])
+        related_likes = [SUBJECTS[key] for key in liked_subjects if key in article["subjects"]]
+        if related_likes:
+            score += min(6, 3 + len(related_likes))
+            reasons.insert(0, "More like a story you selected · " + related_likes[0])
+        if followed := company_matches(article, companies):
+            score += 8
+            reasons.insert(0, "Mentions " + followed[0] + ", a company you follow")
         if article["source"] in preferred_sources or article.get("source_id") in preferred_sources:
             score += 4
             reasons.append("From a source you follow")
@@ -150,7 +158,7 @@ def recommend(articles, *, topics=(), preferred_sources=(), subjects=(), authors
         ranked.append(article)
         counts[article["source"]] += 1
     return {"articles": ranked, "total_candidates": len(candidates), "updated_at": now.isoformat(),
-            "personalized": bool(topics or preferred_sources or subjects or authors or related_subjects),
+            "personalized": bool(topics or preferred_sources or subjects or authors or related_subjects or liked_subjects or muted_topics or companies),
             "basis": "Selected interests, follows and optional saved-story topics, balanced with freshness and source diversity."}
 
 

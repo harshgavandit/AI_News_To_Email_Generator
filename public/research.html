@@ -25,7 +25,8 @@
         <nav class="site-nav research-nav" aria-label="Main navigation">
           <a href="/#reading-room">Reading Room</a>
           <a href="/research.html" aria-current="page">Research Desk</a>
-          <a href="/sources.html">Sources</a>
+          <a href="/technology.html">Technologies</a>
+          <a href="/projects.html">Projects</a>
         </nav>
         <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
       </div>
@@ -50,7 +51,7 @@
                 <select id="research-topic"><option value="all">All topics</option></select>
               </label>
               <label>Task
-                <select id="research-mode"><option value="search">Find sources</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="brief">Build a topic brief</option></select>
+                <select id="research-mode"><option value="search">Find sources</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="global_compare">Compare across languages</option><option value="brief">Build a topic brief</option></select>
               </label>
               <button class="button primary" id="research-submit" type="submit">Find sources</button>
             </div>
@@ -75,6 +76,8 @@
               <select id="radar-role"><option value="general">Technology reader</option><option value="engineer">Software engineer</option><option value="researcher">Researcher</option><option value="founder">Founder &amp; product leader</option><option value="security">Security practitioner</option></select>
               <label for="radar-interests">Interests or technologies</label>
               <input id="radar-interests" maxlength="360" placeholder="e.g. AI agents, Kubernetes, NVIDIA" />
+              <label for="radar-stack">Packages, projects, or cloud services to follow</label>
+              <input id="radar-stack" maxlength="360" placeholder="e.g. React, Google Cloud | us-central1" />
               <div class="radar-controls">
                 <label>Window<select id="radar-hours"><option value="24">24 hours</option><option value="168" selected>7 days</option><option value="720">30 days</option></select></label>
                 <label>Brief size<select id="radar-length"><option value="3">3 stories</option><option value="5" selected>5 stories</option><option value="10">10 stories</option></select></label>
@@ -85,18 +88,31 @@
             </form>
             <p id="radar-status" class="research-status" role="status" aria-live="polite"></p>
             <div id="radar-results"></div>
+            <details class="radar-event">
+              <summary>Check a package version for advisories</summary>
+              <form id="package-check-form">
+                <label>Ecosystem<select name="ecosystem"><option>npm</option><option>PyPI</option><option>Go</option><option>crates.io</option><option>Maven</option><option>NuGet</option><option>RubyGems</option></select></label>
+                <label>Package name <input required name="name" maxlength="160" placeholder="e.g. express" /></label>
+                <label>Installed version <input required name="version" maxlength="80" placeholder="e.g. 4.18.2" /></label>
+                <p class="research-meta">Queries OSV with the package name and version you enter.</p>
+                <button type="submit" class="button secondary">Check advisories</button>
+              </form>
+              <p id="package-check-status" role="status"></p>
+              <div id="package-check-results"></div>
+            </details>
           </section>
           <section class="research-panel" aria-labelledby="developments-title">
             <p class="research-label">Across publishers</p>
             <h2 id="developments-title">Developments</h2>
             <p>Related reporting is grouped by evidence and shown with a publication timeline.</p>
+            <button type="button" id="show-followed-developments" class="text-button" aria-pressed="false">Show followed stories</button>
             <ol id="development-list" class="development-list" aria-label="Recent developments"></ol>
             <p id="development-status" class="research-status" role="status"></p>
           </section>
           <section class="research-panel" aria-labelledby="watch-title">
             <p class="research-label">Monitoring</p>
             <h2 id="watch-title">Topic alerts</h2>
-            <p id="watch-description">Watch up to six keyword queries in this browser.</p>
+            <p id="watch-description">Watch up to six keyword queries or technology rules in this browser.</p>
             <div class="monitor-consent" id="monitor-opt-in" hidden>
               <p>Background monitoring stores your watch terms and checks the archive when this page is closed. Terms stay for up to 30 days after your last visit.</p>
               <button id="monitor-enable" type="button" class="text-button">Enable background monitoring</button>
@@ -108,6 +124,23 @@
               <label for="watch-topic" class="sr-only">Alert topic</label>
               <select id="watch-topic"><option value="all">All topics</option></select>
             </form>
+            <details id="rule-builder" class="radar-event">
+              <summary>Create a technology watch rule</summary>
+              <form id="watch-rule-draft">
+                <label>Describe the update you want <input name="intent" required minlength="8" maxlength="320" placeholder="e.g. Kubernetes breaking changes" /></label>
+                <button class="button secondary" type="submit">Draft with AI</button>
+                <p class="research-meta">The text you enter may be sent to OpenAI. Review the proposed filters before saving.</p>
+              </form>
+              <form id="watch-rule-form">
+                <label>Technology <select name="technology" required></select></label>
+                <label>Trigger <select name="event" required></select></label>
+                <label>Version mentioned in source <input name="version" maxlength="60" placeholder="e.g. 1.34.0" /></label>
+                <label>Region mentioned in source <input name="region" maxlength="60" placeholder="e.g. us-central1" /></label>
+                <div class="radar-actions"><button class="button secondary" id="watch-rule-preview" type="button">Preview recent matches</button><button class="button primary" type="submit">Save reviewed rule</button></div>
+              </form>
+              <p id="watch-rule-status" class="research-status" role="status"></p>
+              <div id="watch-rule-matches"></div>
+            </details>
             <p id="watch-status" class="research-status" role="status"></p>
             <div id="watch-list"></div>
             <div id="monitor-results" class="monitor-results" hidden>

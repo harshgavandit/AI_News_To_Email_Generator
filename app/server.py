@@ -53,11 +53,13 @@ from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
 from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, subjects_for
+from app.reader_signals import ReaderFeedback
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
-from app import event_intelligence
+from app import research_projects
+from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
@@ -68,6 +70,8 @@ app.include_router(syndication_router)
 app.include_router(discovery_router)
 app.include_router(monitoring.router)
 app.include_router(insight_router)
+app.include_router(research_projects.router)
+app.include_router(research_projects.public_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -368,6 +372,7 @@ class RecommendationRequest(BaseModel):
     q: str = Field(default="", max_length=150)
     limit: int = Field(default=24, ge=1, le=50)
     scope: RecommendationScope = Field(default_factory=RecommendationScope)
+    feedback: ReaderFeedback = Field(default_factory=ReaderFeedback)
 
     @model_validator(mode="after")
     def supported_preferences(self):
@@ -384,7 +389,8 @@ class ResearchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     q: str = Field(default="", max_length=320)
     article_id: str = Field(default="", max_length=40, pattern=r"^[a-zA-Z0-9_-]*$")
-    mode: Literal["search", "analyze", "compare", "brief"] = "search"
+    mode: Literal["search", "analyze", "compare", "brief", "global_compare"] = "search"
+    language: Literal[tuple(research_service.OUTPUT_LANGUAGES)] = "en"
     scope: RecommendationScope = Field(default_factory=RecommendationScope)
 
     @model_validator(mode="after")
@@ -416,7 +422,7 @@ def archive_research(body: ResearchRequest, request: Request):
         question = anchor["title"][:320]
         # Article analysis uses current related coverage even for an older archive link.
         scope = RecommendationScope(hours=TimeWindow.month).model_dump()
-    return research_service.research(store, question=question, mode=body.mode, filters=scope, anchor=anchor)
+    return research_service.research(store, question=question, mode=body.mode, filters=scope, anchor=anchor, language=body.language)
 
 
 @app.get("/api/intelligence/daily")
@@ -482,15 +488,20 @@ def recommendations(body: RecommendationRequest, request: Request, response: Res
     response.headers["Cache-Control"] = "no-store"
     query = search_text(body.q)
     related_subjects = []
+    liked_subjects = []
     if store and body.saved_ids:
         counts = Counter(subject for row in store.pinned_articles(body.saved_ids) for subject in subjects_for(row))
         related_subjects = [subject for subject, _ in counts.most_common(6)]
-    sampling = body.model_copy(update={"subjects": list(dict.fromkeys([*body.subjects, *related_subjects])),
-                                       "exclude_ids": [*body.exclude_ids, *body.saved_ids]})
+    if store and body.feedback.liked_ids:
+        counts = Counter(subject for row in store.pinned_articles(body.feedback.liked_ids) for subject in subjects_for(row))
+        liked_subjects = [subject for subject, _ in counts.most_common(6)]
+    sampling = body.model_copy(update={"subjects": list(dict.fromkeys([*body.subjects, *related_subjects, *liked_subjects])),
+                                       "exclude_ids": [*body.exclude_ids, *body.saved_ids, *body.feedback.liked_ids]})
     candidates = intelligence_candidates(store, body.scope.hours, scope=body.scope, query=query, interests=sampling)
     ranked = recommend(candidates, topics=body.topics, subjects=body.subjects, preferred_sources=body.sources,
                        authors=body.authors, exclude_ids=sampling.exclude_ids, query=query, limit=body.limit,
-                       hours=body.scope.hours, related_subjects=related_subjects)
+                       hours=body.scope.hours, related_subjects=related_subjects, liked_subjects=liked_subjects,
+                       muted_topics=body.feedback.muted_topics, companies=body.feedback.companies)
     if store and ranked["articles"]:
         enriched = store.with_reading_access(ranked["articles"])
         for article in enriched:
@@ -682,6 +693,10 @@ def run_intelligence_check(store):
         progress = research_service.index_archive(store)
         event_progress = event_intelligence.sync(store)
         brief = research_service.refresh_research_brief(store)
+        try:
+            ai_insights.prepare_recent_changes(store)
+        except SQLAlchemyError as error:
+            logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
         return {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief}
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)

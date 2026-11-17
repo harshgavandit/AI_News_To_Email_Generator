@@ -74,6 +74,11 @@ def markdown_link(value):
     return "" if url == "#" else "<" + url.replace("<", "%3C").replace(">", "%3E") + ">"
 
 
+def change_label(item):
+    notice = {"correction": "Publisher correction", "retraction": "Publisher retraction"}.get(item.get("editorial_notice"))
+    return " · ".join(part for part in (notice, item["title"], item["publisher"]) if part)
+
+
 def digest_markdown(digest):
     intro = digest["introduction"]
     lines = [f"# {NAME}", markdown_text(intro.get("greeting")), markdown_text(intro.get("introduction"))]
@@ -91,6 +96,10 @@ def digest_markdown(digest):
                 lines.append(f"**Why it matters.** {markdown_text(impact)}")
         if source := markdown_link(article.get("url")):
             lines.append(f"Source: {source}")
+        if changes := article.get("change_sources"):
+            lines.append("**New since your last brief**\n" + "\n".join(
+                f"- {markdown_text(change_label(item))} {markdown_link(item['url'])}\n  {markdown_text(item.get('excerpt'))}"
+                for item in changes))
 
     if quick_hits := digest.get("quick_hits"):
         lines.append("### Quick hits")
@@ -316,6 +325,14 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None, *, schedul
                 <strong>{heading}.</strong> {escape(insight)}
               </div>
             """
+        if changes := article.get("change_sources"):
+            change_items = []
+            for item in changes:
+                href = escape(safe_href(item["url"]), quote=True)
+                label = escape(change_label(item))
+                excerpt = escape(item.get("excerpt") or "")
+                change_items.append(f'<li><a class="email-link" href="{href}">{label}</a><br>{excerpt}</li>')
+            card_html += '<div class="email-text"><strong>New since your last brief</strong><ul>' + "".join(change_items) + '</ul></div>'
         if url != "#":
             card_html += f"""
               <div>

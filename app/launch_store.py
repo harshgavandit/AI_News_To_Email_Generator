@@ -200,7 +200,7 @@ def install_search_index(conn):
 class Store:
     def __init__(self, url):
         # Register additive intelligence tables before creating a local archive.
-        from app import event_intelligence, radar_store  # noqa: F401
+        from app import event_intelligence, radar_store, research_projects, watch_rules  # noqa: F401
         if url.startswith(("postgres://", "postgresql://")):
             url = "postgresql+psycopg://" + url.split("://", 1)[1]
         self.engine = create_engine(url, pool_pre_ping=True, **(
@@ -540,6 +540,10 @@ class Store:
                 subject_match = or_(*(articles.c.subject_keys.contains(f"|{key}|", autoescape=True)
                                       for key in interests.subjects))
                 boosts.append(case((subject_match, 16), else_=0))
+            feedback = getattr(interests, "feedback", None)
+            if feedback and feedback.companies:
+                company_match = or_(*(articles.c.title.icontains(name, autoescape=True) for name in feedback.companies))
+                boosts.append(case((company_match, 25), else_=0))
             if boosts:
                 order.insert(0, sum(boosts).desc())
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
@@ -549,6 +553,8 @@ class Store:
                                 language=language, coverage=coverage, subject=subject)
         if interests and interests.exclude_ids:
             candidates = candidates.where(articles.c.id.not_in(interests.exclude_ids))
+        if interests and (feedback := getattr(interests, "feedback", None)) and feedback.muted_topics:
+            candidates = candidates.where(articles.c.topic.not_in(feedback.muted_topics))
         ranked = candidates.add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
@@ -650,6 +656,12 @@ class Store:
         with self.engine.begin() as conn:
             rows = conn.execute(candidates).mappings().all()
             pending = [(row["mailbox"], *make_message(row)) for row in rows]
+            advance = update(subscriptions).where(subscriptions.c.mailbox == bindparam("recipient_key")).values(
+                next_run=bindparam("next_delivery"), claimed=0)
+            skipped = [{"recipient_key": mailbox, "next_delivery": next_run}
+                       for mailbox, message, next_run in pending if message is None]
+            if skipped:
+                conn.execute(advance, skipped)
             pending = [item for item in pending if item[1] is not None]
             if not pending:
                 return 0
@@ -670,8 +682,6 @@ class Store:
                 index_elements=[limits.c.scope, limits.c.bucket],
                 set_={"used": limits.c.used + 1, "touched": now}, where=limits.c.used < 3
             ).returning(limits.c.scope)))
-            advance = update(subscriptions).where(subscriptions.c.mailbox == bindparam("recipient_key")).values(
-                next_run=bindparam("next_delivery"), claimed=0)
             conn.execute(advance, [{"recipient_key": mailbox, "next_delivery": next_run}
                                    for mailbox, _, next_run in pending])
             for mailbox, message, _ in pending:

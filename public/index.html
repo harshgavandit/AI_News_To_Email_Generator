@@ -74,6 +74,8 @@
         </nav>
         <div class="sidebar-section">
           <a class="sidebar-secondary" href="/research.html">Research Desk ↗</a>
+          <a class="sidebar-secondary" href="/technology.html">Technology pages ↗</a>
+          <a class="sidebar-secondary" href="/projects.html">Research projects ↗</a>
           <h2>Explore topics</h2>
           <div id="sidebar-topics" class="workspace-links" role="group" aria-label="Explore topics"></div>
         </div>
@@ -162,6 +164,17 @@
                 <div class="preference-actions"><button class="button primary" type="submit">Update recommendations</button><button class="text-button" type="button" data-clear-preferences>Reset interests</button></div>
                 <p class="status" role="status" aria-live="polite">Your interests stay in this browser. Selected preferences are sent to rank stories when you open For You.</p>
               </form>
+            </details>
+            <details>
+              <summary>Manage recommendation feedback</summary>
+              <form id="company-follow-form">
+                <label for="company-follow-name">Company name</label>
+                <input id="company-follow-name" minlength="2" maxlength="60" required />
+                <button type="submit" class="button secondary">Follow company</button>
+              </form>
+              <p class="small">To use this feedback in morning emails, save your Tech Radar to your verified inbox. <a href="/research.html#radar-title">Open Tech Radar</a></p>
+              <div id="recommendation-feedback-list" class="preference-actions" aria-label="Followed companies and muted topics"></div>
+              <p id="recommendation-feedback-status" class="status" role="status"></p>
             </details>
           </section>
           <section id="briefing-intro" class="briefing-intro" aria-label="About this briefing" hidden>

@@ -4,15 +4,72 @@ import secrets
 import time
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request, Response
+import httpx
+from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import ai_insights, event_intelligence, monitoring, public_mail, radar_store, research
+from app import ai_insights, event_intelligence, monitoring, public_mail, radar_store, research, stack_intelligence, technology, watch_rules
 from app.coverage import TOPICS, public_article
+from app.provenance import source_history
 from app.launch_store import get_store
 from app.research import evidence_record
 
 router = APIRouter()
+
+
+class TechnologyQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    hours: Literal[168, 720, 2160] = 720
+    question: str = Field(default="", max_length=320)
+    language: Literal[tuple(research.OUTPUT_LANGUAGES)] = "en"
+
+
+@router.get("/api/intelligence/technologies")
+def technology_catalog():
+    return {"technologies": technology.catalog(), "watch_events": watch_rules.EVENT_LABELS}
+
+
+@router.post("/api/intelligence/watch-draft")
+def draft_watch(body: watch_rules.DraftInput, request: Request):
+    from app.server import admit_expensive
+    monitoring.protect_write(request)
+    store = archive()
+    admit_expensive(store, request, "technology-watch-draft", 6, 600)
+    if not research.ai_enabled():
+        return {"rule": None, "notice": "AI drafting is unavailable. You can still set the filters directly."}
+    if not research.reserve(store, "answers", 180, 1500):
+        return {"rule": None, "notice": "The daily AI limit was reached. You can still set the filters directly."}
+    try:
+        rule = watch_rules.draft(body.intent)
+    except Exception:
+        return {"rule": None, "notice": "A draft could not be prepared. You can still set the filters directly."}
+    return {"rule": rule, "notice": "Review the filters before saving." if rule else "The request could not be represented as one rule. Choose the filters directly."}
+
+
+@router.get("/api/intelligence/technologies/{ident}")
+def technology_page(ident: Literal[tuple(technology.TECHNOLOGIES)], hours: int = 720):
+    if hours not in (168, 720, 2160):
+        raise HTTPException(422, "Choose 7, 30, or 90 days.")
+    return {"records": technology.eligible_rows(archive(), ident, hours), "hours": hours}
+
+
+@router.post("/api/intelligence/technologies/{ident}/ask")
+def ask_technology(ident: Literal[tuple(technology.TECHNOLOGIES)], body: TechnologyQuestion, request: Request):
+    from app.server import admit_expensive
+    store = archive()
+    admit_expensive(store, request, "technology-analysis", 8, 600)
+    return technology.edition(store, ident, body.hours, body.question, body.language)
+
+
+@router.get("/api/intelligence/source-history/{article_id}")
+def article_history(article_id: Annotated[str, Path(pattern=r"^[a-zA-Z0-9_-]{1,40}$")], request: Request):
+    from app.server import admit_expensive
+    store = archive()
+    admit_expensive(store, request, "source-history", 20, 600)
+    result = source_history(store, article_id)
+    if not result:
+        raise HTTPException(404, "This source is unavailable in the retained archive.")
+    return result
 
 
 class ConversationTurn(BaseModel):
@@ -65,19 +122,23 @@ def options():
 
 @router.get("/api/intelligence/events")
 def developments(response: Response, hours: Annotated[int, Query(ge=24, le=720)] = 168,
-                 topic: str = "all", limit: Annotated[int, Query(ge=1, le=80)] = 24):
+                 topic: str = "all", limit: Annotated[int, Query(ge=1, le=80)] = 24,
+                 followed: Annotated[str, Query(max_length=1319)] = ""):
     if topic not in ("all", *TOPICS):
         raise HTTPException(422, "Choose a supported topic.")
     store = archive()
-    response.headers["Cache-Control"] = "public, max-age=30"
-    return {"events": event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic),
+    event_ids = followed.split(",") if followed else []
+    if any(not re.fullmatch(r"[a-f0-9]{32}", ident) for ident in event_ids):
+        raise HTTPException(422, "Choose valid developments.")
+    response.headers["Cache-Control"] = "private, no-store" if event_ids else "public, max-age=30"
+    return {"events": event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic, event_ids=event_ids),
             "status": "available" if event_intelligence.ready(store) else "warming",
             "notice": "Related coverage is grouped by source evidence. Grouping does not establish agreement."}
 
 
 @router.get("/api/intelligence/events/{event_id}")
-def development(event_id: str, response: Response):
-    result = event_intelligence.timeline(archive(), event_id)
+def development(event_id: str, response: Response, since: Annotated[int | None, Query(ge=1, le=2147483647)] = None):
+    result = event_intelligence.timeline(archive(), event_id, since=since)
     if not result:
         raise HTTPException(404, "This development is no longer in the retained archive.")
     response.headers["Cache-Control"] = "no-store"
@@ -94,6 +155,12 @@ def explanation(body: ai_insights.ExplainRequest, request: Request, response: Re
         raise HTTPException(404, "This article is no longer available.")
     evidence = [evidence_record(public_article(article))]
     response.headers["Cache-Control"] = "private, no-store"
+    if body.format == "technical_brief":
+        format_id = ai_insights.technical_format(evidence[0].get("coverage"))
+        if not format_id:
+            raise HTTPException(422, "Technical briefs are available for releases and research publications.")
+        return {"answer": ai_insights.technical_brief(store, evidence, format_id, body.language),
+                "evidence": evidence, "sections": ai_insights.TECHNICAL_FIELDS[format_id]}
     return {"answer": ai_insights.explain(store, evidence, depth=body.depth, language=body.language),
             "evidence": evidence}
 
@@ -111,6 +178,20 @@ def catch_up(body: ai_insights.CatchupRequest, request: Request, response: Respo
                              "source_basis": result["source_notice"]}
     response.headers["Cache-Control"] = "private, no-store"
     return result
+
+
+@router.post("/api/intelligence/package-check")
+def package_check(body: stack_intelligence.PackageCheck, request: Request, response: Response):
+    from app.server import admit_expensive
+    store = archive()
+    admit_expensive(store, request, "package-check", 8, 600)
+    try:
+        result = stack_intelligence.advisories(store, body)
+    except (httpx.HTTPError, ValueError, KeyError, TypeError) as error:
+        raise HTTPException(502, "The advisory database could not complete this check.") from error
+    response.headers["Cache-Control"] = "private, no-store"
+    return {**result, "answer": ai_insights.explain(store, result["evidence"], depth="developer",
+        prompt=ai_insights.PROMPT + " Explain the published issue and only the mitigation explicitly described in the advisory.")}
 
 
 @router.post("/api/intelligence/converse")

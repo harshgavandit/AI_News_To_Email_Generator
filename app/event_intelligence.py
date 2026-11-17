@@ -6,6 +6,7 @@ never fetch a URL or run a model. The existing intelligence worker maintains it.
 from datetime import UTC, datetime
 import hashlib
 import json
+import re
 import time
 
 from sqlalchemy import Column, Float, Index, Integer, String, Table, Text, delete, inspect, select, update
@@ -33,8 +34,13 @@ event_updates = Table("brief_event_updates", schema,
     Column("published_at", String(40), nullable=False), Column("title", Text, nullable=False),
     Column("excerpt", Text, nullable=False), Column("reason", String(32), nullable=False))
 Index("brief_event_updates_timeline", event_updates.c.event_id, event_updates.c.observed)
+event_revisions = Table("brief_event_update_revisions", schema,
+    Column("update_id", String(64), primary_key=True), Column("event_id", String(32), nullable=False),
+    Column("revision", Integer, nullable=False))
+Index("brief_event_revision_lookup", event_revisions.c.event_id, event_revisions.c.revision)
 TABLES = (events, event_items, event_keys, event_updates)
 STOPS = GENERIC_TERMS | frozenset("new announces announced launches launched unveils latest says introduces introducing report reports".split())
+UPDATE_TERMS = re.compile(r"\b(?:correct(?:ed|ion)|retract(?:ed|ion)|restored|resolved|mitigated|expanded)\b", re.I)
 
 
 def ready(store):
@@ -45,6 +51,26 @@ def ready(store):
 
 def fingerprint(row):
     return hashlib.sha256(json.dumps([row["title"], row.get("description", "")], ensure_ascii=False).encode()).hexdigest()
+
+
+def revisions_ready(store):
+    if not getattr(store, "_event_revisions_ready", False):
+        store._event_revisions_ready = inspect(store.engine).has_table(event_revisions.name)
+    return store._event_revisions_ready
+
+
+def is_repeat(row, previous):
+    matches = [other for other in previous if coverage_match(headline(row), headline(other))]
+    if not matches:
+        return False
+    # Near-identical headlines can accompany a substantive publisher update.
+    def changes(article):
+        text = f"{article['title']} {article.get('description', '')}"
+        return set(re.findall(r"\b\d+(?:[.,]\d+)*\s*(?:%|million|billion|hours?|regions?|users?|devices?)", text, re.I)) | {
+            word.casefold() for word in UPDATE_TERMS.findall(text)}
+
+    previous_changes = set().union(*(changes(other) for other in matches))
+    return not (changes(row) - previous_changes)
 
 
 def keys_for(row):
@@ -75,6 +101,7 @@ def observe(store, row, *, now=None, semantic_ids=()):
     now = now or time.time()
     stamp = fingerprint(row)
     keys = keys_for(row)
+    track_revisions = revisions_ready(store)
     with store.engine.begin() as conn:
         old = conn.execute(select(event_items).where(event_items.c.article_id == row["id"])).mappings().first()
         if old and old["fingerprint"] == stamp:
@@ -100,6 +127,7 @@ def observe(store, row, *, now=None, semantic_ids=()):
                     break
         new_event = not event_id
         event_id = event_id or hashlib.sha256(("event:" + row["id"]).encode()).hexdigest()[:32]
+        significant = True
         if new_event:
             stmt = store.insert(events).values(id=event_id, anchor_id=row["id"], title=row["title"],
                 topic=row.get("topic") or "industry", revision=1, created=now, updated=now)
@@ -107,9 +135,10 @@ def observe(store, row, *, now=None, semantic_ids=()):
         else:
             previous = conn.execute(select(articles).join(event_items, event_items.c.article_id == articles.c.id)
                 .where(event_items.c.event_id == event_id, articles.c.id != row["id"]).limit(20)).mappings().all()
-            repeats = any(coverage_match(headline(row), headline(other)) for other in previous)
+            repeats = is_repeat(row, previous)
             values = {"updated": now}
-            if old or not repeats:
+            significant = bool(old or not repeats)
+            if significant:
                 values["revision"] = events.c.revision + 1
             conn.execute(update(events).where(events.c.id == event_id).values(**values))
         stmt = store.insert(event_items).values(article_id=row["id"], event_id=event_id, fingerprint=stamp, observed=now)
@@ -117,10 +146,15 @@ def observe(store, row, *, now=None, semantic_ids=()):
             set_={"fingerprint": stamp, "observed": now}))
         for key in keys:
             conn.execute(store.insert(event_keys).values(key=key, event_id=event_id).on_conflict_do_nothing())
-        conn.execute(store.insert(event_updates).values(id=hashlib.sha256((row["id"] + stamp).encode()).hexdigest(),
+        update_id = hashlib.sha256(f"{row['id']}:{stamp}:{now}".encode()).hexdigest()
+        conn.execute(store.insert(event_updates).values(id=update_id,
             event_id=event_id, article_id=row["id"], observed=now, published_at=row["published_at"],
             title=row["title"], excerpt=public_article(row)["cleanSummary"],
             reason="source_revision" if old else "first_report" if new_event else "additional_reporting").on_conflict_do_nothing())
+        if significant and track_revisions:
+            revision = conn.execute(select(events.c.revision).where(events.c.id == event_id)).scalar_one()
+            conn.execute(store.insert(event_revisions).values(update_id=update_id, event_id=event_id,
+                revision=revision).on_conflict_do_nothing())
     return event_id, True
 
 
@@ -152,11 +186,12 @@ def version_for(rows):
     return hashlib.sha256(json.dumps(sorted((row["id"], fingerprint(row)) for row in rows)).encode()).hexdigest()[:32]
 
 
-def catalog(store, *, hours=168, limit=80, topic="all"):
+def catalog(store, *, hours=168, limit=80, topic="all", event_ids=()):
     if not ready(store):
         return []
     with store.engine.connect() as conn:
-        chosen = conn.execute(select(events).where(events.c.updated >= time.time() - hours * 3600,
+        scope = events.c.id.in_(event_ids) if event_ids else events.c.updated >= time.time() - hours * 3600
+        chosen = conn.execute(select(events).where(scope,
             *([events.c.topic == topic] if topic != "all" else [])).order_by(events.c.updated.desc()).limit(limit)).mappings().all()
         ids = [row["id"] for row in chosen]
         if not ids:
@@ -184,9 +219,10 @@ def catalog(store, *, hours=168, limit=80, topic="all"):
     return result
 
 
-def timeline(store, ident):
+def timeline(store, ident, since=None):
     if not ready(store):
         return None
+    track_revisions = revisions_ready(store)
     with store.engine.connect() as conn:
         event = conn.execute(select(events).where(events.c.id == ident)).mappings().first()
         if not event:
@@ -196,9 +232,17 @@ def timeline(store, ident):
         updates = conn.execute(select(event_updates).where(event_updates.c.event_id == ident,
             event_updates.c.article_id.in_(retained)).order_by(event_updates.c.observed.desc()).limit(40)).mappings()
         entries = [{**dict(row), "source": retained[row["article_id"]]} for row in updates]
+        changes = []
+        if since is not None and track_revisions:
+            revisions = conn.execute(select(event_updates, event_revisions.c.revision).join(event_revisions,
+                event_revisions.c.update_id == event_updates.c.id).where(event_revisions.c.event_id == ident,
+                event_revisions.c.revision > since, event_updates.c.article_id.in_(retained))
+                .order_by(event_revisions.c.revision.desc(), event_updates.c.observed.desc()).limit(5)).mappings()
+            changes = [{**dict(row), "source": retained[row["article_id"]]} for row in revisions]
     if not retained:
         return None
-    return {"id": ident, "title": event["title"], "entries": entries,
+    return {"id": ident, "title": event["title"], "entries": entries, "changes": changes,
+            "revision": str(event["revision"]),
             "notice": "Publication and observed revision history. Additional reporting may repeat existing facts."}
 
 
@@ -210,3 +254,5 @@ def prune(conn, now):
     retained_articles = select(articles.c.id)
     conn.execute(delete(event_items).where(~event_items.c.article_id.in_(retained_articles)))
     conn.execute(delete(event_updates).where(~event_updates.c.article_id.in_(retained_articles)))
+    if inspect(conn).has_table(event_revisions.name):
+        conn.execute(delete(event_revisions).where(~event_revisions.c.update_id.in_(select(event_updates.c.id))))

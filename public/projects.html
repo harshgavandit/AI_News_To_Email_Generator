@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Research Projects · Informa AI</title>
+    <link rel="icon" href="/informa-ai-icon.png" />
+    <script src="/theme.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/research.css" />
+    <link rel="stylesheet" href="/intelligence-pages.css" />
+    <script type="module" src="/research-projects.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#project-title">Skip to projects</a>
+    <header class="site-header"><div class="topbar wrap">
+      <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+      <nav class="site-nav research-nav" aria-label="Main navigation"><a href="/research.html">Research Desk</a><a href="/technology.html">Technologies</a><a href="/projects.html" aria-current="page">Projects</a></nav>
+      <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
+    </div></header>
+    <main class="wrap research-main intelligence-page">
+      <section class="research-header">
+        <p class="research-label">Informa Intelligence</p><h1 id="project-title">Research projects</h1>
+        <p id="project-intro">Keep a question open, collect sources, and prepare a brief your team can verify.</p>
+      </section>
+      <p id="project-status" class="research-status" role="status">Loading research projects…</p>
+      <section id="project-enable" class="research-panel" hidden>
+        <h2>Set up this browser</h2><p>Projects use the same private browser session as background monitoring. The session expires after 30 days of inactivity.</p>
+        <button id="project-enable-button" class="button primary" type="button">Enable background monitoring</button>
+      </section>
+      <section id="project-invitation" class="research-panel" hidden>
+        <h2>Join a shared project</h2><p>Accept the invitation to collect sources and prepare briefs with your team.</p>
+        <button id="project-join" class="button primary" type="button">Accept invitation</button>
+      </section>
+      <div id="project-workspace" class="technology-layout" hidden>
+        <section class="research-panel" id="project-detail" aria-live="polite">
+          <h2>Open a project</h2><p>Choose a project or start with a question you want to track.</p>
+        </section>
+        <aside class="research-rail" aria-label="Project directory">
+          <section class="research-panel"><h2>Your projects</h2><nav class="intelligence-actions" id="project-list" aria-label="Your projects"></nav></section>
+          <section class="research-panel">
+            <h2>Start a project</h2>
+            <form id="project-create">
+              <label>Research question <textarea name="question" required minlength="5" maxlength="240" rows="2" placeholder="e.g. How are Kubernetes release changes affecting operators?"></textarea></label>
+              <label>Archive keywords <input name="keywords" required minlength="2" maxlength="100" placeholder="e.g. Kubernetes networking" /></label>
+              <label>Technology <select name="technology"><option value="">Any technology</option></select></label>
+              <button type="submit" class="button primary">Create project</button>
+            </form>
+          </section>
+        </aside>
+      </div>
+      <section class="research-panel" id="shared-brief" hidden></section>
+    </main>
+    <footer class="site-footer wrap"><a class="footer-brand" href="/">Informa AI</a><a href="/privacy.html">Privacy &amp; controls</a></footer>
+  </body>
+</html>

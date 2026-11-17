@@ -3,6 +3,7 @@ import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLang
 import { initSavedViews } from "./saved-views.js";
 import { createPreferences } from "./preferences.js";
 import { readingContent } from "./reading-content.js";
+import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -718,6 +719,16 @@ function renderStories() {
     original.className = "card-original-link";
     actions.append(original);
     actions.append(dossierBtn, save, pin);
+    if (isForYou) {
+      const more = node("button", "pin-button", "More like this");
+      const mute = node("button", "pin-button", "Mute topic");
+      more.type = mute.type = "button";
+      more.setAttribute("aria-label", `More like this: ${article.title}`);
+      mute.setAttribute("aria-label", `Mute topic: ${article.topic_label || article.topic}`);
+      more.addEventListener("click", () => changeRecommendationFeedback("liked_ids", String(article.id), "We’ll show more stories on related subjects."));
+      mute.addEventListener("click", () => changeRecommendationFeedback("muted_topics", article.topic, "Topic muted in For You."));
+      actions.append(more, mute);
+    }
     bottom.append(actions);
     main.append(top, heading);
     card.append(main);
@@ -1054,6 +1065,45 @@ $("hide-read").addEventListener("click", () => {
 });
 try { $("hide-read").setAttribute("aria-pressed", String(localStorage.getItem("informa-hide-read") === "true")); } catch {}
 
+function renderRecommendationFeedback() {
+  const feedback = readFeedback();
+  const list = $("recommendation-feedback-list");
+  list.replaceChildren();
+  for (const [field, prefix, values] of [["companies", "Unfollow", feedback.companies], ["muted_topics", "Unmute", feedback.muted_topics]]) {
+    for (const value of values) {
+      const label = field === "muted_topics" ? state.topics[value] || value : value;
+      const button = node("button", "pin-button", `${prefix} ${label}`);
+      button.type = "button";
+      button.addEventListener("click", () => changeRecommendationFeedback(field, value, `${label} removed from this list.`));
+      list.append(button);
+    }
+  }
+}
+
+function changeRecommendationFeedback(field, value, message) {
+  if (!value) return;
+  toggleFeedback(field, value);
+  status("recommendation-feedback-status", message);
+  renderRecommendationFeedback();
+  loadRecommendations();
+}
+
+$("company-follow-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = $("company-follow-name");
+  const company = input.value.trim();
+  if (company.length < 2 || !/^[\p{L}\p{N} &.,+_'\-]+$/u.test(company) || !/[\p{L}\p{N}]/u.test(company)) {
+    status("recommendation-feedback-status", "Enter a company name.", true);
+    return;
+  }
+  if (readFeedback().companies.some((value) => value.toLowerCase() === company.toLowerCase())) {
+    status("recommendation-feedback-status", "You already follow this company.");
+    return;
+  }
+  changeRecommendationFeedback("companies", company, `Following ${company}.`);
+  input.value = "";
+});
+
 async function loadRecommendations() {
   state.controller?.abort();
   state.updateCheck?.abort();
@@ -1063,6 +1113,7 @@ async function loadRecommendations() {
   $("refresh").disabled = true;
   $("show-more").hidden = true;
   status("news-status", "Finding stories that match your filters…");
+  renderRecommendationFeedback();
   syncURL();
   try {
     if (!state.sources.length) {
@@ -1081,6 +1132,7 @@ async function loadRecommendations() {
     const data = await request("/api/recommendations", { method: "POST",
       headers: { "Content-Type": "application/json" }, signal: controller.signal,
       body: JSON.stringify({ ...selected, q, scope: { ...filters, hours: Number(hours) }, exclude_ids: [...readStories].slice(-100),
+        feedback: readFeedback(),
         ...(preferences.usesSavedStories() && { saved_ids: [...saved.keys()].slice(-8) }) }) });
     if (state.controller !== controller || state.view !== "for-you") return;
     state.recommendations = data.articles;
@@ -1542,6 +1594,16 @@ function renderDigest() {
       const takeaway = node("p", "reason");
       takeaway.append(node("strong", "", "Key takeaway. "), document.createTextNode(a.keyTakeaway));
       item.append(takeaway);
+    }
+    if (a.change_sources?.length) {
+      const changes = node("ul", "timeline-entries");
+      for (const source of a.change_sources) {
+        const row = node("li");
+        row.append(externalLink(source.url, `${source.title} · ${source.publisher}`));
+        if (source.excerpt) row.append(node("p", "", source.excerpt));
+        changes.append(row);
+      }
+      item.append(node("h4", "", "New since your last brief"), changes);
     }
     const provenance = { ai_feed_summary: "AI summary of publisher feed", publisher_excerpt: "Publisher excerpt", headline_only: "Headline only" };
     const sourceRow = node("div", "digest-source-row");
