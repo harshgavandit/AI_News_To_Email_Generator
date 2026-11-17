@@ -23,6 +23,8 @@
 .research-status:empty { margin: 0; }
 .research-panel h2 { margin: 0 0 10px; font: 400 clamp(1.5rem, 3vw, 2rem)/1.1 var(--serif); letter-spacing: -.02em; }
 .research-panel h3 { margin: 0; font-size: 1rem; line-height: 1.35; }
+.research-export { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.research-export h2 { margin: 0; }
 .research-panel a { text-underline-offset: .2em; }
 .research-evidence, .research-claims, .research-clusters { display: grid; gap: 12px; margin: 16px 0; padding-left: 22px; }
 .research-evidence li, .research-claims li, .research-clusters li { padding: 0 0 12px 4px; border-bottom: 1px solid var(--line); }
@@ -32,6 +34,20 @@
 .research-cite { display: inline-block; font-size: .8rem; min-width: 25px; margin: 0 4px; text-align: center; color: var(--green); background: var(--sage); border-radius: 5px; }
 .research-rail p { line-height: 1.5; }
 #watch-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+#watch-topic { grid-column: 1 / -1; }
+.monitor-consent { margin-block: 12px 16px; padding: 10px 12px; border-radius: 8px; background: var(--sage); }
+.monitor-consent p { margin: 0; font-size: .82rem; }
+.monitor-consent button, .monitor-heading button { min-height: 40px; }
+.monitor-results { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.monitor-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.monitor-count { color: var(--green); font-size: .75rem; margin-inline-start: 4px; }
+.monitor-alerts { padding: 0; list-style: none; margin-block: 8px; }
+.monitor-alerts > li { border-top: 1px solid var(--line); padding: 10px 8px; }
+.monitor-alerts .monitor-unread-alert { background: var(--sage); border-inline-start: 2px solid var(--green); }
+.monitor-alerts h4 { margin: 4px 0; font-size: .9rem; line-height: 1.4; }
+.monitor-alerts p { margin: 0; }
+.monitor-alerts summary { margin-top: 6px; cursor: pointer; }
+.monitor-settings, .monitor-alerts > li > a, .monitor-alerts details, .monitor-empty { font-size: .8rem; }
 .watch-item { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .watch-item header { display: flex; gap: 8px; justify-content: space-between; align-items: start; }
 .watch-item header button { min-height: 32px; }

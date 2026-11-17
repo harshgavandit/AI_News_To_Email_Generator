@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.engine import make_url
 
-from app import research, server
-from app.launch_store import Store, research_vectors
+from app import monitoring, research, server
+from app.launch_store import Store, monitor_alerts, monitor_profiles, monitor_watches, research_vectors
 from app.sources import BY_ID
 
 
@@ -66,6 +66,75 @@ def activate(monkeypatch, *, vectors=False):
     monkeypatch.setenv("OPENAI_API_KEY", "mock-provider-key")
     if vectors:
         monkeypatch.setenv("NEWS_AI_VECTORS", "1")
+
+
+def test_background_monitors_run_between_visits_and_keep_private_alerts(archive, monkeypatch):
+    store, browser = archive
+    monkeypatch.setenv("ADMIN_TOKEN", "monitor-job-owner")
+    monkeypatch.setattr(monitoring, "INTERVAL", 0)
+    owner = {"Authorization": "Bearer monitor-job-owner"}
+    prefix = "/api/intelligence/inbox"
+    watches = [{"id": "battery-watch", "query": "Northstar battery packs"}]
+    body = {"watches": watches}
+    assert browser.get(prefix).json()["active"] is False
+    assert browser.post(prefix + "/enable", headers={"Origin": "https://unrelated.example"}, json=body).status_code == 403
+    response = browser.post(prefix + "/enable", json=body)
+    assert response.status_code == 201
+    assert "HttpOnly" in response.headers["set-cookie"] and "SameSite=strict" in response.headers["set-cookie"]
+    assert response.headers["cache-control"] == "private, no-store"
+    assert response.json()["watches"][0]["checked"] is None
+    assert browser.post("/api/admin/monitoring/check").status_code == 401
+    assert browser.post("/api/admin/monitoring/check", headers=owner).json()["alerts_created"] == 0
+
+    title = "Northstar recalls Falcon battery packs after overheating reports"
+    first = article("new-report", title, "Northstar published additional detail about the battery packs.", "bbc-tech", hours=0)
+    store.ingest(first["source_id"], [first], True)
+    assert browser.post("/api/admin/monitoring/check", headers=owner).json()["alerts_created"] == 1
+    with TestClient(server.app) as other:
+        assert other.get(prefix).json()["alerts"] == []
+        assert other.post(prefix + "/read").status_code == 401
+    state = browser.get(prefix).json()
+    assert state["unread"] == 1
+    alert, = state["alerts"]
+    assert "new-report" in {row["id"] for row in alert["sources"]}
+    assert all(row["url"].startswith("https://") for row in alert["sources"])
+    assert browser.post(prefix + "/read").json()["unread"] == 0
+    assert browser.post("/api/admin/monitoring/check", headers=owner).json()["alerts_created"] == 0
+
+    second = article("corroboration", title, "Another publisher confirmed the Northstar battery packs recall.", "wired", hours=0)
+    store.ingest(second["source_id"], [second], True)
+    assert browser.post("/api/admin/monitoring/check", headers=owner).json()["alerts_created"] == 0
+    state = browser.get(prefix).json()
+    assert len(state["alerts"]) == 1 and state["alerts"][0]["id"] == alert["id"]
+    assert state["unread"] == 0 and "corroboration" in {row["id"] for row in state["alerts"][0]["sources"]}
+    assert browser.put(prefix + "/watches", json={"revision": 0, "watches": watches}).status_code == 200
+    assert browser.put(prefix + "/watches", json={"revision": 0, "watches": []}).status_code == 409
+    assert browser.delete(prefix).json()["active"] is False
+    with store.engine.connect() as conn:
+        assert all(conn.execute(select(table)).first() is None for table in (monitor_profiles, monitor_watches, monitor_alerts))
+
+
+def test_expired_monitor_and_matching_terms_are_purged(archive):
+    store, browser = archive
+    prefix = "/api/intelligence/inbox"
+    watch = {"id": "one", "query": "Northstar battery"}
+    assert browser.post(prefix + "/enable", json={"watches": [watch, {**watch, "id": "two"}]}).status_code == 422
+    assert browser.post(prefix + "/enable", json={"watches": [watch]}).status_code == 201
+    with store.engine.begin() as conn:
+        conn.execute(monitor_profiles.update().values(expires=0))
+    assert browser.get(prefix).json()["active"] is False
+    assert monitoring.run_monitoring(store)["watches_checked"] == 0
+    with store.engine.connect() as conn:
+        assert conn.execute(select(monitor_watches)).first() is None
+
+
+def test_research_daily_has_source_evidence_before_a_generated_edition(archive):
+    _, browser = archive
+    result = browser.get("/api/intelligence/daily").json()
+    assert result["brief"] is None
+    assert result["source_edition"]["basis"] == "publisher_evidence"
+    assert result["source_edition"]["evidence"]
+    assert all(row["url"].startswith("https://") for row in result["source_edition"]["evidence"])
 
 
 def good_answer(prompt, _, schema, **kwargs):

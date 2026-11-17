@@ -60,14 +60,25 @@
           <section class="research-panel" aria-labelledby="watch-title">
             <p class="research-label">Monitoring</p>
             <h2 id="watch-title">Topic alerts</h2>
-            <p>Watch up to six keyword queries. Alerts check for new matches while this desk is open.</p>
+            <p id="watch-description">Watch up to six keyword queries in this browser.</p>
+            <div class="monitor-consent" id="monitor-opt-in" hidden>
+              <p>Background monitoring stores your watch terms and checks the archive when this page is closed. Terms stay for up to 30 days after your last visit.</p>
+              <button id="monitor-enable" type="button" class="text-button">Enable background monitoring</button>
+            </div>
             <form id="watch-form">
               <label for="watch-query" class="sr-only">Keywords to watch</label>
               <input id="watch-query" type="search" required minlength="2" maxlength="150" placeholder="e.g. Kubernetes security" />
               <button type="submit" class="button secondary">Watch</button>
+              <label for="watch-topic" class="sr-only">Alert topic</label>
+              <select id="watch-topic"><option value="all">All topics</option></select>
             </form>
             <p id="watch-status" class="research-status" role="status"></p>
             <div id="watch-list"></div>
+            <div id="monitor-results" class="monitor-results" hidden>
+              <div class="monitor-heading"><h3>Alert inbox <span id="monitor-unread" class="monitor-count"></span></h3><button id="monitor-read" type="button" class="text-button" hidden>Mark all read</button></div>
+              <ol id="monitor-alerts" class="monitor-alerts" aria-label="Recent intelligence alerts"></ol>
+              <a class="monitor-settings" href="/privacy.html#background-monitoring">Manage stored watches</a>
+            </div>
           </section>
           <section class="research-panel daily-panel" aria-labelledby="research-daily-title">
             <p class="research-label">Past 24 hours</p>

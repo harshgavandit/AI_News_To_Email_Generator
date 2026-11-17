@@ -56,6 +56,7 @@ from app.intelligence import SUBJECTS, recommend, related_articles, related_term
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
 from app import research as research_service
+from app import monitoring
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
 app.include_router(mail_router)
@@ -63,6 +64,7 @@ app.include_router(mail_events_router)
 app.include_router(workspace_router)
 app.include_router(syndication_router)
 app.include_router(discovery_router)
+app.include_router(monitoring.router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -73,7 +75,7 @@ _digest_cache = Cache("digest-v11")
 _news_cache = Cache("news-v17")
 _headline_cache = Cache("headlines-v7")
 _signals_cache = Cache("signals-v1")
-_trending_cache = Cache("trending-v6")
+_trending_cache = Cache("trending-v7")
 _briefing_cache = Cache("briefing-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
@@ -85,7 +87,7 @@ class LimitRequestBody:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["method"] not in {"POST", "PATCH"}:
+        if scope["type"] != "http" or scope["method"] not in {"POST", "PATCH", "PUT"}:
             await self.app(scope, receive, send)
             return
         request = Request(scope, receive)
@@ -391,22 +393,9 @@ class ResearchRequest(BaseModel):
         return self
 
 
-class ResearchWatch(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,40}$")
-    query: str = Field(min_length=2, max_length=150)
-    topic: str = Field(default="all", max_length=24)
-
-    @model_validator(mode="after")
-    def valid_watch(self):
-        if self.topic not in ("all", *TOPICS) or not search_terms(self.query):
-            raise ValueError("Choose a supported topic and enter words to watch.")
-        return self
-
-
 class WatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    watches: list[ResearchWatch] = Field(min_length=1, max_length=6)
+    watches: list[monitoring.Watch] = Field(min_length=1, max_length=6)
 
 
 @app.post("/api/intelligence/research")
@@ -431,13 +420,20 @@ def archive_research(body: ResearchRequest, request: Request):
 def research_daily():
     store = get_store()
     saved = research_service.recent_research_brief(store) if store else None
+    source_edition = None
+    if store and not saved:
+        current = cached_briefing(store, 24)
+        evidence = [research_service.evidence_record(row) for row in current["articles"]]
+        if evidence:
+            source_edition = {"evidence": evidence, "updated_at": current["updated_at"], "basis": "publisher_evidence"}
     return {"status": "available" if saved else "pending",
-            "brief": saved, "ai_available": research_service.ai_enabled()}
+            "brief": saved, "source_edition": source_edition, "ai_available": research_service.ai_enabled()}
 
 
 @app.get("/api/intelligence/options")
 def research_options():
-    return {"topics": TOPICS}
+    return {"topics": TOPICS, "analysis_enabled": research_service.ai_enabled(),
+            "semantic_configured": research_service.vectors_enabled()}
 
 
 @app.post("/api/intelligence/watch")
@@ -607,9 +603,7 @@ def trending(response: Response):
     return data
 
 
-@app.get("/api/briefing")
-def daily_briefing(response: Response, hours: Annotated[int, Query(ge=12, le=168)] = 24):
-    store = get_store()
+def cached_briefing(store, hours):
     key = hashlib.sha256(json.dumps([str(store.engine.url) if store else "rss", hours]).encode()).hexdigest()
     data, _ = _briefing_cache.get(key)
     if data is None:
@@ -619,6 +613,13 @@ def daily_briefing(response: Response, hours: Annotated[int, Query(ge=12, le=168
                 data = build_briefing(intelligence_candidates(store, hours), hours=hours)
                 if data["articles"]:
                     _briefing_cache.put(key, data, ttl=60)
+    return data
+
+
+@app.get("/api/briefing")
+def daily_briefing(response: Response, hours: Annotated[int, Query(ge=12, le=168)] = 24):
+    store = get_store()
+    data = cached_briefing(store, hours)
     response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
     if data["articles"]:
         response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=30"
@@ -674,11 +675,32 @@ def run_intelligence_check(store):
     if lease is None:
         return {"status": "already_started"}
     try:
+        watch_progress = run_monitoring_check(store, scheduled=True)
         progress = research_service.index_archive(store)
         brief = research_service.refresh_research_brief(store)
-        return {"status": "checked", **progress, "brief_status": brief}
+        return {"status": "checked", **watch_progress, **progress, "brief_status": brief}
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
+
+
+def run_monitoring_check(store, *, scheduled=False):
+    scope = "research-monitor-lease"
+    lease = store.claim_refresh(scheduled=scheduled, scope=scope)
+    if lease is None:
+        return {"monitoring_status": "already_started", "watches_checked": 0, "alerts_created": 0}
+    try:
+        return monitoring.run_monitoring(store)
+    except SQLAlchemyError as error:
+        logger.warning("research_monitor_error type=%s", type(error).__name__)
+        return {"monitoring_status": "unavailable", "watches_checked": 0, "alerts_created": 0}
+    finally:
+        store.finish_refresh(lease, cooldown=240 if scheduled else 0, scope=scope)
+
+
+@app.post("/api/admin/monitoring/check")
+def check_monitoring(authorization: str | None = Header(default=None)):
+    require_owner(authorization, detail="Enter a valid owner access key to check monitoring.")
+    return run_monitoring_check(source_store())
 
 
 @app.get("/api/jobs/morning")

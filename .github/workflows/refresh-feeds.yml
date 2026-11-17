@@ -96,7 +96,7 @@ jobs:
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
-      - name: Update the semantic index and intelligence briefing
+      - name: Check topic alerts and update the intelligence briefing
         shell: bash
         run: |
           set -euo pipefail
@@ -107,7 +107,7 @@ jobs:
           result=$(curl --silent --show-error --fail --max-time 80 \
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/intelligence' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-          jq '{status, index_status, indexed, brief_status}' <<< "$result"
+          jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status}' <<< "$result"
           jq -e '(.status == "already_started") or (.status == "checked"
             and (.index_status | IN("updated", "current", "disabled", "budget_limited"))
             and (.brief_status | IN("answered", "current", "disabled", "insufficient", "budget_limited")))' \

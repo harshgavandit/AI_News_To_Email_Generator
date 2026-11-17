@@ -80,6 +80,13 @@
           <p>These controls need JavaScript. You can also remove this site’s stored data in your browser settings.</p>
         </noscript>
       </section>
+      <section class="analytics-panel" id="background-monitoring" aria-labelledby="background-monitoring-title">
+        <h2 id="background-monitoring-title">Background monitoring</h2>
+        <p>If you enable it in the Research Desk, Informa AI stores your watch terms and source-linked matches under a browser-specific session. Matches are kept for up to 14 days. The session expires after 30 days without use.</p>
+        <p id="privacy-monitor-status" role="status">Checking this browser’s monitoring settings…</p>
+        <button id="delete-background-watches" class="button secondary" type="button" hidden>Delete background watches and alerts</button>
+        <a href="/research.html">Open the Research Desk</a>
+      </section>
       <section class="analytics-panel" aria-labelledby="analytics-title">
         <div>
           <p class="eyebrow">An optional choice</p>
@@ -104,7 +111,7 @@
             <h2>Search and AI use the information needed for the request.</h2>
             <p>Search terms and filters are sent to Informa AI to find matching articles. Shared story and monitoring URLs can contain those filters, so review a link before sharing it.</p>
             <p>When you request AI analysis or a brief, selected article titles and excerpts and the instructions you submit may be sent to OpenAI. Semantic search may also send your query to OpenAI. Avoid including sensitive personal information. Informa AI does not save your research questions or answers in its archive.</p>
-            <p>Topic alerts are stored in this browser. While the Research Desk is open, it sends your watch keywords to Informa AI to check for matches. This check uses the archive directly.</p>
+            <p>Browser-only topic watches send their keywords to Informa AI while the Research Desk is open. Optional background monitoring stores keywords on the server so it can check the archive between visits. The monitor uses publisher records directly.</p>
           </section>
           <section id="email-data">
             <h2>Email and author features are optional.</h2>

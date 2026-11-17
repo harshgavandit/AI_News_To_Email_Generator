@@ -47,6 +47,7 @@ GENERIC_TAGS = GENERIC_TERMS | {"ai", "dev", "programming", "webdev", "beginners
 def extract_trending(articles, *, hours=48, limit=10):
     now = datetime.now(UTC)
     cutoff = now - timedelta(hours=hours)
+    midpoint = now - timedelta(hours=hours / 2)
     pool = []
     for a in articles:
         try:
@@ -56,6 +57,16 @@ def extract_trending(articles, *, hours=48, limit=10):
         except (ValueError, KeyError, TypeError):
             continue
     pool = deduplicate(pool)
+    newest_ids = {article["id"] for article in pool if datetime.fromisoformat(article["published_at"]) > midpoint}
+
+    def momentum(matching):
+        recent = {publisher_family(row) for row in matching if row["id"] in newest_ids}
+        previous = {publisher_family(row) for row in matching if row["id"] not in newest_ids}
+        recent.discard(None)
+        previous.discard(None)
+        rise = len(recent) - len(previous)
+        return {"recent_source_count": len(recent), "previous_source_count": len(previous),
+                "momentum": "rising" if len(recent) >= 3 and rise >= 2 and len(recent) * 2 >= len(previous) * 3 else "steady"}
 
     results = []
     curated_tags = set()
@@ -79,6 +90,7 @@ def extract_trending(articles, *, hours=48, limit=10):
                 "query": query,
                 "source_count": len({publisher_family(a) for a in matching}),
                 "basis": "recent_mentions",
+                **momentum(matching),
             })
 
     advisory_mentions = defaultdict(list)
@@ -90,7 +102,8 @@ def extract_trending(articles, *, hours=48, limit=10):
         if len(publishers) < 2:
             continue
         results.append({"tag": identifier, "category": "security", "count": len(mentions),
-                        "query": search_text(identifier), "source_count": len(publishers), "basis": "shared_advisory"})
+                        "query": search_text(identifier), "source_count": len(publishers), "basis": "shared_advisory",
+                        **momentum(mentions)})
 
     observed = defaultdict(list)
     for article in pool:
@@ -104,12 +117,13 @@ def extract_trending(articles, *, hours=48, limit=10):
         if len(publishers) >= 3:
             category = Counter(topic_for(article) for article in mentions).most_common(1)[0][0]
             results.append({"tag": tag, "category": category, "count": len(mentions), "query": tag,
-                            "source_count": len(publishers), "basis": "publisher_tags"})
+                            "source_count": len(publishers), "basis": "publisher_tags", **momentum(mentions)})
 
-    results.sort(key=lambda row: (-row["source_count"], -row["count"], row["query"]))
+    results.sort(key=lambda row: (row["momentum"] != "rising", -row["source_count"], -row["count"], row["query"]))
     return {
         "trending": results[:limit],
         "total_analyzed": len(pool),
         "window_hours": hours,
+        "momentum_window_hours": hours / 2,
         "updated_at": now.isoformat(),
     }

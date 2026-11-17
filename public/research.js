@@ -1,4 +1,5 @@
 import { readingGroups } from "/privacy-data.js";
+import { monitorInbox } from "./monitor-inbox.js";
 
 const byId = (id) => document.getElementById(id);
 const form = byId("research-form");
@@ -16,6 +17,8 @@ let daily;
 let checking = false;
 let watchGeneration = 0;
 let watches = loadWatches();
+let inbox = null;
+let inboxBusy = false;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -54,6 +57,37 @@ function panel(title) {
   const section = element("section", "", "research-panel");
   section.append(element("h2", title));
   return section;
+}
+
+function markdownText(value) {
+  return String(value || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/[\\`*_{}\[\]()<>#!|]/g, "\\$&");
+}
+
+function downloadNotes(data, title, references) {
+  const lines = ["# Informa AI research notes", "", markdownText(title), ""];
+  if (data.answer?.claims?.length) {
+    lines.push("## Findings", "");
+    for (const claim of data.answer.claims) {
+      const cited = claim.source_ids.map((id) => references.get(id)).filter(Boolean).join(", ");
+      lines.push(`- ${claim.kind === "analysis" ? "Interpretation. " : ""}${markdownText(claim.text)} (Sources ${cited})`);
+    }
+    lines.push("");
+  }
+  if (data.answer?.limitations) lines.push("## Evidence limits", "", markdownText(data.answer.limitations), "");
+  lines.push("## Source evidence", "");
+  for (const row of data.evidence) {
+    const href = link("", row.url).getAttribute("href");
+    const label = markdownText(row.title);
+    lines.push(`${references.get(row.id)}. ${href ? `[${label}](<${href}>)` : label} · ${markdownText(row.publisher)} · ${dateLabel(row.published_at)}`);
+    if (row.excerpt) lines.push(`   > ${markdownText(row.excerpt)}`);
+  }
+  const file = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/markdown;charset=utf-8" }));
+  const anchor = element("a");
+  anchor.href = file;
+  anchor.download = "informa-ai-research-notes.md";
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(file), 1000);
 }
 
 function render(data, titles) {
@@ -103,6 +137,16 @@ function render(data, titles) {
   }
   if (!data.evidence.length) return;
   const evidence = panel(titles.evidence);
+  const toolbar = element("header", "", "research-export");
+  toolbar.append(evidence.firstElementChild);
+  const exportButton = element("button", "Download notes", "button secondary");
+  exportButton.type = "button";
+  exportButton.addEventListener("click", () => {
+    try { downloadNotes(data, titles.context || titles.evidence, references); }
+    catch { status.textContent = "Research notes could not be downloaded in this browser."; }
+  });
+  toolbar.append(exportButton);
+  evidence.append(toolbar);
   const list = element("ol", "", "research-evidence");
   for (const [index, row] of data.evidence.entries()) {
     const item = element("li");
@@ -146,7 +190,8 @@ async function search(body) {
       `${data.evidence.length} source${data.evidence.length === 1 ? "" : "s"} · ${label}` :
       "No matching sources. Try a different term, topic, or time range.";
     render(data, { answer: body.mode === "compare" ? "AI coverage comparison" :
-      body.mode === "brief" ? "AI topic briefing" : "AI analysis", evidence: "Source evidence" });
+      body.mode === "brief" ? "AI topic briefing" : "AI analysis", evidence: "Source evidence",
+      context: body.q || data.evidence[0]?.title });
     if (body.article_id && data.evidence.length) question.value = data.evidence[0].title.slice(0, 320);
   } catch (error) {
     if (controller === currentRequest && !controller.signal.aborted) status.textContent = error.message;
@@ -188,18 +233,16 @@ function renderWatches() {
     const remove = element("button", "Remove", "text-button");
     remove.type = "button";
     remove.setAttribute("aria-label", `Remove watch for ${watch.query}`);
-    remove.addEventListener("click", () => {
-      watchGeneration++;
-      watches = watches.filter((item) => item.id !== watch.id);
-      saveWatches();
-      renderWatches();
-      byId("watch-query").focus();
+    remove.addEventListener("click", async () => {
+      if (await replaceWatches(watches.filter((item) => item.id !== watch.id))) byId("watch-query").focus();
     });
     const header = element("header");
     header.append(title, remove);
     article.append(header);
     const matching = Array.isArray(watch.matches) ? watch.matches : [];
-    article.append(element("p", watch.seen === null ? "Waiting for the first check." :
+    article.append(element("p", inbox?.active
+      ? (watch.checked ? `Checked ${dateLabel(watch.checked * 1000)}` : "Waiting for the first background check.")
+      : watch.seen === null ? "Waiting for the first check." :
       matching.length ? `${matching.length} recent development${matching.length === 1 ? "" : "s"}` :
       "No matches in the past 48 hours.", "research-meta"));
     const list = element("ul");
@@ -215,12 +258,16 @@ function renderWatches() {
 }
 
 async function checkWatches() {
+  if (inbox?.active) {
+    if (!document.hidden) await refreshInbox();
+    return;
+  }
   if (checking || document.hidden || !watches.length) return;
   checking = true;
   const generation = watchGeneration;
   try {
     const data = await api("/api/intelligence/watch", {
-      watches: watches.map(({ id, query }) => ({ id, query })),
+      watches: settings(watches),
     });
     if (generation !== watchGeneration) return;
     let newDevelopments = 0;
@@ -252,41 +299,144 @@ byId("watch-form").addEventListener("submit", (event) => {
   const input = byId("watch-query");
   const query = input.value.trim();
   if (query.length < 2 || !/[\p{L}\p{N}]/u.test(query)) { watchStatus.textContent = "Enter keywords to watch."; return; }
-  if (watches.some((watch) => watch.query.toLowerCase() === query.toLowerCase())) {
-    watchStatus.textContent = "You already watch these keywords.";
+  const watchTopic = byId("watch-topic").value;
+  if (watches.some((watch) => watch.query.toLowerCase() === query.toLowerCase() && (watch.topic || "all") === watchTopic)) {
+    watchStatus.textContent = "You already watch these keywords in this topic.";
     return;
   }
   if (watches.length >= 6) { watchStatus.textContent = "Remove an alert before adding another."; return; }
+  replaceWatches([...watches, { id: crypto.randomUUID(), query, topic: watchTopic, seen: null, matches: [] }]).then((saved) => {
+    if (saved && input.value.trim() === query) input.value = "";
+    if (saved && !inbox?.active) checkWatches();
+  });
+});
+
+function syncInbox(data) {
+  inbox = data;
+  byId("monitor-opt-in").hidden = !data.available || data.active;
+  byId("monitor-results").hidden = !data.active;
+  byId("watch-description").textContent = data.active
+    ? "New alerts appear here after the archive updates and your watches are checked."
+    : "Watch up to six keyword queries. Browser-only alerts check while this desk is open.";
+  watches = data.active ? data.watches : loadWatches();
+  renderWatches();
+  if (!data.active) return;
+  byId("monitor-unread").textContent = data.unread ? `${data.unread} unread` : "";
+  byId("monitor-read").hidden = !data.unread;
+  const list = byId("monitor-alerts");
+  list.replaceChildren();
+  if (!data.alerts.length) list.append(element("li", "New developments from your watches will appear here.", "monitor-empty"));
+  const terms = new Map(watches.map((watch) => [watch.id, watch.query]));
+  for (const alert of data.alerts) {
+    const [lead, ...supporting] = alert.sources;
+    if (!lead) continue;
+    const row = element("li", "", alert.unread ? "monitor-unread-alert" : "");
+    const label = element("p", [alert.unread && "New", terms.get(alert.watch_id),
+      dateLabel(alert.updated * 1000)].filter(Boolean).join(" · "), "research-meta");
+    const title = element("h4");
+    title.append(link(lead.title, `/?article=${encodeURIComponent(lead.id)}#reading-room`));
+    row.append(label, title, link(lead.publisher, lead.url));
+    if (supporting.length) {
+      const details = element("details");
+      details.append(element("summary", `${supporting.length} more source${supporting.length === 1 ? "" : "s"}`));
+      const sources = element("ul");
+      for (const source of supporting) {
+        const item = element("li");
+        item.append(link(source.title, source.url), element("span", ` · ${source.publisher}`, "research-meta"));
+        sources.append(item);
+      }
+      details.append(sources);
+      row.append(details);
+    }
+    list.append(row);
+  }
+}
+
+async function refreshInbox() {
+  if (inboxBusy) return;
+  inboxBusy = true;
+  try {
+    const data = await monitorInbox();
+    if (!data) return;
+    const newlyUnread = inbox?.active && data.active ? Math.max(0, data.unread - inbox.unread) : 0;
+    // Preserve focus, expanded source lists, and announcement state on unchanged polls.
+    if (JSON.stringify(data) !== JSON.stringify(inbox)) syncInbox(data);
+    if (newlyUnread) watchStatus.textContent = `${newlyUnread} new intelligence alert${newlyUnread === 1 ? "" : "s"}.`;
+  } catch (error) {
+    if (inbox?.active) watchStatus.textContent = error.message;
+  } finally { inboxBusy = false; }
+}
+
+const settings = (rows) => rows.map(({ id, query, topic: watchTopic }) => ({ id, query, topic: watchTopic || "all" }));
+
+async function writeInbox(path, options, feedback) {
+  if (inboxBusy) {
+    watchStatus.textContent = "Finishing an alert check. Try again in a moment.";
+    return false;
+  }
+  inboxBusy = true;
   watchGeneration++;
-  watches.push({ id: crypto.randomUUID(), query, seen: null, matches: [] });
-  input.value = "";
+  try {
+    syncInbox(await monitorInbox(path, options));
+    watchStatus.textContent = feedback;
+    return true;
+  } catch (error) {
+    if (error.status === 409) {
+      try { syncInbox(await monitorInbox()); } catch { /* Leave the prior view available until another check. */ }
+    }
+    watchStatus.textContent = error.message;
+    return false;
+  } finally { inboxBusy = false; }
+}
+
+async function replaceWatches(next) {
+  if (inbox?.active) return writeInbox("/watches", { method: "PUT",
+    body: { watches: settings(next), revision: inbox.revision } }, "Background watches saved.");
+  watchGeneration++;
+  watches = next;
   saveWatches();
   renderWatches();
-  checkWatches();
+  return true;
+}
+
+byId("monitor-enable").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    if (await writeInbox("/enable", { method: "POST", body: { watches: settings(watches) } }, "Background monitoring is on.")) {
+      byId("watch-query").focus();
+    }
+  } finally { button.disabled = false; }
 });
+byId("monitor-read").addEventListener("click", () =>
+  writeInbox("/read", { method: "POST" }, "Alert inbox marked read."));
 window.addEventListener("storage", ({ key }) => {
   if (key === alertKey || key === "informa-reader-reset" || key === null) {
     watchGeneration++;
-    watches = loadWatches();
-    renderWatches();
+    if (inbox?.active) refreshInbox();
+    else { watches = loadWatches(); renderWatches(); }
   }
 });
 document.addEventListener("visibilitychange", checkWatches);
-setInterval(checkWatches, 90000);
+setInterval(checkWatches, 60000);
 renderWatches();
-checkWatches();
+refreshInbox().then(checkWatches);
 
 api("/api/intelligence/options").then((options) => {
-  for (const [id, label] of Object.entries(options.topics || {})) topic.add(new Option(label, id));
+  for (const [id, label] of Object.entries(options.topics || {})) {
+    topic.add(new Option(label, id));
+    byId("watch-topic").add(new Option(label, id));
+  }
 }).catch(() => { /* All topics can still be searched. */ });
 
 const dailyStatus = byId("research-daily-status");
-api("/api/intelligence/daily").then(({ brief }) => {
-  daily = brief;
+api("/api/intelligence/daily").then(({ brief, source_edition: sourceEdition }) => {
+  daily = brief || sourceEdition;
   dailyStatus.textContent = brief ? `Generated ${dateLabel(brief.generated_at * 1000)} from archived sources.` :
-    "A cited edition will appear when the next briefing is ready.";
-  byId("show-daily").hidden = !brief;
-  byId("daily-fallback").hidden = Boolean(brief);
+    sourceEdition ? "Publisher evidence selected from the past 24 hours." : "The latest archive check returned no stories for this edition.";
+  byId("show-daily").textContent = brief ? "Read the cited brief" : "Read the source brief";
+  byId("show-daily").hidden = !daily;
+  byId("daily-fallback").hidden = Boolean(daily);
 }).catch(() => {
   dailyStatus.textContent = "The latest edition could not be loaded.";
   byId("daily-fallback").hidden = false;
@@ -298,11 +448,11 @@ byId("show-daily").addEventListener("click", () => {
   submit.disabled = false;
   results.setAttribute("aria-busy", "false");
   status.textContent = "Intelligence briefing · Past 24 hours";
-  render(daily, { answer: "AI intelligence briefing", evidence: "Briefing sources" });
+  render(daily, { answer: "AI intelligence briefing", evidence: "Briefing sources", context: "Past 24 hours" });
   results.scrollIntoView({ block: "nearest" });
 });
 
-api("/api/trending").then(({ trending }) => {
+api("/api/trending").then(({ trending, momentum_window_hours }) => {
   const entries = trending?.slice(0, 5);
   if (!entries?.length) return;
   byId("research-trend-list").replaceChildren(...entries.map((trend) => {
@@ -316,7 +466,11 @@ api("/api/trending").then(({ trending }) => {
       question.focus();
       if (!submit.disabled) form.requestSubmit();
     });
-    row.append(button, element("span", `${trend.source_count} sources`, "research-meta"));
+    const meta = element("span", trend.momentum === "rising"
+      ? `Rising · ${trend.recent_source_count} sources` : `${trend.source_count} sources`, "research-meta");
+    if (trend.momentum === "rising") meta.title =
+      `${trend.recent_source_count} publishers in the last ${momentum_window_hours} hours, compared with ${trend.previous_source_count} in the prior window.`;
+    row.append(button, meta);
     return row;
   }));
   byId("research-trends").hidden = false;

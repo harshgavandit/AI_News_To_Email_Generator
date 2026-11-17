@@ -1,4 +1,5 @@
 import { clearReadingData, dataCounts, readBrowserData, readingGroups } from "/privacy-data.js";
+import { monitorInbox } from "./monitor-inbox.js";
 
 const byId = (id) => document.getElementById(id);
 const feedback = byId("privacy-status");
@@ -57,6 +58,27 @@ byId("confirm-clear-data").addEventListener("click", () => {
   } catch { feedback.textContent = "Some data could not be cleared. Check your browser storage settings and review the counts before trying again."; }
   dialog.close();
   refresh();
+});
+
+const monitorStatus = byId("privacy-monitor-status");
+const deleteMonitor = byId("delete-background-watches");
+function showMonitoring(active) {
+  monitorStatus.textContent = active ? "Background monitoring is enabled in this browser." : "This browser has no active background monitoring session.";
+  deleteMonitor.hidden = !active;
+}
+monitorInbox().then((data) => showMonitoring(data?.active)).catch(() => {
+  monitorStatus.textContent = "Background monitoring status is temporarily unavailable.";
+});
+deleteMonitor.addEventListener("click", async () => {
+  deleteMonitor.disabled = true;
+  try {
+    await monitorInbox("", { method: "DELETE" });
+    showMonitoring(false);
+    try { localStorage.setItem("informa-reader-reset", String(Date.now())); } catch { /* Other tabs check on their next poll. */ }
+    monitorStatus.textContent = "Background watches and alert history were deleted.";
+  } catch (error) {
+    monitorStatus.textContent = error.message;
+  } finally { deleteMonitor.disabled = false; }
 });
 
 const analytics = byId("analytics-choice");

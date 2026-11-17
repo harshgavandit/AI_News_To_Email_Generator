@@ -279,8 +279,22 @@ def test_cross_publisher_advisory_trend_and_preprint_deduplication():
         story("vendor", source_id="kubernetes-advisories", title=title),
         story("report", source_id="the-hacker-news", title=title),
     ])
-    assert {"tag": "CVE-2026-12345", "query": "cve 2026 12345", "category": "security",
-            "count": 2, "source_count": 2, "basis": "shared_advisory"} in result["trending"]
+    item = next(row for row in result["trending"] if row["tag"] == "CVE-2026-12345")
+    assert (item["query"], item["category"], item["count"], item["source_count"], item["basis"]) == (
+        "cve 2026 12345", "security", 2, 2, "shared_advisory")
+
+
+def test_rising_topics_require_broader_recent_publisher_coverage():
+    sources = ("ars-technica", "the-verge", "wired")
+    rows = [story(f"recent-{number}", source_id=source, title="Kubernetes infrastructure capacity expands", age=2)
+            for number, source in enumerate(sources)]
+    rows.append(story("prior", source_id="ars-technica", title="Kubernetes test clusters", age=30))
+    rows.append(story("another-verge", source_id="the-verge", title="Kubernetes production version ships", age=4))
+    result = extract_trending(rows)
+    top = result["trending"][0]
+    assert top["tag"] == "Kubernetes & Cloud"
+    assert (top["momentum"], top["recent_source_count"], top["previous_source_count"]) == ("rising", 3, 1)
+    assert result["momentum_window_hours"] == 24
 
 
 def test_trending_can_discover_a_tag_across_independent_source_groups():

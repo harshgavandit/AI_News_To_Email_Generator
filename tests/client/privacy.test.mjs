@@ -6,11 +6,12 @@ import { clearReadingData, dataCounts, readBrowserData, readingGroups } from '..
 
 const analytics = readFileSync(new URL('../../public/analytics.js', import.meta.url), 'utf8');
 const markup = readFileSync(new URL('../../public/privacy.html', import.meta.url), 'utf8');
-const controls = readFileSync(new URL('../../public/privacy.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/, '');
+const controls = readFileSync(new URL('../../public/privacy.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/gm, '');
 
 function mount({ consent, signal, blocked = false } = {}) {
   const dom = new JSDOM(markup, { url: 'https://informa.test/privacy.html?private=hidden', runScripts: 'outside-only' });
   const { window } = dom;
+  window.monitorInbox = async () => ({ active: false });
   if (consent) window.localStorage.setItem('informa-analytics-consent', consent);
   if (signal === 'gpc') Object.defineProperty(window.navigator, 'globalPrivacyControl', { value: true });
   if (signal === 'dnt') Object.defineProperty(window.navigator, 'doNotTrack', { value: '1' });

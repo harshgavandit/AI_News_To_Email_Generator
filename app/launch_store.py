@@ -40,6 +40,19 @@ research_vectors = Table("brief_research_vectors", schema,
     Column("id", String(40), primary_key=True), Column("encoder", String(100), nullable=False),
     Column("title", Text, nullable=False), Column("description", Text, nullable=False),
     Column("embedding", LargeBinary, nullable=False))
+monitor_profiles = Table("brief_monitor_profiles", schema,
+    Column("id", String(64), primary_key=True), Column("expires", Float, nullable=False, index=True),
+    Column("revision", Integer, nullable=False))
+monitor_watches = Table("brief_monitor_watches", schema,
+    Column("profile_id", String(64), primary_key=True), Column("id", String(40), primary_key=True),
+    Column("query", String(150), nullable=False), Column("topic", String(24), nullable=False),
+    Column("created", Float, nullable=False), Column("next_check", Float, nullable=False, index=True),
+    Column("checked", Float))
+monitor_alerts = Table("brief_monitor_alerts", schema,
+    Column("id", String(32), primary_key=True), Column("profile_id", String(64), nullable=False),
+    Column("watch_id", String(40), nullable=False), Column("created", Float, nullable=False, index=True),
+    Column("updated", Float, nullable=False), Column("read_at", Float), Column("evidence", Text, nullable=False))
+Index("brief_monitor_alerts_inbox", monitor_alerts.c.profile_id, monitor_alerts.c.updated)
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),
