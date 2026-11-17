@@ -186,6 +186,13 @@ def version_for(rows):
     return hashlib.sha256(json.dumps(sorted((row["id"], fingerprint(row)) for row in rows)).encode()).hexdigest()[:32]
 
 
+def development_for_article(store, article_id):
+    if not ready(store):
+        return None
+    with store.engine.connect() as conn:
+        return conn.scalar(select(event_items.c.event_id).where(event_items.c.article_id == article_id))
+
+
 def catalog(store, *, hours=168, limit=80, topic="all", event_ids=()):
     if not ready(store):
         return []

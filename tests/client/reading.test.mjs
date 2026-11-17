@@ -148,6 +148,7 @@ test('actual Reading Room module opens permitted text, follows its author and re
     const data = path.startsWith('/api/news') ? { ...catalog, articles: [article], total: 1, sources: catalog.sources, facets: {} } :
       path.startsWith('/api/articles/') ? { article: { ...article, reading_access: { mode: permitted ? 'full_text' : 'excerpt', label: permitted ? 'Full article · with permission' : 'Publisher excerpt' } }, related: [coverage], coverage: [coverage],
         reading: permitted ? { html: '<p>Licensed body supplied by the author.</p>', attribution: 'A Writer' } : null,
+        development_id: 'a'.repeat(32),
         summary: { limited_source: !permitted, highlights: permitted ? ['Licensed body supplied by the author.'] : [] },
         also_indexed_by: [{ id: 'medium-codex', label: 'CodeX feed' }],
         reading_notice: permitted ? 'Shared with permission.' : 'Publisher-supplied excerpt.' } :
@@ -162,6 +163,8 @@ test('actual Reading Room module opens permitted text, follows its author and re
     assert.equal(document.getElementById('dossier-highlights').hidden, false);
     assert.match(document.getElementById('dossier-highlights-basis').textContent, /shared with permission/);
     assert.equal(document.getElementById('dossier-indexed-by').textContent, 'CodeX feed');
+    document.getElementById('dossier-follow-story').click();
+    assert.deepEqual(JSON.parse(localStorage.getItem('informa-radar-v1')).followed_events, ['a'.repeat(32)]);
     document.getElementById('dossier-highlights').open = true;
     document.getElementById('dossier-follow-author').click();
     assert.equal(JSON.parse(localStorage.getItem('informa-interests-v1')).authors[0], authorKey);

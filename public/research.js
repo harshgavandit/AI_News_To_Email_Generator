@@ -1,7 +1,7 @@
 import { readingGroups } from "/privacy-data.js";
 import { monitorInbox } from "./monitor-inbox.js";
 import { readFeedback } from "./reader-feedback.js";
-import { followedTechnologies } from "./technology-follow.js";
+import { followedTechnologies, followedStories } from "./technology-follow.js";
 import { historyControl } from "./source-history.js";
 import { initRuleBuilder } from "./watch-rule-ui.js";
 
@@ -496,6 +496,16 @@ const radarPreferencesReady = api("/api/mail/radar").then(({ profile, seen }) =>
 }).catch(() => { /* Public visitors can build a catch-up without a mailbox account. */ });
 
 let followedOnly = false;
+window.addEventListener("storage", event => {
+  if (event.key !== radarKey) return;
+  followedEvents = followedStories();
+  for (const button of document.querySelectorAll("[data-follow-event]")) {
+    const active = followedEvents.includes(button.dataset.followEvent);
+    button.textContent = active ? "Unfollow story" : "Follow story";
+    button.setAttribute("aria-pressed", String(active));
+  }
+  if (followedOnly) loadDevelopments();
+});
 let developmentsRequest = 0;
 async function loadDevelopments() {
   const current = ++developmentsRequest;

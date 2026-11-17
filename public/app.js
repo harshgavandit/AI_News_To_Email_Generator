@@ -6,6 +6,7 @@ import { readingContent } from "./reading-content.js";
 import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 import { createDeliveryStatus } from "./delivery-status.js";
 import { createStoryQuestion } from "./story-question.js";
+import { followedStories, saveStoryFollow } from "./technology-follow.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -2331,12 +2332,16 @@ $("pin-all-saved").addEventListener("click", () => {
 const dossier = { article: null, articles: [], index: 0, trigger: null, openerId: "", controller: null };
 const storyQuestion = createStoryQuestion(request, () => ({ article: dossier.article, coverage: dossier.coverage || [] }), externalLink);
 const quickStoryActions = document.querySelector(".story-quick-actions");
-for (const id of ["dossier-share-btn", "dossier-pin-btn", "dossier-follow-publication"])
+for (const id of ["dossier-share-btn", "dossier-pin-btn", "dossier-follow-story"])
   quickStoryActions.append($(id));
 
 function syncFollowActions() {
   if (!dossier.article) return;
   const article = dossier.article;
+  const followingStory = followedStories().includes(dossier.developmentId);
+  $("dossier-follow-story").hidden = !dossier.developmentId;
+  $("dossier-follow-story").textContent = followingStory ? "Following story" : "Follow story";
+  $("dossier-follow-story").setAttribute("aria-pressed", String(followingStory));
   const followed = preferences.follows("authors", article.author_key);
   $("dossier-follow-author").hidden = !article.author_key;
   $("dossier-follow-author").textContent = followed ? "Following author" : "Follow author";
@@ -2410,6 +2415,8 @@ async function loadArticleDetails(article, details) {
         ...readingContent(data.reading.html));
     }
     dossier.coverage = data.coverage || [];
+    dossier.developmentId = data.development_id || null;
+    syncFollowActions();
     const coverageIds = new Set(dossier.coverage.map((story) => story.id));
     renderDossierLinks("dossier-matches", dossier.coverage);
     renderDossierLinks("dossier-related", (data.related || []).filter((story) => !coverageIds.has(story.id)));
@@ -2450,6 +2457,7 @@ function openDossier(article, trigger, details) {
 
 function renderDossier(details) {
   storyQuestion.reset();
+  dossier.developmentId = null;
   $("dossier-references").hidden = true;
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
@@ -2582,6 +2590,18 @@ $("dossier-follow-publication").addEventListener("click", () => {
   status("dossier-feedback", preferences.togglePublication(dossier.article));
   syncFollowActions();
 });
+$("dossier-follow-story").addEventListener("click", () => {
+  if (!dossier.developmentId) return;
+  try {
+    const active = !followedStories().includes(dossier.developmentId);
+    saveStoryFollow(dossier.developmentId, active);
+    syncFollowActions();
+    status("dossier-feedback", active ? "Story followed in your Research Desk. Save your Tech Radar to your verified inbox to include it in email catch-ups." : "Story removed from your followed list.");
+  } catch (error) {
+    status("dossier-feedback", error.message === "You can follow up to 40 stories." ? error.message : "Following could not be saved in this browser.", true);
+  }
+});
+window.addEventListener("storage", () => { if (dossier.article) syncFollowActions(); });
 $("dossier-coverage-brief").addEventListener("click", () => {
   if (!dossier.article || !dossier.coverage.length) return;
   const newPins = [dossier.article, ...dossier.coverage].filter((story) => !state.pins.has(String(story.id)));

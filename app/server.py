@@ -554,6 +554,7 @@ def article_details(article_id: str, response: Response):
                   if entry.id in seen_in and entry.id != article.get("source_id")]
     response.headers["Cache-Control"] = "no-store"
     return {"article": article, "related": [public_article(item) for item in related],
+            "development_id": event_intelligence.development_for_article(store, article_id) if store else None,
             "coverage": [public_article(item) for item in coverage],
             "reading": reading,
             "reading_notice": ("Full text shared with permission from the rights holder. Original source and attribution are preserved."

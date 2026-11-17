@@ -237,6 +237,10 @@ def test_conversation_retrieves_prior_source_context_but_keeps_provider_fallback
         "A cloud provider reported network disruption affecting API availability.", "ars-technica")
     store.ingest(row["source_id"], [row], True)
     monkeypatch.setattr(insight_api, "get_store", lambda: store)
+    ident, _ = event_intelligence.observe(store, row)
+    from app import server
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    assert server.article_details("conversation-1", Response())["development_id"] == ident
     request = Request({"type": "http", "method": "POST", "path": "/api/intelligence/converse",
         "headers": [(b"user-agent", b"test")], "client": ("127.0.0.1", 8080), "scheme": "http", "query_string": b""})
     result = insight_api.converse(insight_api.ConversationRequest.model_validate({
