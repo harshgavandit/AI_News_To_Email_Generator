@@ -505,7 +505,7 @@ DEFAULT_SOURCES += (
            ("qwenlm.github.io", "qwen.ai"), topic="ai", refresh_minutes=15),
     Source("prnewswire-technology", "prnewswire-technology", "PR Newswire Technology Announcements", "news",
            "https://www.prnewswire.com/rss/business-technology-latest-news/business-technology-latest-news-list.rss",
-           ("prnewswire.com",), topic="industry", coverage="publisher", refresh_minutes=10),
+           ("prnewswire.com",), topic="industry", coverage="publisher", language="und", refresh_minutes=10),
     Source("microsoft-video", "youtube", "Microsoft on YouTube", "video",
            "https://www.youtube.com/feeds/videos.xml?channel_id=UCFtEEv80fQVKkD4h1PF-Xqw",
            ("youtube.com", "youtu.be"), topic="bigtech", publisher_group="microsoft", refresh_minutes=10),

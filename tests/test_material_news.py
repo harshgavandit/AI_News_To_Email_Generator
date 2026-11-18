@@ -50,6 +50,19 @@ def test_recency_and_commerce_do_not_pin_old_or_shopping_news():
     assert news_score(item("bad", "Service outage") | {"published_at": "invalid"}) == 0
 
 
+@pytest.mark.parametrize("title", [
+    "Claude describes a future AI takeover", "Java4Shell puts applications at risk of takeover",
+    "A model raises concerns about benchmarks", "A compiler raises a runtime error",
+])
+def test_ambiguous_takeover_and_raises_are_not_corporate_events(title):
+    assert not {"acquisition", "funding"} & {value["id"] for value in story_signals(item("ambiguous", title))}
+
+
+@pytest.mark.parametrize("title", ["Startup raises $500 million", "Startup raises a new round", "Startup raises €20m"])
+def test_funding_signals_keep_explicit_capital_raises(title):
+    assert "funding" in {value["id"] for value in story_signals(item("capital", title))}
+
+
 def test_earnings_not_hidden_by_another_nvidia_development():
     rows = [item("earnings", "Nvidia quarterly earnings surge"),
             item("leadership", "Nvidia CEO search continues", "the-verge", hours=40)]

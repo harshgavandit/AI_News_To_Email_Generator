@@ -253,7 +253,8 @@ async function loadHeadlines() {
         item.append(link, node("span", "muted", source.label));
         links.append(item);
       }
-      const search = node("a", "coverage-search", `Browse ${story.query} coverage →`);
+      const search = node("a", "coverage-search", "Browse related coverage →");
+      search.setAttribute("aria-label", `Browse coverage: ${story.title}`);
       search.href = `/?${new URLSearchParams({ q: story.query, window: "7d", sort: "relevance" })}#reading-room`;
       const actions = node("div", "coverage-actions");
       const sources = node("details");

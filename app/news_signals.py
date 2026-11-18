@@ -3,14 +3,14 @@ from datetime import UTC, datetime
 import re
 
 SIGNALS = (
-    ("acquisition", "Acquisitions & mergers", 14, r"\b(?:acquir\w*|acquisition|merger|takeover|buyout)\b"),
+    ("acquisition", "Acquisitions & mergers", 14, r"\b(?:acquir\w*|acquisition|merger|buyout|(?:hostile|corporate|company) takeover|takeover (?:bid|deal|offer))\b"),
     ("ipo", "IPOs & public markets", 13, r"\b(?:ipo|initial public offering|stock.market debut|go(?:es|ing)? public|prospectus)\b"),
     ("earnings", "Earnings & financial results", 12, r"\b(?:earnings|quarterly results|financial results|revenue (?:beat|miss|surge|growth)|results.*(?:nvidia|chipmaker))\b"),
     ("outage", "Service disruptions", 15, r"\b(?:outage|service disruption|unavailable|services? (?:is|are) down|service (?:restored|recovery))\b"),
     ("security", "Security incidents", 15, r"\b(?:breach|ransomware|zero.day|exploit(?:ed|s|ation)?|actively exploited|critical vulnerabilit\w*)\b"),
     ("policy", "Policy & governance", 12, r"\b(?:antitrust|export controls?|sanctions?|transparency initiative|regulat\w*|ai (?:safety|governance))\b"),
     ("launch", "Products & model releases", 10, r"\b(?:launch\w*|unveil\w*|introduc\w*|rolls? out|expands? access|now available|flagship|keynote|ignite\s+20\d{2}|(?:tasks|features?).*\bfree|linked billing)\b"),
-    ("funding", "Funding & investment", 9, r"\b(?:raises?|funding|series [a-f]|seed round|venture capital)\b|\$[\d.]+[bm]\b"),
+    ("funding", "Funding & investment", 9, r"\b(?:raises? (?:[$€£¥\d]|(?:a (?:new )?)?(?:round|seed|series|capital|funding))|funding|series [a-f]|seed round|venture capital)\b|\$[\d.]+[bm]\b"),
     ("leadership", "Company leadership", 12, r"\b(?:ceo|chief executive)\b.*\b(?:resign\w*|depart\w*|appoint\w*|successor|search|steps? down|transition)\b"),
 )
 COMPILED = tuple((key, label, weight, re.compile(pattern, re.I)) for key, label, weight, pattern in SIGNALS)
