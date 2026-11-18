@@ -1,6 +1,26 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "fastapi",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
+      "destination": "https://getinformdaily.com/",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
+      "destination": "https://getinformdaily.com/",
+      "permanent": true
+    },
+    {
+      "source": "/:page(about|contribute|privacy|projects|research|sources|technology|trust).html",
+      "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
+      "destination": "https://getinformdaily.com/:page.html",
+      "permanent": true
+    }
+  ],
   "functions": {
     "app/server.py": {
       "maxDuration": 120,
