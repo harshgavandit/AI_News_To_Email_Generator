@@ -22,9 +22,10 @@ class Headline:
     references: frozenset[str]
 
 
-def headline(article):
+def headline(article, *, include_status=False):
     source = BY_ID.get(article.get("source_id"))
-    if not source or source.coverage not in COVERAGE_TYPES or source.kind in {"video", "research"}:
+    if (not source or (source.coverage not in COVERAGE_TYPES and not (include_status and source.coverage == "status"))
+            or source.kind in {"video", "research"}):
         return None
     try:
         published = datetime.fromisoformat(article["published_at"])

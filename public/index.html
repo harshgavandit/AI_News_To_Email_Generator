@@ -44,6 +44,7 @@
     <link rel="stylesheet" href="/foundations.css" />
     <link rel="stylesheet" href="/desk.css" />
     <link rel="stylesheet" href="/polish.css" />
+    <link rel="stylesheet" href="/reader-tools.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -82,6 +83,7 @@
           <button type="button" data-workspace-view="saved"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" focusable="false"><path d="M5 3h10v14l-5-3-5 3V3Z" /></svg></span> Saved <span id="sidebar-saved-count" class="nav-count"></span></button>
         </nav>
         <div class="sidebar-section">
+          <a class="sidebar-secondary" href="/inbox.html">Inbox ↗</a>
           <a class="sidebar-secondary" href="/research.html">Research Desk ↗</a>
           <a class="sidebar-secondary" href="/technology.html">Technology pages ↗</a>
           <a class="sidebar-secondary" href="/projects.html">Research projects ↗</a>
@@ -211,6 +213,7 @@
                 <a href="/research.html#radar-title" class="button secondary">Edit interests</a>
               </div>
             </div>
+            <div id="home-catchup-freshness"></div>
             <div id="home-catchup-results"></div>
           </section>
           <div id="feed-controls">
@@ -864,6 +867,8 @@
           </div>
         </details>
         <p id="dossier-feedback" class="status" role="status"></p>
+        <a id="dossier-development" class="text-button" hidden>Open development ↗</a>
+        <div id="dossier-impact"></div>
         <div class="dossier-layers">
           <details id="dossier-highlights" class="dossier-section dossier-highlights" hidden>
             <summary class="dossier-section-title">Story summary</summary>

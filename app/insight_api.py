@@ -8,7 +8,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import ai_insights, event_intelligence, monitoring, public_mail, radar_store, research, stack_intelligence, technology, watch_rules
+from app import ai_insights, event_intelligence, monitoring, personal_impact, public_mail, radar_store, reader_freshness, research, stack_intelligence, technology, watch_rules
 from app.coverage import TOPICS, public_article
 from app.provenance import source_history
 from app.launch_store import get_store
@@ -72,6 +72,24 @@ def article_history(article_id: Annotated[str, Path(pattern=r"^[a-zA-Z0-9_-]{1,4
     return result
 
 
+@router.post("/api/intelligence/personal-impact")
+def impact(body: personal_impact.ImpactRequest, request: Request, response: Response):
+    from app.server import admit_expensive
+
+    monitoring.protect_write(request)
+    store = archive()
+    admit_expensive(store, request, "personal-impact", 8, 600)
+    row = store.article(body.article_id)
+    if not row:
+        raise HTTPException(404, "This story is no longer in the archive.")
+    rows = [public_article(row)]
+    event_id = event_intelligence.development_for_article(store, body.article_id)
+    if event_id and (events := event_intelligence.catalog(store, event_ids=[event_id], limit=1)):
+        rows.extend(item for item in events[0]["articles"] if item["id"] != body.article_id)
+    response.headers["Cache-Control"] = "private, no-store"
+    return personal_impact.check(store, body, rows)
+
+
 class ConversationTurn(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     role: Literal["user", "assistant"]
@@ -133,19 +151,25 @@ def developments(response: Response, hours: Annotated[int, Query(ge=12, le=2160)
     if any(not re.fullmatch(r"[a-f0-9]{32}", ident) for ident in event_ids):
         raise HTTPException(422, "Choose valid developments.")
     response.headers["Cache-Control"] = "private, no-store" if event_ids else "public, max-age=30"
-    return {"events": event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic,
-                                                 event_ids=event_ids, query=q.strip()),
-            "status": "available" if event_intelligence.ready(store) else "warming",
-            "notice": "Related coverage is grouped by source evidence. Grouping does not establish agreement."}
+    items = event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic, event_ids=event_ids, query=q.strip())
+    result = {"events": items, "status": "available" if event_intelligence.ready(store) else "warming",
+              "notice": "Related coverage is grouped by source evidence. Grouping does not establish agreement."}
+    if q.strip() and not event_ids:
+        source_ids = {row.get("source_id") for event in items for row in event["articles"]}
+        result["coverage_freshness"] = reader_freshness.coverage_snapshot(store, topics=[topic], source_ids=source_ids)
+    return result
 
 
 @router.get("/api/intelligence/events/{event_id}")
-def development(event_id: str, response: Response, since: Annotated[int | None, Query(ge=1, le=2147483647)] = None):
-    result = event_intelligence.timeline(archive(), event_id, since=since)
+def development(event_id: Annotated[str, Path(pattern=r"^[a-f0-9]{32}$")], response: Response,
+                since: Annotated[int | None, Query(ge=1, le=2147483647)] = None):
+    store = archive()
+    result = event_intelligence.timeline(store, event_id, since=since)
     if not result:
         raise HTTPException(404, "This development is no longer in the retained archive.")
     response.headers["Cache-Control"] = "no-store"
-    return result
+    source_ids = {item["source"].get("source_id") for item in result["entries"]}
+    return {**result, "coverage_freshness": reader_freshness.coverage_snapshot(store, source_ids=source_ids, linked_only=True)}
 
 
 @router.post("/api/intelligence/explain")
@@ -179,6 +203,8 @@ def catch_up(body: ai_insights.CatchupRequest, request: Request, response: Respo
                     30 if body.summary_only else 10, 600)
     result = ai_insights.catchup(store, body.profile, body.seen, hours=body.hours,
                                  since=body.since, allow_generate=not body.summary_only)
+    source_ids = {row.get("source_id") for event in result["events"] for row in event["articles"]}
+    result["coverage_freshness"] = reader_freshness.coverage_snapshot(store, topics=body.profile.topics, source_ids=source_ids)
     if (brief := result.pop("brief", None)) and not body.summary_only:
         expires, ident = int(time.time()) + 3600, secrets.token_urlsafe(24)
         store.save_preview(ident, brief, expires)

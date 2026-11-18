@@ -66,10 +66,12 @@ def keys_for(row):
 def event_score(row, candidate):
     if row["id"] == candidate["id"]:
         return 1.0
-    if match := coverage_match(headline(row), headline(candidate)):
+    left, right = BY_ID.get(row["source_id"]), BY_ID.get(candidate["source_id"])
+    if left and right and left.coverage == right.coverage == "status" and left.id != right.id:
+        return 0
+    if match := coverage_match(headline(row, include_status=True), headline(candidate, include_status=True)):
         return match[0]
     # Official releases and tutorials are not different reports of one event.
-    left, right = BY_ID.get(row["source_id"]), BY_ID.get(candidate["source_id"])
     if not left or not right or left.coverage not in {"reporting", "publisher", "advisory"} or right.coverage not in {"reporting", "publisher", "advisory"}:
         return 0
     if left.language != right.language:
@@ -249,7 +251,9 @@ def timeline(store, ident, since=None, *, observed_since=None):
             changes = [entry(row) for row in revisions]
     if not retained:
         return None
+    latest_material = next((item for item in entries if item["reason"] not in {"additional_reporting", "source_revision"}), None)
     return {"id": ident, "title": event["title"], "entries": entries, "changes": changes,
+            "latest_material": latest_material, "topic": event["topic"],
             "revision": str(event["revision"]),
             "notice": "Publication and observed revision history. Additional reporting may repeat existing facts."}
 

@@ -34,6 +34,70 @@ async function until(check) {
   assert.fail('Expected UI state did not arrive');
 }
 
+test('a development deep link renders its evidence, freshness, and personal impact check', async () => {
+  const id = 'e'.repeat(32);
+  const markup = readFileSync(new URL('../../public/development.html', import.meta.url), 'utf8');
+  const env = mount(markup, `https://informa.test/development.html?id=${id}`);
+  const previousFetch = globalThis.fetch;
+  const target = { provider: 'google-cloud', service: 'Compute Engine', region: 'us-central1' };
+  localStorage.setItem('informa-impact-v1', JSON.stringify({ cloud: [target], packages: [] }));
+  const source = { id: 'provider', title: 'Service update', coverage: 'status', publisher: 'Google Cloud Status',
+    url: 'https://status.cloud.google.com/', published_at: '2026-11-18T16:00:00Z', cleanSummary: 'Service has recovered.' };
+  const entry = { ...source, source, excerpt: source.cleanSummary, change_label: 'Resolved', observed: 1795017900 };
+  globalThis.fetch = async (path, options = {}) => {
+    const payload = path === '/api/intelligence/personal-impact' ?
+      { cloud: [{ target, status: 'match', message: 'Official report matches.', evidence: [source] }], packages: [] } :
+      { title: 'Cloud service recovery', entries: [entry], latest_material: entry, notice: 'Source timeline',
+        coverage_freshness: { scope: 'Feeds linked to this development', counts: { enabled: 1, stale: 1 },
+          feeds: [{ label: source.publisher, freshness: 'stale', checked_at: source.published_at }] } };
+    if (path === '/api/intelligence/personal-impact')
+      assert.deepEqual(JSON.parse(options.body), { cloud: [target], packages: [], article_id: source.id, explain: false });
+    return new Response(JSON.stringify(payload));
+  };
+  try {
+    await import(`../../public/development.js?reader=${Date.now()}`);
+    await until(() => document.getElementById('development-title').textContent === 'Cloud service recovery');
+    assert.match(document.getElementById('development-content').textContent, /Resolved.*Timeline/);
+    assert.match(document.querySelector('.reader-freshness').textContent, /1 overdue/);
+    assert.equal(document.querySelector('.research-evidence a').href, source.url);
+    [...document.querySelectorAll('button')].find(el => el.textContent === 'Follow development').click();
+    assert.deepEqual(JSON.parse(localStorage.getItem('informa-radar-v1')).followed_events, [id]);
+    document.querySelector('.impact-panel button').click();
+    await until(() => document.querySelector('.impact-panel').textContent.includes('Official report matches.'));
+  } finally { globalThis.fetch = previousFetch; env.close(); }
+});
+
+test('Inbox separates follow read state from server watch delivery controls', async () => {
+  const markup = readFileSync(new URL('../../public/inbox.html', import.meta.url), 'utf8');
+  const env = mount(markup, 'https://informa.test/inbox.html');
+  const previousFetch = globalThis.fetch;
+  const id = 'f'.repeat(32);
+  localStorage.setItem('informa-radar-v1', JSON.stringify({ followed_events: [id] }));
+  const calls = [];
+  let snoozed = false;
+  globalThis.fetch = async (path, options = {}) => {
+    calls.push([path, options.method]);
+    if (options.method === 'PUT') snoozed = JSON.parse(options.body).action === 'snooze';
+    const payload = path.startsWith('/api/intelligence/events?') ?
+      { events: [{ id, title: 'Followed cloud outage', digest_version: '2' }] } :
+      { available: true, active: true, controls_ready: true, unread: 0, alerts: [],
+        watches: [{ id: 'cloud', query: 'Cloud alerts', delivery: { muted: false, snoozed_until: snoozed ? 1893456000 : null } }] };
+    return new Response(JSON.stringify(payload));
+  };
+  try {
+    await import(`../../public/reader-inbox.js?reader=${Date.now()}`);
+    await until(() => document.querySelector('#inbox-follows button'));
+    assert.equal(document.querySelector('#inbox-follows a').search, `?id=${id}`);
+    document.querySelector('#inbox-follows button').click();
+    await until(() => document.getElementById('inbox-follow-status').textContent === '0 unread followed developments');
+    assert.equal(JSON.parse(localStorage.getItem('informa-inbox-seen-v1'))[id], '2');
+    document.querySelector('#inbox-watches button').click();
+    await until(() => document.querySelector('#inbox-watches button').textContent === 'Resume');
+    assert.ok(calls.some(([path, method]) => path === '/api/intelligence/inbox/watches/cloud/delivery' && method === 'PUT'));
+    assert.equal(document.querySelector('#inbox-email-label + p + a').pathname, '/research.html');
+  } finally { globalThis.fetch = previousFetch; env.close(); }
+});
+
 test('delivery receipt refresh never sends a brief and clears private status after verification expires', async () => {
   const env = mount();
   Object.defineProperty(document, 'hidden', { configurable: true, value: false });

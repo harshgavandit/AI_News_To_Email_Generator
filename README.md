@@ -10,6 +10,10 @@ Open Today’s Brief for a five-story catch-up and email that selection, or expl
 
 The Reading Room opens on **Today** for a new reader and **Catch up** when the browser has a reading checkpoint. Catch up shows selected developments since that checkpoint, including source-linked confirmations, scope changes, recoveries, and corrections when the source text supports them. Repeat reporting stays in the event timeline. **Mark caught up** advances the checkpoint, and **All stories** opens the full feed. The search controls carry the query, topic, and time range between **Articles**, **Developments**, and **Ask with sources**.
 
+Open a development from Catch up, search, or a personalized brief to see its timeline, linked source checks, and available publisher evidence on a shareable page. Save package versions or Azure, Google Cloud, and Cloudflare service-region pairs in Personal impact settings. **Check personal impact** compares exact package versions with OSV and cloud targets with the named provider’s archived status excerpt. Missing evidence returns **Unknown**. An optional AI explanation cites the matched cloud report.
+
+The Inbox shows followed developments and alerts from background monitoring. Mark items seen, or snooze, mute, and resume a watch. These watch controls affect browser alerts. Morning email preferences are managed separately from a verified inbox.
+
 Open the [Research Desk](https://getinformdaily.com/research.html) to search publisher evidence, compare coverage, request cited analysis, and download research notes with source links. Opt in to background monitoring for up to six queries and review the private inbox when you return. The inbox updates after the archive and monitoring checks run. Delete watches and alerts under Privacy &amp; controls.
 
 Open a story in the Reading Room to see its publisher excerpt and related reporting. When enough text is available, the story summary highlights sentences from the excerpt or an article shared with permission. Save articles, share a story link, pin reports to a brief, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. Search and filters narrow the articles before personalization ranks them. Coverage and related links show what connected the records, such as closely matching headlines or a shared CVE identifier.
@@ -44,6 +48,7 @@ npm run build
 npm test
 uv run ruff check app tests scripts main.py
 uv run pytest -q
+uv run python -m scripts.check_reader_quality
 ```
 
 Run live integration checks only for a deliberate source diagnosis. These commands contact publishers. For a specific issue, select only the affected sources:

@@ -30,7 +30,7 @@ from app.cache import Cache
 from app.mail_schedule import run_due_subscriptions
 from app.mail_capacity import batch_sender, mail_capacity
 from app.mail_events import router as mail_events_router
-from app import public_mail
+from app import public_mail, reader_freshness
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, TAGLINE
@@ -396,7 +396,7 @@ class ResearchRequest(BaseModel):
     @model_validator(mode="after")
     def valid_question(self):
         if (not self.article_id and not search_terms(self.q)) or (
-            self.article_id and (self.q or self.mode != "analyze")
+            self.article_id and (self.q or self.mode not in {"analyze", "compare"})
         ):
             raise ValueError("Enter a question or analyze an archived article.")
         return self
@@ -422,7 +422,10 @@ def archive_research(body: ResearchRequest, request: Request):
         question = anchor["title"][:320]
         # Article analysis uses current related coverage even for an older archive link.
         scope = RecommendationScope(hours=TimeWindow.month).model_dump()
-    return research_service.research(store, question=question, mode=body.mode, filters=scope, anchor=anchor, language=body.language)
+    result = research_service.research(store, question=question, mode=body.mode, filters=scope, anchor=anchor, language=body.language)
+    source_ids = {row.get("source_id") for row in result["evidence"]}
+    return {**result, "coverage_freshness": reader_freshness.coverage_snapshot(store, topics=[scope["topic"]],
+             source_ids=source_ids, filters={key: scope[key] for key in ("source", "publisher", "kind", "region", "coverage", "language")})}
 
 
 @app.get("/api/intelligence/daily")
