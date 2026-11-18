@@ -2043,7 +2043,7 @@
     "collection": "AI engineering"
   },
   {
-    "id": "release-microsoft-agent-framework",
+    "id": "release-microsoft-agent-framework-go",
     "group": "github-releases",
     "label": "Microsoft Agent Framework Go Releases",
     "url": "https://github.com/microsoft/agent-framework-go/releases.atom",
