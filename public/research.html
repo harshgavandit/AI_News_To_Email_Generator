@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/foundations.css" />
     <link rel="stylesheet" href="/research.css" />
     <link rel="stylesheet" href="/polish.css" />
+    <link rel="stylesheet" href="/reader-tools.css" />
     <script type="module" src="/research.js"></script>
   </head>
   <body>
@@ -100,6 +101,24 @@
             </form>
             <p id="radar-status" class="research-status" role="status" aria-live="polite"></p>
             <div id="radar-results"></div>
+            <details class="radar-event" id="impact-settings">
+              <summary>Personal impact settings</summary>
+              <p>Saved in this browser. An impact check sends these selections to Informa AI and checks package versions with OSV.</p>
+              <form data-impact-kind="cloud">
+                <label>Cloud provider <select name="provider"><option value="google-cloud">Google Cloud</option><option value="azure">Azure</option><option value="cloudflare">Cloudflare</option></select></label>
+                <label>Service <input name="service" required minlength="2" maxlength="60" pattern="[\p{L}\p{N} ._+\/\-]+" placeholder="Compute Engine" /></label>
+                <label>Region <input name="region" required minlength="2" maxlength="60" pattern="[\p{L}\p{N} ._+\/\-]+" placeholder="us-central1" /></label>
+                <button class="button secondary" type="submit">Add cloud target</button>
+              </form>
+              <form data-impact-kind="packages">
+                <label>Ecosystem <select name="ecosystem"><option>npm</option><option>PyPI</option><option>Go</option><option>crates.io</option><option>Maven</option><option>NuGet</option><option>RubyGems</option></select></label>
+                <label>Package <input name="name" required maxlength="160" pattern="[A-Za-z0-9@_][A-Za-z0-9@._\/+:\-]*" placeholder="express" /></label>
+                <label>Version <input name="version" required maxlength="80" pattern="[vV]?[0-9][A-Za-z0-9._+\-]*" placeholder="4.18.2" /></label>
+                <button class="button secondary" type="submit">Add package target</button>
+              </form>
+              <ul data-impact-list aria-label="Saved impact targets"></ul>
+              <p data-impact-status role="status"></p>
+            </details>
             <details class="radar-event">
               <summary>Check a package version for advisories</summary>
               <form id="package-check-form">
@@ -124,6 +143,7 @@
           <section class="research-panel" aria-labelledby="watch-title">
             <p class="research-label">Monitoring</p>
             <h2 id="watch-title">Topic alerts</h2>
+            <a href="/inbox.html">Open Inbox ↗</a>
             <p id="watch-description">Watch up to six keyword queries or technology rules in this browser.</p>
             <div class="monitor-consent" id="monitor-opt-in" hidden>
               <p>Background monitoring stores your watch terms and checks the archive when this page is closed. Terms stay for up to 30 days after your last visit.</p>

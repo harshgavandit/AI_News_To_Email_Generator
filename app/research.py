@@ -218,6 +218,7 @@ def evidence_record(article):
         "excerpt": article["cleanSummary"][:650] if article["summary_basis"] == "publisher_excerpt" else "",
         "match": article.get("match"), "coverage": article.get("coverage"), "topic": article["category"],
         "region": article.get("region"), "publisher_family": article.get("publisher_family"),
+        "source_id": article.get("source_id"),
     }.items() if value is not None}
 
 

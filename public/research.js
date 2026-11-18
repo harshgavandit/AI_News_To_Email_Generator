@@ -6,6 +6,9 @@ import { historyControl } from "./source-history.js";
 import { initRuleBuilder } from "./watch-rule-ui.js";
 import { appendClaimEvidence } from "./claim-evidence.js";
 import { searchLink } from "./search-context.js";
+import { initImpactSettings } from "./personal-impact.js";
+import { developmentLink } from "./development-link.js";
+import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
 
 const byId = (id) => document.getElementById(id);
 const form = byId("research-form");
@@ -17,6 +20,8 @@ const status = byId("research-status");
 const results = byId("research-results");
 const watchList = byId("watch-list");
 const watchStatus = byId("watch-status");
+initImpactSettings(byId("impact-settings"));
+if (location.hash === "#impact-settings") byId("impact-settings").open = true;
 const alertKey = readingGroups.alerts.key;
 let currentRequest;
 let daily;
@@ -111,6 +116,8 @@ function downloadNotes(data, title, references) {
 
 function render(data, titles) {
   results.replaceChildren();
+  const freshness = freshnessNotice(data.coverage_freshness);
+  if (freshness) results.append(freshness);
   const references = new Map(data.evidence.map((row, index) => [row.id, index + 1]));
   const cite = (id) => {
     const number = references.get(id);
@@ -253,15 +260,18 @@ async function search(body) {
   try {
     if (body.mode === "developments") {
       const params = new URLSearchParams({ ...body.scope, q: body.q.slice(0, 150), limit: 24 });
-      const { events = [], status: availability } = await api(`/api/intelligence/events?${params}`, undefined, controller.signal);
+      const { events = [], status: availability, coverage_freshness: coverage } = await api(`/api/intelligence/events?${params}`, undefined, controller.signal);
       if (controller !== currentRequest) return;
       const view = panel("Matching developments");
+      const freshness = freshnessNotice(coverage);
+      if (freshness) view.append(freshness);
       const list = element("ol", "", "development-list");
       for (const event of events) list.append(developmentItem(event, status, true));
       view.append(list);
       results.append(view);
       status.textContent = events.length ? `${events.length} grouped developments` :
         availability === "warming" ? "Development indexing is temporarily unavailable." :
+          coverageWarning(coverage) ? "No matching developments in the available archive. Some source checks are incomplete." :
           "No matching developments. Try a wider time range or browse individual articles.";
       return;
     }
@@ -270,6 +280,7 @@ async function search(body) {
     const label = data.retrieval === "hybrid" ? "Keyword and semantic search" : "Keyword search";
     status.textContent = data.evidence.length ?
       `${data.evidence.length} source${data.evidence.length === 1 ? "" : "s"} · ${label}` :
+      coverageWarning(data.coverage_freshness) ? "No matching sources in the available archive. Some source checks are incomplete." :
       "No matching sources. Try a different term, topic, or time range.";
     render(data, { answer: body.mode === "global_compare" ? "Cross-language coverage comparison" : body.mode === "compare" ? "AI coverage comparison" :
       body.mode === "brief" ? "AI topic briefing" : "AI analysis", evidence: "Source evidence",
@@ -422,6 +433,8 @@ async function catchMeUp(event) {
     feedback.textContent = data.message || `${data.events?.length || 0} developments ready. AI explanations are linked to publisher evidence.`;
     const list = byId("radar-results");
     list.replaceChildren();
+    const freshness = freshnessNotice(data.coverage_freshness);
+    if (freshness) list.append(freshness);
     for (const event of data.events || []) {
       const row = element("article", "", "radar-event");
       const heading = element("h3");
@@ -429,6 +442,7 @@ async function catchMeUp(event) {
       if (story) heading.append(link(event.title, story.url));
       else heading.textContent = event.title;
       row.append(heading, element("p", `${event.change === "updated" ? "Updated" : "New development"} · ${event.source_count} publishers`, "research-meta"));
+      if (developmentLink(event.id)) row.append(link("Open development ↗", developmentLink(event.id)));
       if (event.reasons?.length) row.append(element("p", event.reasons.join(" · ")));
       row.append(followButton(event.id));
       if (event.change_sources?.length) row.append(element("h4", "New since your last brief"), timelineList(event.change_sources));
@@ -548,6 +562,7 @@ function developmentItem(event, feedback, compare = false) {
     } catch (error) { feedback.textContent = error.message; open.disabled = false; }
   });
   item.append(open, followButton(event.id));
+  if (developmentLink(event.id)) item.append(link("Open development ↗", developmentLink(event.id)));
   if (compare) {
     const action = element("button", "Compare coverage", "text-button");
     action.type = "button";

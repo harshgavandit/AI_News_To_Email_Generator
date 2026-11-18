@@ -10,6 +10,9 @@ import { followedStories, followedTechnologies, saveStoryFollow } from "./techno
 import { catchupCheckpoint, entryView, homeCatchupRequest, markCatchupCheckpoint } from "./catchup-home.js";
 import { appendClaimEvidence, sourceEvidence } from "./claim-evidence.js";
 import { searchLink } from "./search-context.js";
+import { impactPanel } from "./personal-impact.js";
+import { developmentLink } from "./development-link.js";
+import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
 
 const $ = (id) => document.getElementById(id);
 const views = ["feed", "for-you", "saved", "briefing", "catchup"];
@@ -1214,6 +1217,7 @@ async function loadHomeCatchup() {
   const results = $("home-catchup-results");
   const mark = $("home-catchup-mark");
   results.replaceChildren();
+  $("home-catchup-freshness").replaceChildren();
   mark.hidden = true;
   if (!lastCatchup) {
     status("home-catchup-status", "Read today’s briefing to start tracking new developments in this browser.");
@@ -1262,12 +1266,22 @@ async function loadHomeCatchup() {
         copy.append(explained);
       }
       card.append(copy);
+      const timelineHref = developmentLink(event.id);
+      if (timelineHref) {
+        const timeline = node("a", "text-button", "Open development ↗");
+        timeline.href = timelineHref;
+        copy.append(timeline);
+      }
       results.append(card);
     }
     mark.hidden = !results.childElementCount;
+    const notice = freshnessNotice(data.coverage_freshness);
+    if (notice) $("home-catchup-freshness").append(notice);
     status("home-catchup-status", results.childElementCount
       ? `Selected developments since ${readableTime(new Date(lastCatchup).toISOString())} within the last 30 days.`
-      : "You’re caught up on matching developments in the available archive.");
+      : coverageWarning(data.coverage_freshness)
+        ? "No new developments found in the available archive. Some source checks are incomplete."
+        : "You’re caught up on matching developments in the available archive.");
   } catch (error) {
     if (state.controller !== controller || error.name === "AbortError") return;
     status("home-catchup-status", error.message, true);
@@ -1737,6 +1751,12 @@ function renderDigest() {
       headline_only: "Headline only", ai_evidence_explanation: "AI explanation of publisher evidence" };
     const sourceRow = node("div", "digest-source-row");
     sourceRow.append(externalLink(a.sourceUrl || a.url, "Read source ↗"));
+    const development = developmentLink(a.development_id);
+    if (development) {
+      const link = node("a", "", "Open development ↗");
+      link.href = development;
+      sourceRow.append(link);
+    }
     if (provenance[a.summary_basis]) sourceRow.append(node("span", "", provenance[a.summary_basis]));
     item.append(sourceRow);
     $("preview").append(item);
@@ -2452,6 +2472,9 @@ function syncFollowActions() {
   const article = dossier.article;
   const followingStory = followedStories().includes(dossier.developmentId);
   $("dossier-follow-story").hidden = !dossier.developmentId;
+  const development = developmentLink(dossier.developmentId);
+  $("dossier-development").hidden = !development;
+  if (development) $("dossier-development").href = development;
   $("dossier-follow-story").textContent = followingStory ? "Following story" : "Follow story";
   $("dossier-follow-story").setAttribute("aria-pressed", String(followingStory));
   const followed = preferences.follows("authors", article.author_key);
@@ -2572,6 +2595,7 @@ function renderDossier(details) {
   dossier.developmentId = null;
   $("dossier-references").hidden = true;
   const article = dossier.article = dossier.articles[dossier.index];
+  $("dossier-impact").replaceChildren(impactPanel(article.id));
   markAsRead(article.id);
   const topic = article.category || article.topic;
   const coverage = article.kind === "video" ? "Creator video" : article.kind === "podcast" ? "Podcast episode" : article.content_format === "newsletter" ? "Newsletter article" : state.coverageTypes[article.coverage] || coverageLabels[article.coverage];

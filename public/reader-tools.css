@@ -1,0 +1,51 @@
+.reader-page-nav, .reader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem 1rem;
+}
+
+.reader-page-content {
+  display: grid;
+  gap: 1rem;
+  max-width: 50rem;
+  overflow-wrap: anywhere;
+}
+
+.reader-items > li {
+  padding-block: .75rem;
+}
+
+.reader-items .reader-actions {
+  margin-top: .5rem;
+}
+
+.impact-panel {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line, currentColor);
+  border-radius: .75rem;
+  overflow-wrap: anywhere;
+}
+
+.impact-panel label {
+  display: block;
+  margin-block: .75rem;
+}
+
+#impact-settings form {
+  display: grid;
+  gap: .5rem;
+  margin-block: 1rem;
+}
+
+.reader-freshness {
+  margin-block: .65rem 1rem;
+  padding: .75rem 1rem;
+  border-inline-start: 2px solid currentColor;
+  font-size: .9rem;
+}
+
+.reader-freshness p {
+  margin: .3rem 0;
+}

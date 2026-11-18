@@ -37,7 +37,7 @@ def mentions(label, rows):
 
 def advisories(store, package):
     payload = {"package": {"ecosystem": package.ecosystem, "name": package.name}, "version": package.version}
-    cache_key = hashlib.sha256(("osv:" + json.dumps(payload, sort_keys=True)).encode()).hexdigest()
+    cache_key = hashlib.sha256(("osv-v2:" + json.dumps(payload, sort_keys=True)).encode()).hexdigest()
     now = time.time()
     cached = store.get_summary(cache_key)
     if cached and cached["checked_at"] >= now - 900:
@@ -55,10 +55,13 @@ def advisories(store, package):
         ident = record.get("id") if isinstance(record, dict) else None
         if not isinstance(ident, str) or record.get("withdrawn") or not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", ident):
             continue
+        aliases = record.get("aliases")
         evidence.append({"id": ident, "title": sanitize_text(record.get("summary") or "", 300) or ident,
                          "excerpt": sanitize_text(record.get("details") or "", 650),
                          "publisher": "OSV", "url": f"https://osv.dev/vulnerability/{ident}",
-                         "published_at": record.get("published") or ""})
+                         "published_at": record.get("published") or "",
+                         "aliases": [alias for alias in (aliases if isinstance(aliases, list) else [])[:20]
+                                     if isinstance(alias, str) and re.fullmatch(r"[A-Za-z0-9._-]{1,100}", alias)]})
     result = {"evidence": evidence, "partial": bool(data.get("next_page_token")) or len(records) > 20, "checked_at": now}
     store.save_summary(cache_key, result, replace=True)
     return result

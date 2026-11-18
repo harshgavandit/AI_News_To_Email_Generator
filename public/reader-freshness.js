@@ -1,0 +1,40 @@
+function moment(value) {
+  return value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleString() : "No recorded check";
+}
+
+export function coverageWarning(snapshot) {
+  const counts = snapshot?.counts;
+  if (!counts) return "";
+  if (!counts.enabled) return "No enabled feeds were found in this source scope.";
+  const notes = [];
+  if (counts.stale) notes.push(`${counts.stale} overdue`);
+  if (counts.failed) notes.push(`${counts.failed} with failed checks`);
+  if (counts.pending) notes.push(`${counts.pending} awaiting a successful check`);
+  return notes.length ? `Source coverage may be incomplete · ${notes.join(" · ")}.` : "";
+}
+
+export function freshnessNotice(snapshot, doc = document) {
+  if (!snapshot?.counts) return null;
+  const section = doc.createElement("section");
+  section.className = "reader-freshness";
+  section.setAttribute("aria-label", "Source check freshness");
+  const scope = doc.createElement("strong");
+  scope.textContent = snapshot.scope;
+  const summary = doc.createElement("p");
+  summary.textContent = `Latest recorded check: ${moment(snapshot.checked_at)}. ${coverageWarning(snapshot)}`;
+  section.append(scope, summary);
+  if (snapshot.feeds?.length) {
+    const detail = doc.createElement("details");
+    const heading = doc.createElement("summary");
+    heading.textContent = "Check times by source";
+    const list = doc.createElement("ul");
+    for (const feed of snapshot.feeds) {
+      const row = doc.createElement("li");
+      row.textContent = `${feed.label} · ${feed.freshness} · ${moment(feed.checked_at)}`;
+      list.append(row);
+    }
+    detail.append(heading, list);
+    section.append(detail);
+  }
+  return section;
+}

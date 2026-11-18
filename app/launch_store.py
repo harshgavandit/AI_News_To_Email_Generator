@@ -54,6 +54,9 @@ monitor_alerts = Table("brief_monitor_alerts", schema,
     Column("watch_id", String(40), nullable=False), Column("created", Float, nullable=False, index=True),
     Column("updated", Float, nullable=False), Column("read_at", Float), Column("evidence", Text, nullable=False))
 Index("brief_monitor_alerts_inbox", monitor_alerts.c.profile_id, monitor_alerts.c.updated)
+monitor_delivery = Table("brief_monitor_delivery", schema,
+    Column("profile_id", String(64), primary_key=True), Column("watch_id", String(40), primary_key=True),
+    Column("muted", Boolean, nullable=False), Column("snoozed_until", Float))
 source_order = tuple(BY_ID)
 article_indexes = (
     Index("brief_articles_page", articles.c.published_at, articles.c.id),

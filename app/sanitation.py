@@ -45,7 +45,7 @@ SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[^\W_])|(?<=[。！？])\s*(?=\w)")
 DIRECTIONAL = "👇👉🔗✅👆➡️⬇️🏼🏻🏽🏾🏿 \t"
 
 
-def sanitize_text(value, limit=4000):
+def sanitize_text(value, limit=4000, *, strip_timestamps=False):
     """Keep editorial sentences; drop promotional lines, social links, sponsor pitches, and embedded URLs."""
     text = str(value or "")[:32000]
     if "<" in text or "&" in text:
@@ -65,7 +65,8 @@ def sanitize_text(value, limit=4000):
         for sentence in SENTENCES.split(line):
             if PROMO_RE.search(sentence):
                 continue
-            sentence = TIMESTAMP.sub("", sentence)
+            if strip_timestamps:
+                sentence = TIMESTAMP.sub(" ", sentence)
             sentence = HASHTAG.sub("", URL.sub("", sentence))
             sentence = re.sub(r"(?<!\w)@[\w.-]+", "", sentence)
             sentence = " ".join(sentence.split()).strip(DIRECTIONAL + "|•–—*[]():;\"'")
@@ -78,7 +79,7 @@ def sanitize_text(value, limit=4000):
 
 def sanitize_story_excerpt(raw_text: str, source: str, title: str = "", *, channel: str = "",
                            video_fallback: bool = True) -> str:
-    excerpt = " ".join(SENTENCES.split(sanitize_text(raw_text))[:2])
+    excerpt = " ".join(SENTENCES.split(sanitize_text(raw_text, strip_timestamps=source == "youtube"))[:2])
     if not excerpt and video_fallback and source == "youtube" and title:
         excerpt = f"Video by {channel or 'a featured creator'} covering {sanitize_text(title, 180)}."
     if len(excerpt) > 220:
@@ -92,5 +93,6 @@ def sanitize_article(article):
     result = dict(article)
     for key in ("title", "description", "summary", "cleanSummary", "whyItMatters", "keyTakeaway"):
         if key in result:
-            result[key] = sanitize_text(result[key], 500 if key == "title" else 4000)
+            result[key] = sanitize_text(result[key], 500 if key == "title" else 4000,
+                                        strip_timestamps=article.get("source") == "youtube")
     return result

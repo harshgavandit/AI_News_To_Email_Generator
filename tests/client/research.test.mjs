@@ -21,6 +21,9 @@ function mountResearch(window) {
     ['watch-rule-ui.js', ['initRuleBuilder']],
     ['claim-evidence.js', ['appendClaimEvidence']],
     ['search-context.js', ['searchLink']],
+    ['personal-impact.js', ['initImpactSettings']],
+    ['development-link.js', ['developmentLink']],
+    ['reader-freshness.js', ['coverageWarning', 'freshnessNotice']],
   ]) {
     const code = readFileSync(new URL(`../../public/${file}`, import.meta.url), 'utf8')
       .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');

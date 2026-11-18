@@ -6,14 +6,15 @@ import os
 import re
 import secrets
 import time
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import delete, inspect, select, update
+from sqlalchemy import delete, inspect, or_, select, update
 
 from app.coverage import TOPICS
 from app.discovery import search_terms
-from app.launch_store import monitor_alerts, monitor_profiles, monitor_watches
+from app.launch_store import monitor_alerts, monitor_delivery, monitor_profiles, monitor_watches
 from app.research import watch_matches
 from app import watch_rules
 
@@ -60,6 +61,11 @@ class WatchList(BaseModel):
 
 class WatchUpdate(WatchList):
     revision: int = Field(ge=0, le=2_000_000_000)
+
+
+class DeliveryChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["mute", "snooze", "resume"]
 
 
 def schema_ready(store):
@@ -133,6 +139,14 @@ def stored_rules(conn, ident):
     return dict(conn.execute(select(table.c.watch_id, table.c.rule).where(table.c.profile_id == ident)).all())
 
 
+def controls_available(conn):
+    return inspect(conn).has_table(monitor_delivery.name)
+
+
+def paused(control, now):
+    return bool(control and (control["muted"] or (control["snoozed_until"] or 0) > now))
+
+
 def snapshot(store, ident, now):
     with store.engine.connect() as conn:
         profile = active_profile(conn, ident, now)
@@ -140,19 +154,25 @@ def snapshot(store, ident, now):
             return {"available": True, "active": False, "watches": [], "alerts": [], "unread": 0}
         watches = conn.execute(select(monitor_watches).where(monitor_watches.c.profile_id == ident)
                                .order_by(monitor_watches.c.created, monitor_watches.c.id)).mappings()
+        controls_ready = controls_available(conn)
+        controls = {row["watch_id"]: row for row in conn.execute(select(monitor_delivery).where(
+            monitor_delivery.c.profile_id == ident)).mappings()} if controls_ready else {}
         alerts = conn.execute(select(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
             monitor_alerts.c.created >= now - RETENTION).order_by(monitor_alerts.c.updated.desc(),
             monitor_alerts.c.id.desc()).limit(MAX_ALERTS)).mappings()
         alert_rows = [{"id": row["id"], "watch_id": row["watch_id"], "created": row["created"],
                        "updated": row["updated"], "unread": row["read_at"] is None,
-                       "sources": json.loads(row["evidence"])} for row in alerts]
+                       "sources": json.loads(row["evidence"])} for row in alerts if not paused(controls.get(row["watch_id"]), now)]
         watch_rows = [{key: row[key] for key in ("id", "query", "topic", "checked")} for row in watches]
         filters = stored_rules(conn, ident)
         for row in watch_rows:
             if row["id"] in filters:
                 row["rule"] = json.loads(filters[row["id"]])
+            control = controls.get(row["id"])
+            row["delivery"] = ({"muted": control["muted"], "snoozed_until": control["snoozed_until"]}
+                               if paused(control, now) else {"muted": False, "snoozed_until": None})
         return {"available": True, "active": True, "revision": profile["revision"], "watches": watch_rows,
-                "alerts": alert_rows, "unread": sum(row["unread"] for row in alert_rows)}
+                "alerts": alert_rows, "unread": sum(row["unread"] for row in alert_rows), "controls_ready": controls_ready}
 
 
 def set_cookie(response, request, token):
@@ -232,6 +252,9 @@ def save_watches(body: WatchUpdate, request: Request, response: Response):
                                                        monitor_watches.c.id.in_(removed)))
             conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
                                                      monitor_alerts.c.watch_id.in_(removed)))
+            if controls_available(conn):
+                conn.execute(delete(monitor_delivery).where(monitor_delivery.c.profile_id == ident,
+                                                             monitor_delivery.c.watch_id.in_(removed)))
             if prior_rules:
                 table = watch_rules.rules
                 conn.execute(delete(table).where(table.c.profile_id == ident, table.c.watch_id.in_(removed)))
@@ -258,11 +281,56 @@ def mark_read(request: Request, response: Response):
     return snapshot(store, ident, now)
 
 
+@router.post("/read/{alert_id}")
+def mark_alert_seen(alert_id: Annotated[str, Path(pattern=r"^[a-f0-9]{32}$")], request: Request, response: Response):
+    protect_write(request)
+    store, ident, now = configured_store(), profile_id(request), time.time()
+    with store.engine.begin() as conn:
+        begin_write(conn)
+        if not active_profile(conn, ident, now, lock=True):
+            raise HTTPException(401, "Enable background monitoring in this browser first.")
+        found = conn.execute(update(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
+            monitor_alerts.c.id == alert_id, monitor_alerts.c.created >= now - RETENTION).values(read_at=now)).rowcount
+        if not found:
+            raise HTTPException(404, "This alert is unavailable.")
+    response.headers["Cache-Control"] = "private, no-store"
+    return snapshot(store, ident, now)
+
+
+@router.put("/watches/{watch_id}/delivery")
+def set_delivery(watch_id: Annotated[str, Path(pattern=r"^[a-zA-Z0-9_-]{1,40}$")], body: DeliveryChange,
+                 request: Request, response: Response):
+    from app.server import admit_expensive
+
+    protect_write(request)
+    store, ident, now = configured_store(), profile_id(request), time.time()
+    admit_expensive(store, request, "monitor-delivery", 30, 60)
+    with store.engine.begin() as conn:
+        begin_write(conn)
+        if not active_profile(conn, ident, now, lock=True):
+            raise HTTPException(401, "Enable background monitoring in this browser first.")
+        if not controls_available(conn):
+            raise HTTPException(503, "Watch controls are being prepared.")
+        watch = conn.execute(select(monitor_watches).where(monitor_watches.c.profile_id == ident,
+                             monitor_watches.c.id == watch_id).with_for_update()).first()
+        if not watch:
+            raise HTTPException(404, "This watch is unavailable.")
+        filters = (monitor_delivery.c.profile_id == ident, monitor_delivery.c.watch_id == watch_id)
+        conn.execute(delete(monitor_delivery).where(*filters))
+        if body.action != "resume":
+            conn.execute(monitor_delivery.insert().values(profile_id=ident, watch_id=watch_id,
+                muted=body.action == "mute", snoozed_until=now + 86400 if body.action == "snooze" else None))
+    response.headers["Cache-Control"] = "private, no-store"
+    return snapshot(store, ident, now)
+
+
 def delete_profiles(conn, ids):
     from app import research_projects
     research_projects.remove_profiles(conn, ids)
     if rules_available(conn):
         conn.execute(delete(watch_rules.rules).where(watch_rules.rules.c.profile_id.in_(ids)))
+    if controls_available(conn):
+        conn.execute(delete(monitor_delivery).where(monitor_delivery.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_watches).where(monitor_watches.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_profiles).where(monitor_profiles.c.id.in_(ids)))
@@ -295,6 +363,11 @@ def persist_matches(store, watch, matches, now):
             monitor_watches.c.profile_id == ident, monitor_watches.c.id == watch_id).with_for_update()).mappings().first()
         if not current or current["created"] != watch["created"]:
             return 0
+        if controls_available(conn):
+            control = conn.execute(select(monitor_delivery).where(monitor_delivery.c.profile_id == ident,
+                                   monitor_delivery.c.watch_id == watch_id)).mappings().first()
+            if paused(control, now):
+                return 0
         existing = [(row.id, json.loads(row.evidence)) for row in conn.execute(select(
             monitor_alerts.c.id, monitor_alerts.c.evidence).where(*filters)
             .order_by(monitor_alerts.c.created, monitor_alerts.c.id))]
@@ -343,6 +416,11 @@ def run_monitoring(store, *, now=None):
         old_alerts = select(monitor_alerts.c.id).where(monitor_alerts.c.created < now - RETENTION).limit(400)
         conn.execute(delete(monitor_alerts).where(monitor_alerts.c.id.in_(old_alerts)))
         scope = select(monitor_watches).join(monitor_profiles, monitor_profiles.c.id == monitor_watches.c.profile_id)
+        if controls_available(conn):
+            scope = scope.outerjoin(monitor_delivery, (monitor_delivery.c.profile_id == monitor_watches.c.profile_id) &
+                (monitor_delivery.c.watch_id == monitor_watches.c.id)).where(
+                    monitor_delivery.c.muted.is_not(True),
+                    or_(monitor_delivery.c.snoozed_until.is_(None), monitor_delivery.c.snoozed_until <= now))
         if rules_available(conn):
             table = watch_rules.rules
             scope = scope.outerjoin(table, (table.c.profile_id == monitor_watches.c.profile_id) &

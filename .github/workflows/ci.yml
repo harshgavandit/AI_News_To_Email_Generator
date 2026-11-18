@@ -37,6 +37,8 @@ jobs:
           npm test
       - name: Test API, feed handling, and delivery controls
         run: uv run python -m pytest -q
+      - name: Replay reader intelligence quality cases
+        run: uv run python -m scripts.check_reader_quality
   mail-capacity:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -70,4 +72,4 @@ jobs:
         env:
           UV_PYTHON: '3.12'
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
-        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py
+        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py tests/test_reader_intelligence.py

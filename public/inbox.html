@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,follow" />
+  <title>Inbox · Informa AI</title>
+  <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/foundations.css" />
+  <link rel="stylesheet" href="/research.css" />
+  <link rel="stylesheet" href="/polish.css" />
+  <link rel="stylesheet" href="/reader-tools.css" />
+  <script type="module" src="/reader-inbox.js"></script>
+</head>
+<body>
+  <a class="skip" href="#inbox-title">Skip to inbox</a>
+  <header class="site-header">
+    <div class="topbar wrap">
+      <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+      <nav class="reader-page-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a><a href="/inbox.html" aria-current="page">Inbox</a></nav>
+    </div>
+  </header>
+  <main class="wrap research-main">
+    <h1 id="inbox-title">Inbox</h1>
+    <p id="inbox-page-status" role="status"></p>
+    <div class="reader-page-content">
+      <section class="research-panel" aria-labelledby="inbox-alerts-label">
+        <h2 id="inbox-alerts-label">Watch alerts</h2>
+        <p>Snooze or mute these alerts in this browser’s Inbox. Change morning email separately below.</p>
+        <p id="inbox-watch-status" role="status">Loading watch alerts…</p>
+        <ol id="inbox-alerts" class="reader-items"></ol>
+        <details><summary>Manage watch alerts</summary><ul id="inbox-watches" class="reader-items"></ul><a href="/research.html#watch-title">Add or edit watches ↗</a></details>
+      </section>
+      <section class="research-panel" aria-labelledby="inbox-follows-label">
+        <h2 id="inbox-follows-label">Followed developments</h2>
+        <p id="inbox-follow-status" role="status">Loading followed stories…</p>
+        <ol id="inbox-follows" class="reader-items"></ol>
+      </section>
+      <section class="research-panel" aria-labelledby="inbox-email-label">
+        <h2 id="inbox-email-label">Morning email</h2>
+        <p>Manage your verified inbox and choose which followed developments are included in your morning brief.</p>
+        <a href="/research.html#radar-delivery-mode">Manage verified email preferences ↗</a>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

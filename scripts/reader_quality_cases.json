@@ -1,0 +1,38 @@
+{
+  "method": "Historical source facts replayed with synthetic headlines, timestamps, and adversarial variants. This fixture is not used in production.",
+  "cases": [
+    {
+      "id": "cloudflare-outage",
+      "source": "https://blog.cloudflare.com/18-november-2025-outage/",
+      "source_id": "cloudflare-status",
+      "title": "Cloudflare network traffic disruption affects core services",
+      "first": "Cloudflare reported disruptions to delivery of network traffic.",
+      "steps": [
+        {"excerpt": "The same disruption affects Cloudflare network traffic.", "reason": "additional_reporting", "revision": "1", "repeat": true},
+        {"excerpt": "The outage is not resolved. Recovery efforts continue.", "reason": "source_revision", "revision": "1"},
+        {"excerpt": "The outage was resolved and all systems were functioning normally by 17:06 UTC.", "reason": "resolved", "revision": "2"},
+        {"excerpt": "Correction: the company initially suspected an attack. Cloudflare identified an internal configuration issue.", "reason": "correction", "revision": "3"}
+      ],
+      "expected_search": "cloudflare disruption",
+      "accepted_claim": "Cloudflare reported restoration by 17:06 UTC.",
+      "quote": "all systems were functioning normally by 17:06 UTC",
+      "rejected_claim": "Cloudflare reported restoration by 19:45 UTC."
+    },
+    {
+      "id": "cisco-splunk",
+      "source": "https://newsroom.cisco.com/c/r/newsroom/en/us/a/y2024/m03/cisco-completes-acquisition-of-splunk.html",
+      "background": "https://newsroom.cisco.com/c/r/newsroom/en/us/a/y2023/m09/cisco-to-acquire-splunk-to-help-make-organizations-more-secure-and-resilient-in-an-ai-powered-world.html",
+      "source_id": "ars-technica",
+      "title": "Cisco Splunk acquisition deal advances toward closing",
+      "first": "Cisco agreed to buy Splunk, with the proposed transaction subject to closing conditions.",
+      "steps": [
+        {"excerpt": "Cisco announced it completed the acquisition of Splunk.", "reason": "completed", "revision": "2"},
+        {"excerpt": "The reports describe the same completed acquisition of Splunk by Cisco.", "reason": "additional_reporting", "revision": "2", "repeat": true}
+      ],
+      "expected_search": "cisco splunk acquisition",
+      "accepted_claim": "Cisco completed its acquisition of Splunk.",
+      "quote": "completed the acquisition of Splunk",
+      "rejected_claim": "Cisco confirmed a $45 billion purchase price."
+    }
+  ]
+}

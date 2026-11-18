@@ -88,6 +88,11 @@ def brief_evidence(article):
     return []
 
 
+def development_url(article):
+    ident = article.get("development_id", "")
+    return f"{public_site()}/development.html?id={ident}" if re.fullmatch(r"[a-f0-9]{32}", ident) else ""
+
+
 def evidence_label(item):
     return " · ".join(part for part in (item.get("publisher") or "Original source",
         COVERAGE_LABELS.get(item.get("coverage"), ""), (item.get("published_at") or "")[:10]) if part)
@@ -110,6 +115,8 @@ def digest_markdown(digest):
                 lines.append(f"**Why it matters.** {markdown_text(impact)}")
         if source := markdown_link(article.get("url")):
             lines.append(f"Source: {source}")
+        if development := development_url(article):
+            lines.append(f"Follow the development: {markdown_link(development)}")
         for item in brief_evidence(article):
             lines.append(f"**Publisher evidence** · {markdown_text(evidence_label(item))} {markdown_link(item.get('url'))}"
                          f"\n> {markdown_text(item.get('excerpt'))}")
@@ -361,6 +368,9 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None, *, schedul
             card_html += (f'<div class="email-text" style="font-size:12px;margin-bottom:12px;">'
                           f'<strong>Publisher evidence</strong> · <a class="email-link" href="{href}">{label}</a>'
                           f'<blockquote style="margin:6px 0 0 0;">{excerpt}</blockquote></div>')
+        if development := development_url(article):
+            card_html += (f'<p><a class="email-link" href="{escape(development, quote=True)}">'
+                          "Open the development timeline →</a></p>")
         if url != "#":
             card_html += f"""
               <div>

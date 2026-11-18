@@ -353,6 +353,7 @@ def catchup(store, profile, seen, *, hours=168, allow_generate=True, pool=None, 
         event["explanation"] = answer
         entry["whyItMatters"] = "; ".join(event["reasons"])
         entry["change"] = event["change"]
+        entry["development_id"] = event["id"]
         if answer["status"] == "answered":
             prepared += 1
             event["explanation_evidence"] = evidence

@@ -1,13 +1,10 @@
 """Research evaluations use an isolated archive and deterministic provider responses."""
 from datetime import UTC, datetime, timedelta
 import json
-import os
-from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.engine import make_url
+from sqlalchemy import select
 
 from app import monitoring, research, server
 from app.launch_store import Store, monitor_alerts, monitor_profiles, monitor_watches, research_vectors
@@ -20,26 +17,6 @@ def article(ident, title, description, source_id="ars-technica", *, hours=1):
             "source_id": source_id, "publisher": source.label, "kind": source.kind,
             "category": "Cybersecurity", "url": f"https://{source.hosts[0]}/{ident}",
             "published_at": (datetime.now(UTC) - timedelta(hours=hours)).isoformat()}
-
-
-@pytest.fixture(params=["sqlite", "postgresql"])
-def research_database(request, tmp_path):
-    if request.param == "sqlite":
-        yield f"sqlite:///{tmp_path / 'research.db'}"
-        return
-    url = os.getenv("TEST_NEWS_POSTGRES_URL")
-    if not url:
-        pytest.skip("Set TEST_NEWS_POSTGRES_URL to a disposable PostgreSQL service")
-    schema = f"test_research_{uuid4().hex}"
-    admin = create_engine(url)
-    with admin.begin() as conn:
-        conn.exec_driver_sql(f"CREATE SCHEMA {schema}")
-    try:
-        yield make_url(url).update_query_dict({"options": f"-csearch_path={schema}"}).render_as_string(hide_password=False)
-    finally:
-        with admin.begin() as conn:
-            conn.exec_driver_sql(f"DROP SCHEMA {schema} CASCADE")
-        admin.dispose()
 
 
 @pytest.fixture

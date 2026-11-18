@@ -25,7 +25,9 @@ for (const filename of readdirSync('public')) {
     filename === 'sources.html' ? ['sources.js', /element\("([^"\n]+)"\)/g] :
     filename === 'contribute.html' ? ['contribute.js', /byId\("([^"\n]+)"\)/g] :
     filename === 'privacy.html' ? ['privacy.js', /byId\("([^"\n]+)"\)/g] :
-    filename === 'research.html' ? ['research.js', /byId\("([^"\n]+)"\)/g] : null;
+    filename === 'research.html' ? ['research.js', /byId\("([^"\n]+)"\)/g] :
+    filename === 'inbox.html' ? ['reader-inbox.js', /byId\("([^"\n]+)"\)/g] :
+    filename === 'development.html' ? ['development.js', /getElementById\("([^"\n]+)"\)/g] : null;
   if (entry) {
     const script = readFileSync(resolve('public', entry[0]), 'utf8');
     for (const match of script.matchAll(entry[1])) {

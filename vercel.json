@@ -15,7 +15,7 @@
       "permanent": true
     },
     {
-      "source": "/:page(about|contribute|privacy|projects|research|sources|technology|trust).html",
+      "source": "/:page(about|contribute|development|inbox|privacy|projects|research|sources|technology|trust).html",
       "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
       "destination": "https://getinformdaily.com/:page.html",
       "permanent": true
@@ -100,7 +100,7 @@
       ]
     },
     {
-      "source": "/research.html",
+      "source": "/:page(development|inbox|research).html",
       "headers": [
         {
           "key": "Content-Security-Policy",
