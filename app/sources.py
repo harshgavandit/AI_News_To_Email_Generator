@@ -31,6 +31,7 @@ class Source:
     collection: str = ""
     reviewed_at: str = ""
     publisher_group: str = ""
+    pause_reason: str = ""
 
     @property
     def content_format(self):
@@ -78,6 +79,7 @@ class Source:
             "collection": self.collection or self.topic,
             "reviewed_at": self.reviewed_at or None,
             "publisher_family": self.publisher_family,
+            **({"pause_reason": self.pause_reason} if self.pause_reason else {}),
         }
 
 
@@ -169,11 +171,16 @@ DEFAULT_SOURCES = (
 
     # 3. World & Regional Tech
     reporting("rest-of-world", "Rest of World", "https://restofworld.org/feed/latest/", "restofworld.org", region="Global", topic="industry"),
-    Source("tech-in-asia", "tech-in-asia", "Tech in Asia", "news", "https://www.techinasia.com/feed", ("techinasia.com",), enabled=True, topic="startups", coverage="reporting", region="APAC"),
+    Source("tech-in-asia", "tech-in-asia", "Tech in Asia", "news", "https://www.techinasia.com/feed",
+           ("techinasia.com",), enabled=False, topic="startups", coverage="reporting", region="APAC",
+           pause_reason="The publisher denies automated feed access. TNGlobal remains active for APAC technology news."),
     reporting("sifted", "Sifted", "https://sifted.eu/feed", "sifted.eu", region="EU", topic="startups"),
     Source("hacker-news", "hacker-news", "Hacker News", "news", "https://hacker-news.firebaseio.com/v0/topstories.json",
            ("news.ycombinator.com",), topic="software", coverage="discussion", integration="hacker-news-api"),
     reporting("techcabal", "TechCabal", "https://techcabal.com/feed/", "techcabal.com", region="Africa", topic="startups"),
+    Source("govtech-singapore", "govtech-singapore", "GovTech Singapore", "news",
+           "https://www.tech.gov.sg/media/rss.xml", ("tech.gov.sg",), topic="industry", region="APAC",
+           refresh_minutes=60, reviewed_at="2026-11-18"),
     reporting("scmp-tech", "SCMP Technology", "https://www.scmp.com/rss/36/feed", "scmp.com", region="Asia",
               article_paths=("/tech/",)),
     reporting("indian-express-tech", "The Indian Express Technology", "https://indianexpress.com/section/technology/feed/", "indianexpress.com", region="India"),
@@ -313,7 +320,9 @@ DEFAULT_SOURCES = (
     article_feed("dev-architecture", "DEV Community Architecture", "https://dev.to/feed/tag/architecture", "dev.to", group="dev"),
     article_feed("dev-security", "DEV Community Security", "https://dev.to/feed/tag/security", "dev.to", group="dev", topic="security"),
     Source("hashnode-discover", "hashnode", "Hashnode Global Technology Feed", "engineering", "https://gql-beta.hashnode.com/",
-           ("hashnode.com", "hashnode.dev"), topic="software", coverage="article", integration="hashnode-api", language="und"),
+           ("hashnode.com", "hashnode.dev"), enabled=False, topic="software", coverage="article",
+           integration="hashnode-api", language="und",
+           pause_reason="Hashnode retired free GraphQL access. Its public Community Publication RSS remains active."),
     article_feed("hashnode", "Hashnode Community Publication", "https://townhall.hashnode.com/rss.xml", "townhall.hashnode.com", group="hashnode", topic="software"),
     article_feed("freecodecamp", "freeCodeCamp", "https://www.freecodecamp.org/news/rss/", "freecodecamp.org"),
     article_feed("towards-data-science", "Towards Data Science", "https://towardsdatascience.com/feed/", "towardsdatascience.com", topic="ai"),
@@ -338,6 +347,13 @@ DEFAULT_SOURCES = (
              article_paths=("/rust-lang/rust/releases/tag/",)),
     releases("kubernetes-releases", "Kubernetes Releases", "https://github.com/kubernetes/kubernetes/releases.atom", "github.com",
              article_paths=("/kubernetes/kubernetes/releases/tag/",)),
+    *(Source(ident, "github-releases", label, "engineering", f"https://github.com/{repo}/releases.atom",
+             ("github.com",), topic=topic, coverage="release", article_paths=(f"/{repo}/releases/tag/",),
+             publisher_group=publisher, reviewed_at="2026-11-18") for ident, label, repo, topic, publisher in (
+                 ("release-mistral-vibe", "Mistral Vibe Releases", "mistralai/mistral-vibe", "ai", "mistral"),
+                 ("release-pytorch-executorch", "ExecuTorch Releases", "pytorch/executorch", "ai", "pytorch"),
+                 ("release-langflow", "Langflow Releases", "langflow-ai/langflow", "ai", "langflow"),
+             )),
     Source("kubernetes-blog", "kubernetes-blog", "Kubernetes Blog", "engineering",
            "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software", article_paths=("/blog/",)),
     Source("python-blog", "python-blog", "Python Insider", "engineering",
@@ -390,6 +406,9 @@ DEFAULT_SOURCES = (
            "https://rss.arxiv.org/rss/cs.AR", ("arxiv.org",), topic="chips", coverage="preprint"),
     Source("mit-robotics", "mit-robotics", "MIT News Robotics", "research", "https://news.mit.edu/topic/mitrobotics-rss.xml",
            ("news.mit.edu",), topic="research"),
+    Source("open-robotics-discourse", "open-robotics-discourse", "Open Robotics Discourse", "engineering",
+           "https://discourse.openrobotics.org/latest.rss", ("discourse.openrobotics.org",), topic="chips",
+           coverage="discussion", article_paths=("/t/",), refresh_minutes=60, reviewed_at="2026-11-18"),
     reporting("quanta-computing", "Quanta Magazine Computer Science", "https://www.quantamagazine.org/computer-science/feed/",
               "quantamagazine.org", topic="research"),
     reporting("stat-health-tech", "STAT Health Tech", "https://www.statnews.com/category/health-tech/feed/", "statnews.com",
@@ -416,10 +435,12 @@ DEFAULT_SOURCES = (
                  ("startups", "startups"), ("security", "security"), ("hardware", "chips"),
                  ("artificial-intelligence", "ai"), ("enterprise", "software"))),
     Source("venturebeat", "venturebeat", "VentureBeat", "news", "https://venturebeat.com/feed/",
-           ("venturebeat.com",), coverage="reporting"),
+           ("venturebeat.com",), enabled=False, coverage="reporting",
+           pause_reason="The RSS endpoint repeatedly returned HTTP 429. Paused pending a supported feed access path."),
     Source("venturebeat-news-index", "venturebeat", "VentureBeat News Index", "news",
            "https://venturebeat.com/news-sitemap.xml", ("venturebeat.com",), coverage="reporting",
-           integration="news-sitemap"),
+           integration="news-sitemap", enabled=False,
+           pause_reason="The news sitemap also returned HTTP 429 and shares the RSS endpoint's rate-limited host."),
     Source("bbc-news-index", "bbc-tech", "BBC News Technology Discovery", "news",
            "https://www.bbc.com/sitemaps/https-index-com-news.xml", ("bbc.com", "bbc.co.uk"),
            coverage="reporting", tech_only=True, integration="news-sitemap",
@@ -430,7 +451,8 @@ DEFAULT_SOURCES = (
     Source("moneycontrol-it", "moneycontrol", "Moneycontrol IT Industry", "news",
            "https://www.moneycontrol.com/news/business/information-technology/", ("moneycontrol.com",),
            coverage="reporting", region="India", integration="publisher-metadata",
-           article_paths=("/news/business/information-technology/",)),
+           article_paths=("/news/business/information-technology/",), enabled=False,
+           pause_reason="The section lacks reliable article metadata. Moneycontrol's technology RSS and news sitemap remain active."),
     Source("moneycontrol-news-index", "moneycontrol", "Moneycontrol Technology Discovery", "news",
            "https://www.moneycontrol.com/news/news-sitemap.xml", ("moneycontrol.com",),
            coverage="reporting", region="India", tech_only=True, integration="news-sitemap"),

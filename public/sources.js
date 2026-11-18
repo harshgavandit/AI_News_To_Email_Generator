@@ -87,11 +87,24 @@ function sourceRow(source) {
   if (source.type) coverage.append(node("span", "", source.type));
   if (source.format) {
     const schedule = source.refresh_policy === "daily" ? "daily refresh from 8:00 a.m. IST" : `checks every ${source.refresh_minutes || 5} min`;
-    coverage.append(node("span", "", `${source.format} · ${schedule}`));
+    coverage.append(node("span", "", source.enabled ? `${source.format} · ${schedule}` : source.format));
   }
 
   const health = node("div", "directory-health");
   health.append(node("span", `directory-state directory-state-${source.freshness}`, statusLabels[source.freshness]));
+  if (source.freshness === "paused" && source.pause_reason) {
+    health.append(node("span", "directory-timestamp", source.pause_reason));
+  } else if (source.freshness === "failed") {
+    const reasons = {
+      fetch_timeout: "The publisher took too long to respond.",
+      dns_failed: "The publisher’s feed host did not resolve.",
+      tls_failed: "A secure connection to the feed could not be established.",
+      connection_failed: "The publisher’s feed could not be reached.",
+      rate_limited: "The publisher limited requests.",
+      access_denied: "The publisher denied feed access.",
+    };
+    if (Object.hasOwn(reasons, source.error)) health.append(node("span", "directory-timestamp", reasons[source.error]));
+  }
   const checked = timestamp(source.checked_at, "Checked");
   if (checked) health.append(checked);
   if (source.last_success !== source.checked_at) {

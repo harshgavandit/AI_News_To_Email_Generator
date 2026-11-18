@@ -2651,6 +2651,8 @@
     "id": "robohub",
     "group": "robohub",
     "label": "Robohub",
+    "enabled": false,
+    "pause_reason": "The feed could not be reached reliably. Tech Xplore Robotics and The Robot Report provide robotics coverage.",
     "url": "https://robohub.org/feed/",
     "hosts": [
       "robohub.org"
@@ -2660,6 +2662,21 @@
     "format": "blog",
     "kind": "engineering",
     "reviewed_at": "2026-11-17",
+    "refresh_minutes": 30,
+    "collection": "Global technology"
+  },
+  {
+    "id": "techxplore-robotics",
+    "group": "techxplore",
+    "label": "Tech Xplore Robotics",
+    "url": "https://techxplore.com/rss-feed/robotics-news/",
+    "hosts": [
+      "techxplore.com"
+    ],
+    "topic": "chips",
+    "coverage": "reporting",
+    "kind": "news",
+    "reviewed_at": "2026-11-18",
     "refresh_minutes": 30,
     "collection": "Global technology"
   },

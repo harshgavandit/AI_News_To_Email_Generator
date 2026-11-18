@@ -25,10 +25,14 @@ def morning_refresh_at(now):
     return now.astimezone(INDIA_TIME).replace(hour=8, minute=0, second=0, microsecond=0).astimezone(UTC)
 
 
+def source_enabled(source, state):
+    return source.enabled and state.get("enabled", True)
+
+
 def daily_refresh_plan(state, morning, now):
     """One scheduled check per enabled source per India calendar day."""
     pending = {source.id for source in DEFAULT_SOURCES
-               if state.get(source.id, {}).get("enabled", source.enabled)
+               if source_enabled(source, state.get(source.id, {}))
                and (state.get(source.id, {}).get("checked") or 0) < morning.timestamp()}
     ready = {source_id for source_id in pending
              if (state.get(source_id, {}).get("retry_at") or 0) <= now.timestamp()}
@@ -38,7 +42,7 @@ def daily_refresh_plan(state, morning, now):
 def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=None, now=None, per_host=6):
     now = now or datetime.now(UTC).timestamp()
     candidates = [source for source in DEFAULT_SOURCES if (only is None or source.id == only)
-        and state.get(source.id, {}).get("enabled", source.enabled)
+        and source_enabled(source, state.get(source.id, {}))
         and (state.get(source.id, {}).get("retry_at") or 0) <= now
         and (source_ids is None or source.id in source_ids)
         and (not due_only or state.get(source.id, {}).get("available") is False
@@ -119,7 +123,7 @@ def source_catalog(store=None, *, include_archive=True):
     result = []
     for s in DEFAULT_SOURCES:
         state = states.get(s.id, {})
-        feed = {**s.public(), "region_id": region_id(s.region), "enabled": state.get("enabled", s.enabled),
+        feed = {**s.public(), "region_id": region_id(s.region), "enabled": source_enabled(s, state),
                 "available": state.get("available"), "last_success": timestamp(state.get("last_success")),
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
@@ -139,7 +143,7 @@ def source_catalog(store=None, *, include_archive=True):
         else:
             due = (state.get("checked") or 0) + s.poll_minutes * 60
             next_check = datetime.fromtimestamp(max(now.timestamp(), due, retry), UTC)
-        feed["next_check_at"] = next_check.isoformat()
+        feed["next_check_at"] = next_check.isoformat() if feed["enabled"] else None
         latest = feed["latest_published_at"]
         feed["content_status"] = ("no_retained_content" if not latest else
             "quiet" if latest < (now - timedelta(days=30)).isoformat() else "recent")

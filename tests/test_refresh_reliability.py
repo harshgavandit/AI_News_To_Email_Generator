@@ -315,7 +315,7 @@ def test_adaptive_refresh_runs_before_morning_and_drains_bounded_batches(archive
     store, client = archive
     monkeypatch.setenv("FEED_REFRESH_MODE", "adaptive")
     daily_clock(datetime(2026, 11, 17, 1, tzinfo=UTC))
-    sources = ingestion.DEFAULT_SOURCES[:70]
+    sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:70]
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
     attempts, cleanups = [], []
     monkeypatch.setattr(store, "prune", lambda: cleanups.append(True))

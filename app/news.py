@@ -2,6 +2,8 @@
 import asyncio
 import hashlib
 import re
+import socket
+import ssl
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -83,6 +85,21 @@ def http_failure(error):
         except (ValueError, TypeError, OverflowError, OSError):
             pass
     return status
+
+
+def transport_failure(error):
+    if isinstance(error, (TimeoutError, httpx.TimeoutException)):
+        return "fetch_timeout"
+    cause = error
+    for _ in range(8):  # HTTPX wraps the original network exception.
+        if isinstance(cause, socket.gaierror):
+            return "dns_failed"
+        if isinstance(cause, ssl.SSLError):
+            return "tls_failed"
+        cause = cause.__cause__
+        if cause is None:
+            break
+    return "connection_failed" if isinstance(error, httpx.ConnectError) else "fetch_failed"
 
 
 def canonical_url(url, *, medium=False):
@@ -312,8 +329,8 @@ def read_feed(task, *, validators=None, known_urls=()):
             latest_published_at=max((article["published_at"] for article in articles.values()), default=None))
     except httpx.HTTPStatusError as error:
         return [], {**status, **http_failure(error)}
-    except (httpx.HTTPError, ValueError, OSError):
-        return [], dict(status, error="fetch_failed")
+    except (httpx.HTTPError, ValueError, OSError) as error:
+        return [], dict(status, error=transport_failure(error))
 
 
 def safe_read_feed(source):

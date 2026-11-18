@@ -667,6 +667,9 @@ def update_source(source_id: str, body: SourceUpdate, authorization: str | None 
     require_owner(authorization)
     if source_id not in BY_ID:
         raise HTTPException(404, "Unknown source.")
+    source = BY_ID[source_id]
+    if body.enabled and not source.enabled:
+        raise HTTPException(409, source.pause_reason or "This integration is paused in the source catalog.")
     source_store().enable(source_id, body.enabled)
     return {"source": source_id, "enabled": body.enabled}
 
