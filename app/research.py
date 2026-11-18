@@ -306,7 +306,7 @@ def synthesize(store, mode, question, records, *, cacheable=False, language="en"
     if not ai_enabled():
         return dict(empty, status="unavailable", limitations="AI analysis is unavailable. Explore the source evidence below.")
     global_compare = mode == "global_compare"
-    quoted = mode in {"project", "technology"}
+    quoted = True
     model = (os.getenv("NEWS_AI_ANALYSIS_MODEL") or get_openai_model()) if mode in {"compare", "global_compare"} else get_openai_model()
     system = INSTRUCTIONS + f"\nWrite the answer in {OUTPUT_LANGUAGES.get(language, 'English')}; preserve source names and uncertainty."
     fields = ("id", "title", "publisher", "excerpt", "published_at")

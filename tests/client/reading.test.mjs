@@ -132,7 +132,7 @@ test('licensed reading renderer keeps code and safe links while removing active 
 });
 
 test('actual Reading Room module opens permitted text, follows its author and refreshes revoked access', async () => {
-  const env = mount();
+  const env = mount(html, 'https://informa.test/?view=feed');
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
   globalThis.setInterval = () => 0;
   const article = { id: 'test-article', title: 'A useful Python guide', description: 'The source excerpt.', cleanSummary: 'The source excerpt.',
@@ -243,7 +243,7 @@ test('opening the Saved view directly renders bookmarks from browser storage', a
 });
 
 test('daily briefing navigation, read state and modal brief pins work together', async () => {
-  const env = mount();
+  const env = mount(html, 'https://informa.test/?view=feed');
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
   globalThis.setInterval = () => 0;
   const articles = [1, 2].map(index => ({ id: `brief-${index}`, title: `An attributed technology update ${index}`,
@@ -262,7 +262,7 @@ test('daily briefing navigation, read state and modal brief pins work together',
     await until(() => document.querySelector('#stories .story'));
     document.querySelector('[data-workspace-view="briefing"]').click();
     await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
-    assert.equal(document.getElementById('reading-title').textContent, 'Daily briefing');
+    assert.equal(document.getElementById('reading-title').textContent, 'Today');
     assert.equal(document.getElementById('briefing-intro').hidden, false);
     assert.equal(new URL(location.href).searchParams.get('view'), 'briefing');
     assert.equal(document.querySelector('#stories .coverage-count').textContent, '2 publishers');
@@ -280,6 +280,49 @@ test('daily briefing navigation, read state and modal brief pins work together',
     assert.equal(localStorage.getItem('informa-hide-read'), 'true');
     document.getElementById('hide-read').click();
     assert.equal(document.querySelectorAll('#stories .story').length, 2);
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
+test('returning readers open Catch up and can mark cited updates as read', async () => {
+  const env = mount();
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const lastVisit = Date.now() - 3600_000;
+  localStorage.setItem('informa-catchup-checkpoint', String(lastVisit));
+  const requests = [];
+  const article = { id: 'news', title: 'Regional network outage', publisher: 'Provider status',
+    url: 'https://example.org/incident', cleanSummary: 'The provider is investigating.' };
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/intelligence/catchup') {
+      requests.push(JSON.parse(options.body));
+      const events = requests.length > 1 ? [] : [{ id: 'a'.repeat(32), title: article.title,
+        updated_at: new Date().toISOString(), articles: [article], source_count: 2,
+        change_sources: [{ change_label: 'Resolved', excerpt: 'Service has been restored.', url: article.url, publisher: article.publisher }],
+      }];
+      return new Response(JSON.stringify({ events }));
+    }
+    return new Response(JSON.stringify({ ...catalog, articles: [], coverage: [], trending: [] }));
+  };
+  try {
+    await import(`../../public/app.js?returning=${Date.now()}`);
+    const results = document.getElementById('home-catchup-results');
+    await until(() => results.textContent.includes('Service has been restored.'));
+    assert.equal(document.getElementById('reading-title').textContent, 'Catch up');
+    assert.equal(requests[0].since, lastVisit / 1000);
+    assert.equal(requests[0].summary_only, true);
+    assert.equal(results.querySelector('a').href, article.url);
+    document.getElementById('home-catchup-mark').click();
+    await until(() => document.getElementById('home-catchup-status').textContent.includes('caught up'));
+    assert.ok(Number(localStorage.getItem('informa-catchup-checkpoint')) > lastVisit);
+    document.getElementById('view-feed').click();
+    const input = document.getElementById('search');
+    input.value = 'cloud outage';
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    const link = new URL(document.getElementById('search-developments').href);
+    assert.equal(link.searchParams.get('q'), 'cloud outage');
+    assert.equal(link.searchParams.get('mode'), 'developments');
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
+    document.getElementById('view-saved').click();
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 

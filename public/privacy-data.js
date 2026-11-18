@@ -6,6 +6,7 @@ export const readingGroups = Object.freeze({
   views: { label: "Monitoring views", key: "informa-saved-views-v1" },
   alerts: { label: "Research topic alerts", key: "informa-research-alerts-v1" },
   radar: { label: "Technology radar preferences", key: "informa-radar-v1" },
+  checkpoint: { label: "Catch-up checkpoint", key: "informa-catchup-checkpoint" },
 });
 const exportKeys = [...Object.values(readingGroups).map(({ key }) => key),
   "informa-theme", "informa-story-layout", "informa-hide-read", "informa-analytics-consent"];

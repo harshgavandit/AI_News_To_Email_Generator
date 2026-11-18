@@ -306,3 +306,49 @@ body { text-rendering: optimizeLegibility; }
   .desk-masthead { background: Canvas; color: CanvasText; border-color: CanvasText; }
   .desk-masthead :is(p, .edition-date) { color: CanvasText; }
 }
+.search-destinations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-block: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.search-destinations a,
+.search-destinations [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+}
+
+.search-destinations [aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.claim-evidence {
+  margin-block: 0.5rem;
+  border-inline-start: 2px solid currentColor;
+  padding-inline-start: 0.75rem;
+}
+
+.claim-evidence summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.claim-evidence blockquote {
+  margin: 0.55rem 0;
+  overflow-wrap: anywhere;
+}
+
+#home-catchup-results article {
+  margin-block-start: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+#home-catchup-results h3 button {
+  text-align: start;
+}

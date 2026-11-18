@@ -153,7 +153,8 @@ def test_research_daily_has_source_evidence_before_a_generated_edition(archive):
 def good_answer(prompt, _, schema, **kwargs):
     source = json.loads(prompt)["evidence"][0]
     return schema(status="answered", limitations="Only publisher excerpts were available.", claims=[
-        {"text": "Northstar recalled 200 battery packs.", "kind": "fact", "source_ids": [source["id"]]},
+        {"text": "Northstar recalled 200 battery packs.", "kind": "fact", "source_ids": [source["id"]],
+         "quotes": [source["excerpt"][:145]]},
     ]).model_dump_json()
 
 
@@ -285,7 +286,8 @@ def test_scheduled_brief_validates_evidence_and_respects_source_pause(archive, m
         evidence = json.loads(prompt)["evidence"]
         source = next(row for row in evidence if "200" in row["excerpt"])
         return schema(status="answered", limitations="Published excerpts only.", claims=[
-            {"text": "A recall affected 200 battery packs.", "kind": "fact", "source_ids": [source["id"]]},
+            {"text": "A recall affected 200 battery packs.", "kind": "fact", "source_ids": [source["id"]],
+             "quotes": [source["excerpt"][:145]]},
         ]).model_dump_json()
 
     monkeypatch.setattr(research, "generate_response", generate)

@@ -108,7 +108,8 @@
           </div>
           <div class="daily-entry-actions">
             <button type="button" id="masthead-briefing" class="edition-link" aria-label="Read today's brief">Today’s brief <span aria-hidden="true">↗</span></button>
-            <button type="button" id="masthead-explore" class="edition-link">Explore stories</button>
+            <button type="button" id="masthead-catchup" class="edition-link">Catch up</button>
+            <button type="button" id="masthead-explore" class="edition-link">All stories</button>
           </div>
         </section>
       <div class="desk-layout">
@@ -151,8 +152,9 @@
           </div>
           <div class="reading-stream">
             <div class="reading-views" role="group" aria-label="Reading Room view">
-              <button id="view-briefing" type="button" aria-pressed="false">Today’s brief</button>
-              <button id="view-feed" type="button" aria-pressed="true">Explore stories</button>
+              <button id="view-briefing" type="button" aria-pressed="false">Today</button>
+              <button id="view-catchup" type="button" aria-pressed="false">Catch up</button>
+              <button id="view-feed" type="button" aria-pressed="true">All stories</button>
               <button id="view-for-you" type="button" aria-pressed="false">For You</button>
               <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
             </div>
@@ -201,16 +203,31 @@
             </div>
             <div id="daily-delivery-slot"></div>
           </section>
+          <section id="home-catchup" class="briefing-intro" aria-label="Since your last visit" hidden>
+            <div class="briefing-overview">
+              <div><h3>Since your last visit</h3><p id="home-catchup-status" role="status"></p></div>
+              <div class="briefing-actions">
+                <button type="button" id="home-catchup-mark" class="button primary" hidden>Mark caught up</button>
+                <a href="/research.html#radar-title" class="button secondary">Edit interests</a>
+              </div>
+            </div>
+            <div id="home-catchup-results"></div>
+          </section>
           <div id="feed-controls">
             <div class="reading-discovery">
               <div class="discovery-fields">
                 <form id="story-search" class="reading-search" role="search">
-                  <div class="reading-search-heading"><label for="search">Search stories</label><a id="research-search-link" class="text-button" href="/research.html">Research Desk ↗</a></div>
+                  <div class="reading-search-heading"><label for="search">Search technology news</label></div>
                   <div class="search-wrap">
                     <span class="reading-search-icon" aria-hidden="true"></span>
                     <input id="search" type="search" maxlength="150" placeholder="Topics, authors, companies, or headlines" />
                     <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
                   </div>
+                  <nav class="search-destinations" aria-label="Search result type">
+                    <span aria-current="page">Articles</span>
+                    <a id="search-developments" href="/research.html?mode=developments">Developments</a>
+                    <a id="research-search-link" href="/research.html?mode=analyze">Ask with sources</a>
+                  </nav>
                 </form>
                 <div class="mobile-topic">
                   <label for="topic-mobile">Topic</label>

@@ -46,17 +46,22 @@
               placeholder="What are the latest developments in AI coding agents?"></textarea>
             <div class="research-controls">
               <label>Time range
-                <select id="research-hours"><option value="24">Past 24 hours</option><option value="168" selected>Past 7 days</option><option value="720">Past 30 days</option><option value="2160">Past 90 days</option></select>
+                <select id="research-hours"><option value="12">Past 12 hours</option><option value="24">Past 24 hours</option><option value="168" selected>Past 7 days</option><option value="720">Past 30 days</option><option value="2160">Past 90 days</option></select>
               </label>
               <label>Topic
                 <select id="research-topic"><option value="all">All topics</option></select>
               </label>
               <label>Task
-                <select id="research-mode"><option value="search">Find sources</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="global_compare">Compare across languages</option><option value="brief">Build a topic brief</option></select>
+                <select id="research-mode"><option value="search">Find sources</option><option value="developments">Developments</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="global_compare">Compare across languages</option><option value="brief">Build a topic brief</option></select>
               </label>
               <button class="button primary" id="research-submit" type="submit">Find sources</button>
             </div>
             <p class="research-privacy">Semantic search and AI analysis may send your query to OpenAI. <a href="/privacy.html">Privacy &amp; controls</a></p>
+            <nav class="search-destinations" aria-label="Search result type">
+              <a id="search-articles" href="/?view=feed#reading-room">Articles</a>
+              <a id="search-developments" href="/research.html?mode=developments">Developments</a>
+              <a id="search-ask" href="/research.html?mode=analyze">Ask with sources</a>
+            </nav>
           </form>
           <p id="research-status" class="research-status" role="status" aria-live="polite"></p>
           <div id="research-results" aria-busy="false"></div>
@@ -85,6 +90,12 @@
                 <label>Explain in<select id="radar-language"><option value="en">English</option><option value="hi">Hindi</option><option value="mr">Marathi</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="pt">Portuguese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option><option value="ar">Arabic</option><option value="fa">Persian</option><option value="vi">Vietnamese</option><option value="tr">Turkish</option><option value="pl">Polish</option><option value="nl">Dutch</option></select></label>
                 <label>Detail<select id="radar-depth"><option value="simple">Simple</option><option value="developer">Developer</option><option value="technical">Technical</option></select></label>
               </div>
+              <label for="radar-delivery-mode">Morning email content</label>
+              <select id="radar-delivery-mode">
+                <option value="personalized">Personalized brief</option>
+                <option value="material_updates">Only new or meaningful updates from my follows</option>
+              </select>
+              <p class="research-meta">Applies to verified inboxes with morning delivery enabled. <a href="/?view=briefing#reading-room">Set up morning delivery</a> or <a href="/?view=for-you#personalization">manage followed companies and muted topics</a>.</p>
               <div class="radar-actions"><button class="button primary" type="submit">Catch me up ✦</button><button class="text-button" id="radar-save" type="button">Save to verified inbox</button></div>
             </form>
             <p id="radar-status" class="research-status" role="status" aria-live="polite"></p>

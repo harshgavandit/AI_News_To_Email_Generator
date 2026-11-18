@@ -60,19 +60,24 @@ def with_unsubscribe(brief, url, *, scheduled=False):
 
 def personalized_morning_brief(store, mailbox, fallback, load_events):
     from app import ai_insights, radar_store
+    followed_only = False
     try:
         saved = radar_store.profiles(store, [mailbox]).get(mailbox)
         if not saved:
             return fallback
+        followed_only = saved.get("delivery_mode") == "material_updates"
         profile = ai_insights.RadarProfile.model_validate(saved)
         seen = radar_store.histories(store, [mailbox]).get(mailbox, {})
-        result = ai_insights.catchup(store, profile, seen, hours=24, allow_generate=False, pool=load_events())
+        result = ai_insights.catchup(store, profile, seen, hours=24, allow_generate=False,
+                                     pool=load_events(), followed_only=followed_only)
         if result.get("brief"):
             return result["brief"]
         if result["status"] in {"empty", "caught_up"}:
             return None
     except Exception as error:
         logger.warning("radar_mail_fallback error_type=%s", type(error).__name__)
+        if followed_only:
+            return None
     return fallback
 
 

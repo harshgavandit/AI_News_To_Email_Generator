@@ -6,15 +6,15 @@ never fetch a URL or run a model. The existing intelligence worker maintains it.
 from datetime import UTC, datetime
 import hashlib
 import json
-import re
 import time
 
 from sqlalchemy import Column, Float, Index, Integer, String, Table, Text, delete, inspect, select, update
 
 from app.coverage import public_article
-from app.discovery import search_text
+from app.discovery import search_terms, search_text
 from app.intelligence import GENERIC_TERMS, references
-from app.launch_store import articles, schema
+from app.launch_store import articles, schema, search_document
+from app.material_changes import LABELS, change_kind
 from app.sources import BY_ID
 from app.story_coverage import coverage_match, headline
 
@@ -40,7 +40,6 @@ event_revisions = Table("brief_event_update_revisions", schema,
 Index("brief_event_revision_lookup", event_revisions.c.event_id, event_revisions.c.revision)
 TABLES = (events, event_items, event_keys, event_updates)
 STOPS = GENERIC_TERMS | frozenset("new announces announced launches launched unveils latest says introduces introducing report reports".split())
-UPDATE_TERMS = re.compile(r"\b(?:correct(?:ed|ion)|retract(?:ed|ion)|restored|resolved|mitigated|expanded)\b", re.I)
 
 
 def ready(store):
@@ -57,20 +56,6 @@ def revisions_ready(store):
     if not getattr(store, "_event_revisions_ready", False):
         store._event_revisions_ready = inspect(store.engine).has_table(event_revisions.name)
     return store._event_revisions_ready
-
-
-def is_repeat(row, previous):
-    matches = [other for other in previous if coverage_match(headline(row), headline(other))]
-    if not matches:
-        return False
-    # Near-identical headlines can accompany a substantive publisher update.
-    def changes(article):
-        text = f"{article['title']} {article.get('description', '')}"
-        return set(re.findall(r"\b\d+(?:[.,]\d+)*\s*(?:%|million|billion|hours?|regions?|users?|devices?)", text, re.I)) | {
-            word.casefold() for word in UPDATE_TERMS.findall(text)}
-
-    previous_changes = set().union(*(changes(other) for other in matches))
-    return not (changes(row) - previous_changes)
 
 
 def keys_for(row):
@@ -128,19 +113,21 @@ def observe(store, row, *, now=None, semantic_ids=()):
         new_event = not event_id
         event_id = event_id or hashlib.sha256(("event:" + row["id"]).encode()).hexdigest()[:32]
         significant = True
+        reason = "first_report"
         if new_event:
             stmt = store.insert(events).values(id=event_id, anchor_id=row["id"], title=row["title"],
                 topic=row.get("topic") or "industry", revision=1, created=now, updated=now)
             conn.execute(stmt.on_conflict_do_nothing())
         else:
-            previous = conn.execute(select(articles).join(event_items, event_items.c.article_id == articles.c.id)
-                .where(event_items.c.event_id == event_id, articles.c.id != row["id"]).limit(20)).mappings().all()
-            repeats = is_repeat(row, previous)
-            values = {"updated": now}
-            significant = bool(old or not repeats)
+            previous = conn.execute(select(event_updates, articles.c.source_id)
+                .join(articles, articles.c.id == event_updates.c.article_id)
+                .where(event_updates.c.event_id == event_id)
+                .order_by(event_updates.c.observed.desc(), event_updates.c.id).limit(40)).mappings().all()
+            reason = change_kind(row, previous, same_article=bool(old))
+            significant = reason not in {"source_revision", "additional_reporting"}
             if significant:
-                values["revision"] = events.c.revision + 1
-            conn.execute(update(events).where(events.c.id == event_id).values(**values))
+                conn.execute(update(events).where(events.c.id == event_id)
+                             .values(updated=now, revision=events.c.revision + 1))
         stmt = store.insert(event_items).values(article_id=row["id"], event_id=event_id, fingerprint=stamp, observed=now)
         conn.execute(stmt.on_conflict_do_update(index_elements=[event_items.c.article_id],
             set_={"fingerprint": stamp, "observed": now}))
@@ -150,7 +137,7 @@ def observe(store, row, *, now=None, semantic_ids=()):
         conn.execute(store.insert(event_updates).values(id=update_id,
             event_id=event_id, article_id=row["id"], observed=now, published_at=row["published_at"],
             title=row["title"], excerpt=public_article(row)["cleanSummary"],
-            reason="source_revision" if old else "first_report" if new_event else "additional_reporting").on_conflict_do_nothing())
+            reason=reason).on_conflict_do_nothing())
         if significant and track_revisions:
             revision = conn.execute(select(events.c.revision).where(events.c.id == event_id)).scalar_one()
             conn.execute(store.insert(event_revisions).values(update_id=update_id, event_id=event_id,
@@ -193,13 +180,21 @@ def development_for_article(store, article_id):
         return conn.scalar(select(event_items.c.event_id).where(event_items.c.article_id == article_id))
 
 
-def catalog(store, *, hours=168, limit=80, topic="all", event_ids=()):
+def catalog(store, *, hours=168, limit=80, topic="all", event_ids=(), query=""):
     if not ready(store):
         return []
     with store.engine.connect() as conn:
         scope = events.c.id.in_(event_ids) if event_ids else events.c.updated >= time.time() - hours * 3600
-        chosen = conn.execute(select(events).where(scope,
-            *([events.c.topic == topic] if topic != "all" else [])).order_by(events.c.updated.desc()).limit(limit)).mappings().all()
+        stmt = select(events).where(scope, *([events.c.topic == topic] if topic != "all" else []))
+        if query:
+            terms = search_terms(query) or (search_text(query),)
+            if not any(terms):
+                return []
+            matches = store.query(2160).join(event_items, event_items.c.article_id == articles.c.id)
+            matches = matches.with_only_columns(event_items.c.event_id, maintain_column_froms=True).where(
+                *(search_document.contains(term, autoescape=True) for term in terms))
+            stmt = stmt.where(events.c.id.in_(matches))
+        chosen = conn.execute(stmt.order_by(events.c.updated.desc(), events.c.id).limit(limit)).mappings().all()
         ids = [row["id"] for row in chosen]
         if not ids:
             return []
@@ -226,7 +221,7 @@ def catalog(store, *, hours=168, limit=80, topic="all", event_ids=()):
     return result
 
 
-def timeline(store, ident, since=None):
+def timeline(store, ident, since=None, *, observed_since=None):
     if not ready(store):
         return None
     track_revisions = revisions_ready(store)
@@ -238,14 +233,20 @@ def timeline(store, ident, since=None):
             event_items.c.article_id == articles.c.id).where(event_items.c.event_id == ident)).mappings()}
         updates = conn.execute(select(event_updates).where(event_updates.c.event_id == ident,
             event_updates.c.article_id.in_(retained)).order_by(event_updates.c.observed.desc()).limit(40)).mappings()
-        entries = [{**dict(row), "source": retained[row["article_id"]]} for row in updates]
+        def entry(row):
+            return {**dict(row), "source": retained[row["article_id"]],
+                    "change_label": LABELS.get(row["reason"], "Publisher update")}
+
+        entries = [entry(row) for row in updates]
         changes = []
-        if since is not None and track_revisions:
+        if track_revisions and (since is not None or observed_since is not None):
+            cutoff = (event_revisions.c.revision > since if since is not None
+                      else event_updates.c.observed > observed_since)
             revisions = conn.execute(select(event_updates, event_revisions.c.revision).join(event_revisions,
                 event_revisions.c.update_id == event_updates.c.id).where(event_revisions.c.event_id == ident,
-                event_revisions.c.revision > since, event_updates.c.article_id.in_(retained))
+                cutoff, event_updates.c.article_id.in_(retained))
                 .order_by(event_revisions.c.revision.desc(), event_updates.c.observed.desc()).limit(5)).mappings()
-            changes = [{**dict(row), "source": retained[row["article_id"]]} for row in revisions]
+            changes = [entry(row) for row in revisions]
     if not retained:
         return None
     return {"id": ident, "title": event["title"], "entries": entries, "changes": changes,
