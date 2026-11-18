@@ -2045,8 +2045,8 @@
   {
     "id": "release-microsoft-agent-framework",
     "group": "github-releases",
-    "label": "microsoft/agent-framework Releases",
-    "url": "https://github.com/microsoft/agent-framework/releases.atom",
+    "label": "Microsoft Agent Framework Go Releases",
+    "url": "https://github.com/microsoft/agent-framework-go/releases.atom",
     "hosts": [
       "github.com"
     ],
@@ -2056,9 +2056,9 @@
     "kind": "engineering",
     "refresh_minutes": 60,
     "article_paths": [
-      "/microsoft/agent-framework/releases/tag/"
+      "/microsoft/agent-framework-go/releases/tag/"
     ],
-    "reviewed_at": "2026-11-17",
+    "reviewed_at": "2026-11-18",
     "collection": "AI engineering"
   },
   {
