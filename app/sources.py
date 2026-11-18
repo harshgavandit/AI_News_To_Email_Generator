@@ -457,7 +457,7 @@ DEFAULT_SOURCES = (
            "https://www.moneycontrol.com/news/news-sitemap.xml", ("moneycontrol.com",),
            coverage="reporting", region="India", tech_only=True, integration="news-sitemap"),
     Source("google-threat-intelligence", "google-security", "Google Threat Intelligence", "research",
-           "https://cloudblog.withgoogle.com/topics/threat-intelligence/rss/", ("cloud.google.com",),
+           "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v", ("cloud.google.com",),
            topic="security", coverage="advisory"),
     Source("google-security", "google-security", "Google Security Blog", "engineering",
            "https://feeds.feedburner.com/GoogleOnlineSecurityBlog", ("security.googleblog.com", "blog.google"),
