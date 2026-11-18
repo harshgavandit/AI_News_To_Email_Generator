@@ -572,7 +572,7 @@ def headlines(response: Response):
         with _headline_cache.key_lock(key):
             data, _ = _headline_cache.get(key)
             if data is None:
-                rows = store.headline_candidates(HEADLINE_HOURS) if store else collect_news()["articles"]
+                rows = store.headline_candidates(HEADLINE_HOURS, include_primary=True) if store else collect_news()["articles"]
                 data = build_headlines(rows)
                 if data["articles"]:
                     _headline_cache.put(key, data, ttl=60)

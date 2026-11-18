@@ -3,7 +3,7 @@ on:
   schedule:
     # 08:00 in India (UTC+05:30).
     - cron: '30 2 * * *'
-    - cron: '*/5 * * * *'
+    - cron: '2-57/5 * * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
@@ -24,7 +24,7 @@ jobs:
   refresh:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
@@ -36,8 +36,9 @@ jobs:
             echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
             exit 1
           fi
-          # Two bounded batches per tick; overdue feeds resume on the next tick.
-          for attempt in {1..2}; do
+          # Drain missed intervals across bounded calls.
+          deadline=$((SECONDS + 480))
+          for attempt in {1..8}; do
             result=$(curl --silent --show-error --fail --max-time 115 --retry 1 --retry-max-time 115 \
               --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
               <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
@@ -52,7 +53,8 @@ jobs:
             fi
             jq -e '.status == "already_started" or (.status == "refreshed" and .checked > 0 and .remaining > 0)' \
               <<< "$result" > /dev/null
-            sleep 15
+            if (( SECONDS >= deadline )); then break; fi
+            sleep 2
           done
           ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
             'https://ai-news-to-email-generator.vercel.app/api/ready')
@@ -60,8 +62,12 @@ jobs:
           if [[ $(jq -r '.status' <<< "$ready") == 'degraded' ]]; then
             echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
           fi
+          health=$(curl --silent --show-error --fail --max-time 15 \
+            'https://ai-news-to-email-generator.vercel.app/api/discovery/ingestion')
+          jq . <<< "$health"
+          jq -e '.status != "stalled"' <<< "$health"
   mail:
-    if: github.event.schedule == '*/5 * * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
+    if: github.event.schedule == '2-57/5 * * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -85,7 +91,7 @@ jobs:
             exit 1
           fi
   intelligence:
-    if: github.event.schedule == '*/5 * * * *' || inputs.intelligence_only
+    if: github.event.schedule == '2-57/5 * * * *' || inputs.intelligence_only
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:

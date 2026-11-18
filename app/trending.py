@@ -14,6 +14,11 @@ def publisher_family(article):
 
 
 TRENDING_PATTERNS = (
+    ("MongoDB & Analytics", "software", r"\bmongodb\b|\bfirebolt\b|\bdatabricks\b|\bsnowflake\b"),
+    ("IPOs & Public Markets", "startups", r"\bipo\b|\binitial public offering\b|\bprospectus\b"),
+    ("Earnings & Results", "bigtech", r"\bearnings\b|\bquarterly results\b|\bfinancial results\b"),
+    ("Qwen & Alibaba AI", "ai", r"\bqwen[\w.-]*\b|\balibaba\b"),
+    ("Microsoft Ignite", "bigtech", r"\bignite\b"),
     ("OpenAI", "ai", r"\bopenai\b|chatgpt"),
     ("NVIDIA", "chips", r"\bnvidia\b|geforce|blackwell|hopper"),
     ("Anthropic", "ai", r"\banthropic\b|claude"),

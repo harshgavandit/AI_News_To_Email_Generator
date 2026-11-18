@@ -30,6 +30,7 @@ class Source:
     refresh_minutes: int = 0
     collection: str = ""
     reviewed_at: str = ""
+    publisher_group: str = ""
 
     @property
     def content_format(self):
@@ -44,6 +45,8 @@ class Source:
 
     @property
     def publisher_family(self):
+        if self.publisher_group:
+            return self.publisher_group
         if self.group in {"medium", "dev", "hashnode", "youtube", "github-releases", "crossref"}:
             return self.group
         for name, domains in (("google", ("google.com", "googleblog.com", "research.google", "deepmind.google", "projectzero.google", "android.com")),
@@ -465,6 +468,61 @@ DEFAULT_SOURCES = (
 
 )
 
+# Reviewed reporting and first-party announcements fill market, product and regional gaps.
+DEFAULT_SOURCES += (
+    Source("korea-joongang-news", "korea-joongang", "Korea JoongAng Daily Technology Discovery", "news",
+           "https://www.koreajoongangdaily.com/tag/korea/business/lifestyle/entertainment/sports/opinion/world/?lab_viewport=newssitemap",
+           ("koreajoongangdaily.com",), topic="bigtech", coverage="reporting", region="Asia", tech_only=True,
+           integration="news-sitemap", refresh_minutes=5),
+    Source("ctech-news", "ctech", "CTech by Calcalist", "news", "https://www.calcalistech.com/ctechnews",
+           ("calcalistech.com",), topic="startups", coverage="reporting", region="Middle East", tech_only=True,
+           integration="publisher-metadata", article_paths=("/ctechnews/article/",), refresh_minutes=15),
+    Source("claude-platform-notes", "anthropic", "Claude Platform Release Notes", "engineering",
+           "https://platform.claude.com/docs/en/release-notes/overview.md", ("platform.claude.com",),
+           topic="ai", coverage="release", integration="release-notes", refresh_minutes=10),
+    reporting("9to5google", "9to5Google", "https://9to5google.com/feed/", "9to5google.com", topic="bigtech"),
+    reporting("9to5mac", "9to5Mac", "https://9to5mac.com/feed/", "9to5mac.com", topic="bigtech"),
+    reporting("theprint-tech", "ThePrint Technology", "https://theprint.in/category/tech/feed/", "theprint.in", region="India"),
+    reporting("ft-technology", "Financial Times Technology", "https://www.ft.com/technology?format=rss", "ft.com", topic="bigtech"),
+    reporting("wsj-technology", "The Wall Street Journal Technology", "https://feeds.content.dowjones.io/public/rss/RSSWSJD", "wsj.com", topic="bigtech"),
+    Source("wsj-business", "wsj-technology", "The Wall Street Journal Business", "news",
+           "https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness", ("wsj.com",), coverage="reporting", topic="bigtech", tech_only=True),
+    Source("cnbc-investing", "cnbc-tech", "CNBC Investing", "news", "https://www.cnbc.com/id/15839069/device/rss/rss.html",
+           ("cnbc.com",), topic="bigtech", coverage="reporting", tech_only=True),
+    Source("cnbc-markets", "cnbc-tech", "CNBC Markets", "news", "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+           ("cnbc.com",), topic="bigtech", coverage="reporting", tech_only=True),
+    Source("scmp-business", "scmp-tech", "SCMP Business", "news", "https://www.scmp.com/rss/92/feed/",
+           ("scmp.com",), coverage="reporting", topic="bigtech", region="Asia", tech_only=True),
+    reporting("globes-tech-business", "Globes Technology & Business", "https://en.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=942",
+              "en.globes.co.il", region="Middle East", tech_only=True),
+    Source("mongodb-blog", "mongodb", "MongoDB Company & Engineering Blog", "engineering", "https://www.mongodb.com/blog/rss",
+           ("mongodb.com",), topic="software", refresh_minutes=15),
+    Source("microsoft-official-blog", "microsoft", "Microsoft Official Blog", "news", "https://blogs.microsoft.com/feed/",
+           ("blogs.microsoft.com", "news.microsoft.com"), topic="bigtech", refresh_minutes=10),
+    Source("google-gemini", "google-keyword", "Google Gemini Announcements", "news", "https://blog.google/products-and-platforms/products/gemini/rss/",
+           ("blog.google",), topic="ai", refresh_minutes=10),
+    Source("qwen-official", "qwen", "Qwen Official Research & Releases", "news", "https://qwenlm.github.io/blog/index.xml",
+           ("qwenlm.github.io", "qwen.ai"), topic="ai", refresh_minutes=15),
+    Source("prnewswire-technology", "prnewswire-technology", "PR Newswire Technology Announcements", "news",
+           "https://www.prnewswire.com/rss/business-technology-latest-news/business-technology-latest-news-list.rss",
+           ("prnewswire.com",), topic="industry", coverage="publisher", refresh_minutes=10),
+    Source("microsoft-video", "youtube", "Microsoft on YouTube", "video",
+           "https://www.youtube.com/feeds/videos.xml?channel_id=UCFtEEv80fQVKkD4h1PF-Xqw",
+           ("youtube.com", "youtu.be"), topic="bigtech", publisher_group="microsoft", refresh_minutes=10),
+    Source("bloomberg-video", "youtube", "Bloomberg Television", "video",
+           "https://www.youtube.com/feeds/videos.xml?channel_id=UCIALMKvObZNtJ6AmdCLP7Lg",
+           ("youtube.com", "youtu.be"), coverage="reporting", topic="bigtech", tech_only=True, publisher_group="bloomberg", refresh_minutes=5),
+    Source("reuters-video", "youtube", "Reuters on YouTube", "video",
+           "https://www.youtube.com/feeds/videos.xml?channel_id=UChqUTb7kYRX8-EiaN3XFrSQ",
+           ("youtube.com", "youtu.be"), coverage="reporting", topic="industry", tech_only=True, publisher_group="reuters", refresh_minutes=5),
+    Source("cnbc-video", "youtube", "CNBC on YouTube", "video",
+           "https://www.youtube.com/feeds/videos.xml?channel_id=UCvJJ_dzjViJCoLf5uKUTwoA",
+           ("youtube.com", "youtu.be"), coverage="reporting", topic="bigtech", tech_only=True, publisher_group="cnbc-tech", refresh_minutes=10),
+    Source("financial-times-video", "youtube", "Financial Times on YouTube", "video",
+           "https://www.youtube.com/feeds/videos.xml?channel_id=UCoUxsWakJucWg46KW5RsvPw",
+           ("youtube.com", "youtu.be"), coverage="reporting", topic="industry", tech_only=True, publisher_group="ft-technology", refresh_minutes=10),
+)
+
 def validate_source(source):
     from app.article_metadata import public_link
     endpoint = urlsplit(source.url)
@@ -478,7 +536,8 @@ def validate_source(source):
         or source.topic not in {"ai", "software", "startups", "security", "chips", "bigtech", "research", "industry", "outages", "video"}
         or source.coverage not in {"reporting", "publisher", "article", "release", "advisory", "preprint", "journal", "discussion", "status"}
         or source.content_format not in {"news", "blog", "newsletter", "paper", "release", "video", "podcast"}
-        or source.refresh_minutes not in range(0, 1441) or 0 < source.refresh_minutes < 5):
+        or source.refresh_minutes not in range(0, 1441) or 0 < source.refresh_minutes < 5
+        or source.publisher_group and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", source.publisher_group)):
         raise ValueError(f"Invalid or duplicate reviewed source: {source.id}")
     return source
 

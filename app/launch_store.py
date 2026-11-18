@@ -21,6 +21,7 @@ from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_
 from app.sources import BY_ID
 from app.article_metadata import author_identity, metadata_for, restore_metadata
 from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
+from app.news_signals import MATERIAL_TERMS
 
 schema = MetaData()
 articles = Table("brief_articles", schema,
@@ -148,7 +149,7 @@ class QuotaReached(Exception):
     pass
 
 
-CLASSIFICATION_VERSION = 3
+CLASSIFICATION_VERSION = 4
 
 
 def discovery_fields(article):
@@ -550,8 +551,11 @@ class Store:
                 boosts.append(case((company_match, 25), else_=0))
             if boosts:
                 order.insert(0, sum(boosts).desc())
+        # Keep material developments in the candidate pool even during high-volume publication bursts.
+        signal_match = or_(*(articles.c.search_title.contains(term, autoescape=True) for term in MATERIAL_TERMS))
+        recent_signal = and_(signal_match, articles.c.published_at >= (datetime.now(UTC) - timedelta(hours=72)).isoformat())
         rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
-            order_by=order).label("topic_rank")
+            order_by=[case((recent_signal, 1), else_=0).desc(), *order]).label("topic_rank")
         candidates = self.query(hours, source=source, publisher=publisher, kind=kind, query=query,
                                 source_ids=source_ids, topic=topic, region=region,
                                 language=language, coverage=coverage, subject=subject)
@@ -563,12 +567,15 @@ class Store:
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]
 
-    def headline_candidates(self, hours, *, include_primary=False, per_source=10):
+    def headline_candidates(self, hours, *, include_primary=False, per_source=30):
         providers = [s.id for s in BY_ID.values() if s.coverage in (
-            {"reporting", "publisher", "advisory"} if include_primary else {"reporting"}) and s.kind != "video"]
+            {"reporting", "publisher", "advisory", "release"} if include_primary else {"reporting"})]
+        important = or_(*(articles.c.search_title.contains(term, autoescape=True) for term in MATERIAL_TERMS))
         rank = func.row_number().over(partition_by=articles.c.source_id,
-            order_by=(articles.c.published_at.desc(), articles.c.id.desc())).label("publisher_rank")
-        ranked = self.query(hours).where(articles.c.source_id.in_(providers)).add_columns(rank).subquery()
+            order_by=(case((important, 1), else_=0).desc(), articles.c.published_at.desc(), articles.c.id.desc())).label("publisher_rank")
+        release_ids = [s.id for s in BY_ID.values() if s.coverage == "release"]
+        ranked = self.query(hours).where(articles.c.source_id.in_(providers),
+            or_(articles.c.source_id.not_in(release_ids), important)).add_columns(rank).subquery()
         # A high-volume publisher cannot crowd quieter regional sources out of selection.
         with self.engine.connect() as conn:
             rows = conn.execute(select(ranked).where(ranked.c.publisher_rank <= per_source)).mappings()

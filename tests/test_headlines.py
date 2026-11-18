@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 
 from app import news, server
-from app.headlines import active_coverage, build_headlines
+from app.headlines import build_headlines
 from app.launch_store import Store
 from app.sources import BY_ID
 
@@ -15,7 +15,7 @@ def article(ident, provider, title, age, now):
             "url": f"https://{source.hosts[0]}/{ident}", "published_at": (now - timedelta(hours=age)).isoformat()}
 
 
-def test_headlines_prioritize_material_changes_and_expire_the_reviewed_story():
+def test_headlines_prioritize_material_changes_without_static_featured_stories():
     now = datetime(2026, 11, 15, 12, tzinfo=UTC)
     stories = [article("lead", "cbs-tech", "Nvidia CEO transition adds a new chapter", 36, now),
                article("policy", "itnews-au", "Australia enacts new export controls for semiconductors", 12, now),
@@ -26,11 +26,7 @@ def test_headlines_prioritize_material_changes_and_expire_the_reviewed_story():
                article("shopping", "tecnoblog", "Black Friday best deals for phones", 1, now)]
     result = build_headlines(stories, now=now, limit=3)
     assert [s["id"] for s in result["articles"]] == ["breach", "policy", "minor"]
-    lead, = result["coverage"]
-    assert "Nikesh Arora" in lead["summary"] and "interim CEO" in lead["summary"]
-    assert any(s["publisher"] == "NVIDIA Newsroom" for s in lead["sources"])
-    assert not active_coverage(now - timedelta(days=3))
-    assert not active_coverage(now + timedelta(days=7))
+    assert result["coverage"] == []
 
 
 def test_headlines_endpoint_uses_enabled_archive_sources(tmp_path, monkeypatch):

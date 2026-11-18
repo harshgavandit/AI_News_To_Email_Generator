@@ -73,7 +73,7 @@ COMPANY = headline_pattern(
     r"alphabet|amazon|amd|anthropic|apple|asml|baidu|broadcom|bytedance|cisco|cloudflare|"
     r"crowdstrike|databricks|deepseek|google|huawei|ibm|intel|meta|microsoft|mistral|"
     r"nvidia|openai|oracle|palantir|palo alto networks|qualcomm|salesforce|samsung|sap|"
-    r"snowflake|tencent|tesla|tiktok|tsmc|uber|xai|tech giant(?:s)?|chipmakers?"
+    r"snowflake|mongodb|firebolt|alibaba|tencent|tesla|tiktok|tsmc|uber|xai|tech giant(?:s)?|chipmakers?"
 )
 CORPORATE_ACTION = headline_pattern(
     r"ceo|chief executive|succession|successor|shareholders?|earnings|quarterly (?:profit|revenue)|"
@@ -93,7 +93,7 @@ DOMAIN_SIGNALS = (
     )),
     ("ai", headline_pattern(
         r"ai|gen[ -]?ai|artificial intelligence|machine learning|deep learning|language models?|"
-        r"llms?|chatgpt|openai|anthropic|claude (?:code|models?)|google gemini|deepmind|agentic|diffusion models?|"
+        r"llms?|chatgpt|openai|anthropic|claude (?:code|models?)|gemini|qwen[\w.-]*|deepmind|agentic|diffusion models?|"
         r"multimodal|frontier models?|reasoning models?|rag|fine-tuning|synthetic data|embedding models?|"
         r"deepseek|mistral|grok|copilot|reinforcement learning|rlhf|model context protocol|mcp|mixture of experts|moe|"
         r"kv cache|test-time compute|chain-of-thought|transformer architecture|"
@@ -202,7 +202,7 @@ def topic_for(article):
     source = article_source(article)
     default = source.topic if source else "industry"
     kind = article.get("kind") or (source.kind if source else "")
-    if kind == "video" or default == "video":
+    if default == "video" or (kind == "video" and not source):
         return "video"
     if kind == "status" or default == "outages":
         return "outages"
@@ -231,6 +231,7 @@ def topic_for(article):
 
 
 def public_article(article):
+    from app.news_signals import story_signals
     from app.intelligence import subjects_for
     article = restore_metadata(article)
     source = article_source(article)
@@ -283,6 +284,7 @@ def public_article(article):
             "source_required": True,
         },
         "subjects": subjects_for(article),
+        "news_signals": story_signals(article),
         "has_excerpt": has_excerpt,
         # Backward compatibility properties:
         "description": clean_summary,

@@ -267,6 +267,12 @@ async function loadCoverage() {
         `Failed checks: ${number.format(attention.failed_sources)} · Overdue checks: ${number.format(attention.overdue_sources)} · Sources quiet for 30 days: ${number.format(attention.quiet_sources)}.`));
       panel.append(node("p", "", "A successful check confirms feed access. It does not mean a publisher has released a new story or that coverage is exhaustive."));
     }
+    if (data.ingestion) {
+      const health = data.ingestion;
+      element("coverage-attention").append(node("p", "", `Synchronization ${health.status} · ${number.format(health.due_sources)} sources due · ${number.format(health.priority_sources_overdue)} priority feeds overdue.`));
+    }
+    const gaps = (data.signals || []).filter(signal => signal.gap);
+    if (gaps.length) element("coverage-attention").append(node("p", "", `Recent headline sample needs coverage review for ${gaps.map(signal => signal.label).join(", ")}.`));
     element("coverage-status").textContent = data.notice || "";
   } catch { element("coverage-status").textContent = "Coverage counts are temporarily unavailable."; }
 }

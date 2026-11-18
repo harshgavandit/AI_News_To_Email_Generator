@@ -246,6 +246,7 @@ body.sheet-open { overflow: hidden; }
 }
 
 .daily-entry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.news-signal { display: inline-flex; align-items: center; padding: 3px 7px; border: 1px solid var(--accent-line); border-radius: 5px; font-size: 10px; color: var(--green); background: var(--sage); }
 .daily-entry-actions .edition-link { display: inline-flex; min-height: 44px; }
 .daily-entry-actions #masthead-explore { background: transparent; }
 .briefing-intro { display: block; }

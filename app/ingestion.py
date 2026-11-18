@@ -43,16 +43,23 @@ def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=N
         and (source_ids is None or source.id in source_ids)
         and (not due_only or state.get(source.id, {}).get("available") is False
              or (state.get(source.id, {}).get("checked") or 0) + source.poll_minutes * 60 <= now)]
-    # Never-checked feeds first, then the most overdue. Stable ordering prevents starvation.
-    candidates.sort(key=lambda source: ((state.get(source.id, {}).get("checked") or 0) + source.poll_minutes * 60, source.id))
+    # Normalize by cadence so fast news does not wait behind quiet weekly blogs.
+    candidates.sort(key=lambda source: (-(now - (state.get(source.id, {}).get("checked") or 0)) /
+                                       (source.poll_minutes * 60), source.id))
     if maximum is None:
         return candidates
-    selected, hosts = [], Counter()
-    for source in candidates:
+    # Reserve a quarter of each batch for oldest checks to prevent starvation.
+    oldest = sorted(candidates, key=lambda source: (state.get(source.id, {}).get("checked") or 0, source.id))
+    ordered = [*oldest[:max(1, maximum // 4)], *candidates]
+    selected, hosts, seen = [], Counter(), set()
+    for source in ordered:
+        if source.id in seen:
+            continue
         host = urlsplit(source.url).hostname.removeprefix("www.")
         if hosts[host] >= per_host:
             continue
         selected.append(source)
+        seen.add(source.id)
         hosts[host] += 1
         if len(selected) == maximum:
             break
@@ -189,3 +196,26 @@ def feed_freshness(catalog, **filters):
     return {"status": status, "counts": counts,
             "checked_at": max((s.get("checked_at") or "" for s in active), default="") or None,
             "last_success": max((s.get("last_success") or "" for s in active), default="") or None}
+
+
+def ingestion_health(store, catalog=None):
+    """Expose scheduler progress and source-specific deadlines without masking a backlog."""
+    catalog = catalog if catalog is not None else source_catalog(store, include_archive=False)
+    now = datetime.now(UTC).timestamp()
+    state = store.source_state(include_archive=False)
+    active = [feed for feed in catalog if feed["enabled"]]
+    due = refresh_plan(state, due_only=True, now=now)
+    last_check = max((state.get(feed["id"], {}).get("checked") or 0 for feed in active), default=0)
+    lag = sorted(max(0, now - state[feed["id"]]["checked"] - feed["refresh_minutes"] * 60)
+                 for feed in active if state.get(feed["id"], {}).get("checked"))
+    critical = [feed for feed in active if feed["refresh_minutes"] <= 15]
+    overdue_critical = [feed for feed in critical if
+        (state.get(feed["id"], {}).get("checked") or 0) + feed["refresh_minutes"] * 60 < now]
+    stalled = not last_check or now - last_check > 20 * 60
+    return {"status": "stalled" if stalled else "backlogged" if len(overdue_critical) > len(critical) / 2 else "running",
+            "last_check_at": timestamp(last_check), "seconds_since_check": round(now - last_check) if last_check else None,
+            "due_sources": len(due), "deferred_sources": sum(bool(feed.get("retry_at")) for feed in active),
+            "pending_sources": sum(not state.get(feed["id"], {}).get("checked") for feed in active),
+            "priority_sources": len(critical), "priority_sources_overdue": len(overdue_critical),
+            "p95_overdue_seconds": round(lag[min(len(lag) - 1, int(len(lag) * .95))]) if lag else 0,
+            "notice": "Cadences are targets. Publisher availability and scheduler starts determine observed latency."}

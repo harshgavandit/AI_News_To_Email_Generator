@@ -103,11 +103,12 @@ def plain_text(value):
 
 
 def article_in_scope(source, path, title, tags):
+    from app.news_signals import TECH_ENTITIES
     if source.article_paths and not path.startswith(source.article_paths):
         return False
     if path.startswith(source.excluded_paths) or SPONSORED_TITLE.match(title):
         return False
-    return not source.tech_only or bool(TECH_HEADLINE.search(title)) or any(
+    return not source.tech_only or bool(TECH_HEADLINE.search(title) or TECH_ENTITIES.search(title)) or any(
         TECH_SECTION.fullmatch(section) for section in (*tags, *path.split("/"))
     )
 
@@ -160,6 +161,14 @@ async def fetch_with_deadline(url, validators=None):
 
 
 def read_feed(task, *, validators=None, known_urls=()):
+    if isinstance(task, Source) and task.integration == "release-notes":
+        try:
+            from app.release_notes import read_release_notes
+            return read_release_notes(task, fetch_bytes)
+        except httpx.HTTPStatusError as error:
+            return [], {**task.public(), "available": False, "count": 0, **http_failure(error)}
+        except (ValueError, httpx.HTTPError, UnicodeError):
+            return [], dict(task.public(), available=False, count=0, error="changelog_unavailable")
     if isinstance(task, Source) and task.integration == "crossref-api":
         try:
             from app.scholarly import read_crossref

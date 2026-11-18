@@ -66,7 +66,7 @@ def article_metadata(body, url, source):
 
 
 def read_listing(source, fetch, *, known_urls=()):
-    from app.news import canonical_url
+    from app.news import canonical_url, article_in_scope
     origin = urlsplit(source.url)
     robots_url = f"https://{origin.netloc}/robots.txt"
     rules = RobotFileParser()
@@ -85,22 +85,27 @@ def read_listing(source, fetch, *, known_urls=()):
             continue
         parsed = urlsplit(url)
         if (parsed.netloc != origin.netloc or not parsed.path.startswith(source.article_paths)
-                or not parsed.path.endswith(".html") or url in links or not rules.can_fetch("InformaAI", url)):
+                or url in links or not rules.can_fetch("InformaAI", url)):
             continue
         links.append(url)
-        if len(links) == 8:
+        if len(links) == 48:
             break
     if not links:
         raise ValueError("No reviewed article links")
-    items, failures = [], 0
+    items, failures, attempted = [], 0, 0
+    started = time.monotonic()
     for url in links:
         if url in known_urls:
             continue
+        if attempted >= 8 or time.monotonic() - started >= 24:
+            break
+        attempted += 1
         try:
             if delay:
                 time.sleep(delay)
             if article := article_metadata(fetch(url), url, source):
-                items.append(article)
+                if article_in_scope(source, urlsplit(url).path, article["title"], []):
+                    items.append(article)
             else:
                 failures += 1
         except Exception:

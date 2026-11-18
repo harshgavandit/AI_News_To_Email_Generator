@@ -6,6 +6,7 @@ from app.coverage import TOPICS, public_article, region_id
 from app.intelligence import story_identity
 from app.selection import words
 from app.sources import BY_ID
+from app.news_signals import news_score
 from app.web_digest import digest_markdown, safe_email_html
 
 PROVIDERS = {
@@ -51,7 +52,8 @@ def diverse_stories(candidates, count, *, previous=(), lead_with_incident=False)
         )
         new_region = region_id(story["region"]) not in regions
         new_topic = story["topic"] not in topics
-        return (reported_outage, story["coverage"] != "article", story["publisher"] not in publishers, new_topic + new_region, new_region,
+        return (reported_outage, story["coverage"] != "article", story["publisher"] not in publishers,
+                int(news_score(story, now) // 8), new_topic + new_region, new_region,
                 REPORTING_PRIORITY.get(story["coverage"], 0), story["published_at"], story["id"])
 
     def is_duplicate(row):

@@ -6,7 +6,8 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from app.coverage import TOPICS, public_article
-from app.ingestion import feed_freshness, source_catalog
+from app.ingestion import feed_freshness, source_catalog, ingestion_health
+from app.news_signals import SIGNALS, story_signals
 from app.launch_store import get_store
 from app.news import canonical_url
 from app.sources import BY_ID
@@ -52,6 +53,14 @@ def coverage(response: Response):
     catalog = source_catalog(store)
     diagnostics = store.feed_diagnostics()
     counts = store.coverage_counts()
+    sample = store.headline_candidates(48, include_primary=True, per_source=12)
+    signals = []
+    for key, label, _, _ in SIGNALS:
+        matches = [row for row in sample if key in {signal["id"] for signal in story_signals(row)}]
+        signals.append({"id": key, "label": label, "sampled_articles": len(matches),
+            "publisher_groups": len({BY_ID[row["source_id"]].publisher_family for row in matches}),
+            "latest_published_at": max((row["published_at"] for row in matches), default=None),
+            "gap": "no_matching_headlines_in_sample" if not matches else None})
     response.headers["Cache-Control"] = "public, max-age=30"
     topics = []
     for key, label in TOPICS.items():
@@ -63,7 +72,8 @@ def coverage(response: Response):
         topics.append({"id": key, "label": label, "feeds": len(feeds),
             "publisher_groups": len({feed["publisher_family"] for feed in feeds}),
             "fresh_feeds": fresh, "articles_24h": recent, "gap": gap})
-    return {"freshness": feed_freshness(catalog), "topics": topics,
+    return {"freshness": feed_freshness(catalog), "topics": topics, "signals": signals,
+        "signal_sample_size": len(sample), "signal_window_hours": 48, "ingestion": ingestion_health(store, catalog),
         "attention": {"topics": [topic for topic in topics if topic["gap"]],
             "failed_sources": sum(feed["enabled"] and feed["freshness"] == "failed" for feed in catalog),
             "overdue_sources": sum(feed["enabled"] and feed["freshness"] == "stale" for feed in catalog),
@@ -84,6 +94,15 @@ def coverage(response: Response):
             "last_success": feed["last_success"], "error": feed.get("error"), "retry_at": feed.get("retry_at")}
             for feed in catalog],
         "notice": "Feed checks measure synchronization, not exhaustive coverage. Topic feed counts use configured focus; article counts use story classification."}
+
+
+@router.get("/ingestion")
+def ingestion_status(response: Response):
+    store = get_store()
+    if not store:
+        raise HTTPException(503, "The persistent archive is unavailable.")
+    response.headers["Cache-Control"] = "public, max-age=30"
+    return ingestion_health(store)
 
 
 @router.get("/check")

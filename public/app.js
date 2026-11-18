@@ -32,7 +32,7 @@ const state = {
   source: "all",
   publisher: "",
   searching: false,
-  hours: 12,
+  hours: 24,
   view: "feed",
   pins: new Map(),
   digestSources: new Set(),
@@ -348,7 +348,7 @@ function syncURL() {
   $("filter-high-signal").setAttribute("aria-pressed", String($("coverage").value === "reporting"));
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
-  const baseHours = state.view === "for-you" ? 168 : 12;
+  const baseHours = state.view === "for-you" ? 168 : 24;
   $("reset-filters").hidden = ["saved", "briefing"].includes(state.view) ||
     (!count && !$("region").value && state.topic === "all" && state.hours === baseHours && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
@@ -389,7 +389,7 @@ function restoreURL() {
   $("publisher").value = state.publisher;
   const windowValue = params.get("window");
   state.hours = Number(Object.keys(windows).find((hours) => windows[hours] === windowValue || hours === windowValue)) ||
-    (params.get("view") === "for-you" ? 168 : 12);
+    (params.get("view") === "for-you" ? 168 : 24);
   state.topic = Object.hasOwn(state.topics, params.get("topic")) ? params.get("topic") : "all";
   $("search").value = (params.get("q") || "").slice(0, 150);
   state.searching = Boolean($("search").value.trim());
@@ -653,6 +653,7 @@ function renderStories() {
     const readingTime = article.readingTimeMinutes || Math.max(1, Math.ceil(wordCount / 65));
 
     const badges = node("div", "story-meta-badges");
+    if (article.news_signals?.length) badges.append(node("span", "news-signal", article.news_signals[0].label));
     if (state.view === "for-you" && article.recommendation_reasons?.length) {
       badges.append(node("span", "for-you-badge", article.recommendation_reasons[0]));
     }
@@ -1322,7 +1323,7 @@ $("reset-filters").addEventListener("click", () => {
   clearTimeout(searchTimer);
   state.topic = state.source = "all";
   state.publisher = "";
-  state.hours = state.view === "for-you" ? 168 : 12;
+  state.hours = state.view === "for-you" ? 168 : 24;
   state.searching = false;
   for (const id of ["search", "region", "publisher", "coverage", "language", "subject"]) $(id).value = "";
   $("kind").value = "all";

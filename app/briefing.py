@@ -6,8 +6,9 @@ from app.intelligence import deduplicate
 from app.sources import BY_ID
 from app.story_coverage import compare_coverage, coverage_match, headline
 from app.world_edition import diverse_stories
+from app.news_signals import impact_score
 
-BRIEFING_COVERAGE = {"reporting", "publisher", "journal", "preprint", "advisory"}
+BRIEFING_COVERAGE = {"reporting", "publisher", "journal", "preprint", "advisory", "release"}
 
 
 def build_briefing(rows, *, hours=24, limit=5):
@@ -18,7 +19,8 @@ def build_briefing(rows, *, hours=24, limit=5):
         source = BY_ID.get(row.get("source_id"))
         try:
             published = datetime.fromisoformat(row["published_at"])
-            if source and source.kind != "video" and source.coverage in BRIEFING_COVERAGE and cutoff <= published <= now:
+            if (source and source.coverage in BRIEFING_COVERAGE and cutoff <= published <= now
+                    and (source.kind != "video" and source.coverage != "release" or impact_score(row) > 0)):
                 eligible.append(public_article(row))
         except (KeyError, TypeError, ValueError):
             continue
