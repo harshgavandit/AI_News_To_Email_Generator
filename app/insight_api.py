@@ -122,9 +122,10 @@ def options():
 
 
 @router.get("/api/intelligence/events")
-def developments(response: Response, hours: Annotated[int, Query(ge=24, le=720)] = 168,
+def developments(response: Response, hours: Annotated[int, Query(ge=12, le=2160)] = 168,
                  topic: str = "all", limit: Annotated[int, Query(ge=1, le=80)] = 24,
-                 followed: Annotated[str, Query(max_length=1319)] = ""):
+                 followed: Annotated[str, Query(max_length=1319)] = "",
+                 q: Annotated[str, Query(max_length=150)] = ""):
     if topic not in ("all", *TOPICS):
         raise HTTPException(422, "Choose a supported topic.")
     store = archive()
@@ -132,7 +133,8 @@ def developments(response: Response, hours: Annotated[int, Query(ge=24, le=720)]
     if any(not re.fullmatch(r"[a-f0-9]{32}", ident) for ident in event_ids):
         raise HTTPException(422, "Choose valid developments.")
     response.headers["Cache-Control"] = "private, no-store" if event_ids else "public, max-age=30"
-    return {"events": event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic, event_ids=event_ids),
+    return {"events": event_intelligence.catalog(store, hours=hours, limit=limit, topic=topic,
+                                                 event_ids=event_ids, query=q.strip()),
             "status": "available" if event_intelligence.ready(store) else "warming",
             "notice": "Related coverage is grouped by source evidence. Grouping does not establish agreement."}
 
@@ -170,14 +172,18 @@ def explanation(body: ai_insights.ExplainRequest, request: Request, response: Re
 def catch_up(body: ai_insights.CatchupRequest, request: Request, response: Response):
     from app.server import admit_expensive
     store = archive()
-    admit_expensive(store, request, "catch-up", 10, 600)
-    result = ai_insights.catchup(store, body.profile, body.seen, hours=body.hours)
-    if brief := result.pop("brief", None):
+    response.headers["Cache-Control"] = "private, no-store"
+    if body.summary_only and not event_intelligence.ready(store):
+        raise HTTPException(503, "Developments are still being indexed. Try again shortly.")
+    admit_expensive(store, request, "home-catch-up" if body.summary_only else "catch-up",
+                    30 if body.summary_only else 10, 600)
+    result = ai_insights.catchup(store, body.profile, body.seen, hours=body.hours,
+                                 since=body.since, allow_generate=not body.summary_only)
+    if (brief := result.pop("brief", None)) and not body.summary_only:
         expires, ident = int(time.time()) + 3600, secrets.token_urlsafe(24)
         store.save_preview(ident, brief, expires)
         result["preview"] = {"digest": brief, "expires": expires, "preview_id": ident,
                              "source_basis": result["source_notice"]}
-    response.headers["Cache-Control"] = "private, no-store"
     return result
 
 
@@ -233,9 +239,16 @@ def update_inbox_radar(body: ai_insights.RadarProfile, request: Request, respons
     mailbox, store = private_mailbox(request), archive()
     if not radar_store.ready(store):
         raise HTTPException(503, "Radar storage is being prepared. Try again shortly.")
+    if body.delivery_mode == "material_updates" and not (
+            body.followed_events or body.followed_technologies or body.feedback.companies
+            or body.interests or body.stack or body.topics):
+        raise HTTPException(422, "Add a followed story, company, technology, or topic before enabling followed updates.")
     radar_store.save_profile(store, mailbox, body.model_dump())
     response.headers["Cache-Control"] = "private, no-store"
-    return {"profile": body.model_dump(), "notice": "Applies to opted-in morning mail. This does not subscribe your inbox."}
+    notice = ("Morning mail will include only new or materially changed developments that match your follows. "
+              "Mornings without matching updates are skipped." if body.delivery_mode == "material_updates" else
+              "Personalized preferences saved. They apply if your inbox is opted into morning mail.")
+    return {"profile": body.model_dump(), "notice": notice}
 
 
 @router.delete("/api/mail/radar")

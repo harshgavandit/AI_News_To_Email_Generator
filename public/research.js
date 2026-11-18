@@ -4,6 +4,8 @@ import { readFeedback } from "./reader-feedback.js";
 import { followedTechnologies, followedStories } from "./technology-follow.js";
 import { historyControl } from "./source-history.js";
 import { initRuleBuilder } from "./watch-rule-ui.js";
+import { appendClaimEvidence } from "./claim-evidence.js";
+import { searchLink } from "./search-context.js";
 
 const byId = (id) => document.getElementById(id);
 const form = byId("research-form");
@@ -60,8 +62,13 @@ async function api(path, body, signal, method) {
     ...(body && { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (response.status === 429) throw new Error("Too many requests. Wait a moment and try again.");
-  if (!response.ok) throw new Error(response.status === 404 ? "This story is no longer available in the archive." :
-    "The archive could not complete this request. Please try again.");
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(typeof data.detail === "string" ? data.detail : response.status === 404 ?
+      "This story is no longer available in the archive." : "The archive could not complete this request. Please try again.");
+    error.status = response.status;
+    throw error;
+  }
   return response.json();
 }
 
@@ -126,19 +133,7 @@ function render(data, titles) {
           text.append(" ", citation);
         }
         item.append(text);
-        if (claim.quotes?.length) {
-          const quotes = element("details", "", "research-meta");
-          quotes.append(element("summary", "Read the original evidence"));
-          for (const [index, quote] of claim.quotes.entries()) {
-            const source = data.evidence[references.get(claim.source_ids[index]) - 1];
-            const excerpt = element("blockquote", quote);
-            excerpt.lang = source?.language || "";
-            excerpt.dir = "auto";
-            if (source) excerpt.append(element("footer", source.publisher));
-            quotes.append(excerpt);
-          }
-          item.append(quotes);
-        }
+        appendClaimEvidence(item, claim, data.evidence, (url, label) => link(label, url));
         claims.append(item);
       }
       answer.append(claims);
@@ -232,18 +227,44 @@ function languageName(code) {
   try { return new Intl.DisplayNames(["en"], { type: "language" }).of(code); } catch { return code; }
 }
 
-const taskLabels = { search: "Find sources", analyze: "Answer with sources", compare: "Compare coverage", global_compare: "Compare across languages", brief: "Build a topic brief" };
-mode.addEventListener("change", () => { submit.textContent = taskLabels[mode.value]; });
+const taskLabels = { search: "Find sources", developments: "Find developments", analyze: "Answer with sources", compare: "Compare coverage", global_compare: "Compare across languages", brief: "Build a topic brief" };
+function syncSearchDestinations() {
+  const context = { q: question.value, hours: Number(byId("research-hours").value), topic: topic.value };
+  for (const [id, target] of [["search-articles", "articles"], ["search-developments", "developments"], ["search-ask", "analyze"]]) {
+    const item = byId(id);
+    item.href = searchLink(target, context);
+    if (target === mode.value) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  }
+  submit.textContent = taskLabels[mode.value];
+}
+form.addEventListener("input", syncSearchDestinations);
+form.addEventListener("change", syncSearchDestinations);
 
 async function search(body) {
   currentRequest?.abort();
   const controller = new AbortController();
   currentRequest = controller;
   results.replaceChildren();
+  byId("conversation-desk").hidden = true;
   results.setAttribute("aria-busy", "true");
   status.textContent = body.mode === "search" ? "Searching the archive…" : "Gathering evidence and checking citations…";
   submit.disabled = true;
   try {
+    if (body.mode === "developments") {
+      const params = new URLSearchParams({ ...body.scope, q: body.q.slice(0, 150), limit: 24 });
+      const { events = [], status: availability } = await api(`/api/intelligence/events?${params}`, undefined, controller.signal);
+      if (controller !== currentRequest) return;
+      const view = panel("Matching developments");
+      const list = element("ol", "", "development-list");
+      for (const event of events) list.append(developmentItem(event, status, true));
+      view.append(list);
+      results.append(view);
+      status.textContent = events.length ? `${events.length} grouped developments` :
+        availability === "warming" ? "Development indexing is temporarily unavailable." :
+          "No matching developments. Try a wider time range or browse individual articles.";
+      return;
+    }
     const data = await api("/api/intelligence/research", body, controller.signal);
     if (controller !== currentRequest) return;
     const label = data.retrieval === "hybrid" ? "Keyword and semantic search" : "Keyword search";
@@ -269,6 +290,7 @@ form.addEventListener("submit", (event) => {
   const q = question.value.trim();
   if (!q) { question.focus(); return; }
   conversation = [];
+  history.replaceState(null, "", searchLink(mode.value, { q, hours: Number(byId("research-hours").value), topic: topic.value }));
   byId("conversation-transcript").replaceChildren();
   search({ q, mode: mode.value, ...(mode.value === "global_compare" && { language: byId("radar-language").value }),
     scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
@@ -293,10 +315,7 @@ byId("conversation-form").addEventListener("submit", async (event) => {
       const claims = element("ul");
       for (const claim of data.answer.claims) {
         const item = element("li", claim.text);
-        for (const ident of claim.source_ids || []) {
-          const source = data.evidence.find((entry) => entry.id === ident);
-          if (source) item.append(" ", link(`[${source.publisher}] ↗`, source.url));
-        }
+        appendClaimEvidence(item, claim, data.evidence, (url, label) => link(label, url));
         claims.append(item);
       }
       exchange.append(claims);
@@ -320,7 +339,7 @@ function radarProfile() {
     topics: topic.value && topic.value !== "all" ? [topic.value] : [], followed_events: followedEvents,
     feedback: readFeedback(inboxFeedback), followed_technologies: followedTechnologies(inboxTechnologies),
     language: byId("radar-language").value, depth: byId("radar-depth").value,
-    length: Number(byId("radar-length").value) };
+    length: Number(byId("radar-length").value), delivery_mode: byId("radar-delivery-mode").value };
 }
 
 function loadRadarProfile(profile) {
@@ -329,6 +348,8 @@ function loadRadarProfile(profile) {
   if ([...byId("radar-language").options].some((option) => option.value === profile.language)) byId("radar-language").value = profile.language;
   if ([...byId("radar-depth").options].some((option) => option.value === profile.depth)) byId("radar-depth").value = profile.depth;
   if ([...byId("radar-length").options].some((option) => Number(option.value) === profile.length)) byId("radar-length").value = String(profile.length);
+  if ([...byId("radar-delivery-mode").options].some(option => option.value === profile.delivery_mode))
+    byId("radar-delivery-mode").value = profile.delivery_mode;
   byId("radar-interests").value = (profile.interests || []).join(", ");
   byId("radar-stack").value = (profile.stack || []).join(", ");
   followedEvents = profile.followed_events || [];
@@ -365,7 +386,7 @@ function timelineList(items) {
     const publisher = item.source?.publisher || item.publisher;
     const row = element("li");
     row.append(element("span", `${dateLabel(item.published_at)} · ${publisher} · `), link(item.title, item.source?.url || item.url));
-    if (item.reason === "source_revision") row.append(element("span", " · Publisher revised this item", "research-meta"));
+    if (item.change_label) row.append(element("span", ` · ${item.change_label}`, "research-meta"));
     if (item.excerpt) row.append(element("p", item.excerpt));
     entries.append(row);
   }
@@ -423,8 +444,13 @@ async function catchMeUp(event) {
       });
       row.append(timeline);
       if (event.explanation?.claims?.length) {
-        row.append(element("p", event.explanation.claims.map((claim) => claim.text).join(" ")));
-        row.append(element("p", `Evidence quotes stay linked to the publisher. ${event.explanation.limitations || ""}`, "research-meta"));
+        const notes = element("ul");
+        for (const claim of event.explanation.claims) {
+          const note = element("li", claim.kind === "analysis" ? `Interpretation · ${claim.text}` : claim.text);
+          appendClaimEvidence(note, claim, event.explanation_evidence || [], (url, label) => link(label, url));
+          notes.append(note);
+        }
+        row.append(notes, element("p", event.explanation.limitations, "research-meta"));
       }
       list.append(row);
     }
@@ -472,8 +498,10 @@ byId("radar-save").addEventListener("click", async () => {
     rememberRadar();
     const data = await api("/api/mail/radar", radarProfile(), undefined, "PUT");
     byId("radar-status").textContent = data.notice;
-  } catch {
-    byId("radar-status").textContent = "Verify your email from the home page first. Radar preferences stay in this browser until you save them to a verified inbox.";
+  } catch (error) {
+    byId("radar-status").textContent = error.status === 401
+      ? "Verify your email from the home page first. Radar preferences stay in this browser until you save them to a verified inbox."
+      : error.message;
   } finally { button.disabled = false; }
 });
 
@@ -507,6 +535,37 @@ window.addEventListener("storage", event => {
   if (followedOnly) loadDevelopments();
 });
 let developmentsRequest = 0;
+function developmentItem(event, feedback, compare = false) {
+  const item = element("li", "", "development-item");
+  item.append(element("strong", event.title), element("span", `${event.source_count} publishers · updated ${dateLabel(event.updated_at)}`, "research-meta"));
+  const open = element("button", "Open timeline", "text-button");
+  open.type = "button";
+  open.addEventListener("click", async () => {
+    try {
+      open.disabled = true;
+      await showTimeline(event.id, item);
+      open.remove();
+    } catch (error) { feedback.textContent = error.message; open.disabled = false; }
+  });
+  item.append(open, followButton(event.id));
+  if (compare) {
+    const action = element("button", "Compare coverage", "text-button");
+    action.type = "button";
+    action.addEventListener("click", () => {
+      const anchor = event.articles?.[0]?.id;
+      question.value = event.title.slice(0, 320);
+      mode.value = "compare";
+      syncSearchDestinations();
+      question.focus();
+      if (anchor) search({ article_id: anchor, mode: "compare",
+        scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
+      else form.requestSubmit();
+    });
+    item.append(action);
+  }
+  return item;
+}
+
 async function loadDevelopments() {
   const current = ++developmentsRequest;
   const list = byId("development-list");
@@ -519,21 +578,7 @@ async function loadDevelopments() {
   const { events = [] } = await api(path);
   if (current !== developmentsRequest) return;
   feedback.textContent = "";
-  for (const event of events) {
-    const item = element("li", "", "development-item");
-    item.append(element("strong", event.title), element("span", `${event.source_count} publishers · updated ${dateLabel(event.updated_at)}`, "research-meta"));
-    const open = element("button", "Open timeline", "text-button");
-    open.type = "button";
-    open.addEventListener("click", async () => {
-      try {
-        open.disabled = true;
-        await showTimeline(event.id, item);
-        open.remove();
-      } catch (error) { feedback.textContent = error.message; open.disabled = false; }
-    });
-    item.append(open, followButton(event.id));
-    list.append(item);
-  }
+  for (const event of events) list.append(developmentItem(event, feedback));
   if (!events.length) feedback.textContent = followedOnly ? "No followed stories are still in the archive." : "Developments are being indexed as new coverage arrives.";
   } catch { if (current === developmentsRequest) feedback.textContent = "Development timelines are temporarily unavailable."; }
 }
@@ -764,7 +809,7 @@ initRuleBuilder(async (watch) => {
   return saved;
 });
 
-api("/api/intelligence/options").then((options) => {
+const searchOptionsReady = api("/api/intelligence/options").then((options) => {
   for (const [id, label] of Object.entries(options.topics || {})) {
     topic.add(new Option(label, id));
     byId("watch-topic").add(new Option(label, id));
@@ -818,7 +863,8 @@ api("/api/trending").then(({ trending, momentum_window_hours }) => {
   byId("research-trends").hidden = false;
 }).catch(() => { /* Core research works when trend data is unavailable. */ });
 
-const article = new URLSearchParams(location.search).get("article");
+const searchParams = new URLSearchParams(location.search);
+const article = searchParams.get("article");
 if (article && /^[a-zA-Z0-9_-]{1,40}$/.test(article)) {
   mode.value = "analyze";
   byId("research-hours").value = "720";
@@ -826,7 +872,15 @@ if (article && /^[a-zA-Z0-9_-]{1,40}$/.test(article)) {
   search({ article_id: article, mode: "analyze" });
 } else {
   try {
-    question.value = (sessionStorage.getItem("informa-research-query") || "").slice(0, 150);
+    question.value = (searchParams.get("q") || sessionStorage.getItem("informa-research-query") || "").slice(0, 320);
     sessionStorage.removeItem("informa-research-query");
   } catch { /* Start with an empty query when browser storage is unavailable. */ }
 }
+searchOptionsReady.then(() => {
+  const selectedMode = searchParams.get("mode"), hours = searchParams.get("hours");
+  if (!article && Object.hasOwn(taskLabels, selectedMode)) mode.value = selectedMode;
+  if ([...byId("research-hours").options].some(option => option.value === hours)) byId("research-hours").value = hours;
+  if ([...topic.options].some(option => option.value === searchParams.get("topic"))) topic.value = searchParams.get("topic");
+  syncSearchDestinations();
+  if (mode.value === "developments" && question.value.trim()) form.requestSubmit();
+});

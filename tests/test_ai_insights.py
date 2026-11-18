@@ -291,3 +291,71 @@ def test_opted_in_radar_gets_personalized_morning_mail_and_history_after_accepta
     assert "Cloud provider reports a regional network outage" in sent_payload["text"]
     assert not any(key.startswith("_informa") for key in sent_payload)
     assert radar_store.histories(store, [mailbox])[mailbox]
+
+
+def test_catchup_and_development_search_return_meaningful_changes_over_http(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import insight_api, server
+
+    store = Store(f"sqlite:///{tmp_path / 'material.sqlite'}")
+    store.migrate()
+    now = time.time()
+    report = story("cloud-1", "Northstar cloud network outage disrupts regional services",
+                   "A disruption affected service availability.", "ars-technica")
+    repeat = story("cloud-2", report["title"], "Regional service availability was disrupted.", "the-verge")
+    for row in (report, repeat):
+        store.ingest(row["source_id"], [row], True)
+    event, _ = event_intelligence.observe(store, report, now=now - 30)
+    event_intelligence.observe(store, repeat, now=now - 20)
+    cosmetic = dict(report, description="A disruption affected service availability. Read more on our website.")
+    event_intelligence.observe(store, cosmetic, now=now - 15)
+    uncertain = dict(report, description="The incident was not resolved. The operator is investigating.")
+    event_intelligence.observe(store, uncertain, now=now - 10)
+    assert event_intelligence.timeline(store, event, since=1)["changes"] == []
+
+    monkeypatch.setattr(insight_api, "get_store", lambda: store)
+    client = TestClient(server.app)
+    payload = {"hours": 720, "since": now - 25, "summary_only": True}
+    assert client.post("/api/intelligence/catchup", json=payload).json()["events"] == []
+    revised = dict(report, description="The provider says service has been restored.")
+    event_intelligence.observe(store, revised, now=now - 5)
+    response = client.post("/api/intelligence/catchup", json=payload)
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "private, no-store"
+    data = response.json()
+    assert "preview" not in data
+    update = data["events"][0]
+    assert update["change"] == "updated"
+    assert update["change_sources"][0]["change_label"] == "Resolved"
+    assert update["change_sources"][0]["excerpt"] == revised["description"]
+    assert update["change_sources"][0]["url"] == report["url"]
+    assert client.get("/api/intelligence/events", params={"q": "Northstar outage", "hours": 12}).json()["events"][0]["id"] == event
+    assert client.get("/api/intelligence/events", params={"q": "Northstar satellites", "hours": 12}).json()["events"] == []
+
+
+def test_followed_updates_mail_skips_unrelated_reports_and_repeat_coverage(tmp_path):
+    from app import mail_schedule
+
+    store = Store(f"sqlite:///{tmp_path / 'followed.sqlite'}")
+    store.migrate()
+    mailbox = "b" * 64
+    row = story("gpu-news", "NVIDIA publishes new GPU driver compatibility details",
+                "NVIDIA announced new driver requirements.", "ars-technica")
+    unrelated = story("cloud-news", "Cloud provider rebuilds billing dashboard",
+                      "The company redesigned its customer site.", "the-verge")
+    for article in (row, unrelated):
+        store.ingest(article["source_id"], [article], True)
+        event_intelligence.observe(store, article)
+    profile = ai_insights.RadarProfile(delivery_mode="material_updates", feedback={"companies": ["NVIDIA"]})
+    radar_store.save_profile(store, mailbox, profile.model_dump())
+    def load():
+        return event_intelligence.catalog(store)
+    brief = mail_schedule.personalized_morning_brief(store, mailbox, {}, load)
+    assert brief["followed_updates"] is True
+    assert [item["digest_id"] for item in brief["articles"]] == ["gpu-news"]
+    assert "Mentions a company you follow: NVIDIA" in brief["markdown"]
+    assert "Manage or mute follows" in brief["html"]
+    store.reserve_delivery("followed-delivery", [("mail:followed", "today", 3)],
+                           event_mailbox=mailbox, event_history=brief["_catchup"])
+    store.record_delivery("followed-delivery", "provider-accepted")
+    assert mail_schedule.personalized_morning_brief(store, mailbox, {}, load) is None

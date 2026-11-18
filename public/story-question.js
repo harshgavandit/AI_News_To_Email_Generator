@@ -1,3 +1,5 @@
+import { appendClaimEvidence } from "./claim-evidence.js";
+
 export function createStoryQuestion(request, context, externalLink) {
   const byId = id => document.getElementById(id);
   const panel = byId("story-question-panel"), opener = byId("dossier-ask");
@@ -41,10 +43,7 @@ export function createStoryQuestion(request, context, externalLink) {
           text.prepend(label);
         }
         item.append(text);
-        for (const id of claim.source_ids || []) {
-          const source = data.evidence?.find(row => row.id === id);
-          if (source) item.append(externalLink(source.url, `${source.publisher} ↗`), " ");
-        }
+        appendClaimEvidence(item, claim, data.evidence || [], externalLink);
         claims.append(item);
       }
       output.append(claims);

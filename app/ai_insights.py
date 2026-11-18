@@ -43,7 +43,11 @@ TECHNICAL_FIELDS = {
     "release": {"changes": "What changed", "breaking": "Breaking changes", "migration": "Documented migration"},
     "research": {"method": "What was tested", "findings": "Reported findings", "limitations": "Reported limitations"},
 }
-UPDATE_PROMPT = PROMPT + " Focus on this newly observed publisher update. Describe any explicit correction as attributed to its source."
+UPDATE_PROMPT = PROMPT + """
+Compare the current publisher update with earlier evidence, when supplied.
+Use earlier evidence only as context and cite only the current evidence.
+Explain the newly reported fact and attribute confirmations, recoveries and corrections to the source.
+If the current excerpt only repeats earlier facts, return insufficient."""
 
 
 def technical_format(coverage):
@@ -63,6 +67,7 @@ class RadarProfile(BaseModel):
     followed_events: list[Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]] = Field(default_factory=list, max_length=40)
     feedback: ReaderFeedback = Field(default_factory=ReaderFeedback)
     followed_technologies: list[Literal[tuple(technology.TECHNOLOGIES)]] = Field(default_factory=list, max_length=20)
+    delivery_mode: Literal["personalized", "material_updates"] = "personalized"
 
     @field_validator("language")
     @classmethod
@@ -104,6 +109,8 @@ class CatchupRequest(BaseModel):
     profile: RadarProfile = Field(default_factory=RadarProfile)
     seen: dict[str, str] = Field(default_factory=dict, max_length=200)
     hours: Literal[24, 168, 720] = 168
+    since: float | None = Field(default=None, ge=0, le=2147483647)
+    summary_only: bool = False
 
     @field_validator("seen")
     @classmethod
@@ -150,14 +157,16 @@ def validate_explanation(answer, evidence):
     return answer.model_dump()
 
 
-def explain(store, evidence, *, depth="simple", language="en", allow_generate=True, prompt=PROMPT, sections=None):
+def explain(store, evidence, *, depth="simple", language="en", allow_generate=True, prompt=PROMPT, sections=None,
+            earlier=()):
     # Store and render only supplied excerpts; no arbitrary URL/article extraction.
     material = [row for row in evidence if len(row.get("excerpt", "")) >= 32][:5]
     fallback = {"status": "insufficient", "claims": [], "language": language,
                 "limitations": "There is not enough publisher text for a useful explanation. Read the original source."}
     if not material:
         return fallback
-    key = explanation_key(material, depth, language, prompt)
+    previous = list(earlier)[:2]
+    key = explanation_key({"current": material, "earlier": previous} if previous else material, depth, language, prompt)
     if cached := store.get_summary(key):
         return dict(cached, cached=True)
     if not allow_generate:
@@ -173,7 +182,8 @@ def explain(store, evidence, *, depth="simple", language="en", allow_generate=Tr
         if not research.reserve(store, "answers", 180, 1500):
             return dict(fallback, status="budget_limited", limitations="Today's AI allowance is used. Original publisher evidence remains available.")
         output_schema = explanation_schema(material, sections or ())
-        payload = json.dumps({"depth": DEPTHS[depth], "output_language": OUTPUT_LANGUAGES[language], "evidence": material}, ensure_ascii=False)
+        payload = json.dumps({"depth": DEPTHS[depth], "output_language": OUTPUT_LANGUAGES[language],
+                              "evidence": material, "earlier_evidence": previous}, ensure_ascii=False)
         try:
             raw = generate_response(payload, prompt, output_schema, max_tokens=1500)
             result = validate_explanation(output_schema.model_validate_json(raw), material)
@@ -205,7 +215,16 @@ def update_evidence(changes):
     from app.provenance import notice
     return [{"id": item["id"], "title": item["title"], "excerpt": item["excerpt"],
              "published_at": item["published_at"], "publisher": item["source"]["publisher"],
-             "url": item["source"]["url"], "editorial_notice": notice(item["title"])} for item in changes]
+             "url": item["source"]["url"], "editorial_notice": notice(item["title"]),
+             "change_label": item["change_label"], "coverage": item["source"].get("coverage")} for item in changes]
+
+
+def earlier_evidence(timeline):
+    if not timeline or not timeline["changes"]:
+        return []
+    first_change = min(item["observed"] for item in timeline["changes"])
+    earlier = [item for item in timeline["entries"] if item["observed"] < first_change and item["excerpt"]][:2]
+    return update_evidence(earlier)
 
 
 def prepare_recent_changes(store):
@@ -220,14 +239,14 @@ def prepare_recent_changes(store):
         if not timeline or not timeline["changes"]:
             continue
         evidence = update_evidence(timeline["changes"][:1])
-        result = explain(store, evidence, prompt=UPDATE_PROMPT)
+        result = explain(store, evidence, prompt=UPDATE_PROMPT, earlier=earlier_evidence(timeline))
         if not result.get("cached"):
             prepared += 1
         if prepared == 2:
             break
 
 
-def rank_events(items, profile, seen, *, related_subjects=()):
+def rank_events(items, profile, seen, *, related_subjects=(), followed_only=False):
     interests = [(label, search_terms(label)) for label in profile.interests]
     ranked = []
     now = datetime.now(UTC)
@@ -241,13 +260,17 @@ def rank_events(items, profile, seen, *, related_subjects=()):
         followed = event["id"] in follows
         tracked = [technology.TECHNOLOGIES[ident].name for ident in dict.fromkeys(profile.followed_technologies)
                    if any(technology.match(ident, article) for article in event["articles"])]
-        if not followed and not tracked and profile.topics and not any(article["topic"] in profile.topics for article in event["articles"]):
-            continue
         text = search_text(" ".join(article["title"] + " " + article.get("cleanSummary", "") for article in event["articles"]))
         matches = [label for label, terms in interests if terms and all(term in text for term in terms)]
         stack_matches = [label for label in profile.stack if stack_intelligence.mentions(label, event["articles"])]
         companies = list(dict.fromkeys(name for article in event["articles"]
             for name in company_matches(article, profile.feedback.companies)))
+        topic_match = any(article["topic"] in profile.topics for article in event["articles"])
+        explicit_follow = followed or tracked or companies or stack_matches
+        if profile.topics and not (explicit_follow or topic_match or (followed_only and matches)):
+            continue
+        if followed_only and not (explicit_follow or topic_match or matches):
+            continue
         similar = bool(set(subjects_for(story)) & set(related_subjects))
         score = len(matches) * 8 + (4 if event["topic"] in ROLE_TOPICS[profile.role] else 0)
         if interests and not matches:
@@ -258,6 +281,8 @@ def rank_events(items, profile, seen, *, related_subjects=()):
         score += 3 / (1 + age / 12) + min(event["source_count"], 4) * .2
         reasons = (["Matches " + ", ".join(matches[:3])] if matches else
                    ["Relevant to your " + ROLES[profile.role].lower() + " perspective"] if event["topic"] in ROLE_TOPICS[profile.role] else ["Broader technology context"])
+        if topic_match:
+            reasons.insert(0, "Matches a selected topic")
         if event["id"] in seen:
             reasons.append("Updated since your last catch-up")
         if followed:
@@ -287,16 +312,18 @@ def rank_events(items, profile, seen, *, related_subjects=()):
     return picked
 
 
-def catchup(store, profile, seen, *, hours=168, allow_generate=True, pool=None):
+def catchup(store, profile, seen, *, hours=168, allow_generate=True, pool=None, since=None, followed_only=False):
     items = pool if pool is not None else event_intelligence.catalog(store, hours=hours, limit=240)
     missing_follows = set(profile.followed_events) - {event["id"] for event in items}
     if missing_follows:
         cutoff = datetime.now(UTC).timestamp() - hours * 3600
         followed = event_intelligence.catalog(store, event_ids=sorted(missing_follows), limit=40)
         items = [*items, *(event for event in followed if datetime.fromisoformat(event["updated_at"]).timestamp() >= cutoff)]
+    if since is not None:
+        items = [event for event in items if datetime.fromisoformat(event["updated_at"]).timestamp() > since]
     liked = store.pinned_articles(profile.feedback.liked_ids) if profile.feedback.liked_ids else []
     related_subjects = {subject for article in liked for subject in subjects_for(article)}
-    selected = rank_events(items, profile, seen, related_subjects=related_subjects)
+    selected = rank_events(items, profile, seen, related_subjects=related_subjects, followed_only=followed_only)
     if not selected:
         return {"status": "caught_up" if seen and items else "empty", "events": [], "brief": None,
                 "message": "No unseen matching developments in this window. Change your topics or time range."}
@@ -306,27 +333,38 @@ def catchup(store, profile, seen, *, hours=168, allow_generate=True, pool=None):
     for index, (entry, event) in enumerate(zip(brief["articles"], selected)):
         evidence = evidence_for(event)
         change_sources = []
+        earlier = []
+        if since is not None and datetime.fromisoformat(event["created_at"]).timestamp() < since:
+            event["change"] = "updated"
         if event["change"] == "updated":
-            timeline = event_intelligence.timeline(store, event["id"], since=int(seen[event["id"]]))
+            revision = seen.get(event["id"])
+            timeline = event_intelligence.timeline(store, event["id"], since=int(revision) if revision else None,
+                                                   observed_since=since)
             change_sources = update_evidence(timeline["changes"]) if timeline else []
             if change_sources:
                 evidence = change_sources[:1]
+                earlier = earlier_evidence(timeline)
                 event["change_sources"] = change_sources
                 entry["change_sources"] = change_sources
         # Three foreground calls maximum; other stories reuse shared cache or excerpts.
         answer = explain(store, evidence, depth=profile.depth, language=profile.language,
                          allow_generate=allow_generate and index < 3,
-                         prompt=UPDATE_PROMPT if change_sources else PROMPT)
+                         prompt=UPDATE_PROMPT if change_sources else PROMPT, earlier=earlier)
         event["explanation"] = answer
         entry["whyItMatters"] = "; ".join(event["reasons"])
         entry["change"] = event["change"]
         if answer["status"] == "answered":
             prepared += 1
+            event["explanation_evidence"] = evidence
             entry["summary"] = " ".join(claim["text"] for claim in answer["claims"])
             entry["summary_basis"] = "ai_evidence_explanation"
             entry["language"] = profile.language
-            entry["evidence_links"] = [{"title": row["publisher"], "url": row["url"]} for row in evidence]
+            sources = {row["id"]: row for row in evidence}
+            entry["claim_evidence"] = [{**sources[claim["source_id"]], "excerpt": claim["quote"]}
+                                       for claim in answer["claims"]]
     brief["edition"] = "catchup"
+    if followed_only:
+        brief["followed_updates"] = True
     brief["introduction"] = {"greeting": f"Your technology catch-up, {profile.name or 'Reader'}",
         "introduction": f"{len(selected)} new or updated developments selected for your radar. "
             f"{prepared} shared AI explanations; other entries use original publisher excerpts. "

@@ -8,6 +8,8 @@ The reviewed catalog contains 477 feed and API integrations, including independe
 
 Open Today’s Brief for a five-story catch-up and email that selection, or explore stories, topics and saved monitoring views. Ask a source-linked question inside the story reader, save an article, follow its publication or pin it to a brief. Hide read stories and compare supporting coverage. The interface supports light and dark themes, card and list reading, and mobile navigation.
 
+The Reading Room opens on **Today** for a new reader and **Catch up** when the browser has a reading checkpoint. Catch up shows selected developments since that checkpoint, including source-linked confirmations, scope changes, recoveries, and corrections when the source text supports them. Repeat reporting stays in the event timeline. **Mark caught up** advances the checkpoint, and **All stories** opens the full feed. The search controls carry the query, topic, and time range between **Articles**, **Developments**, and **Ask with sources**.
+
 Open the [Research Desk](https://getinformdaily.com/research.html) to search publisher evidence, compare coverage, request cited analysis, and download research notes with source links. Opt in to background monitoring for up to six queries and review the private inbox when you return. The inbox updates after the archive and monitoring checks run. Delete watches and alerts under Privacy &amp; controls.
 
 Open a story in the Reading Room to see its publisher excerpt and related reporting. When enough text is available, the story summary highlights sentences from the excerpt or an article shared with permission. Save articles, share a story link, pin reports to a brief, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. Search and filters narrow the articles before personalization ranks them. Coverage and related links show what connected the records, such as closely matching headlines or a shared CVE identifier.
@@ -15,6 +17,8 @@ Open a story in the Reading Room to see its publisher excerpt and related report
 Preview the Global Top 5 or tailor a brief by coverage and reader perspective. Pin articles to include them and export the result as Markdown, HTML, or an email file. Briefs identify whether each summary comes from a publisher excerpt, a headline, or AI synthesis. Verified inboxes can receive a brief or opt in to the scheduled Global Top 5 when email delivery is configured.
 
 Each verified inbox can request up to three briefs per UTC day. Delivery receipts show provider acceptance and the remaining allowance. A configured Resend webhook adds delivery, delay and bounce updates. Readers can recheck status while keeping the prepared brief available to copy or download.
+
+Readers with verified, opted-in morning delivery can choose **Only new or meaningful updates from my follows** in the Research Desk. The same delivery schedule and inbox limits apply. The scheduler skips mornings with no matching developments and includes the reason each item was selected.
 
 The reader labels excerpts, headline-only records, and full articles shared with reviewed permission. Authors can verify their inbox and submit text and permission evidence for an already listed article in the [author workspace](https://getinformdaily.com/contribute.html). Only the owner can approve publication. Authors can withdraw permission; the owner can revoke it. Submissions and verified email addresses stay private during review.
 

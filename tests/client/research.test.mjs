@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { readingGroups } from '../../public/privacy-data.js';
+import { coverageLabels } from '../../public/catalog.js';
 
 const markup = readFileSync(new URL('../../public/research.html', import.meta.url), 'utf8');
 const script = readFileSync(new URL('../../public/research.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/gm, '');
@@ -10,13 +11,16 @@ const inboxScript = readFileSync(new URL('../../public/monitor-inbox.js', import
 const feedbackScript = readFileSync(new URL('../../public/reader-feedback.js', import.meta.url), 'utf8')
   .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
 function mountResearch(window) {
+  window.coverageLabels = coverageLabels;
   window.eval(inboxScript);
   window.eval(`(() => { ${feedbackScript}\nwindow.readFeedback = readFeedback; })()`);
   for (const [file, bindings] of [
-    ['technology-follow.js', ['followedTechnologies']],
+    ['technology-follow.js', ['followedTechnologies', 'followedStories']],
     ['evidence-ui.js', ['node', 'requestJSON', 'answerBlock', 'sourceLink', 'sourceList']],
     ['source-history.js', ['historyControl']],
     ['watch-rule-ui.js', ['initRuleBuilder']],
+    ['claim-evidence.js', ['appendClaimEvidence']],
+    ['search-context.js', ['searchLink']],
   ]) {
     const code = readFileSync(new URL(`../../public/${file}`, import.meta.url), 'utf8')
       .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
@@ -25,6 +29,42 @@ function mountResearch(window) {
   window.eval(script);
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
+
+test('a scoped search opens development results and can save the followed-updates mode', async () => {
+  const dom = new JSDOM(markup, { url: 'https://informa.test/research.html?q=cloud+outage&hours=12&topic=software&mode=developments',
+    runScripts: 'outside-only' });
+  const { window } = dom;
+  const calls = [];
+  window.readingGroups = readingGroups;
+  window.fetch = async (path, options = {}) => {
+    calls.push([path, options.method, options.body]);
+    const data = path === '/api/intelligence/options' ? { topics: { software: 'Software' } } :
+      path.startsWith('/api/intelligence/events?hours=12') ? { events: [{ id: 'd'.repeat(32),
+        title: 'Cloud outage recovered', source_count: 2, updated_at: '2026-11-18' }] } :
+      options.method === 'PUT' ? { notice: 'Followed updates saved.' } : {};
+    return { ok: true, json: async () => data };
+  };
+  try {
+    mountResearch(window);
+    await flush();
+    const { document } = window;
+    assert.match(document.getElementById('research-results').textContent, /Cloud outage recovered/);
+    assert.ok(calls.some(([path]) => path.includes('hours=12&topic=software&q=cloud+outage')));
+    const articles = new URL(document.getElementById('search-articles').href);
+    assert.deepEqual([articles.searchParams.get('q'), articles.searchParams.get('window'), articles.searchParams.get('topic')],
+      ['cloud outage', '12h', 'software']);
+    const ask = new URL(document.getElementById('search-ask').href);
+    assert.equal(ask.searchParams.get('mode'), 'analyze');
+    document.getElementById('radar-delivery-mode').value = 'material_updates';
+    document.getElementById('radar-save').click();
+    await flush();
+    const saved = calls.find(([path, method]) => path === '/api/mail/radar' && method === 'PUT');
+    assert.equal(JSON.parse(saved[2]).delivery_mode, 'material_updates');
+    assert.equal(document.getElementById('radar-status').textContent, 'Followed updates saved.');
+  } finally {
+    window.close();
+  }
+});
 
 test('article analysis keeps citations in the Research Desk and preserves original attribution', async () => {
   const dom = new JSDOM(markup, { url: 'https://informa.test/research.html?article=s1', runScripts: 'outside-only' });
@@ -37,7 +77,7 @@ test('article analysis keeps citations in the Research Desk and preserves origin
       retrieval: 'keyword', clusters: [],
       evidence: [{ id: 's1', title: 'Security patch issued', excerpt: 'An update is available.',
         publisher: 'Official advisory', url: 'https://example.org/advisory', published_at: '2026-11-14', language: 'en' }],
-      answer: { status: 'answered', claims: [{ text: 'A patch is available.', kind: 'fact', source_ids: ['s1'] }],
+      answer: { status: 'answered', claims: [{ text: 'A patch is available.', kind: 'fact', source_ids: ['s1'], quotes: ['An update is available.'] }],
         limitations: 'Publisher excerpt only.' },
     } : {};
     return { ok: true, json: async () => data };
@@ -50,6 +90,10 @@ test('article analysis keeps citations in the Research Desk and preserves origin
     assert.equal(citation.href, 'https://informa.test/research.html?article=s1#research-source-1');
     const evidence = window.document.querySelector(citation.hash);
     assert.match(evidence.textContent, /Official advisory/);
+    const claim = window.document.querySelector('.claim-evidence');
+    claim.querySelector('summary').click();
+    assert.equal(claim.querySelector('blockquote').textContent, 'An update is available.');
+    assert.equal(claim.querySelector('a').href, 'https://example.org/advisory');
     assert.equal(evidence.querySelector('h3 > a').href, 'https://example.org/advisory');
     assert.equal(evidence.querySelector('a[href*="reading-room"]').href, 'https://informa.test/?article=s1#reading-room');
   } finally {
@@ -181,7 +225,7 @@ test('followed story revisions, package results, and multilingual technical evid
     document.getElementById('research-form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
     await flush();
     assert.match(document.getElementById('research-results').textContent, /Cross-language coverage comparison/);
-    assert.match(document.getElementById('research-results').textContent, /Read the original evidence/);
+    assert.match(document.getElementById('research-results').textContent, /Evidence from uv Releases/);
     [...document.querySelectorAll('#research-results button')].find((button) => button.textContent === 'Build technical brief').click();
     await flush();
     assert.match(document.getElementById('research-results').textContent, /Breaking changes/);

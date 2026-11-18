@@ -33,6 +33,7 @@ class RankedArticleDetail(BaseModel):
     whyItMatters: str = ""
     keyTakeaway: str = ""
     summary_basis: str = ""
+    publisher_excerpt: str = ""
 
 
 class EmailDigestResponse(BaseModel):

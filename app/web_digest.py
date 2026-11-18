@@ -26,6 +26,7 @@ SUMMARY_LABELS = {
     "ai_feed_summary": "AI summary of publisher feed",
     "publisher_excerpt": "Publisher excerpt",
     "headline_only": "Headline only",
+    "ai_evidence_explanation": "AI explanation of publisher evidence",
 }
 COVERAGE_LABELS = {
     "reporting": "Independent reporting",
@@ -76,7 +77,20 @@ def markdown_link(value):
 
 def change_label(item):
     notice = {"correction": "Publisher correction", "retraction": "Publisher retraction"}.get(item.get("editorial_notice"))
-    return " · ".join(part for part in (notice, item["title"], item["publisher"]) if part)
+    return " · ".join(part for part in (notice or item.get("change_label"), item["title"], item["publisher"]) if part)
+
+
+def brief_evidence(article):
+    if claims := article.get("claim_evidence"):
+        return claims
+    if article.get("summary_basis") == "ai_feed_summary" and article.get("publisher_excerpt"):
+        return [{**article, "excerpt": article["publisher_excerpt"]}]
+    return []
+
+
+def evidence_label(item):
+    return " · ".join(part for part in (item.get("publisher") or "Original source",
+        COVERAGE_LABELS.get(item.get("coverage"), ""), (item.get("published_at") or "")[:10]) if part)
 
 
 def digest_markdown(digest):
@@ -96,6 +110,9 @@ def digest_markdown(digest):
                 lines.append(f"**Why it matters.** {markdown_text(impact)}")
         if source := markdown_link(article.get("url")):
             lines.append(f"Source: {source}")
+        for item in brief_evidence(article):
+            lines.append(f"**Publisher evidence** · {markdown_text(evidence_label(item))} {markdown_link(item.get('url'))}"
+                         f"\n> {markdown_text(item.get('excerpt'))}")
         if changes := article.get("change_sources"):
             lines.append("**New since your last brief**\n" + "\n".join(
                 f"- {markdown_text(change_label(item))} {markdown_link(item['url'])}\n  {markdown_text(item.get('excerpt'))}"
@@ -108,6 +125,8 @@ def digest_markdown(digest):
             detail = " · ".join(part for part in (item.get("title"), item.get("publisher"), item.get("region")) if part)
             hits.append(f"- {markdown_text(detail)} {markdown_link(item.get('url'))}".rstrip())
         lines.append("\n".join(hits))
+    if digest.get("edition") == "catchup":
+        lines.append(f"Manage or mute follows: {public_site()}/research.html#radar-title")
     return "\n\n".join(filter(None, lines))
 
 
@@ -214,6 +233,8 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             whyItMatters=item.get("whyItMatters", ""),
             keyTakeaway=item.get("keyTakeaway", ""),
             summary_basis=item["summary_basis"],
+            publisher_excerpt=(source["cleanSummary"][:650] if item["summary_basis"] == "ai_feed_summary"
+                               and source["has_excerpt"] else ""),
         ))
 
     # Prefer distinct publisher regions and skip near-duplicates of selected stories.
@@ -333,6 +354,13 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None, *, schedul
                 excerpt = escape(item.get("excerpt") or "")
                 change_items.append(f'<li><a class="email-link" href="{href}">{label}</a><br>{excerpt}</li>')
             card_html += '<div class="email-text"><strong>New since your last brief</strong><ul>' + "".join(change_items) + '</ul></div>'
+        for item in brief_evidence(article):
+            href = escape(safe_href(item.get("url")), quote=True)
+            label = escape(evidence_label(item))
+            excerpt = escape(item.get("excerpt") or "")
+            card_html += (f'<div class="email-text" style="font-size:12px;margin-bottom:12px;">'
+                          f'<strong>Publisher evidence</strong> · <a class="email-link" href="{href}">{label}</a>'
+                          f'<blockquote style="margin:6px 0 0 0;">{excerpt}</blockquote></div>')
         if url != "#":
             card_html += f"""
               <div>
@@ -435,9 +463,11 @@ def safe_email_html(digest: dict, unsubscribe_url: str | None = None, *, schedul
 
           <tr>
             <td class="email-text" style="padding-top:16px;border-top:1px solid #d9e1db;font-size:12px;line-height:1.6;color:#506158;text-align:center;">
-              {"<p style='margin:0 0 6px;'>You subscribed to the daily technology brief.</p>" if scheduled else ""}
+              {"<p style='margin:0 0 6px;'>You opted into morning updates from your follows.</p>" if scheduled and digest.get("followed_updates") else
+               "<p style='margin:0 0 6px;'>You subscribed to the daily technology brief.</p>" if scheduled else ""}
               <p style="margin:0;">
                 {unsubscribe}
+                {f'<a class="email-link" href="{origin}/research.html#radar-title">Manage or mute follows</a> · ' if digest.get("edition") == "catchup" else ""}
                 <a class="email-link" href="{origin}/sources.html" style="color:#375e48;text-decoration:underline;">Source directory</a> ·
                 <a class="email-link" href="{origin}" style="color:#375e48;text-decoration:underline;">Web edition</a>
               </p>

@@ -6,9 +6,17 @@ import { readingContent } from "./reading-content.js";
 import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 import { createDeliveryStatus } from "./delivery-status.js";
 import { createStoryQuestion } from "./story-question.js";
-import { followedStories, saveStoryFollow } from "./technology-follow.js";
+import { followedStories, followedTechnologies, saveStoryFollow } from "./technology-follow.js";
+import { catchupCheckpoint, entryView, homeCatchupRequest, markCatchupCheckpoint } from "./catchup-home.js";
+import { appendClaimEvidence, sourceEvidence } from "./claim-evidence.js";
+import { searchLink } from "./search-context.js";
 
 const $ = (id) => document.getElementById(id);
+const views = ["feed", "for-you", "saved", "briefing", "catchup"];
+const editions = ["saved", "briefing", "catchup"];
+let lastCatchup = catchupCheckpoint(window.localStorage);
+let catchupReadThrough = 0;
+let implicitHome = !location.search && !location.hash;
 const state = {
   articles: [],
   recommendations: [],
@@ -327,14 +335,19 @@ function readingFilters() {
 }
 
 function syncURL() {
+  reflectSearchLinks();
   $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || state.view === "saved";
   const url = new URL(location.href);
   for (const [key, value] of Object.entries(readingFilters())) {
     if (!value || value === "all") url.searchParams.delete(key);
     else url.searchParams.set(key, value);
   }
-  if (state.view !== "feed") url.searchParams.set("view", state.view);
-  else url.searchParams.delete("view");
+  if (implicitHome && ["briefing", "catchup"].includes(state.view)) {
+    url.searchParams.delete("window");
+    url.searchParams.delete("view");
+  } else {
+    url.searchParams.set("view", state.view);
+  }
   history.replaceState(null, "", url);
   reflectWorkspace();
   $("clear-search").hidden = !$("search").value;
@@ -350,7 +363,7 @@ function syncURL() {
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
   const baseHours = state.view === "for-you" ? 168 : 24;
-  $("reset-filters").hidden = ["saved", "briefing"].includes(state.view) ||
+  $("reset-filters").hidden = editions.includes(state.view) ||
     (!count && !$("region").value && state.topic === "all" && state.hours === baseHours && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
@@ -406,20 +419,27 @@ function restoreURL() {
   if ($("sort").selectedIndex === -1) $("sort").value = defaultSort(state.searching);
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
-  const viewParam = params.get("view");
-  state.view = ["saved", "for-you", "briefing"].includes(viewParam) ? viewParam : "feed";
-  for (const peer of ["feed", "for-you", "saved", "briefing"])
-    $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
-  $("feed-controls").hidden = ["saved", "briefing"].includes(state.view);
-  $("sort").hidden = state.view !== "feed";
-  $("refresh").hidden = ["saved", "briefing"].includes(state.view);
-  $("personalization").hidden = state.view !== "for-you";
-  $("briefing-intro").hidden = state.view !== "briefing";
+  state.view = entryView(params, lastCatchup);
+  updateViewControls();
   reflectWorkspace();
 }
 
+function updateViewControls() {
+  for (const peer of views)
+    $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
+  $("feed-controls").hidden = editions.includes(state.view);
+  $("sort").hidden = state.view !== "feed";
+  $("refresh").hidden = editions.includes(state.view);
+  $("personalization").hidden = state.view !== "for-you";
+  $("briefing-intro").hidden = state.view !== "briefing";
+  $("home-catchup").hidden = state.view !== "catchup";
+  $("stories").hidden = state.view === "catchup";
+  $("news-status").hidden = state.view === "catchup";
+  $("source-health-button").parentElement.hidden = state.view === "catchup";
+}
+
 function reflectWorkspace() {
-  const labels = { feed: "All stories", "briefing": "Daily briefing", "for-you": "For you", saved: "Saved stories" };
+  const labels = { feed: "All stories", briefing: "Today", catchup: "Catch up", "for-you": "For you", saved: "Saved stories" };
   $("reading-title").textContent = labels[state.view];
   for (const button of document.querySelectorAll("[data-workspace-view]")) {
     if (button.dataset.workspaceView === state.view) button.setAttribute("aria-current", "page");
@@ -470,7 +490,12 @@ for (const button of document.querySelectorAll("[data-workspace-view]")) {
     $("reading-title").focus({ preventScroll: true });
   });
 }
-$("masthead-briefing").addEventListener("click", () => $("view-briefing").click());
+function openHomeEdition(view) {
+  $(`view-${view}`).click();
+  $("reading-title").focus();
+}
+$("masthead-briefing").addEventListener("click", () => openHomeEdition("briefing"));
+$("masthead-catchup").addEventListener("click", () => openHomeEdition("catchup"));
 $("masthead-explore").addEventListener("click", () => {
   $("view-feed").click();
   $("reading-room").scrollIntoView({ block: "start", behavior: "smooth" });
@@ -482,7 +507,7 @@ $("briefing-email").addEventListener("click", () => {
   $("hero-email").focus();
 });
 $("sidebar-save-view").addEventListener("click", () => {
-  if (["saved", "briefing"].includes(state.view)) $("view-feed").click();
+  if (editions.includes(state.view)) $("view-feed").click();
   closeWorkspaceMenu();
   $("saved-views").open = true;
   $("saved-view-name").focus();
@@ -574,6 +599,10 @@ function renderStories() {
   $("outage-links").hidden = state.topic !== "outages";
   const container = $("stories");
   container.replaceChildren();
+  if (state.view === "catchup") {
+    for (const id of ["show-more", "hide-read", "mark-all-read", "export-saved-md", "pin-all-saved"]) $(id).hidden = true;
+    return;
+  }
   const isSaved = state.view === "saved";
   const isForYou = state.view === "for-you";
   const isBriefing = state.view === "briefing";
@@ -1041,6 +1070,10 @@ async function loadBriefing() {
       updateSourceCatalog(catalog.sources);
     }
     state.briefing = data.articles;
+    if (!lastCatchup && data.articles.length) {
+      lastCatchup = Date.now();
+      markCatchupCheckpoint(window.localStorage, lastCatchup);
+    }
     if (data.freshness) renderHealth(data.freshness);
     $("briefing-context").textContent = data.articles.length ?
       `${data.articles.length} stories selected from ${data.publishers} publishers. Based on source headlines and excerpts.` :
@@ -1175,7 +1208,86 @@ async function loadRecommendations() {
   }
 }
 
+async function loadHomeCatchup() {
+  state.controller?.abort();
+  const controller = state.controller = new AbortController();
+  const results = $("home-catchup-results");
+  const mark = $("home-catchup-mark");
+  results.replaceChildren();
+  mark.hidden = true;
+  if (!lastCatchup) {
+    status("home-catchup-status", "Read today’s briefing to start tracking new developments in this browser.");
+    return;
+  }
+  status("home-catchup-status", "Checking for new developments…");
+  const readThrough = Date.now();
+  try {
+    const data = await request("/api/intelligence/catchup", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(homeCatchupRequest(window.localStorage, lastCatchup, readFeedback(), followedTechnologies())),
+      signal: controller.signal,
+    });
+    if (state.controller !== controller || state.view !== "catchup") return;
+    catchupReadThrough = readThrough;
+    for (const event of data.events || []) {
+      const story = event.articles?.[0];
+      if (!story) continue;
+      const card = node("article", "briefing-overview");
+      const open = node("button", "text-button", event.title);
+      open.type = "button";
+      open.addEventListener("click", () => openDossier(story, open));
+      const title = node("h3");
+      title.append(open);
+      const copy = node("div");
+      copy.append(node("p", "small", `${event.source_count} publishers · ${readableTime(event.updated_at)}`), title);
+      if (event.change_sources?.length) {
+        for (const change of event.change_sources) {
+          copy.append(node("p", "small", change.change_label), node("p", "", change.excerpt),
+            externalLink(change.url, `${change.publisher} ↗`));
+        }
+      } else {
+        if (story.cleanSummary) copy.append(node("p", "", story.cleanSummary));
+        copy.append(externalLink(story.url, `${story.publisher} ↗`));
+      }
+      if (event.explanation?.claims?.length) {
+        const explained = node("details", "catchup-explanation");
+        explained.append(node("summary", "", "AI explanation"));
+        for (const claim of event.explanation.claims) {
+          const finding = node("div");
+          finding.append(node("p", "", claim.kind === "analysis" ? `Interpretation · ${claim.text}` : claim.text));
+          appendClaimEvidence(finding, claim, event.explanation_evidence || [], externalLink);
+          explained.append(finding);
+        }
+        if (event.explanation.limitations) explained.append(node("p", "small", event.explanation.limitations));
+        copy.append(explained);
+      }
+      card.append(copy);
+      results.append(card);
+    }
+    mark.hidden = !results.childElementCount;
+    status("home-catchup-status", results.childElementCount
+      ? `Selected developments since ${readableTime(new Date(lastCatchup).toISOString())} within the last 30 days.`
+      : "You’re caught up on matching developments in the available archive.");
+  } catch (error) {
+    if (state.controller !== controller || error.name === "AbortError") return;
+    status("home-catchup-status", error.message, true);
+    const retry = node("button", "button secondary", "Try again");
+    retry.type = "button";
+    retry.addEventListener("click", loadHomeCatchup);
+    results.append(retry);
+  }
+}
+
+$("home-catchup-mark").addEventListener("click", () => {
+  if (!catchupReadThrough) return;
+  lastCatchup = Math.max(lastCatchup, catchupReadThrough);
+  markCatchupCheckpoint(window.localStorage, lastCatchup);
+  $("reading-title").focus();
+  loadHomeCatchup();
+});
+
 async function loadNews(append = false, force = false) {
+  if (state.view === "catchup") { renderStories(); return loadHomeCatchup(); }
   if (state.view === "briefing") return loadBriefing();
   if (state.view === "saved") {
     state.controller?.abort();
@@ -1300,24 +1412,19 @@ $("filter-toggle").addEventListener("click", () => {
   $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
 });
 let searchTimer;
-for (const view of ["feed", "for-you", "saved", "briefing"]) {
+for (const view of views) {
   $(`view-${view}`).addEventListener("click", () => {
     if (state.view === view) return;
+    implicitHome = false;
     clearTimeout(searchTimer);
     state.controller?.abort();
     state.updateCheck?.abort();
     state.view = view;
-    for (const peer of ["feed", "for-you", "saved", "briefing"])
-      $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = ["saved", "briefing"].includes(view);
-    $("sort").hidden = view !== "feed";
-    $("refresh").hidden = ["saved", "briefing"].includes(view);
-    $("personalization").hidden = view !== "for-you";
-    $("briefing-intro").hidden = view !== "briefing";
+    updateViewControls();
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
     renderStories();
-    if (view !== "saved" && (view === "for-you" || view === "briefing" || state.feedKey !== newsParams().toString())) loadNews();
+    if (view !== "saved" && (view !== "feed" || state.feedKey !== newsParams().toString())) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
@@ -1624,7 +1731,10 @@ function renderDigest() {
       }
       item.append(node("h4", "", "New since your last brief"), changes);
     }
-    const provenance = { ai_feed_summary: "AI summary of publisher feed", publisher_excerpt: "Publisher excerpt", headline_only: "Headline only" };
+    const evidence = a.claim_evidence || (a.publisher_excerpt ? [{ ...a, excerpt: a.publisher_excerpt }] : []);
+    for (const source of evidence) item.append(sourceEvidence(document, source, "", externalLink));
+    const provenance = { ai_feed_summary: "AI summary of publisher feed", publisher_excerpt: "Publisher excerpt",
+      headline_only: "Headline only", ai_evidence_explanation: "AI explanation of publisher evidence" };
     const sourceRow = node("div", "digest-source-row");
     sourceRow.append(externalLink(a.sourceUrl || a.url, "Read source ↗"));
     if (provenance[a.summary_basis]) sourceRow.append(node("span", "", provenance[a.summary_basis]));
@@ -2988,9 +3098,13 @@ function runCommand(item) {
 }
 
 $("cmd-palette-btn").querySelector("kbd").textContent = /Mac/i.test(navigator.platform) ? "⌘ K" : "Ctrl K";
-$("research-search-link").addEventListener("click", () => {
-  try { sessionStorage.setItem("informa-research-query", $("search").value.trim().slice(0, 150)); } catch { /* The desk can open without a query. */ }
-});
+function reflectSearchLinks() {
+  const query = { q: $("search").value, hours: state.hours, topic: state.topic };
+  $("search-developments").href = searchLink("developments", query);
+  $("research-search-link").href = searchLink("analyze", query);
+}
+$("search").addEventListener("input", reflectSearchLinks);
+reflectSearchLinks();
 $("cmd-palette-btn").addEventListener("click", openCommandPalette);
 $("command-close").addEventListener("click", () => $("command-dialog").close());
 $("command-dialog").addEventListener("close", () => {
