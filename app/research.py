@@ -236,12 +236,13 @@ def evidence_clusters(rows, *, include_single=False):
     return clusters
 
 
-def answer_schema(evidence, *, global_compare=False, quoted=False):
+def answer_schema(evidence, *, global_compare=False, quoted=False, quote_options=None):
     source_id = Literal[tuple(row["id"] for row in evidence)]
     kinds = Literal["shared", "single_source", "difference", "attributed"] if global_compare else Literal["fact", "analysis"]
+    quote_type = Literal[tuple(quote_options)] if quote_options else str
     claim = create_model("ResearchClaim", __config__=ConfigDict(extra="forbid"),
                          text=(str, ...), kind=(kinds, ...), source_ids=(list[source_id], ...),
-                         **({"quotes": (list[str], ...)} if global_compare or quoted else {}))
+                         **({"quotes": (list[quote_type], ...)} if global_compare or quoted else {}))
     return create_model("ResearchAnswer", __config__=ConfigDict(extra="forbid"),
                         status=(Literal["answered", "insufficient"], ...), claims=(list[claim], ...), limitations=(str, ...))
 
@@ -338,7 +339,31 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
         return cached
     if not reserve(store, "answers", 180, 1500):
         return dict(empty, status="budget_limited", limitations="AI analysis reached its daily limit. Source evidence is still available.")
-    schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted)
+    quote_options = None
+    if mode == "visit_catchup":
+        quote_options = []
+        for row in evidence:
+            excerpt = " ".join(row["excerpt"].split())
+            sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", excerpt) if part.strip()]
+            for sentence in sentences:
+                if 12 <= len(sentence) <= 360:
+                    quote_options.append(sentence)
+                elif len(sentence) > 360:
+                    chunk = ""
+                    for word in sentence.split():
+                        candidate = f"{chunk} {word}".strip()
+                        if len(candidate) > 360 and chunk:
+                            if len(chunk) >= 12:
+                                quote_options.append(chunk)
+                            chunk = word
+                        else:
+                            chunk = candidate
+                    if len(chunk) >= 12:
+                        quote_options.append(chunk)
+            if not sentences and 12 <= len(excerpt) <= 360:
+                quote_options.append(excerpt)
+        quote_options = list(dict.fromkeys(quote_options))
+    schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted, quote_options=quote_options)
     try:
         response = generate_response(payload, system, schema, max_tokens=1300, model=model)
         answer = validate_answer(schema.model_validate_json(response), evidence, allow_technology_titles=technology_mode)

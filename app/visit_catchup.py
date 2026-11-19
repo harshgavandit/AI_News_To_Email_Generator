@@ -84,7 +84,7 @@ def archive_rows(store, since, as_of):
         observed = observed.add_columns(updates.c.event_id, seen_at, updates.c.reason.label("update_reason"),
             updates.c.title.label("observed_title"), updates.c.excerpt.label("observed_excerpt"),
             updates.c.published_at.label("observed_published_at"), significant.label("event_change")).where(
-            events.c.updated > since.timestamp(), updates.c.observed > since.timestamp(),
+            updates.c.observed > since.timestamp(),
             updates.c.observed <= as_of.timestamp(), updates.c.published_at <= upper).order_by(
             case((significant, 1), else_=0).desc(), case((material_title, 1), else_=0).desc(),
             seen_at.desc(), updates.c.id).limit(CANDIDATE_LIMIT)
