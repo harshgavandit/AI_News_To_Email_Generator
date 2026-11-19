@@ -96,6 +96,7 @@ target/
 # Virtual environment
 .venv/
 node_modules/
+/public/botid-client.js
 
 # Alembic migrations
 app/alembic/versions/*

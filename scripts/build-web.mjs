@@ -1,9 +1,18 @@
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { build } from 'esbuild';
 
 // Vercel serves these static assets directly alongside the Python application.
 // Validate the deployable files without copying private repository files.
+await build({
+  entryPoints: ['scripts/botid-client.mjs'],
+  outfile: 'public/botid-client.js',
+  bundle: true,
+  minify: true,
+  define: { 'process.env.NODE_ENV': '"production"' },
+});
+
 for (const filename of readdirSync('public')) {
   if (filename.endsWith('.css')) {
     const css = readFileSync(resolve('public', filename), 'utf8');
