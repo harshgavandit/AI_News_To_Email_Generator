@@ -81,6 +81,7 @@
           <button type="button" data-workspace-view="feed" aria-current="page"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" focusable="false"><path d="M7 5h10M7 10h10M7 15h7M3 5h.1M3 10h.1M3 15h.1" /></svg></span> All stories</button>
           <button type="button" data-workspace-view="for-you"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" focusable="false"><path d="M3 5h14M3 10h14M3 15h14" /><path d="M7 3v4M13 8v4M8 13v4" stroke-width="3" /></svg></span> For you</button>
           <button type="button" data-workspace-view="saved"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" focusable="false"><path d="M5 3h10v14l-5-3-5 3V3Z" /></svg></span> Saved <span id="sidebar-saved-count" class="nav-count"></span></button>
+          <button type="button" data-workspace-view="catchup"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9a7 7 0 1 1 1 5M3 4v5h5M10 6v4l3 2" /></svg></span> Catch up</button>
         </nav>
         <div class="sidebar-section">
           <a class="sidebar-secondary" href="/inbox.html">Inbox ↗</a>
@@ -106,12 +107,7 @@
         <section class="desk-masthead" aria-labelledby="hero-title">
           <div><time id="edition-date" class="edition-date"></time>
             <h1 id="hero-title">The technology desk.</h1>
-            <p>Follow global technology news, research, and software releases. Read the original sources or get a brief in your inbox.</p>
-          </div>
-          <div class="daily-entry-actions">
-            <button type="button" id="masthead-briefing" class="edition-link" aria-label="Read today's brief">Today’s brief <span aria-hidden="true">↗</span></button>
-            <button type="button" id="masthead-catchup" class="edition-link">Catch up</button>
-            <button type="button" id="masthead-explore" class="edition-link">All stories</button>
+            <p>Global technology news, research, and releases, with the sources behind each story.</p>
           </div>
         </section>
       <div class="desk-layout">
@@ -159,6 +155,7 @@
               <button id="view-feed" type="button" aria-pressed="true">All stories</button>
               <button id="view-for-you" type="button" aria-pressed="false">For You</button>
               <button id="view-saved" type="button" aria-pressed="false">Saved <span id="saved-count" hidden></span></button>
+              <a href="/inbox.html">Inbox <span aria-hidden="true">↗</span></a>
             </div>
             <div class="reading-stream-actions">
               <span class="keyboard-hints" title="When a story has focus, use J and K to browse, P to pin, and S to save."><kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin · <kbd>S</kbd> save</span>
@@ -195,22 +192,20 @@
           </section>
           <section id="briefing-intro" class="briefing-intro" aria-label="About this briefing" hidden>
             <div class="briefing-overview">
-              <div><span class="briefing-label">Your daily briefing</span><h3>A considered view of the last 24 hours.</h3>
-                <p id="briefing-context">Selecting a concise cross-section of technology reporting and research.</p>
-              </div>
+              <p id="briefing-context">A selection from the last 24 hours.</p>
               <div class="briefing-actions">
-                <button type="button" id="briefing-email" class="button primary">Get this brief by email</button>
-                <button type="button" id="briefing-pin" class="button secondary" hidden>Customize this selection</button>
+                <button type="button" id="briefing-email" class="text-button" aria-controls="daily-delivery">Email this brief</button>
+                <button type="button" id="briefing-pin" class="text-button" hidden>Customize brief</button>
               </div>
             </div>
-            <div id="daily-delivery-slot"></div>
           </section>
           <section id="home-catchup" class="briefing-intro" aria-label="Since your last visit" hidden>
             <div class="briefing-overview">
-              <div><h3>Since your last visit</h3><p id="home-catchup-status" role="status"></p></div>
+              <p id="home-catchup-status" role="status"></p>
               <div class="briefing-actions">
-                <button type="button" id="home-catchup-mark" class="button primary" hidden>Mark caught up</button>
-                <a href="/research.html#radar-title" class="button secondary">Edit interests</a>
+                <button type="button" id="home-catchup-mark" class="text-button" hidden>Mark these seen</button>
+                <button type="button" id="home-catchup-browse" class="button secondary" hidden>Browse all stories</button>
+                <a href="/research.html#radar-title" class="text-button">Edit interests</a>
               </div>
             </div>
             <div id="home-catchup-freshness"></div>
@@ -362,7 +357,7 @@
               <button id="show-updates" class="text-button" type="button">Show updates <span aria-hidden="true">↑</span></button>
             </div>
           </div>
-          <div class="results-line">
+          <div class="results-line" id="story-results-line">
             <div class="reading-result-context">
               <p id="news-status" role="status" aria-live="polite">Loading stories…</p>
               <button id="archive-search" class="text-button" type="button" hidden>Search across all 90 days →</button>
@@ -398,6 +393,7 @@
           >
             Load more stories <span aria-hidden="true">↓</span>
           </button>
+          <div id="daily-delivery-slot" hidden></div>
         </section>
         <aside id="composer" class="composer" aria-labelledby="composer-title">
           <div class="builder-header">

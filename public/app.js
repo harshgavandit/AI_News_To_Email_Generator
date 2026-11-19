@@ -13,12 +13,13 @@ import { searchLink } from "./search-context.js";
 import { impactPanel } from "./personal-impact.js";
 import { developmentLink } from "./development-link.js";
 import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
+import { markDevelopmentsSeen } from "./development-seen.js";
 
 const $ = (id) => document.getElementById(id);
 const views = ["feed", "for-you", "saved", "briefing", "catchup"];
 const editions = ["saved", "briefing", "catchup"];
 let lastCatchup = catchupCheckpoint(window.localStorage);
-let catchupReadThrough = 0;
+let visibleCatchup = [];
 let implicitHome = !location.search && !location.hash;
 const state = {
   articles: [],
@@ -439,6 +440,9 @@ function updateViewControls() {
   $("stories").hidden = state.view === "catchup";
   $("news-status").hidden = state.view === "catchup";
   $("source-health-button").parentElement.hidden = state.view === "catchup";
+  $("story-results-line").hidden = state.view === "catchup";
+  $("daily-delivery-slot").hidden = state.view !== "briefing";
+  document.querySelector(".reading-stream-actions").hidden = state.view === "catchup";
 }
 
 function reflectWorkspace() {
@@ -497,13 +501,7 @@ function openHomeEdition(view) {
   $(`view-${view}`).click();
   $("reading-title").focus();
 }
-$("masthead-briefing").addEventListener("click", () => openHomeEdition("briefing"));
-$("masthead-catchup").addEventListener("click", () => openHomeEdition("catchup"));
-$("masthead-explore").addEventListener("click", () => {
-  $("view-feed").click();
-  $("reading-room").scrollIntoView({ block: "start", behavior: "smooth" });
-  $("search").focus({ preventScroll: true });
-});
+$("home-catchup-browse").addEventListener("click", () => openHomeEdition("feed"));
 $("daily-delivery-slot").append($("daily-delivery"));
 $("briefing-email").addEventListener("click", () => {
   $("daily-delivery").open = true;
@@ -852,9 +850,14 @@ function renderStories() {
     $("region").value && state.regions[$("region").value],
     $("language").value && state.languages[$("language").value],
   ].filter(Boolean);
+  if (isBriefing) {
+    $("briefing-context").textContent = articles.length ?
+      `${articles.length} ${articles.length === 1 ? "story" : "stories"} from the last 24 hours${hideRead ? " · Read stories hidden" : ""}.` :
+      "A selection from the last 24 hours.";
+  }
   status(
     "news-status",
-    state.view === "briefing" ? `${articles.length} stories to catch up on${hideRead ? " · Read stories hidden" : ""}` :
+    isBriefing ? "" :
     isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
       isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} matching candidates · Last ${windows[state.hours]}` :
       [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context,
@@ -1078,9 +1081,6 @@ async function loadBriefing() {
       markCatchupCheckpoint(window.localStorage, lastCatchup);
     }
     if (data.freshness) renderHealth(data.freshness);
-    $("briefing-context").textContent = data.articles.length ?
-      `${data.articles.length} stories selected from ${data.publishers} publishers. Based on source headlines and excerpts.` :
-      "There is no recent publisher reporting in this window. Browse all stories or check source status.";
     $("briefing-pin").hidden = !data.articles.length;
     renderStories();
   } catch (error) {
@@ -1216,15 +1216,18 @@ async function loadHomeCatchup() {
   const controller = state.controller = new AbortController();
   const results = $("home-catchup-results");
   const mark = $("home-catchup-mark");
+  const browse = $("home-catchup-browse");
+  visibleCatchup = [];
   results.replaceChildren();
   $("home-catchup-freshness").replaceChildren();
   mark.hidden = true;
+  browse.hidden = true;
   if (!lastCatchup) {
     status("home-catchup-status", "Read today’s briefing to start tracking new developments in this browser.");
+    browse.hidden = false;
     return;
   }
   status("home-catchup-status", "Checking for new developments…");
-  const readThrough = Date.now();
   try {
     const data = await request("/api/intelligence/catchup", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -1232,10 +1235,10 @@ async function loadHomeCatchup() {
       signal: controller.signal,
     });
     if (state.controller !== controller || state.view !== "catchup") return;
-    catchupReadThrough = readThrough;
     for (const event of data.events || []) {
       const story = event.articles?.[0];
       if (!story) continue;
+      visibleCatchup.push(event);
       const card = node("article", "briefing-overview");
       const open = node("button", "text-button", event.title);
       open.type = "button";
@@ -1275,16 +1278,18 @@ async function loadHomeCatchup() {
       results.append(card);
     }
     mark.hidden = !results.childElementCount;
-    const notice = freshnessNotice(data.coverage_freshness);
+    browse.hidden = results.childElementCount > 0;
+    const notice = freshnessNotice(data.coverage_freshness, document, { compact: true });
     if (notice) $("home-catchup-freshness").append(notice);
     status("home-catchup-status", results.childElementCount
-      ? `Selected developments since ${readableTime(new Date(lastCatchup).toISOString())} within the last 30 days.`
+      ? `${visibleCatchup.length} new or updated ${visibleCatchup.length === 1 ? "development" : "developments"} in your catch-up.`
       : coverageWarning(data.coverage_freshness)
         ? "No new developments found in the available archive. Some source checks are incomplete."
         : "You’re caught up on matching developments in the available archive.");
   } catch (error) {
     if (state.controller !== controller || error.name === "AbortError") return;
     status("home-catchup-status", error.message, true);
+    browse.hidden = false;
     const retry = node("button", "button secondary", "Try again");
     retry.type = "button";
     retry.addEventListener("click", loadHomeCatchup);
@@ -1293,9 +1298,9 @@ async function loadHomeCatchup() {
 }
 
 $("home-catchup-mark").addEventListener("click", () => {
-  if (!catchupReadThrough) return;
-  lastCatchup = Math.max(lastCatchup, catchupReadThrough);
-  markCatchupCheckpoint(window.localStorage, lastCatchup);
+  if (!visibleCatchup.length) return;
+  try { markDevelopmentsSeen(visibleCatchup); }
+  catch { status("home-catchup-status", "This browser could not save your reading progress.", true); return; }
   $("reading-title").focus();
   loadHomeCatchup();
 });
