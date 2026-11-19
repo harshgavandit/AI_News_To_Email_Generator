@@ -89,13 +89,22 @@ async def hn_records(source):
     semaphore = asyncio.Semaphore(6)
     fetched = {}
     ids = []
+    backoff = None
     try:
         async with asyncio.timeout(12), httpx.AsyncClient(timeout=httpx.Timeout(4, connect=3), trust_env=False,
                                                          follow_redirects=False, headers=HEADERS) as client:
             async def get(path):
+                nonlocal backoff
                 async with semaphore:
+                    if backoff is not None:
+                        raise backoff
                     async with client.stream("GET", f"{HN_BASE}/{path}.json") as response:
-                        response.raise_for_status()
+                        try:
+                            response.raise_for_status()
+                        except httpx.HTTPStatusError as error:
+                            if response.status_code == 429 or (response.status_code == 503 and "Retry-After" in response.headers):
+                                backoff = error
+                            raise
                         body = bytearray()
                         async for chunk in response.aiter_bytes(65536):
                             body.extend(chunk)
@@ -105,6 +114,8 @@ async def hn_records(source):
 
             lists = await asyncio.gather(*(get(path) for path in ("topstories", "newstories", "showstories")),
                                          return_exceptions=True)
+            if backoff is not None:
+                raise backoff
             if not any(isinstance(ids, list) for ids in lists):
                 raise ValueError("Invalid story list")
             lists = [ids if isinstance(ids, list) else [] for ids in lists]
@@ -119,8 +130,10 @@ async def hn_records(source):
     except TimeoutError:
         # Keep completed items when the total budget expires; one slow tail
         # must not discard an otherwise usable community snapshot.
-        if not fetched:
+        if not fetched and backoff is None:
             raise
+    if backoff is not None:
+        raise backoff
     records = []
     for ident, item in fetched.items():
         try:

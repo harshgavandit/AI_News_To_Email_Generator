@@ -60,13 +60,14 @@ def test_due_plan_is_bounded_host_aware_and_fair(monkeypatch):
     other = replace(sources[0], id="other", url="https://publisher.example/feed", hosts=("publisher.example",))
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (*sources, other))
     now = time.time()
-    first = ingestion.refresh_plan({}, due_only=True, maximum=8, now=now)
+    first = ingestion.refresh_plan({}, maximum=8, now=now, per_host=6)
     assert len(first) == 7 and other in first
     state = {source.id: {"checked": now, "available": True} for source in first}
-    second = ingestion.refresh_plan(state, due_only=True, maximum=8, now=now + 1)
+    pending = {source.id for source in (*sources, other)} - state.keys()
+    second = ingestion.refresh_plan(state, source_ids=pending, maximum=8, now=now + 1)
     assert len(second) == 4 and not set(first) & set(second)
     state[second[0].id] = {"checked": now, "available": False, "retry_at": now + 900}
-    assert second[0] not in ingestion.refresh_plan(state, due_only=True, maximum=8, now=now + 2)
+    assert second[0] not in ingestion.refresh_plan(state, source_ids=pending, maximum=8, now=now + 2)
 
 
 def test_check_history_opml_and_podcast_api(tmp_path, monkeypatch):
@@ -186,7 +187,7 @@ def test_owner_refresh_batches_require_auth_and_only_accept_reviewed_ids(tmp_pat
     monkeypatch.setenv("ADMIN_TOKEN", "source-owner-test-key")
     monkeypatch.setattr(server, "get_store", lambda: store)
     calls = []
-    monkeypatch.setattr(server, "refresh_sources", lambda store, only=None, **kwargs: calls.append(kwargs) or [])
+    monkeypatch.setattr(server, "run_sweep", lambda **kwargs: calls.append(kwargs) or {"status": "complete"})
     client = TestClient(server.app)
     body = {"source_ids": ["practicalai"]}
     assert client.post("/api/admin/refresh", json=body).status_code == 401
@@ -194,12 +195,12 @@ def test_owner_refresh_batches_require_auth_and_only_accept_reviewed_ids(tmp_pat
     assert client.post("/api/admin/refresh", json={"source_ids": ["https://internal.example"]}, headers=headers).status_code == 422
     assert not calls
     assert client.post("/api/admin/refresh", json=body, headers=headers).status_code == 200
-    assert calls[0]["source_ids"] == {"practicalai"} and calls[0]["maximum"] is None
+    assert calls == [{"source": None, "source_ids": {"practicalai"}, "owner": True}]
 
 
-def test_quiet_source_freshness_uses_its_declared_poll_interval():
-    now = datetime.now(UTC)
-    cutoff = (now - timedelta(minutes=45)).isoformat()
-    feed = {"available": True, "last_success": (now - timedelta(hours=2)).isoformat(), "refresh_minutes": 360}
-    assert ingestion.source_freshness(feed, cutoff) == "fresh"
-    assert ingestion.source_freshness({**feed, "refresh_minutes": 10}, cutoff) == "stale"
+def test_freshness_follows_the_last_sweep_after_its_grace_period():
+    morning = datetime(2026, 11, 17, 2, 30, tzinfo=UTC)
+    evening = morning + timedelta(hours=12)
+    feed = {"available": True, "last_success": morning.isoformat()}
+    assert ingestion.source_freshness(feed, evening + timedelta(minutes=44)) == "fresh"
+    assert ingestion.source_freshness(feed, evening + timedelta(minutes=45)) == "stale"

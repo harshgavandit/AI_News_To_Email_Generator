@@ -68,6 +68,8 @@ def feed_failure(status_code):
         return "rate_limited"
     if status_code in (401, 403):
         return "access_denied"
+    if status_code in (404, 410):
+        return "feed_not_found"
     if status_code >= 500:
         return "upstream_unavailable"
     return "fetch_failed"
@@ -76,12 +78,14 @@ def feed_failure(status_code):
 def http_failure(error):
     response = error.response
     status = {"error": feed_failure(response.status_code)}
+    if response.status_code == 429 and error.request.url.host:
+        status["rate_limit_host"] = error.request.url.host.removeprefix("www.")
     if response.status_code in (429, 503):
         value = response.headers.get("Retry-After", "").strip()
         try:
             delay = int(value) if value.isascii() and value.isdecimal() else (
                 parsedate_to_datetime(value).timestamp() - time.time())
-            status["retry_after"] = max(0, min(86400, delay))
+            status["retry_after"] = max(0, min(datetime.max.replace(tzinfo=timezone.utc).timestamp() - time.time() - 86400, delay))
         except (ValueError, TypeError, OverflowError, OSError):
             pass
     return status
@@ -219,14 +223,13 @@ def read_feed(task, *, validators=None, known_urls=()):
         if status["available"]:
             return items, status
         fallback = {"hacker-news-api": "https://news.ycombinator.com/rss", "dev-api": "https://dev.to/feed"}.get(task.integration)
-        if task.integration == "dev-api" and (status.get("error") == "rate_limited" or status.get("retry_after")):
-            return [], status  # DEV's API and RSS endpoint share the same host.
+        if status.get("error") == "rate_limited" or status.get("retry_after"):
+            return [], status  # A publisher backoff also suspends alternate transports.
         if fallback:
             items, fallback_status = read_feed(replace(task, url=fallback, integration="rss"))
             if fallback_status["available"]:
                 return items, {**fallback_status, **task.public(), "transport": "official-rss-fallback"}
-            if task.integration == "dev-api" and (fallback_status.get("retry_after") or
-                                                  fallback_status.get("error") == "rate_limited"):
+            if fallback_status.get("retry_after") or fallback_status.get("error") == "rate_limited":
                 return [], {**fallback_status, **task.public()}
         return [], status
     if isinstance(task, Source):

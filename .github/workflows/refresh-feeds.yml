@@ -1,13 +1,12 @@
 name: Refresh world tech feeds
 on:
   schedule:
-    # 08:00 in India (UTC+05:30).
-    - cron: '30 2 * * *'
+    # This trigger only processes mail and intelligence.
     - cron: '2-57/5 * * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
-        description: Run publisher synchronization without sending morning mail
+        description: Check publishers during the current sweep without sending morning mail
         type: boolean
         default: true
       intelligence_only:
@@ -22,9 +21,9 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only)
+    if: github.event_name == 'workflow_dispatch' && !inputs.intelligence_only
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
     env:
       FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
     steps:
@@ -36,26 +35,37 @@ jobs:
             echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
             exit 1
           fi
-          # Drain missed intervals across bounded calls.
-          deadline=$((SECONDS + 480))
-          for attempt in {1..8}; do
-            result=$(curl --silent --show-error --fail --max-time 115 --retry 1 --retry-max-time 115 \
-              --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/refresh' \
+          # Multiple batches cover distinct sources in the same sweep.
+          deadline=$((SECONDS + 1800))
+          finished=false
+          for batch in {1..20}; do
+            result=$(curl --silent --show-error --fail --max-time 125 \
+              --header @- 'https://getinformdaily.com/api/jobs/refresh?run=scheduled' \
               <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-            jq . <<< "$result"
+            jq '{status, checked, healthy, remaining, deferred, scheduled_at}' <<< "$result"
+            jq -r '.failures[]? | "::warning::\(.label) (\(.id)): \(.reason)"' <<< "$result"
+            jq -r '.deferrals[]? | "::warning::\(.label) (\(.id)): backoff until \(.retry_at)"' <<< "$result"
+            jq -r '.unconfirmed[]? | "::error::\(.): started without a recorded result. Skipping repeat attempt."' <<< "$result"
             status=$(jq -r '.status' <<< "$result")
-            if [[ "$status" == "waiting" ]]; then
-              echo 'The daily refresh starts at 08:00 India time.'
+            if [[ "$status" == "closed" ]]; then
+              echo 'Publisher checks are only allowed in the 45-minute windows from 08:00 and 20:00 IST.'
               exit 0
             fi
             if jq -e '(.status == "complete" or .status == "refreshed") and .remaining == 0' <<< "$result" > /dev/null; then
+              jq -e '(.unconfirmed | length) == 0' <<< "$result" > /dev/null
+              finished=true
               break
             fi
-            jq -e '.status == "already_started" or (.status == "refreshed" and .checked > 0 and .remaining > 0)' \
-              <<< "$result" > /dev/null
+            if ! jq -e '.status == "refreshed" and .checked > 0 and .remaining > 0' <<< "$result" > /dev/null; then
+              echo '::error::Publisher sweep did not advance. See the batch status above.'
+              exit 1
+            fi
             if (( SECONDS >= deadline )); then break; fi
-            sleep 2
           done
+          if [[ "$finished" != true ]]; then
+            echo '::error::Publisher sweep reached its batch or time limit before all eligible sources were checked.'
+            exit 1
+          fi
           ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
             'https://ai-news-to-email-generator.vercel.app/api/ready')
           jq -e '.freshness.counts | select(.fresh > 0)' <<< "$ready"

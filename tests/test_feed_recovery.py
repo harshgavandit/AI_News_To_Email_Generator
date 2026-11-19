@@ -21,7 +21,7 @@ def test_configured_pause_overrides_preexisting_enabled_state(tmp_path, monkeypa
     monkeypatch.setattr(ingestion, "read_feed", lambda *args, **kwargs: pytest.fail("Paused source fetched"))
 
     now = datetime.now(UTC)
-    assert ingestion.daily_refresh_plan(store.source_state(), ingestion.morning_refresh_at(now), now) == (set(), 0)
+    assert ingestion.sweep_plan(store.source_state(), ingestion.latest_sweep(now), now) == (set(), {})
     assert ingestion.refresh_plan(store.source_state(), only=source.id) == []
     feed, = ingestion.refresh_sources(store)
     assert feed["freshness"] == "paused"

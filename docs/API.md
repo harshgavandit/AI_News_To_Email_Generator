@@ -108,9 +108,8 @@ Signed Resend events correlate `data.email_id` with the recorded provider ID. De
 
 The reviewed source network is documented in [SOURCE-NETWORK.md](SOURCE-NETWORK.md).
 Source records include `format`, `refresh_minutes`, `publisher_family`, `collection`,
-`reviewed_at`, `next_check_at` and `content_status`. Feed freshness accounts for
-the declared polling interval and measures successful synchronization, not new
-publication activity. `GET /api/discovery/sources/{id}/health?hours=24` exposes
+`reviewed_at`, `next_check_at` and `content_status`. Feed freshness measures successful
+synchronization against the latest finished sweep. `GET /api/discovery/sources/{id}/health?hours=24` exposes
 up to seven days of operational history. `GET /api/discovery/sources.opml`
 exports enabled RSS feeds. Owner-authenticated `POST /api/admin/refresh` accepts
 an optional `source_ids` JSON list of up to 12 reviewed IDs.
@@ -121,8 +120,10 @@ an optional `source_ids` JSON list of up to 12 reviewed IDs.
 
 See [coverage investigation](COVERAGE-REPAIR.md) for discovery boundaries and verification.
 
-`GET /api/jobs/refresh` uses adaptive per-source cadence by default. It returns
-`mode: "adaptive"`, `checked`, `healthy` and `remaining` for a bounded batch.
-The database lease prevents overlapping workers; publisher backoff is respected.
-`FEED_REFRESH_MODE=daily` retains the optional morning sweep. Job authorization
-is required in either mode; public readers never submit upstream feed URLs.
+`POST /api/jobs/feed-sweep` requires the Vercel cron credential and scheduled
+time. It checks eligible feeds at 08:00 and 20:00 IST. Manual recovery through
+`GET /api/jobs/refresh?run=scheduled` processes a bounded batch during the open
+sweep. Responses include `checked`, `healthy`, `remaining` and per-source failure reasons.
+The database lease prevents overlapping batches and each enabled source can be
+claimed once per sweep. Sources on backoff are deferred. The owner refresh uses
+those same rules and continues to return `sources` along with the sweep status.

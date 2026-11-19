@@ -352,6 +352,8 @@ class Store:
                 conn.execute(update(sources).where(sources.c.id == source_id, sources.c.last_success.is_not(None))
                              .values(**state, last_success=now))
                 conn.execute(delete(feed_retries).where(feed_retries.c.id == source_id))
+                conn.execute(update(feed_validators).where(feed_validators.c.id == source_id,
+                    feed_validators.c.feed_url == feed_url).values(expires=now + 7 * 86400))
                 return
             if items and available:
                 stmt = self.insert(articles)
@@ -395,7 +397,7 @@ class Store:
                 conn.execute(attempt.on_conflict_do_update(index_elements=[feed_retries.c.id], set_=retry))
             if available and feed_url:
                 if validators:
-                    data = {**validators, "feed_url": feed_url, "expires": now + 6 * 3600}
+                    data = {**validators, "feed_url": feed_url, "expires": now + 7 * 86400}
                     stmt = self.insert(feed_validators).values(id=source_id, **data)
                     conn.execute(stmt.on_conflict_do_update(index_elements=[feed_validators.c.id], set_=data))
                 else:
@@ -791,10 +793,10 @@ class Store:
             return exc.args[0]
         return None
 
-    def claim_refresh(self, *, scheduled=False, scope="feed-refresh-lease"):
+    def claim_refresh(self, *, scheduled=False, scope="feed-refresh-lease", lease_seconds=180):
         """Claim one refresh across instances for longer than the function timeout."""
         now = time.time()
-        expires = now + 180
+        expires = now + lease_seconds
         active = and_(limits.c.scope == scope, limits.c.bucket == "active")
         with self.engine.begin() as conn:
             claim = self.insert(limits).values(scope=scope, bucket="active", used=1, touched=expires)
@@ -811,6 +813,30 @@ class Store:
                     conn.execute(delete(limits).where(active))
                     return None
             return acquired
+
+    def feed_attempts(self, slot):
+        with self.engine.connect() as conn:
+            scopes = conn.scalars(select(limits.c.scope).where(
+                limits.c.bucket == slot, limits.c.scope.startswith("feed-slot:")))
+            return {scope.removeprefix("feed-slot:") for scope in scopes}
+
+    def claim_feed_check(self, source_id, slot):
+        """Reserve one publisher check before making a request, even across worker restarts."""
+        claim = self.insert(limits).values(scope=f"feed-slot:{source_id}", bucket=slot, used=1, touched=time.time())
+        with self.engine.begin() as conn:
+            return conn.scalar(claim.on_conflict_do_nothing().returning(limits.c.scope)) is not None
+
+    def feed_host_backoffs(self, now):
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(limits.c.scope, limits.c.touched).where(limits.c.bucket == "backoff",
+                limits.c.scope.startswith("feed-host:"), limits.c.touched > now))
+            return {scope.removeprefix("feed-host:"): until for scope, until in rows}
+
+    def defer_feed_host(self, host, until):
+        pause = self.insert(limits).values(scope=f"feed-host:{host}", bucket="backoff", used=1, touched=until)
+        with self.engine.begin() as conn:
+            conn.execute(pause.on_conflict_do_update(index_elements=[limits.c.scope, limits.c.bucket],
+                set_={"touched": pause.excluded.touched}, where=limits.c.touched < until))
 
     def finish_refresh(self, lease, *, cooldown=0, scope="feed-refresh-lease"):
         with self.engine.begin() as conn:

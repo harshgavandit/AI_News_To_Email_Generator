@@ -66,7 +66,8 @@ def article_metadata(body, url, source):
 
 
 def read_listing(source, fetch, *, known_urls=()):
-    from app.news import canonical_url, article_in_scope
+    from httpx import HTTPStatusError
+    from app.news import canonical_url, article_in_scope, http_failure
     origin = urlsplit(source.url)
     robots_url = f"https://{origin.netloc}/robots.txt"
     rules = RobotFileParser()
@@ -93,6 +94,7 @@ def read_listing(source, fetch, *, known_urls=()):
     if not links:
         raise ValueError("No reviewed article links")
     items, failures, attempted = [], 0, 0
+    backoff = {}
     started = time.monotonic()
     for url in links:
         if url in known_urls:
@@ -108,8 +110,14 @@ def read_listing(source, fetch, *, known_urls=()):
                     items.append(article)
             else:
                 failures += 1
+        except HTTPStatusError as error:
+            failures += 1
+            reason = http_failure(error)
+            if reason.get("retry_after") or reason["error"] == "rate_limited":
+                backoff = reason
+                break
         except Exception:
             failures += 1
     available = bool(items) or failures == 0
     return items, dict(source.public(), available=available, count=len(items), observed_entries=len(links),
-        rejected_entries=failures, **({"error": "metadata_incomplete"} if failures else {}))
+        rejected_entries=failures, **(backoff or ({"error": "metadata_incomplete"} if failures else {})))
