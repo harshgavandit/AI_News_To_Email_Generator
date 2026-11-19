@@ -19,6 +19,7 @@ from sqlalchemy.exc import DBAPIError
 from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
+from app.article_language import article_language, is_english_article
 from app.article_metadata import author_identity, metadata_for, restore_metadata
 from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 from app.news_signals import MATERIAL_TERMS
@@ -103,6 +104,8 @@ limits = Table("brief_limits", schema, Column("scope", String(150), primary_key=
 codes = Table("brief_codes", schema, Column("id", String(80), primary_key=True),
     Column("mailbox", String(64), nullable=False), Column("proof", String(64), nullable=False),
     Column("expires", Float, nullable=False), Column("tries", Integer, nullable=False))
+mail_session_revocations = Table("brief_mail_session_revocations", schema,
+    Column("digest", String(64), primary_key=True), Column("expires", Float, nullable=False, index=True))
 previews = Table("brief_previews", schema, Column("id", String(80), primary_key=True),
     Column("payload", Text, nullable=False), Column("expires", Float, nullable=False))
 deliveries = Table("brief_deliveries", schema, Column("id", String(64), primary_key=True),
@@ -216,6 +219,7 @@ class Store:
         self._discovery_ready = False
         self._syndication_ready = False
         self._feed_state_ready = False
+        self._mail_revocations_ready = False
         self._schema_lock = threading.Lock()
         self._source_stats_lock = threading.Lock()
         self._source_stats = {}
@@ -334,6 +338,13 @@ class Store:
         self.ensure_feed_state_schema()
         if items and available:
             self.ensure_discovery_schema()
+            items = [{**article, "detected_language": article_language(article)} for article in items]
+            source = BY_ID.get(source_id)
+            if source and source.require_english:
+                eligible = [article for article in items if is_english_article(article)]
+                if diagnostics:
+                    diagnostics = {**diagnostics, "rejected": diagnostics["rejected"] + len(items) - len(eligible)}
+                items = eligible
         now = time.time()
         state = {"available": available, "checked": now, "error": error}
         if available and not unchanged:
@@ -824,6 +835,34 @@ class Store:
         with self.engine.begin() as conn:
             conn.execute(codes.insert().values(id=ident, mailbox=mailbox, proof=proof, expires=expires, tries=0))
 
+    def ensure_mail_revocation_schema(self):
+        if self._mail_revocations_ready:
+            return
+        with self._schema_lock, self.engine.begin() as conn:
+            if not inspect(conn).has_table(mail_session_revocations.name):
+                if self.engine.dialect.name == "postgresql":
+                    conn.exec_driver_sql("SET LOCAL lock_timeout = '5s'")
+                    conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+                mail_session_revocations.create(conn, checkfirst=True)
+        self._mail_revocations_ready = True
+
+    def mail_session_revoked(self, digest):
+        self.ensure_mail_revocation_schema()
+        with self.engine.connect() as conn:
+            return conn.scalar(select(mail_session_revocations.c.digest).where(
+                mail_session_revocations.c.digest == digest,
+                mail_session_revocations.c.expires > time.time())) is not None
+
+    def revoke_mail_session(self, digest, expires):
+        self.ensure_mail_revocation_schema()
+        with self.engine.begin() as conn:
+            conn.execute(self.insert(mail_session_revocations).values(digest=digest, expires=expires)
+                         .on_conflict_do_nothing())
+
+    def discard_code(self, ident, mailbox):
+        with self.engine.begin() as conn:
+            conn.execute(delete(codes).where(codes.c.id == ident, codes.c.mailbox == mailbox))
+
     def consume_code(self, ident, mailbox, proof):
         eligible = and_(codes.c.id == ident, codes.c.mailbox == mailbox, codes.c.expires > time.time(), codes.c.tries < 5)
         with self.engine.begin() as conn:
@@ -1004,6 +1043,8 @@ class Store:
             if inspect(conn).has_table(research_vectors.name):
                 conn.execute(delete(research_vectors).where(
                     ~select(articles.c.id).where(articles.c.id == research_vectors.c.id).exists()))
+            if inspect(conn).has_table(mail_session_revocations.name):
+                conn.execute(delete(mail_session_revocations).where(mail_session_revocations.c.expires <= now))
 
 
 @lru_cache(maxsize=2)

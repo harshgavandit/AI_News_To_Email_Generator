@@ -7,6 +7,7 @@ import { createPreferences } from '../../public/preferences.js';
 import { readingContent } from '../../public/reading-content.js';
 import { createDeliveryStatus } from '../../public/delivery-status.js';
 import { createStoryQuestion } from '../../public/story-question.js';
+import { createCoverageDialog } from '../../public/coverage-dialog.js';
 
 const html = readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
 const authorKey = `author-${'a'.repeat(32)}`;
@@ -33,6 +34,35 @@ async function until(check) {
   for (let i = 0; i < 100; i++) { if (check()) return; await delay(5); }
   assert.fail('Expected UI state did not arrive');
 }
+
+test('coverage comparison shows available evidence and sorts publication timestamps without reordering the results', () => {
+  const env = mount();
+  const dialog = document.getElementById('coverage-dialog');
+  const trigger = document.getElementById('masthead-briefing');
+  const story = { title: 'A technology release', source_count: 4, sources: [
+    { publisher: 'Later report', label: 'A release update', article_id: 'release-2', published_at: '2026-11-18T13:00:00Z',
+      coverage: 'reporting', url: 'https://publisher.example/update', excerpt: 'The publisher excerpt.' },
+    { publisher: 'Earlier report', label: 'A release announced', article_id: 'release-1', published_at: '2026-11-18T12:00:00Z',
+      coverage: 'publisher', url: 'https://official.example/announcement' },
+  ] };
+  try {
+    const open = createCoverageDialog(dialog, { readableTime: value => value, externalLink(url, text) {
+      const link = document.createElement('a'); link.href = url; link.textContent = text; return link;
+    } });
+    open(story, trigger);
+    assert.equal(dialog.open, true);
+    assert.equal(document.activeElement.id, 'coverage-dialog-title');
+    assert.match(dialog.querySelector('#coverage-dialog-note').textContent, /Showing 2 of 4 matched publisher groups/);
+    assert.match(dialog.querySelector('.coverage-publication').textContent, /The publisher excerpt/);
+    assert.match(dialog.querySelector('a[aria-label="Open Later report in reader"]').getAttribute('href'), /article=release-2/);
+    dialog.querySelector('#coverage-timeline').click();
+    assert.equal(dialog.querySelector('.coverage-publication strong').textContent, 'Earlier report');
+    assert.match(dialog.querySelector('.coverage-publication').textContent, /Headline and source link available/);
+    assert.equal(story.sources[0].publisher, 'Later report');
+    dialog.close();
+    assert.equal(document.activeElement, trigger);
+  } finally { env.close(); }
+});
 
 test('delivery receipt refresh never sends a brief and clears private status after verification expires', async () => {
   const env = mount();
@@ -220,7 +250,7 @@ test('For You sends the same search and filters shown in the Reading Room', asyn
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
-test('opening the Saved view directly renders bookmarks from browser storage', async () => {
+test('the Saved view searches and filters bookmarks locally without replacing the feed filters', async () => {
   const env = mount(html, 'https://informa.test/?view=saved#reading-room');
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
   globalThis.setInterval = () => 0;
@@ -232,11 +262,29 @@ test('opening the Saved view directly renders bookmarks from browser storage', a
   try {
     localStorage.setItem('informa-saved-v1', JSON.stringify([{
       id: 'saved-article', title: 'A saved engineering story', url: 'https://example.org/article',
-      publisher: 'Example', source: 'engineering', topic: 'software', category: 'software',
+      publisher: 'Revista Técnica', source: 'engineering', topic: 'software', category: 'software',
+      published_at: new Date().toISOString(),
+    }, {
+      id: 'outage', title: 'A saved outage story', url: 'https://example.org/status',
+      publisher: 'Other publisher', source: 'engineering', topic: 'outages', category: 'outages',
       published_at: new Date().toISOString(),
     }]));
+    localStorage.setItem('informa-read-v1', JSON.stringify(['outage']));
     await import(`../../public/app.js?saved=${Date.now()}`);
+    assert.equal(document.querySelectorAll('#stories .story').length, 2);
+    const find = document.getElementById('saved-search');
+    find.value = 'tecnica engineering';
+    find.dispatchEvent(new window.Event('input', { bubbles: true }));
     assert.equal(document.querySelector('#stories h3')?.textContent, 'A saved engineering story');
+    const reading = document.getElementById('saved-read-filter');
+    reading.value = 'read';
+    reading.dispatchEvent(new window.Event('change', { bubbles: true }));
+    assert.equal(document.querySelectorAll('#stories .story').length, 0);
+    assert.match(document.querySelector('#stories').textContent, /No saved stories match/);
+    document.querySelector('#stories .reading-empty button').click();
+    assert.equal(document.querySelectorAll('#stories .story').length, 2);
+    assert.equal(document.activeElement, find);
+    assert.equal(document.getElementById('search').value, '');
     assert.equal(document.getElementById('view-saved').getAttribute('aria-pressed'), 'true');
     assert(!requests.some(path => path.startsWith('/api/news')));
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
@@ -266,6 +314,8 @@ test('daily briefing navigation, read state and modal brief pins work together',
     assert.equal(document.getElementById('briefing-intro').hidden, false);
     assert.equal(new URL(location.href).searchParams.get('view'), 'briefing');
     assert.equal(document.querySelector('#stories .coverage-count').textContent, '2 publishers');
+    assert.equal(document.getElementById('briefing-progress-meter').max, 2);
+    assert.equal(document.getElementById('briefing-progress-meter').value, 0);
     document.getElementById('briefing-pin').click();
     assert.equal(document.querySelectorAll('#selected-stories .selected-item').length, 2);
     assert.equal(document.getElementById('composer').getAttribute('aria-modal'), 'true');
@@ -276,10 +326,76 @@ test('daily briefing navigation, read state and modal brief pins work together',
     document.getElementById('hide-read').click();
     document.getElementById('mark-all-read').click();
     assert.equal(document.querySelectorAll('#stories .story').length, 0);
+    assert.equal(document.getElementById('briefing-progress-meter').value, 2);
     assert(document.getElementById('stories').textContent.includes('up to date'));
     assert.equal(localStorage.getItem('informa-hide-read'), 'true');
+    assert.equal(document.activeElement.id, 'undo-mark-read');
+    document.getElementById('undo-mark-read').click();
+    assert.equal(document.querySelectorAll('#stories .story').length, 2);
+    assert.equal(document.getElementById('briefing-progress-meter').value, 0);
+    assert.equal(document.activeElement.id, 'mark-all-read');
     document.getElementById('hide-read').click();
     assert.equal(document.querySelectorAll('#stories .story').length, 2);
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
+test('last-visit catch-up uses the browser cutoff, cites reports and returns to the original feed', async () => {
+  const env = mount(html, 'https://informa.test/?q=network&view=catchup#reading-room');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const cutoff = new Date(Date.now() - 2 * 3600_000);
+  const asOf = new Date();
+  const story = { id: 'new-network', title: 'Publisher confirms a network recovery', publisher: 'Infrastructure Journal',
+    url: 'https://publisher.example/network-recovery', description: 'The publisher reports connections were restored.',
+    source: 'medium', kind: 'news', topic: 'software', published_at: new Date(cutoff.getTime() + 1800_000).toISOString() };
+  const requests = [];
+  localStorage.setItem('informa-visit-history-v1', JSON.stringify({
+    startedAt: cutoff.getTime() - 1000, lastActivityAt: cutoff.getTime(), previousAt: null,
+  }));
+  globalThis.fetch = async (url, options) => {
+    const path = String(url);
+    if (path.endsWith('/visit-catchup')) {
+      const body = JSON.parse(options.body);
+      requests.push(body);
+      const data = {
+        since: cutoff.toISOString(), as_of: asOf.toISOString(), window: 'since_visit',
+        evidence: [{
+          id: story.id, title: story.title, publisher: story.publisher, url: story.url,
+          published_at: story.published_at, excerpt: story.description, change_type: 'published',
+        }],
+        answer: body.analyze ? { claims: [{ text: 'Connections were restored.', source_ids: [story.id],
+          quotes: [story.description], kind: 'fact' }] } : null,
+      };
+      return new Response(JSON.stringify(data), { status: 200 });
+    }
+    if (path.endsWith('/articles/' + story.id)) return new Response(JSON.stringify({ article: story }), { status: 200 });
+    return new Response(JSON.stringify({ ...catalog, articles: [story], total: 1 }), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?visit-catchup=${Date.now()}`);
+    await until(() => document.querySelector('#visit-catchup-content a[href="' + story.url + '"]'));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].since, cutoff.toISOString());
+    assert.equal(requests[0].analyze, false);
+    assert.equal(document.getElementById('reading-title').textContent, 'Since your last visit');
+    assert.equal(document.getElementById('stories').hidden, true);
+    const aiButton = [...document.querySelectorAll('#visit-catchup-content button')].find(button => button.textContent === 'Summarize with AI');
+    aiButton.click();
+    await until(() => document.querySelector('#visit-catchup-content .visit-catchup-answer a'));
+    assert.deepEqual(requests[1], { since: cutoff.toISOString(), as_of: asOf.toISOString(), analyze: true });
+    assert.equal(document.querySelector('#visit-catchup-content .visit-catchup-answer a').href, story.url);
+    const withinReader = document.querySelector('#visit-catchup-content a[href*="article=new-network"]');
+    withinReader.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await until(() => document.getElementById('dossier-drawer').open);
+    assert.equal(document.getElementById('dossier-title').textContent, story.title);
+    document.getElementById('dossier-drawer').close();
+    document.getElementById('view-feed').click();
+    assert.equal(document.getElementById('visit-catchup').hidden, true);
+    assert.equal(document.getElementById('stories').hidden, false);
+    assert.equal(document.getElementById('search').value, 'network');
+    assert.equal(new URL(location.href).searchParams.has('view'), false);
+    await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false' &&
+      document.querySelector('#stories [data-story-card-id="new-network"]'));
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
@@ -356,7 +472,7 @@ test('monitoring views appear in the workspace and restore their search', async 
 
 test('author workspace submits privately and owner review requires an explicit permission check', async () => {
   const page = readFileSync(new URL('../../public/contribute.html', import.meta.url), 'utf8');
-  const env = mount(page, 'https://informa.test/contribute.html?article=listed-article');
+  const env = mount(page, 'https://informa.test/contribute.html');
   const fetchBefore = globalThis.fetch;
   let submitted = false, approved = false;
   let signedOut = false, delayList = false, finishList;
@@ -388,7 +504,17 @@ test('author workspace submits privately and owner review requires an explicit p
   };
   try {
     await import(`../../public/contribute.js?test=${Date.now()}`);
+    const lookup = document.getElementById('article-lookup');
+    const input = document.getElementById('contribution-article');
+    await until(() => !document.getElementById('contribution-identity').hidden);
+    assert.equal(document.getElementById('contribution-fields').hidden, true);
+    input.value = 'https://publisher.example/?article=listed-article';
+    lookup.dispatchEvent(new window.Event('submit', { cancelable: true }));
+    assert.equal(requests.some(({path}) => path.startsWith('/api/articles/')), false);
+    input.value = 'https://informa.test/?article=listed-article#reading-room';
+    lookup.dispatchEvent(new window.Event('submit', { cancelable: true }));
     await until(() => !document.getElementById('contribution-fields').disabled);
+    assert.equal(document.getElementById('contribution-fields').hidden, false);
     document.getElementById('contribution-body').value = 'A readable article about a working implementation. '.repeat(10);
     document.getElementById('contribution-evidence').value = 'The owner can verify my authorship and permission at the original publication.';
     document.getElementById('contribution-grant').checked = true;

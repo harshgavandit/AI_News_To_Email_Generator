@@ -27,7 +27,26 @@
   color: var(--muted);
 }
 .directory-intro .eyebrow { color: var(--green); font-size: 11px; margin-bottom: 10px; }
-.directory-intro .directory-reading-note { margin-top: 12px; font-size: 12px; line-height: 1.7; max-width: 76ch; }
+.directory-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.directory-intro .directory-actions { margin-top: 18px; }
+.directory-actions :is(a, button) { min-height: 40px; display: inline-flex; align-items: center; gap: 4px; }
+.directory-diagnostics { display: grid; gap: 10px; align-items: start; margin-bottom: 16px; }
+.directory-diagnostics > details { margin: 0; min-width: 0; scroll-margin-top: 12px; }
+.directory-diagnostics > details:not([open]) { background: var(--surface-top); }
+.directory-diagnostics > details[open] { border-color: var(--accent-line); }
+.directory-diagnostics summary { color: var(--ink); }
+.directory #coverage-attention { margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-top); }
+.directory #coverage-attention p:last-child { margin-bottom: 0; }
+.directory-health-metrics { display: flex; flex-wrap: wrap; gap: 7px; margin: 9px 0; }
+.directory-health-metric { min-height: 32px; display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--paper); border-radius: 6px; color: var(--ink); padding: 5px 9px; font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; }
+button.directory-health-metric { color: var(--green); cursor: pointer; }
+button.directory-health-metric:is(:hover, :focus-visible) { background: var(--sage); }
+.story-check-source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-block: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.story-check-source a { color: var(--green); overflow-wrap: anywhere; }
+.directory-pagination { padding: 14px; border-top: 1px solid var(--line); text-align: center; }
+.directory-active-filters { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 12px 0 0; }
+.directory-active-filters li { min-width: 0; max-width: 100%; }
+.directory-active-filters button { max-width: 100%; min-height: 36px; white-space: normal; overflow-wrap: anywhere; text-align: start; }
 .directory-overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -77,7 +96,7 @@
 #directory-filter-toggle { display: none; }
 .directory-fields {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
 }
 .directory-filters :is(label, select) {
@@ -185,6 +204,9 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.source-check-activity { display: grid; gap: 6px; list-style: none; padding: 0; margin: 8px 0 0; }
+.source-check-activity li { display: grid; gap: 2px; padding-inline-start: 8px; border-inline-start: 1px solid var(--accent-line); }
+.source-check-activity li > span { color: var(--ink); font-size: 11px; }
 .directory-links {
   display: flex;
   align-items: center;
@@ -223,6 +245,10 @@
   .directory-overview { width: max-content; max-width: 100%; }
   .directory-overview > div { min-width: 140px; }
 }
+@media (min-width: 821px) {
+  .directory-diagnostics { grid-template-columns: 1fr 1fr; }
+  .directory-diagnostics:has(details[open]) { grid-template-columns: minmax(0, 1fr); }
+}
 .directory-message h2 { margin: 0 0 5px; font-family: inherit; font-size: 17px; }
 .directory-message p { margin: 0 0 12px; color: var(--muted); }
 .directory-no-script { color: var(--muted); }
@@ -254,5 +280,6 @@
   .directory-filters :is(input, select) { font-size: 16px; }
   .directory-overview dd { font-size: clamp(17px, 4.5vw, 21px); }
   .directory-state { padding-block: 4px; }
+  .directory-result-bar .directory-actions { justify-content: flex-end; gap: 3px 8px; }
   .directory-links { padding-top: 4px; border-top: 1px solid var(--line); }
 }

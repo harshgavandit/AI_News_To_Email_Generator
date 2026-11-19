@@ -8,6 +8,20 @@ const statusLabels = {
   pending: "Awaiting first check",
   paused: "Paused",
 };
+const integrationLabels = {
+  "news-sitemap": "Publisher news sitemap",
+  "publisher-metadata": "Publisher metadata",
+  "release-notes": "Official release notes",
+  rss: "RSS / Atom",
+};
+const errorLabels = {
+  access_denied: "Publisher denied feed access",
+  api_unavailable: "Publisher API unavailable",
+  rate_limited: "Publisher temporarily rate-limited checks",
+  fetch_failed: "Feed could not be reached",
+  parser_failed: "Feed response could not be read",
+};
+const pageSize = 36;
 const filters = [
   ["format", "source-format", "All formats"],
   ["region", "source-region", "All regions"],
@@ -23,6 +37,8 @@ const number = new Intl.NumberFormat();
 const search = element("source-search");
 const filterToggle = element("directory-filter-toggle");
 let catalog = null;
+let matchingSources = [];
+let shown = 0;
 
 function node(tag, className, label) {
   const result = document.createElement(tag);
@@ -42,14 +58,13 @@ function prepareCatalog(data) {
   };
   const sources = data.sources.map((source) => {
     const region = regionId(source);
-    const coverage = source.kind === "video" ? "creator" : source.coverage;
+    const coverage = source.kind === "video" && source.topic === "video" ? "creator" : source.coverage;
     const freshness = Object.hasOwn(statusLabels, source.freshness) ? source.freshness : "pending";
     const regionLabel = region === "Global" ? "Global" :
       source.region && source.region !== region ? source.region : labels.region[region];
     const location = [regionLabel, labels.language[source.language]].filter(Boolean).join(" · ");
-    const type = [labels.coverage[coverage], source.integration === "news-sitemap" ? "Publisher news sitemap" :
-      source.integration === "publisher-metadata" ? "Publisher metadata" :
-      source.integration && source.integration !== "rss" ? "Official API" : "RSS / Atom"].filter(Boolean).join(" · ");
+    const integration = source.integration || "rss";
+    const type = [labels.coverage[coverage], integrationLabels[integration] || "Official API"].filter(Boolean).join(" · ");
     const focus = labels.topic[source.topic];
     const format = source.format || (source.kind === "video" ? "video" : source.kind === "podcast" ? "podcast" : "blog");
     const keywords = normalize([source.label, location, labels.region[region], type, focus, labels.format[format], source.collection, statusLabels[freshness]].join(" "));
@@ -60,7 +75,7 @@ function prepareCatalog(data) {
 
 function showOverview(sources) {
   const fresh = sources.filter((source) => source.freshness === "fresh").length;
-  element("source-fresh-count").textContent = `${number.format(fresh)} / ${number.format(sources.length)}`;
+  element("source-fresh-count").textContent = `${number.format(fresh)} / ${number.format(sources.filter((source) => source.enabled).length)}`;
   element("source-region-count").textContent = number.format(new Set(sources.map((source) => source.region).filter(Boolean)).size);
   element("source-language-count").textContent = number.format(new Set(sources.map((source) => source.language).filter(Boolean)).size);
   element("directory-overview").hidden = !sources.length;
@@ -86,12 +101,14 @@ function sourceRow(source) {
   if (source.focus) coverage.append(node("strong", "", source.focus));
   if (source.type) coverage.append(node("span", "", source.type));
   if (source.format) {
-    const schedule = source.refresh_policy === "daily" ? "daily refresh from 8:00 a.m. IST" : `checks every ${source.refresh_minutes || 5} min`;
-    coverage.append(node("span", "", `${source.format} · ${schedule}`));
+    const schedule = source.refresh_policy === "daily" ? "Daily refresh from 8:00 a.m. IST" :
+      source.refresh_minutes ? `Refresh target: ${source.refresh_minutes} min` : "Scheduled refresh";
+    coverage.append(node("span", "", schedule));
   }
 
   const health = node("div", "directory-health");
   health.append(node("span", `directory-state directory-state-${source.freshness}`, statusLabels[source.freshness]));
+  if (source.error && errorLabels[source.error]) health.append(node("span", "directory-timestamp", errorLabels[source.error]));
   const checked = timestamp(source.checked_at, "Checked");
   if (checked) health.append(checked);
   if (source.last_success !== source.checked_at) {
@@ -105,21 +122,37 @@ function sourceRow(source) {
   else if (source.checked_at && source.available) health.append(node("span", "directory-timestamp", "No retained stories"));
   if (source.content_status === "quiet") health.append(node("span", "directory-timestamp", "No new retained stories in 30 days"));
   const history = node("details", "source-history");
-  history.append(node("summary", "", "Check history"));
+  const historyLabel = node("summary", "", "Check history");
+  historyLabel.setAttribute("aria-label", `Check history for ${source.label}`);
+  history.append(historyLabel);
   const historyText = node("p", "directory-timestamp");
   historyText.setAttribute("role", "status");
   history.append(historyText);
-  let loaded = false;
+  let loaded = false, loading = false;
   history.addEventListener("toggle", async () => {
-    if (!history.open || loaded) return;
+    if (!history.open || loaded || loading) return;
+    loading = true;
     historyText.textContent = "Loading recent checks…";
     try {
       const response = await fetch(`/api/discovery/sources/${encodeURIComponent(source.id)}/health`, {signal: AbortSignal.timeout(15000)});
       if (!response.ok) throw new Error();
       const {history: data} = await response.json();
       historyText.textContent = data.checks ? `${data.successful} of ${data.checks} checks succeeded in ${data.hours}h${data.average_duration_ms !== null ? ` · average ${(data.average_duration_ms / 1000).toFixed(1)}s` : ""}.` : "No checks recorded in the last 24 hours.";
+      const activity = node("ol", "source-check-activity");
+      for (const record of (data.recent || []).slice(0, 5)) {
+        const checked = new Date(Number(record.checked) * 1000);
+        if (!Number.isFinite(checked.getTime())) continue;
+        const entry = node("li", "");
+        const time = timestamp(checked.toISOString(), "Checked");
+        const outcome = record.available ? (record.unchanged ? "Unchanged" : "Succeeded") :
+          (errorLabels[record.error] || "Check failed");
+        entry.append(time, node("span", "", outcome));
+        activity.append(entry);
+      }
+      if (activity.childElementCount) history.append(activity);
       loaded = true;
     } catch { historyText.textContent = "History is unavailable. Close and reopen to retry."; }
+    finally { loading = false; }
   });
   health.append(history);
 
@@ -133,9 +166,11 @@ function sourceRow(source) {
   try {
     const url = new URL(source.feed_url);
     if (url.protocol === "https:" && !url.username && !url.password) {
-      const feed = node("a", "text-button", source.integration && source.integration !== "rss" ? "API ↗" : "Feed ↗");
+      const feedLabel = { "publisher-metadata": "Publisher", "release-notes": "Notes", "news-sitemap": "Sitemap" }[source.integration] ||
+        (!source.integration || source.integration === "rss" ? "Feed" : "API");
+      const feed = node("a", "text-button", `${feedLabel} ↗`);
       feed.href = url.href;
-      feed.setAttribute("aria-label", `Open ${source.label} feed in a new tab`);
+      feed.setAttribute("aria-label", `Open ${source.label} ${feedLabel.toLowerCase()} in a new tab`);
       feed.target = "_blank";
       feed.rel = "noopener noreferrer";
       links.append(feed);
@@ -151,6 +186,68 @@ function showMessage(title, detail, action) {
   element("source-retry").hidden = action !== "retry";
   element("source-clear-empty").hidden = action !== "reset";
   element("source-message").hidden = !title;
+}
+
+function sourceCount(count) {
+  return `${number.format(count)} source${count === 1 ? "" : "s"}`;
+}
+
+function showMoreSources({ focus = false } = {}) {
+  const next = matchingSources.slice(shown, shown + pageSize).map(sourceRow);
+  element("source-rows").append(...next);
+  shown += next.length;
+  element("directory-pagination").hidden = shown >= matchingSources.length;
+  if (shown < matchingSources.length) {
+    element("source-more").textContent = `Show ${sourceCount(Math.min(pageSize, matchingSources.length - shown))} more`;
+  }
+  const status = shown < matchingSources.length ? `${number.format(shown)} shown · ${sourceCount(matchingSources.length)}` : sourceCount(matchingSources.length);
+  element("source-status").textContent = matchingSources.length === catalog.sources.length ? status : `${status} matched`;
+  if (focus && next.length) {
+    const heading = next[0].querySelector("h2");
+    heading.tabIndex = -1;
+    heading.focus();
+  }
+}
+
+function reflectFilters() {
+  const url = new URL(location.href);
+  const items = [];
+  const values = [["q", "source-search", search.value.trim()], ...filters.map(([key, id]) => [key, id, element(id).value])];
+  for (const [key, id, value] of values) {
+    if (!value) {
+      url.searchParams.delete(key);
+      continue;
+    }
+    url.searchParams.set(key, value);
+    const label = key === "q" ? `Search: ${value}` : catalog.labels[key][value];
+    const item = node("li", "");
+    const remove = node("button", "topic-chip", `${label} ×`);
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove filter: ${label}`);
+    remove.addEventListener("click", () => {
+      element(id).value = "";
+      render();
+      search.focus();
+    });
+    item.append(remove);
+    items.push(item);
+  }
+  const active = element("directory-active-filters");
+  active.replaceChildren(...items);
+  active.hidden = !items.length;
+  if (url.href !== location.href) history.replaceState(history.state, "", url);
+}
+
+function restoreFilters() {
+  const params = new URLSearchParams(location.search);
+  search.value = (params.get("q") || "").slice(0, 120);
+  let hasFilters = false;
+  for (const [key, id, allLabel] of filters) {
+    fillOptions(element(id), catalog.labels[key], allLabel, undefined, params.get(key) || "");
+    hasFilters ||= Boolean(element(id).value);
+  }
+  filterToggle.setAttribute("aria-expanded", String(hasFilters));
+  render();
 }
 
 function render() {
@@ -175,12 +272,14 @@ function render() {
     fillOptions(element(id), labels[key], allLabel, counts);
   }
 
-  const totalLabel = `${number.format(sources.length)} source${sources.length === 1 ? "" : "s"}`;
-  element("source-status").textContent = filtered ? `${number.format(rows.length)} of ${totalLabel}` : totalLabel;
   element("source-reset").hidden = !filtered;
   element("source-columns").hidden = !rows.length;
   element("source-rows").hidden = !rows.length;
-  element("source-rows").replaceChildren(...rows.map(sourceRow));
+  element("source-rows").replaceChildren();
+  matchingSources = rows;
+  shown = 0;
+  showMoreSources();
+  reflectFilters();
   if (rows.length) {
     showMessage("", "");
   } else if (filtered) {
@@ -197,6 +296,21 @@ function resetFilters() {
   search.focus();
 }
 
+function browseFilter(key, value) {
+  if (!catalog) {
+    const url = new URL(location.href);
+    url.search = "";
+    url.searchParams.set(key, value);
+    history.replaceState(history.state, "", url);
+    return;
+  }
+  search.value = "";
+  for (const [name, id] of filters) element(id).value = name === key ? value : "";
+  filterToggle.setAttribute("aria-expanded", "true");
+  render();
+  search.focus();
+}
+
 async function loadSources() {
   const retrying = document.activeElement === element("source-retry");
   element("source-status").textContent = "Loading sources…";
@@ -209,7 +323,7 @@ async function loadSources() {
     if (!response.ok) throw new Error();
     catalog = prepareCatalog(await response.json());
     showOverview(catalog.sources);
-    render();
+    restoreFilters();
     element("directory-filters").disabled = false;
     if (retrying) search.focus();
   } catch {
@@ -223,6 +337,8 @@ async function loadSources() {
 }
 
 search.addEventListener("input", render);
+element("source-more").addEventListener("click", () => showMoreSources({ focus: true }));
+window.addEventListener("popstate", () => { if (catalog) restoreFilters(); });
 filterToggle.addEventListener("click", () => {
   const expanded = filterToggle.getAttribute("aria-expanded") === "true";
   filterToggle.setAttribute("aria-expanded", String(!expanded));
@@ -233,7 +349,18 @@ element("source-clear-empty").addEventListener("click", resetFilters);
 element("source-retry").addEventListener("click", loadSources);
 loadSources();
 
+function showLinkedPanel() {
+  if (["#story-check", "#coverage-overview"].includes(location.hash)) {
+    element(location.hash.slice(1)).open = true;
+  }
+}
+let coverageLoaded = false, coverageLoading = false;
 async function loadCoverage() {
+  if (coverageLoaded || coverageLoading) return;
+  coverageLoading = true;
+  const status = element("coverage-status"), retry = element("coverage-retry");
+  retry.hidden = true;
+  status.textContent = "Loading coverage and health…";
   try {
     const response = await fetch("/api/discovery/coverage", { signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error();
@@ -241,12 +368,7 @@ async function loadCoverage() {
     element("coverage-formats").replaceChildren(...(data.formats || []).map((format) => {
       const button = node("button", "topic-chip", `${format.label} · ${format.sources}`);
       button.type = "button";
-      button.addEventListener("click", () => {
-        element("source-format").value = format.id;
-        filterToggle.setAttribute("aria-expanded", "true");
-        render();
-        search.focus();
-      });
+      button.addEventListener("click", () => browseFilter("format", format.id));
       return button;
     }));
     element("coverage-topics").replaceChildren(...data.topics.map((topic) => {
@@ -259,31 +381,59 @@ async function loadCoverage() {
       }[topic.gap] || "Coverage needs review"));
       return card;
     }));
-    const attention = data.attention;
-    if (attention) {
-      const panel = element("coverage-attention");
-      panel.hidden = false;
-      panel.replaceChildren(node("strong", "", "Source monitoring"), node("p", "",
-        `Failed checks: ${number.format(attention.failed_sources)} · Overdue checks: ${number.format(attention.overdue_sources)} · Sources quiet for 30 days: ${number.format(attention.quiet_sources)}.`));
-      panel.append(node("p", "", "A successful check confirms feed access. It does not mean a publisher has released a new story or that coverage is exhaustive."));
-    }
-    if (data.ingestion) {
-      const health = data.ingestion;
-      element("coverage-attention").append(node("p", "", `Synchronization ${health.status} · ${number.format(health.due_sources)} sources due · ${number.format(health.priority_sources_overdue)} priority feeds overdue.`));
-    }
-    const gaps = (data.signals || []).filter(signal => signal.gap);
-    if (gaps.length) element("coverage-attention").append(node("p", "", `Recent headline sample needs coverage review for ${gaps.map(signal => signal.label).join(", ")}.`));
-    element("coverage-status").textContent = data.notice || "";
-  } catch { element("coverage-status").textContent = "Coverage counts are temporarily unavailable."; }
+    renderCoverageStatus(data);
+    status.textContent = data.notice || "";
+    coverageLoaded = true;
+  } catch {
+    status.textContent = "Coverage counts are temporarily unavailable.";
+    retry.hidden = false;
+  } finally { coverageLoading = false; }
 }
-loadCoverage();
+const coverageOverview = element("coverage-overview");
+coverageOverview.addEventListener("toggle", () => { if (coverageOverview.open) loadCoverage(); });
+element("coverage-retry").addEventListener("click", loadCoverage);
+window.addEventListener("hashchange", showLinkedPanel);
+showLinkedPanel();
+if (coverageOverview.open) loadCoverage();
+
+function renderCoverageStatus(data) {
+  const panel = element("coverage-attention"), attention = data.attention, health = data.ingestion;
+  const gaps = (data.signals || []).filter(signal => signal.gap);
+  panel.replaceChildren();
+  panel.hidden = !attention && !health && !gaps.length;
+  if (panel.hidden) return;
+  panel.append(node("strong", "", "Source monitoring"));
+  if (attention) {
+    const metrics = node("div", "directory-health-metrics");
+    for (const [label, count, filter] of [["Failed checks", attention.failed_sources, "failed"],
+      ["Overdue checks", attention.overdue_sources, "stale"], ["Sources quiet for 30 days", attention.quiet_sources]]) {
+      const metric = node(filter && count ? "button" : "span", "directory-health-metric", `${label}: ${number.format(count)}`);
+      if (metric.tagName === "BUTTON") {
+        metric.type = "button";
+        metric.addEventListener("click", () => browseFilter("freshness", filter));
+      }
+      metrics.append(metric);
+    }
+    panel.append(metrics);
+  }
+  if (health) {
+    const status = {running: "Checks running", backlogged: "Checks behind schedule", stalled: "No recent checks"}[health.status] || "Synchronization status unavailable";
+    panel.append(node("p", "", `${status} · ${sourceCount(health.due_sources)} due · ${number.format(health.priority_sources_overdue)} priority feeds past their refresh targets.`));
+    const last = timestamp(health.last_check_at, "Latest check");
+    if (last) panel.append(last);
+  }
+  if (gaps.length) panel.append(node("p", "", `Unrepresented in the latest headline sample: ${gaps.map(signal => signal.label).join(", ")}.`));
+}
 
 element("story-check-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = event.currentTarget.querySelector("button");
+  if (button.disabled) return;
   button.disabled = true;
-  element("story-check-status").textContent = "Checking the archive…";
-  element("story-check-results").replaceChildren();
+  const status = element("story-check-status"), content = element("story-check-results");
+  status.textContent = "Checking the archive…";
+  content.replaceChildren();
+  content.setAttribute("aria-busy", "true");
   try {
     const response = await fetch(`/api/discovery/check?${new URLSearchParams({url: element("story-check-url").value.trim()})}`, {signal: AbortSignal.timeout(20000)});
     const data = await response.json();
@@ -293,14 +443,22 @@ element("story-check-form").addEventListener("submit", async (event) => {
       awaiting_sync: "This publisher is integrated and awaiting its first synchronization.",
       source_unavailable: "The publisher is integrated, but its sources are currently unavailable or paused.",
       not_in_archive: "This article is not in the retained archive. The publisher’s feeds may omit it or it may be outside the 90-day window." };
-    element("story-check-status").textContent = labels[data.status] || "Coverage check completed.";
-    const content = element("story-check-results");
+    status.textContent = labels[data.status] || "Coverage check completed.";
     for (const article of data.articles || []) {
       const link = node("a", "coverage-match", article.title);
       link.href = `/?${new URLSearchParams({article: article.id})}#reading-room`;
       content.append(link);
     }
-    for (const source of data.sources || []) content.append(node("p", "muted", `${source.label}: ${statusLabels[source.freshness] || source.freshness}${source.retry_at ? ` · retry after ${fullDateTime.format(new Date(source.retry_at))}` : ""}`));
-  } catch (error) { element("story-check-status").textContent = error.message || "Could not check coverage. Try again."; }
-  finally { button.disabled = false; }
+    for (const source of data.sources || []) {
+      const row = node("div", "story-check-source");
+      const link = node("a", "", source.label);
+      link.href = `/sources.html?${new URLSearchParams({q: source.label})}#source-search`;
+      row.append(link, node("span", `directory-state directory-state-${Object.hasOwn(statusLabels, source.freshness) ? source.freshness : "pending"}`,
+        statusLabels[source.freshness] || "Check status unavailable"));
+      const retry = timestamp(source.retry_at, "Retry after");
+      if (retry) row.append(retry);
+      content.append(row);
+    }
+  } catch (error) { status.textContent = error.message || "Could not check coverage. Try again."; }
+  finally { button.disabled = false; content.setAttribute("aria-busy", "false"); }
 });

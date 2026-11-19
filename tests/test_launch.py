@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -70,6 +72,29 @@ def test_challenge_limits_attempts_and_is_single_use(store):
     for _ in range(5):
         assert not store.consume_code('second', 'mailbox', 'wrong')
     assert not store.consume_code('second', 'mailbox', 'right')
+
+
+def test_turnstile_cites_the_same_allowed_hostname_as_the_request(monkeypatch):
+    from app import public_mail
+
+    monkeypatch.setenv('PUBLIC_ORIGIN', 'https://getinformdaily.com')
+    monkeypatch.setenv('TURNSTILE_ALLOWED_HOSTNAMES', 'ai-news-to-email-generator.vercel.app')
+    monkeypatch.setenv('TURNSTILE_SECRET_KEY', 'local-test-secret')
+    verify = Mock()
+    monkeypatch.setattr(public_mail.httpx, 'post', verify)
+
+    def request(hostname):
+        return SimpleNamespace(url=SimpleNamespace(hostname=hostname))
+
+    assert not public_mail.verify_human('token', request('other.example.org'))
+    verify.assert_not_called()
+    original = 'ai-news-to-email-generator.vercel.app'
+    verify.return_value.json.return_value = {'success': True, 'action': 'verify_email', 'hostname': original}
+    assert public_mail.verify_human('token', request(original))
+    assert not public_mail.verify_human('token', request('getinformdaily.com'))
+    verify.return_value.json.return_value['hostname'] = 'getinformdaily.com'
+    assert public_mail.verify_human('token', request('getinformdaily.com'))
+
 
 def test_public_mail_verifies_one_inbox_and_limits_three_daily(store, monkeypatch):
     from fastapi import FastAPI

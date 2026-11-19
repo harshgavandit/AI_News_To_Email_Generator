@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f6f7f4" />
     <meta name="description" content="Research the technology news archive with semantic search, cited analysis, and topic alerts." />
+    <link rel="canonical" href="https://getinformdaily.com/research.html" />
     <title>Research Desk · Informa AI</title>
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
@@ -33,16 +34,29 @@
     </header>
     <main class="wrap research-main">
       <section class="research-header" aria-labelledby="research-title">
-        <p class="research-label">Informa Intelligence</p>
+        <p class="research-label">Intelligence workspace</p>
         <h1 id="research-title">Research Desk</h1>
         <p>Explore what happened, compare coverage, and follow the evidence back to its source.</p>
       </section>
+      <nav class="research-section-nav" aria-label="Research Desk sections">
+        <a href="#research-form">Search &amp; analyze</a>
+        <a href="#developments-title">Developments</a>
+        <a href="#radar-title">Tech Radar</a>
+        <a href="#watch-title">Topic alerts</a>
+        <a href="#research-daily-title">Daily briefing</a>
+      </nav>
       <div class="research-layout">
         <div class="research-workspace">
           <form class="research-panel research-form" id="research-form">
             <label for="research-question">Search or ask about technology news</label>
-            <textarea id="research-question" required maxlength="320" rows="2"
-              placeholder="What are the latest developments in AI coding agents?"></textarea>
+            <textarea id="research-question" required maxlength="320" rows="2" aria-describedby="research-mode-help"
+              placeholder="Enter a technology, event, or question"></textarea>
+            <div class="research-starters" role="group" aria-label="Example research queries">
+              <span>Try a query</span>
+              <button class="research-pill" type="button" data-task="search" data-query="Kubernetes releases">Kubernetes releases</button>
+              <button class="research-pill" type="button" data-task="compare" data-query="How are publishers covering recent cloud outages?">Compare cloud outages</button>
+              <button class="research-pill" type="button" data-task="brief" data-query="What changed in AI coding agents?">Brief on coding agents</button>
+            </div>
             <div class="research-controls">
               <label>Time range
                 <select id="research-hours"><option value="24">Past 24 hours</option><option value="168" selected>Past 7 days</option><option value="720">Past 30 days</option><option value="2160">Past 90 days</option></select>
@@ -55,6 +69,8 @@
               </label>
               <button class="button primary" id="research-submit" type="submit">Find sources</button>
             </div>
+            <label id="research-language-field" class="research-language-field" hidden>Answer language <select id="research-language"></select></label>
+            <p id="research-mode-help" class="research-meta">Find matching publisher records in the retained archive.</p>
             <p class="research-privacy">Semantic search and AI analysis may send your query to OpenAI. <a href="/privacy.html">Privacy &amp; controls</a></p>
           </form>
           <p id="research-status" class="research-status" role="status" aria-live="polite"></p>
@@ -64,6 +80,7 @@
             <p>Follow-up questions use this session’s source list. The conversation is not saved to your account.</p>
             <div id="conversation-transcript" aria-live="polite"></div>
             <form id="conversation-form"><label for="conversation-question">Ask a follow-up</label><input id="conversation-question" required minlength="2" maxlength="320" placeholder="What does this mean for developers?" /><button class="button secondary" type="submit">Ask with sources</button></form>
+            <p id="conversation-status" class="research-status" role="status"></p>
           </section>
         </div>
         <aside class="research-rail" aria-label="News monitoring">

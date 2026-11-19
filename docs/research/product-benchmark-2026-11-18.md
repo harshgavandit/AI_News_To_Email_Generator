@@ -1,0 +1,41 @@
+# Informa AI product benchmark
+
+Reviewed on 18 November 2026. The browser review covered Particle’s public home and story pages, Trace’s live ranked feed and dated briefing, and Feedly’s public site and official reader preview. The evaluation of authenticated, paid and native workflows comes from provider documentation. Visual observations describe the pages and previews inspected at the time of review.
+
+## What each product does well
+
+### Particle
+
+- **Editorial hierarchy.** The public home uses an image-led grid with a category and featured-collection rail. An article count and relative age sit above each headline, with a short explanation immediately below. Story detail pairs a large, bold sans-serif headline with media, then switches to a comfortable serif overview beside an article list. Category navigation supports browsing, and linked entities inside the overview support deeper discovery. [Home](https://particle.news/) · [Public story example](https://particle.news/story/nvidia-open-sources-agent-callable-physical-ai-skills)
+- **Depth on demand.** Particle treats an event as the unit of reading. Its native product documents selectable summary formats, different viewpoints, related-story timelines, quotes in context, and follows for entities, authors and publishers. Story questions appear in context. Particle also explains the human review process behind public questions. [Product overview](https://particle.news/blog/introducing-particle-the-news-organized) · [Question moderation](https://particle.news/blog/keeping-humans-in-the-loop-how-ai-and-particle-employees-work-together)
+- **Advantage.** Readers can discover an event, understand why it matters, and reach the underlying reporting from one page. Make the publisher evidence approachable at the decision point, and keep layouts readable when a story has only a headline and link.
+
+### Trace
+
+- **A quick daily read.** The public feed uses a restrained reading column, icon topic navigation, serif story headlines, and a prominent Top/Recent choice. One lead receives the strongest visual treatment. Publisher, age, source count and ongoing status are grouped into a compact metadata line. Pulse separates adjacent discovery from the ranked feed. [Feed](https://www.yourtrace.online/feed) · [Product overview](https://www.yourtrace.online/)
+- **Ranking with a defined endpoint.** Trace describes grouping overlapping coverage into a short briefing with original links and a timeline. A dated public edition has a finite story count and a shareable address. Documented preferences reorder the shared feed and customize email topics, length and format. Trace also documents a separate read-only agent integration. [Method and personalization](https://www.yourtrace.online/how-it-works) · [Dated edition](https://www.yourtrace.online/brief/2026-11-18) · [Agent access](https://www.yourtrace.online/agents)
+- **Advantage.** A clear entry point and a finish line make the briefing a repeatable habit. Keep a concise daily edition distinct from exploratory archives. Make ranked and recent browsing understandable without asking readers to learn the ranking pipeline.
+
+### Feedly
+
+- **A workspace for repeat reading.** The official reader preview shows a neutral sans-serif interface, a small accent on the active selection, nested folders and sources, compact article rows, and direct access to Today, Read Later and annotations. Feedly documents separate display and density preferences by feed, keyboard triage, and a quick switcher with recent destinations. [Reader preview](https://feedly.com/news-reader) · [Layout and density](https://docs.feedly.com/article/276-how-do-i-change-the-views-of-my-feeds-and-source) · [Keyboard shortcuts](https://docs.feedly.com/article/81-what-are-the-keyboard-shortcuts) · [Quick navigation](https://docs.feedly.com/article/853-navigate-feedly-faster-with-go-to)
+- **Control over inputs and outputs.** Sources, saved searches and Boards have distinct roles. Mute filters narrow the feed, and AI can analyze a selected collection or a manually selected set of articles. The analysis documentation explains how Feedly picks evidence and how users can override it. [Feeds, source discovery, muting and Boards](https://docs.feedly.com/article/523-getting-started-with-feedly) · [AI evidence selection](https://docs.feedly.com/article/854-how-ask-ai-and-research-select-articles) · [Inline citations](https://docs.feedly.com/article/741-guide-to-ai-actions-for-feedly-market-intelligence)
+- **Advantage.** Frequent users can build a predictable workflow that connects discovery, triage, analysis and saved evidence. Give filters and scopes visible, reversible states and keep keyboard shortcuts out of text entry.
+
+## Decisions for Informa AI
+
+| Finding in Informa AI | Implemented response |
+| --- | --- |
+| Developing Stories previously exposed an expandable list of links with limited context. Multiple editions of one publication could also populate some article comparisons. | Add a comparison dialog from the masthead and story rail. Compare or order entries by publication time, then open the publisher or the Informa reader. Keep provenance and available excerpts alongside each source. The headline API deduplicates canonical copies and publisher groups, counts matches in the bounded sample, and returns up to five entries. Article detail uses the same publisher-group distinction. |
+| The daily briefing already returns a finite selection, but its reading state was hard to see. | Show progress from the existing browser read history and offer a direct route to the next unread story. The Saved view can filter by reading status or search saved headlines and publishers locally. Readers can undo the last bulk mark-read action. Arrow shortcuts in the story reader leave form-field editing alone. |
+| A large source directory mixed browsing with health diagnostics. Changing or sharing a narrow filter setup was cumbersome. | Separate source checks and coverage diagnostics from the browse list. Support shareable filters, removable filter chips and incremental rendering. Keep the per-source check history, article lookup and OPML export within reach. |
+| Research modes and the links between research, technology timelines and projects needed clearer entry points. | Add section navigation and example queries in Research Desk. Clarify the active research mode and show mode-specific controls. Technology pages provide a filterable source timeline and a retry state. Project navigation keeps the collection and selected evidence in view, with direct links from related workflows. |
+| The Reading Room and secondary pages used uneven visual emphasis for comparable actions. | Retain Informa’s Instrument Serif editorial type, Instrument Sans controls, warm paper, deep green, and restrained copper accent. Use shared light and dark surface tokens across controls, dialogs and secondary pages. Give About and Source Standards direct links to the real reader, research and source tools. |
+
+The masthead uses layered CSS for depth. Dialog arrivals and pointer feedback are short, and the interface honors reduced motion and forced colors. WebGL and Three.js were unnecessary for the reading and comparison workflows because the layout benefits from static depth and lightweight state feedback. The masthead’s decorative treatment carries no source data and is hidden from assistive technology.
+
+Comparison uses the existing archive and publisher-supplied excerpts, with a clear fallback when only a headline is available. Publication order is a view of the sampled reports. It represents when publishers posted coverage, so it should be read as a publication timeline. Existing source rights, original links, reader state and verified email boundaries remain part of the workflow.
+
+## Scope for future evaluation
+
+Native app behavior, account synchronization, automated newsletter editions, shared enterprise collections, authoring controls for saved AI queries and authenticated agent access require separate technical and product evaluation. This release uses the current web, archive, personal reading state, Research Desk, and verified delivery capabilities. Public screenshots and feature descriptions cannot establish parity in private workflows, search quality, ranking accuracy, or production throughput.

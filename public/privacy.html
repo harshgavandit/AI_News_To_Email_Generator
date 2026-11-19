@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f6f7f4" />
     <meta name="description" content="Understand your Informa AI data. Export or clear browser-stored reading lists, choose optional analytics, and learn how AI and email features handle information." />
     <title>Privacy &amp; controls | Informa AI</title>
-    <link rel="canonical" href="https://ai-news-to-email-generator.vercel.app/privacy.html" />
+    <link rel="canonical" href="https://getinformdaily.com/privacy.html" />
     <meta property="og:title" content="Privacy &amp; controls | Informa AI" />
     <meta property="og:description" content="Understand your Informa AI data. Export or clear browser-stored reading lists, choose optional analytics, and learn how AI and email features handle information." />
     <meta property="og:type" content="website" />
@@ -28,22 +28,20 @@
       <div class="topbar wrap">
         <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
         <nav class="site-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a>
-          <a href="/research.html">Research Desk</a><a href="/sources.html">Sources</a><a href="/about.html">About</a>
+          <a href="/research.html">Research Desk</a><a href="/sources.html">Sources</a><a href="/contribute.html">For authors</a>
         </nav>
         <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><a class="button primary" href="/#reading-room">Explore stories</a>
         </div>
       </div>
     </header>
-    <main id="information-main" class="wrap information-main">
+    <main id="information-main" class="wrap information-main" tabindex="-1">
       <nav class="information-nav" aria-label="About this platform"><a href="/about.html">About</a><a href="/privacy.html" aria-current="page">Privacy &amp; controls</a><a href="/trust.html">Source standards</a>
       </nav>
       <header class="information-hero">
-        <p class="eyebrow">Privacy &amp; controls</p>
-        <h1>Your reading space.<br />Your choices.</h1>
-        <p class="information-lead">Understand what stays in your browser, what a feature sends, and the controls available to you.</p>
-        <p>Browse without an account. Keep your saved stories and preferences on this device. Choose whether to use AI briefs, email delivery, and optional audience analytics.</p>
-        <p class="information-date">Updated <time datetime="2026-11-17">17 November 2026</time>
-        </p>
+        <h1>Privacy &amp; controls</h1>
+        <p class="information-lead">Manage the reading data on this device and the services you choose to use.</p>
+        <nav class="information-actions" aria-label="Privacy controls"><a class="button secondary" href="#browser-controls">Browser data</a><a class="button secondary" href="#background-monitoring">Background monitoring</a><a class="button secondary" href="#audience-analytics">Analytics settings</a></nav>
+        <p class="information-date">Updated <time datetime="2026-11-18">18 November 2026</time></p>
       </header>
       <section id="browser-controls" class="privacy-dashboard" aria-labelledby="browser-title">
         <div class="section-heading">
@@ -65,15 +63,16 @@
             <div><strong id="count-radar">—</strong><span>Technology radar</span>
             </div>
         </div>
+        <p id="privacy-visit-history" class="muted">Catch-up uses visit timing stored in this browser. Clearing Read history clears that timing too.</p>
         <div class="privacy-action-row">
           <div>
-            <h3>Take your reading data with you.</h3>
-            <p>Download your saved stories, read IDs, followed lists, monitoring views, topic alerts, technology radar preferences, appearance, and analytics choice as a JSON file. This export stays on your device and excludes email and author-review records.</p>
+            <h3>Export browser data</h3>
+            <p>Download your saved stories, read IDs, visit timing, followed lists, monitoring views, topic alerts, technology radar preferences, appearance, and analytics choice as a JSON file. This export stays on your device and excludes email and author-review records.</p>
           </div><button id="export-browser-data" class="button secondary" type="button">Download my browser data ↓</button>
         </div>
         <div class="privacy-action-row reset-row">
           <div>
-            <h3>Start fresh, on your terms.</h3>
+            <h3>Clear reading lists</h3>
             <p>Select what to clear. This affects this browser’s reading lists only. Export first if you want a copy. Other open Reading Room tabs will reload to apply the reset.</p>
             <fieldset class="privacy-selections"><legend class="sr-only">Choose browser data to clear</legend><label><input type="checkbox" name="clear-group" value="bookmarks" />Saved stories</label><label><input type="checkbox" name="clear-group" value="history" />Read history</label><label><input type="checkbox" name="clear-group" value="interests" />Interests &amp; follows</label><label><input type="checkbox" name="clear-group" value="views" />Monitoring views</label><label><input type="checkbox" name="clear-group" value="alerts" />Topic alerts</label><label><input type="checkbox" name="clear-group" value="radar" />Technology radar</label>
             </fieldset>
@@ -86,13 +85,18 @@
         </noscript>
       </section>
       <section class="analytics-panel" id="background-monitoring" aria-labelledby="background-monitoring-title">
-        <h2 id="background-monitoring-title">Background monitoring</h2>
-        <p>If you enable it in the Research Desk, Informa AI stores your watch terms and source-linked matches under a browser-specific session. Matches are kept for up to 14 days. The session expires after 30 days without use.</p>
-        <p id="privacy-monitor-status" role="status">Checking this browser’s monitoring settings…</p>
-        <button id="delete-background-watches" class="button secondary" type="button" hidden>Delete background watches and alerts</button>
-        <a href="/research.html">Open the Research Desk</a>
+        <div>
+          <p class="eyebrow">Optional server data</p>
+          <h2 id="background-monitoring-title">Background monitoring</h2>
+          <p>If you enable it in the Research Desk, Informa AI stores watch terms and source-linked matches under a browser-specific session. Matches are kept for up to 14 days. The session expires after 30 days without use.</p>
+          <p id="privacy-monitor-status" role="status">Checking this browser’s monitoring settings…</p>
+        </div>
+        <div class="privacy-monitor-actions">
+          <a class="button secondary" href="/research.html">Open Research Desk</a>
+          <button id="delete-background-watches" class="text-button" type="button" hidden>Delete monitoring data</button>
+        </div>
       </section>
-      <section class="analytics-panel" aria-labelledby="analytics-title">
+      <section id="audience-analytics" class="analytics-panel" aria-labelledby="analytics-title">
         <div>
           <p class="eyebrow">An optional choice</p>
           <h2 id="analytics-title">Audience analytics</h2>
@@ -147,7 +151,7 @@
           <section id="privacy-contact" class="prose-contact">
             <p class="eyebrow">A person you can reach</p>
             <h2>Questions about your data?</h2>
-            <p>Contact Harsh Gavand about privacy, access, or removal requests. Include the feature involved and the email address you used, if relevant. Do not send passwords, access keys, or verification codes.</p><a class="button secondary" href="mailto:harshgavand2@gmail.com?subject=Informa%20AI%20privacy%20request">Contact Harsh ↗</a><a class="inline-link" href="/about.html#creator">Meet the creator →</a>
+            <p>Contact Harsh Gavand about privacy, access, or removal requests. Include the feature involved and the email address you used, if relevant. Do not send passwords, access keys, or verification codes.</p><a class="button secondary" href="mailto:hello@getinformdaily.com?subject=Informa%20AI%20privacy%20request">Contact Harsh ↗</a><a class="inline-link" href="/about.html#creator">Meet the creator →</a>
           </section>
         </div>
       </div>
@@ -159,6 +163,12 @@
         <p>Email records, author submissions, appearance, and analytics choices are not affected.</p>
         <div class="dialog-actions"><button id="cancel-clear-data" class="button secondary" type="button" autofocus>Keep my data</button><button id="confirm-clear-data" class="button primary" type="button">Clear selected data</button>
         </div>
+      </dialog>
+      <dialog id="delete-monitoring-dialog" class="privacy-dialog" aria-labelledby="delete-monitoring-title" aria-describedby="delete-monitoring-detail">
+        <h2 id="delete-monitoring-title">Delete background monitoring data?</h2>
+        <p id="delete-monitoring-detail">This deletes your watches, rule settings, alert history, and research projects you own, including their shared brief links. It also removes your access to projects shared with this browser session.</p>
+        <p id="delete-monitoring-status" class="status" role="status"></p>
+        <div class="dialog-actions"><button id="keep-monitoring" class="button secondary" type="button" autofocus>Keep monitoring</button><button id="confirm-delete-monitoring" class="button primary" type="button">Delete monitoring data</button></div>
       </dialog>
     </main>
     <footer class="site-footer wrap">

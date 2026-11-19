@@ -5,19 +5,25 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { JSDOM } from 'jsdom';
 
 test('source coverage and article checks expose real results and recover after errors', async () => {
-  const dom = new JSDOM(readFileSync(new URL('../../public/sources.html', import.meta.url), 'utf8'), {url: 'https://informa.test/sources.html'});
+  const dom = new JSDOM(readFileSync(new URL('../../public/sources.html', import.meta.url), 'utf8'), {url: 'https://informa.test/sources.html?q=practical#story-check'});
   const previous = new Map();
   for (const key of ['document', 'window', 'location', 'history', 'fetch']) previous.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
   for (const key of ['document', 'window', 'location', 'history']) globalThis[key] = dom.window[key];
-  let fail = false, checks = 0;
+  let fail = false, checks = 0, coverageFetches = 0;
   globalThis.fetch = async url => {
     let data;
-    if (url === '/api/sources') data = {sources: [{id: 'practicalai', label: 'Practical AI', source: 'practicalai', kind: 'podcast',
-      format: 'podcast', topic: 'ai', region: 'Global', language: 'en', coverage: 'article', freshness: 'fresh',
-      enabled: true, available: true, refresh_minutes: 60, feed_url: 'https://publisher.example/feed'}]};
-    else if (url === '/api/discovery/coverage') data = {topics: [{id: 'security', label: 'Cybersecurity', articles_24h: 12, feeds: 3, fresh_feeds: 2, gap: 'checks_overdue'}],
-      formats: [{id: 'podcast', label: 'Podcasts', sources: 5}], attention: {failed_sources: 1, overdue_sources: 2, quiet_sources: 4}};
-    else if (url.includes('/health')) data = {history: {checks: 4, successful: 3, hours: 24, average_duration_ms: 250}};
+    if (url === '/api/sources') data = { sources: Array.from({length: 38}, (_, index) => ({
+      id: `publisher-${index}`, label: index ? `Reviewed Publisher ${index}` : 'Practical AI', source: `publisher-${index}`,
+      kind: 'podcast', format: 'podcast', topic: 'ai', region: 'Global', language: 'en', coverage: 'article', freshness: 'fresh',
+      enabled: true, available: true, refresh_minutes: 60, feed_url: 'https://publisher.example/feed',
+    })) };
+    else if (url === '/api/discovery/coverage') {
+      coverageFetches++;
+      data = {topics: [{id: 'security', label: 'Cybersecurity', articles_24h: 12, feeds: 3, fresh_feeds: 2, gap: 'checks_overdue'}],
+        formats: [{id: 'podcast', label: 'Podcasts', sources: 5}], attention: {failed_sources: 1, overdue_sources: 2, quiet_sources: 4}};
+    }
+    else if (url.includes('/health')) data = {history: {checks: 4, successful: 3, hours: 24, average_duration_ms: 250,
+      recent: [{checked: 1700000000, available: false, error: 'rate_limited'}]}};
     else {
       checks++;
       assert.equal(new URL(url, 'https://informa.test').searchParams.get('url'), 'https://publisher.example/story');
@@ -29,17 +35,33 @@ test('source coverage and article checks expose real results and recover after e
   async function until(check) { for (let n = 0; n < 100; n++) { if (check()) return; await delay(5); } assert.fail('UI did not settle'); }
   try {
     await import(`../../public/sources.js?coverage-test=${Date.now()}`);
+    await until(() => document.querySelector('.directory-row'));
+    assert.equal(coverageFetches, 0);
+    const coveragePanel = document.getElementById('coverage-overview');
+    coveragePanel.open = true;
+    coveragePanel.dispatchEvent(new dom.window.Event('toggle'));
     await until(() => document.querySelector('.coverage-topic'));
+    assert.equal(coverageFetches, 1);
+    assert.equal(document.getElementById('story-check').open, true);
+    assert.equal(document.querySelectorAll('.directory-row').length, 1);
+    document.querySelector('#directory-active-filters button').click();
+    assert.equal(new URL(location.href).searchParams.has('q'), false);
+    assert.equal(document.querySelectorAll('.directory-row').length, 36);
+    document.getElementById('source-more').click();
+    assert.equal(document.querySelectorAll('.directory-row').length, 38);
+    assert.equal(document.activeElement.tagName, 'H2');
     assert.match(document.querySelector('.coverage-topic').textContent, /12 stories.*2\/3 feeds current/);
     assert.match(document.querySelector('.coverage-gap').textContent, /need attention/);
     assert.match(document.querySelector('#coverage-attention').textContent, /Failed checks: 1.*Overdue checks: 2.*Sources quiet for 30 days: 4/);
     assert.equal(document.querySelector('#coverage-attention').hidden, false);
     document.querySelector('#coverage-formats button').click();
     assert.equal(document.getElementById('source-format').value, 'podcast');
+    assert.equal(new URL(location.href).searchParams.get('format'), 'podcast');
     const sourceHistory = document.querySelector('.source-history');
     sourceHistory.open = true;
     sourceHistory.dispatchEvent(new dom.window.Event('toggle'));
     await until(() => sourceHistory.textContent.includes('3 of 4 checks'));
+    assert.match(sourceHistory.querySelector('ol').textContent, /Publisher temporarily rate-limited checks/);
     document.getElementById('story-check-url').value = 'https://publisher.example/story';
     const form = document.getElementById('story-check-form');
     form.dispatchEvent(new dom.window.Event('submit', {cancelable: true}));

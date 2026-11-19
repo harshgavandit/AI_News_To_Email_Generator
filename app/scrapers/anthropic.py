@@ -3,6 +3,8 @@ from typing import List, Optional
 import feedparser
 from .web_content import url_to_markdown
 from pydantic import BaseModel
+from app.news import fetch_bytes
+import httpx
 
 
 class AnthropicArticle(BaseModel):
@@ -29,7 +31,10 @@ class AnthropicScraper:
         seen_guids = set()
         
         for rss_url in self.rss_urls:
-            feed = feedparser.parse(rss_url)
+            try:
+                feed = feedparser.parse(fetch_bytes(rss_url))
+            except (ValueError, httpx.HTTPError, OSError, TimeoutError):
+                continue
             if not feed.entries:
                 continue
             
@@ -55,7 +60,7 @@ class AnthropicScraper:
         return articles
 
     def url_to_markdown(self, url: str) -> Optional[str]:
-        return url_to_markdown(url)
+        return url_to_markdown(url, allowed_hosts=frozenset({"anthropic.com", "www.anthropic.com"}))
 
 if __name__ == "__main__":
     scraper = AnthropicScraper()

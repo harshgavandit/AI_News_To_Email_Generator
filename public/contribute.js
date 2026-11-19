@@ -4,6 +4,8 @@ const byId = (id) => document.getElementById(id);
 const node = (tag, text, className = "") => { const el = document.createElement(tag); el.textContent = text; el.className = className; return el; };
 const message = (id, text, error = false) => { byId(id).textContent = text; byId(id).classList.toggle("error", error); };
 let config = null, selected = null, captchaId = null, captchaToken = "", ownerKey = "", ownerRevision = 0, nextCursor = null, authRevision = 0;
+let lookupRevision = 0;
+let draftArticleId = null;
 
 async function request(path, options = {}) {
   const response = await fetch(path, { ...options, cache: "no-store", signal: AbortSignal.timeout(25000) });
@@ -20,8 +22,18 @@ function link(url, text) {
   return anchor;
 }
 function updateAvailability() {
-  byId("contribution-fields").disabled = !selected || !config?.verified;
+  const verified = Boolean(config?.verified);
+  const canSubmit = Boolean(selected && verified);
+  const fields = byId("contribution-fields");
+  fields.disabled = fields.hidden = !canSubmit;
   byId("contribution-reload").disabled = !config?.verified;
+  byId("author-step-inbox").textContent = verified ? "Inbox verified" : "Connect your email address";
+  byId("author-step-article").textContent = selected ? "Article found" : "Use an Informa AI story link";
+  byId("author-step-permission").textContent = canSubmit ? "Ready for your submission" : "Submit your text for review";
+  const pending = byId("contribution-pending");
+  pending.hidden = canSubmit;
+  if (!canSubmit) pending.textContent = selected ? "Verify your inbox to unlock the submission form." :
+    verified ? "Find an article to unlock the submission form." : "Verify your inbox and find the article to unlock the submission form.";
 }
 
 async function captcha() {
@@ -72,27 +84,51 @@ async function refreshAuth() {
   }
 }
 
+function readArticleId(input) {
+  const value = input.trim();
+  const valid = /^[A-Za-z0-9_-]{1,40}$/;
+  if (valid.test(value)) return value;
+  try {
+    const url = new URL(value, location.origin);
+    const id = url.searchParams.get("article");
+    if (url.origin === location.origin && !url.username && !url.password && id && valid.test(id) &&
+        ["/", "/index.html"].includes(url.pathname)) return id;
+  } catch { /* Invalid or external story link. */ }
+  return "";
+}
+
+function resetArticleLookup() {
+  lookupRevision++;
+  selected = null;
+  byId("contribution-selected").hidden = true;
+  byId("contribution-grant").checked = false;
+  updateAvailability();
+}
+
 async function findArticle() {
-  selected = null; updateAvailability(); byId("contribution-selected").hidden = true;
-  const id = byId("contribution-article").value.trim();
-  if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) return message("lookup-status", "Enter a valid Informa AI article ID.", true);
+  resetArticleLookup();
+  const revision = lookupRevision;
+  const id = readArticleId(byId("contribution-article").value);
+  if (!id) return message("lookup-status", "Paste an Informa AI story link or a valid article ID.", true);
   message("lookup-status", "Finding the original article…");
   try {
     const data = await request(`/api/articles/${encodeURIComponent(id)}`);
-    if (byId("contribution-article").value.trim() !== id) return;
+    if (revision !== lookupRevision) return;
     selected = data.article;
+    if (draftArticleId && draftArticleId !== selected.id) byId("contribution-form").reset();
+    draftArticleId = selected.id;
     byId("contribution-title").textContent = selected.title;
     const original = link(selected.url, "View original ↗");
     byId("contribution-original").href = original.href;
     byId("contribution-selected").hidden = false;
     if (!byId("contribution-author").value) byId("contribution-author").value = selected.author || "";
-    message("lookup-status", "Article found. Verify your inbox and provide your text and permission evidence.");
+    message("lookup-status", config?.verified ? "Article found. Add your text and permission evidence below." : "Article found. Verify your inbox to continue.");
     updateAvailability();
-  } catch (error) { message("lookup-status", error.message, true); }
+  } catch (error) { if (revision === lookupRevision) message("lookup-status", error.message, true); }
 }
 
 byId("article-lookup").addEventListener("submit", (event) => { event.preventDefault(); findArticle(); });
-byId("contribution-article").addEventListener("input", () => { selected = null; updateAvailability(); });
+byId("contribution-article").addEventListener("input", () => { resetArticleLookup(); message("lookup-status", ""); });
 byId("contribution-retry-auth").addEventListener("click", refreshAuth);
 byId("contribution-challenge").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -133,6 +169,7 @@ byId("contribution-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selected || !config?.verified) return;
   const revision = authRevision;
+  const submittedArticleId = selected.id;
   byId("contribution-submit").disabled = true;
   try {
     const data = await post("/api/mail/contributions", { article_id: selected.id,
@@ -141,7 +178,7 @@ byId("contribution-form").addEventListener("submit", async (event) => {
       terms_version: config.terms_version });
     if (revision !== authRevision) return;
     message("contribution-status", data.message);
-    byId("contribution-grant").checked = false;
+    if (selected?.id === submittedArticleId) byId("contribution-grant").checked = false;
     await loadOwn();
   } catch (error) { if (revision === authRevision) message("contribution-status", error.message, true); }
   finally { byId("contribution-submit").disabled = false; }

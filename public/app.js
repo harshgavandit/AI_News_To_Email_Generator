@@ -1,5 +1,6 @@
 "use strict";
 import { coverageLabels, fillOptions, languageOptions, optionLabel, originalLanguage, regionId, regionOptions, topicOptions, subjectLabels } from "./catalog.js";
+import { previewSegments, translatePreview } from "./english-preview.js";
 import { initSavedViews } from "./saved-views.js";
 import { createPreferences } from "./preferences.js";
 import { readingContent } from "./reading-content.js";
@@ -7,6 +8,9 @@ import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 import { createDeliveryStatus } from "./delivery-status.js";
 import { createStoryQuestion } from "./story-question.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
+import { createCoverageDialog } from "./coverage-dialog.js";
+import { createVisitCatchup } from "./visit-catchup.js";
+import { openVisit } from "./visit-history.js";
 
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -43,6 +47,8 @@ const state = {
   delivery: "email",
 };
 const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d", 2160: "90d" };
+const readingViews = ["feed", "for-you", "saved", "briefing", "catchup"];
+const archiveViews = ["feed", "for-you"];
 const defaultSort = (searching) => searching ? "relevance" : "latest";
 const node = (tag, className, text) => {
   const el = document.createElement(tag);
@@ -132,6 +138,7 @@ const preferences = createPreferences($("personalization"), () => {
 });
 const saved = new Map();
 const readStories = new Set();
+let readBatch = new Set();
 try {
   const stored = JSON.parse(localStorage.getItem(savedKey) || "[]");
   for (const item of stored.slice(0, 100)) {
@@ -143,11 +150,20 @@ try {
   for (const id of storedRead) readStories.add(String(id));
 } catch {}
 
-function markAsRead(storyId) {
-  readStories.add(String(storyId));
+function persistReadStories() {
   try {
     localStorage.setItem(readKey, JSON.stringify([...readStories].slice(-300)));
-  } catch {}
+    return true;
+  } catch { return false; }
+}
+
+function markAsRead(storyId) {
+  const id = String(storyId);
+  readBatch.delete(id);
+  if (!readBatch.size) $("read-action-notice").hidden = true;
+  readStories.delete(id);
+  readStories.add(id);
+  persistReadStories();
   const card = $("stories")?.querySelector(`[data-story-card-id="${CSS.escape(String(storyId))}"]`);
   if (card) {
     card.classList.add("is-read");
@@ -196,7 +212,7 @@ function toggleSaved(article) {
   renderStories();
   const actions = Array.from($("stories").querySelectorAll(".save-button"));
   const replacement = actions.find((button) => button.dataset.storyId === id) || actions[Math.min(previousIndex, actions.length - 1)];
-  if (restoreFocus) (replacement || $("view-saved")).focus({ preventScroll: Boolean(replacement) });
+  if (restoreFocus) (replacement || (state.view === "saved" ? $("saved-search") : $("reading-title"))).focus({ preventScroll: Boolean(replacement) });
   status("story-action-status", removing ? `Story removed. ${saved.size} saved.` :
     persisted ? `Story saved. ${saved.size} saved on this browser.` : "Story saved for this session. Browser storage is unavailable.");
 }
@@ -231,6 +247,25 @@ const jsonPost = (url, data) =>
     body: JSON.stringify(data),
   });
 const deliveryStatus = createDeliveryStatus(request, readableTime);
+const openCoverage = createCoverageDialog($("coverage-dialog"), { externalLink, readableTime });
+const readingVisit = openVisit({ storage: (() => { try { return window.localStorage; } catch { return undefined; } })() });
+let lastVisitTouch = Date.now();
+function touchReadingVisit() {
+  if (document.hidden || Date.now() - lastVisitTouch < 60_000) return;
+  lastVisitTouch = Date.now();
+  readingVisit.touch();
+}
+window.addEventListener("pointerdown", touchReadingVisit, { passive: true });
+window.addEventListener("keydown", touchReadingVisit);
+const visitCatchup = createVisitCatchup({ region: $("visit-catchup"), request, openArticle: openVisitEvidence });
+
+function coverageAction(story, className, label) {
+  const button = node("button", className, label);
+  button.type = "button";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.addEventListener("click", () => openCoverage(story, button));
+  return button;
+}
 
 async function loadHeadlines() {
   try {
@@ -239,27 +274,27 @@ async function loadHeadlines() {
     const container = $("headlines-content");
     container.classList.toggle("with-coverage", coverage.length > 0);
     container.replaceChildren();
+    const lead = coverage[0];
+    const edition = $("edition-coverage");
+    edition.hidden = !lead;
+    edition.replaceChildren();
+    if (lead) {
+      const title = node("h2", "", lead.title);
+      title.dir = "auto";
+      edition.append(node("span", "edition-coverage-label", "Developing story"), title,
+        coverageAction(lead, "edition-coverage-button", `Compare ${lead.sources.length} sources ↗`));
+    }
     for (const story of coverage) {
       const feature = node("article", "coverage-lead");
       const updated = node("time", "muted", `Updated ${readableTime(story.updated_at)}`);
       updated.dateTime = story.updated_at;
       const meta = node("div", "coverage-meta");
       meta.append(node("span", "source-badge chips", story.topic), updated);
-      const links = node("ul", "coverage-links");
-      for (const source of story.sources) {
-        const item = node("li");
-        const link = externalLink(source.url, source.publisher);
-        link.setAttribute("aria-label", `${source.publisher} — ${source.label}`);
-        item.append(link, node("span", "muted", source.label));
-        links.append(item);
-      }
       const search = node("a", "coverage-search", "Browse related coverage →");
       search.setAttribute("aria-label", `Browse coverage: ${story.title}`);
       search.href = `/?${new URLSearchParams({ q: story.query, window: "7d", sort: "relevance" })}#reading-room`;
       const actions = node("div", "coverage-actions");
-      const sources = node("details");
-      sources.append(node("summary", "", `Sources (${story.sources.length})`), links);
-      actions.append(sources, search);
+      actions.append(coverageAction(story, "button secondary", `Compare ${story.sources.length} sources`), search);
       feature.append(meta, node("h3", "", story.title), node("p", "", story.summary), actions);
       container.append(feature);
     }
@@ -327,7 +362,7 @@ function readingFilters() {
 }
 
 function syncURL() {
-  $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || state.view === "saved";
+  $("archive-search").hidden = !$("search").value.trim() || state.hours === 2160 || !archiveViews.includes(state.view);
   const url = new URL(location.href);
   for (const [key, value] of Object.entries(readingFilters())) {
     if (!value || value === "all") url.searchParams.delete(key);
@@ -350,7 +385,7 @@ function syncURL() {
   $("filter-articles").setAttribute("aria-pressed", String($("coverage").value === "article"));
   $("filter-releases").setAttribute("aria-pressed", String($("coverage").value === "release"));
   const baseHours = state.view === "for-you" ? 168 : 24;
-  $("reset-filters").hidden = ["saved", "briefing"].includes(state.view) ||
+  $("reset-filters").hidden = !archiveViews.includes(state.view) ||
     (!count && !$("region").value && state.topic === "all" && state.hours === baseHours && !state.searching && $("sort").value === "latest");
   renderActiveFilters();
 }
@@ -407,20 +442,24 @@ function restoreURL() {
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
   const viewParam = params.get("view");
-  state.view = ["saved", "for-you", "briefing"].includes(viewParam) ? viewParam : "feed";
-  for (const peer of ["feed", "for-you", "saved", "briefing"])
-    $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
-  $("feed-controls").hidden = ["saved", "briefing"].includes(state.view);
-  $("sort").hidden = state.view !== "feed";
-  $("refresh").hidden = ["saved", "briefing"].includes(state.view);
-  $("personalization").hidden = state.view !== "for-you";
-  $("briefing-intro").hidden = state.view !== "briefing";
+  state.view = readingViews.includes(viewParam) ? viewParam : "feed";
   reflectWorkspace();
 }
 
 function reflectWorkspace() {
-  const labels = { feed: "All stories", "briefing": "Daily briefing", "for-you": "For you", saved: "Saved stories" };
+  const labels = { feed: "All stories", briefing: "Daily briefing", "for-you": "For you", saved: "Saved stories",
+    catchup: "Since your last visit" };
+  const isCatchup = state.view === "catchup";
+  for (const peer of readingViews) $(`view-${peer}`).setAttribute("aria-pressed", String(peer === state.view));
   $("reading-title").textContent = labels[state.view];
+  $("feed-controls").hidden = $("refresh").hidden = !archiveViews.includes(state.view);
+  $("sort").hidden = state.view !== "feed";
+  $("personalization").hidden = state.view !== "for-you";
+  $("briefing-intro").hidden = state.view !== "briefing";
+  $("saved-library").hidden = state.view !== "saved";
+  $("reading-results").hidden = $("stories").hidden = $("story-keyboard-hints").hidden = isCatchup;
+  $("read-action-notice").hidden = state.view === "saved" || isCatchup || !readBatch.size;
+  if (isCatchup) $("show-more").hidden = true;
   for (const button of document.querySelectorAll("[data-workspace-view]")) {
     if (button.dataset.workspaceView === state.view) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -482,7 +521,7 @@ $("briefing-email").addEventListener("click", () => {
   $("hero-email").focus();
 });
 $("sidebar-save-view").addEventListener("click", () => {
-  if (["saved", "briefing"].includes(state.view)) $("view-feed").click();
+  if (!archiveViews.includes(state.view)) $("view-feed").click();
   closeWorkspaceMenu();
   $("saved-views").open = true;
   $("saved-view-name").focus();
@@ -563,14 +602,44 @@ function renderSourceFilters() {
     button.setAttribute("aria-pressed", String(state.source === id));
   }
 }
-const visibleStories = () => {
-  if (state.view === "saved") return [...saved.values()].reverse();
+function savedSearchText(text) {
+  return text.toLocaleLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+}
+
+function visibleStories() {
+  if (state.view === "catchup") return [];
+  if (state.view === "saved") {
+    const terms = savedSearchText($("saved-search").value).trim().split(/\s+/).filter(Boolean);
+    const reading = $("saved-read-filter").value;
+    return [...saved.values()].reverse().filter((article) => {
+      if (reading !== "all" && readStories.has(String(article.id)) !== (reading === "read")) return false;
+      const searchable = [article.title, article.publisher, article.sourceName, article.author, article.topic_label,
+        state.topics[article.topic || article.category]].filter(Boolean).join(" ");
+      const normalized = savedSearchText(searchable);
+      return terms.every(term => normalized.includes(term));
+    });
+  }
   if (state.view === "briefing") return state.briefing;
   if (state.view === "for-you") return state.recommendations;
   return state.articles;
-};
+}
+
+function clearSavedSearch() {
+  $("saved-search").value = "";
+  $("saved-search-clear").hidden = true;
+  $("saved-search").focus({ preventScroll: true });
+  renderStories();
+}
+
+$("saved-search").addEventListener("input", () => {
+  $("saved-search-clear").hidden = !$("saved-search").value;
+  if (state.view === "saved") renderStories();
+});
+$("saved-search-clear").addEventListener("click", clearSavedSearch);
+$("saved-read-filter").addEventListener("change", renderStories);
 
 function renderStories() {
+  if (state.view === "catchup") return;
   $("outage-links").hidden = state.topic !== "outages";
   const container = $("stories");
   container.replaceChildren();
@@ -580,18 +649,19 @@ function renderStories() {
   $("export-saved-md").hidden = !isSaved || !saved.size;
   $("pin-all-saved").hidden = !isSaved || !saved.size;
   const allArticles = visibleStories();
+  if (isBriefing) renderBriefingProgress();
   const hideRead = $("hide-read").getAttribute("aria-pressed") === "true" && !isSaved;
   const articles = hideRead ? allArticles.filter(article => !readStories.has(String(article.id))) : allArticles;
   $("hide-read").hidden = isSaved;
   $("filter-high-signal").hidden = state.view !== "feed";
   $("filter-articles").hidden = state.view !== "feed";
   $("filter-releases").hidden = state.view !== "feed";
-  $("mark-all-read").hidden = isSaved || !articles.length;
+  $("mark-all-read").hidden = isSaved || !articles.some(article => !readStories.has(String(article.id)));
   if (!articles.length) {
     const empty = node("div", "empty reading-empty");
     const query = $("search").value.trim();
     empty.append(node("strong", "", hideRead && allArticles.length ? "You’re up to date with this selection" :
-      isSaved ? "No saved stories" : isBriefing ? "Your briefing is waiting for recent coverage" :
+      isSaved ? (saved.size ? "No saved stories match" : "No saved stories yet") : isBriefing ? "Your briefing is waiting for recent coverage" :
         (isForYou ? "No stories in your personalized feed" : "No matching stories")));
     if (hideRead && allArticles.length) {
       const showRead = node("button", "button secondary", "Show read stories");
@@ -601,12 +671,20 @@ function renderStories() {
     }
     empty.append(node("p", "", hideRead && allArticles.length ? "Show read stories to revisit this selection." :
       isBriefing ? "Browse all stories to explore other time windows and source types." :
-      isSaved ? "Save an article to keep it in this browser." :
+      isSaved ? (saved.size ? "Clear the search and reading status to see your full list." : "Use Save on an article to keep it in your reading list.") :
       isForYou ? "Try a different search or widen your filters. For You also skips stories you have already opened." :
       query ? `Try a different search for “${query}”, or widen the time window.` :
         "Try a longer time window or a different topic, publisher region, or source."));
     const nextWindow = Object.keys(windows).map(Number).find((hours) => hours > state.hours);
-    if (isSaved || isBriefing || (isForYou && !nextWindow)) {
+    if (isSaved && saved.size) {
+      const reset = node("button", "button secondary", "Show all saved");
+      reset.type = "button";
+      reset.addEventListener("click", () => {
+        $("saved-read-filter").value = "all";
+        clearSavedSearch();
+      });
+      empty.append(reset);
+    } else if (isSaved || isBriefing || (isForYou && !nextWindow)) {
       const browse = node("button", "button secondary", "Browse latest stories");
       browse.type = "button";
       browse.addEventListener("click", () => {
@@ -814,7 +892,7 @@ function renderStories() {
   }
   $("show-more").hidden = state.view !== "feed" || !state.cursor;
   $("brief-from-view").hidden = state.view !== "feed" || !state.articles.length || !(state.topic !== "all" ||
-    $("region").value || $("language").value || $("coverage").value || $("subject").value || state.publisher || state.source !== "all" || state.hours !== 12 || state.searching);
+    $("region").value || $("language").value || $("coverage").value || $("subject").value || state.publisher || state.source !== "all" || state.hours !== 24 || state.searching);
   const context = [
     state.topics[state.topic],
     $("region").value && state.regions[$("region").value],
@@ -823,7 +901,7 @@ function renderStories() {
   status(
     "news-status",
     state.view === "briefing" ? `${articles.length} stories to catch up on${hideRead ? " · Read stories hidden" : ""}` :
-    isSaved ? `${saved.size} ${saved.size === 1 ? "story" : "stories"} saved on this browser` :
+    isSaved ? `${articles.length} of ${saved.size} saved ${saved.size === 1 ? "story" : "stories"}` :
       isForYou ? `${state.recommendations.length} recommendations from ${state.recommendationCandidates.toLocaleString()} matching candidates · Last ${windows[state.hours]}` :
       [`${state.articles.length ? `${state.articles.length} of ` : ""}${state.total.toLocaleString()} ${state.total === 1 ? "story" : "stories"}`, ...context,
         hideRead ? `${allArticles.length - articles.length} read stories hidden on this page` : ""].filter(Boolean).join(" · "),
@@ -1022,12 +1100,38 @@ async function checkForUpdates() {
 }
 
 let authorCatalogLoaded = false;
+function renderBriefingProgress() {
+  const total = state.briefing.length;
+  const continueButton = $("briefing-continue");
+  $("briefing-progress").hidden = !total;
+  continueButton.hidden = !total;
+  if (!total) return;
+  const read = state.briefing.filter(article => readStories.has(String(article.id))).length;
+  $("briefing-progress-meter").max = total;
+  $("briefing-progress-meter").value = read;
+  $("briefing-progress-label").textContent = read === total ?
+    `Briefing complete · ${total} marked as read` : `${read} of ${total} marked as read`;
+  continueButton.textContent = read === total ? "Browse latest stories" : read ? "Continue briefing" : "Start reading";
+}
+
+$("briefing-continue").addEventListener("click", () => {
+  if (state.view !== "briefing") return;
+  const next = state.briefing.find(article => !readStories.has(String(article.id)));
+  if (next) openDossier(next, $("briefing-continue"));
+  else {
+    $("view-feed").click();
+    $("reading-title").focus({ preventScroll: true });
+  }
+});
+
 async function loadBriefing() {
   state.controller?.abort();
   state.updateCheck?.abort();
   const controller = state.controller = new AbortController();
   $("stories").setAttribute("aria-busy", "true");
   $("briefing-pin").hidden = true;
+  $("briefing-progress").hidden = true;
+  $("briefing-continue").hidden = true;
   status("news-status", "Preparing your daily briefing…");
   syncURL();
   try {
@@ -1148,6 +1252,13 @@ async function loadRecommendations() {
     }).catch(() => {});
     const { q, sort, limit, hours, ...filters } = Object.fromEntries(newsParams());
     const selected = preferences.request();
+    const signals = [["topics", "topic"], ["subjects", "subject"], ["sources", "publication"], ["authors", "author"]]
+      .filter(([key]) => selected[key].length)
+      .map(([key, label]) => `${selected[key].length} ${label}${selected[key].length === 1 ? "" : "s"}`);
+    if (preferences.usesSavedStories() && saved.size) signals.push("saved stories");
+    $("reading-interests-summary").textContent = signals.length ?
+      `Ranked using your choices in this browser: ${signals.join(", ")}.` :
+      "Choose topics, publications, or authors below to shape these recommendations.";
     const data = await request("/api/recommendations", { method: "POST",
       headers: { "Content-Type": "application/json" }, signal: controller.signal,
       body: JSON.stringify({ ...selected, q, scope: { ...filters, hours: Number(hours) }, exclude_ids: [...readStories].slice(-100),
@@ -1176,6 +1287,13 @@ async function loadRecommendations() {
 }
 
 async function loadNews(append = false, force = false) {
+  if (state.view === "catchup") {
+    state.controller?.abort();
+    state.updateCheck?.abort();
+    syncURL();
+    return visitCatchup.show({ since: readingVisit.previousVisit, persistent: readingVisit.persistent });
+  }
+  visitCatchup.hide();
   if (state.view === "briefing") return loadBriefing();
   if (state.view === "saved") {
     state.controller?.abort();
@@ -1300,24 +1418,19 @@ $("filter-toggle").addEventListener("click", () => {
   $("filter-toggle").setAttribute("aria-expanded", String(!$("extra-filters").hidden));
 });
 let searchTimer;
-for (const view of ["feed", "for-you", "saved", "briefing"]) {
+for (const view of readingViews) {
   $(`view-${view}`).addEventListener("click", () => {
     if (state.view === view) return;
     clearTimeout(searchTimer);
     state.controller?.abort();
     state.updateCheck?.abort();
     state.view = view;
-    for (const peer of ["feed", "for-you", "saved", "briefing"])
-      $(`view-${peer}`).setAttribute("aria-pressed", String(peer === view));
-    $("feed-controls").hidden = ["saved", "briefing"].includes(view);
-    $("sort").hidden = view !== "feed";
-    $("refresh").hidden = ["saved", "briefing"].includes(view);
-    $("personalization").hidden = view !== "for-you";
-    $("briefing-intro").hidden = view !== "briefing";
+    if (view !== "catchup") visitCatchup.hide();
     $("stories").setAttribute("aria-busy", "false");
     syncURL();
+    if (view === "catchup") return void loadNews();
     renderStories();
-    if (view !== "saved" && (view === "for-you" || view === "briefing" || state.feedKey !== newsParams().toString())) loadNews();
+    if (view !== "saved" && (view !== "feed" || state.feedKey !== newsParams().toString())) loadNews();
   });
 }
 $("reset-filters").addEventListener("click", () => {
@@ -1970,7 +2083,7 @@ async function performDelivery() {
   const pending = state.pending;
   if (!pending) throw new Error("Prepare a brief before sending.");
   const result = await jsonPost(
-    pending.kind === "webhook" ? "/api/deliver/webhook" : "/api/mail/send",
+    pending.kind === "webhook" ? "/api/mail/workspace" : "/api/mail/send",
     pending.kind === "webhook"
       ? { preview_id: pending.preview.preview_id, url: pending.url }
       : {
@@ -2281,13 +2394,23 @@ for (const [id, type] of [["filter-high-signal", "reporting"], ["filter-articles
 }
 
 $("mark-all-read").addEventListener("click", () => {
-  const page = visibleStories();
-  for (const article of page) readStories.add(String(article.id));
-  try {
-    localStorage.setItem(readKey, JSON.stringify([...readStories].slice(-300)));
-  } catch {}
+  readBatch = new Set(visibleStories().map(article => String(article.id)).filter(id => !readStories.has(id)));
+  if (!readBatch.size) return;
+  for (const id of readBatch) readStories.add(id);
+  const persisted = persistReadStories();
   renderStories();
-  status("story-action-status", `${page.length} displayed stories marked as read.`);
+  $("read-action-notice").hidden = false;
+  status("read-action-message", `${readBatch.size} ${readBatch.size === 1 ? "story" : "stories"} marked as read${persisted ? "." : " for this session."}`);
+  $("undo-mark-read").focus({ preventScroll: true });
+});
+$("undo-mark-read").addEventListener("click", () => {
+  for (const id of readBatch) readStories.delete(id);
+  readBatch.clear();
+  persistReadStories();
+  $("read-action-notice").hidden = true;
+  renderStories();
+  status("story-action-status", "Previous reading status restored.");
+  ($("mark-all-read").hidden ? $("reading-title") : $("mark-all-read")).focus({ preventScroll: true });
 });
 
 function publishedExcerpt(article) {
@@ -2442,6 +2565,15 @@ async function openLinkedArticle() {
   }
 }
 
+let evidenceOpenId = 0;
+async function openVisitEvidence(id, trigger) {
+  const opening = ++evidenceOpenId;
+  const details = await request(`/api/articles/${encodeURIComponent(id)}`);
+  if (opening !== evidenceOpenId || state.view !== "catchup" || !trigger.isConnected) return;
+  if (!details.article) throw new Error("This report is no longer in the archive.");
+  openDossier(details.article, trigger, details);
+}
+
 function openDossier(article, trigger, details) {
   if (!article || $("dossier-drawer").open) return;
   dossier.trigger = trigger;
@@ -2459,10 +2591,12 @@ function openDossier(article, trigger, details) {
 
 function renderDossier(details) {
   storyQuestion.reset();
+  resetEnglishPreview();
   dossier.developmentId = null;
   $("dossier-references").hidden = true;
   const article = dossier.article = dossier.articles[dossier.index];
   markAsRead(article.id);
+  if (state.view === "briefing") renderBriefingProgress();
   const topic = article.category || article.topic;
   const coverage = article.kind === "video" ? "Creator video" : article.kind === "podcast" ? "Podcast episode" : article.content_format === "newsletter" ? "Newsletter article" : state.coverageTypes[article.coverage] || coverageLabels[article.coverage];
   const publisher = article.sourceName || article.publisher || "Original source";
@@ -2513,8 +2647,11 @@ function renderDossier(details) {
   $("dossier-reading-notice").textContent = summary ?
     "Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content." :
     "Headline and source link only. The full article has not been retrieved or summarized.";
-  $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ? article.language || "" : "";
-  $("dossier-summary").dir = $("dossier-summary").lang === "ar" ? "rtl" : "auto";
+  $("dossier-summary").lang = summary && article.summary_basis !== "ai_feed_summary" ?
+    article.excerpt_language && article.excerpt_language !== "und" ? article.excerpt_language : article.language || "" : "";
+  $("dossier-summary").dir = "auto";
+  $("dossier-translate").hidden = !globalThis.Translator?.create ||
+    !previewSegments(article, summary).some(({ text, language }) => text && language && language !== "en");
   $("dossier-full-body").hidden = true;
   $("dossier-full-body").replaceChildren();
   $("dossier-highlights").hidden = true;
@@ -2560,15 +2697,74 @@ function moveDossier(offset) {
   $("dossier-title").focus({ preventScroll: true });
 }
 
+let englishPreviewController;
+
+function resetEnglishPreview() {
+  englishPreviewController?.abort();
+  englishPreviewController = null;
+  const button = $("dossier-translate");
+  button.disabled = false;
+  button.textContent = "Show English preview";
+  button.setAttribute("aria-expanded", "false");
+  $("dossier-translation-status").textContent = "";
+  $("dossier-english-preview").hidden = true;
+  $("dossier-english-preview").replaceChildren();
+}
+
+$("dossier-translate").addEventListener("click", async () => {
+  const article = dossier.article;
+  const translator = globalThis.Translator;
+  if (!article || !translator?.create) return;
+  const button = $("dossier-translate");
+  const feedback = $("dossier-translation-status");
+  const panel = $("dossier-english-preview");
+  const show = (visible) => {
+    panel.hidden = !visible;
+    button.textContent = visible ? "Hide English preview" : "Show English preview";
+    button.setAttribute("aria-expanded", String(visible));
+  };
+  if (panel.hasChildNodes()) {
+    show(panel.hidden);
+    feedback.textContent = "";
+    return;
+  }
+  const controller = englishPreviewController = new AbortController();
+  button.disabled = true;
+  feedback.textContent = "Preparing English preview…";
+  try {
+    const segments = await translatePreview(previewSegments(article, publishedExcerpt(article)), {
+      translator, signal: controller.signal,
+    });
+    if (controller.signal.aborted) return;
+    const copy = segments.flatMap(({ text, language }, index) => {
+      if (!text || language !== "en") return [];
+      const element = node(index === 0 ? "h4" : "p", "dossier-text", text);
+      element.lang = "en";
+      return element;
+    });
+    panel.replaceChildren(node("p", "dossier-reading-notice", "Machine-translated preview"), ...copy);
+    show(true);
+    feedback.textContent = "English preview ready.";
+  } catch {
+    if (controller.signal.aborted) return;
+    feedback.textContent = "English preview is unavailable on this device. You can still open the publisher’s article.";
+  } finally {
+    if (!controller.signal.aborted) button.disabled = false;
+  }
+});
+
 $("dossier-close").addEventListener("click", () => $("dossier-drawer").close());
 $("dossier-drawer").addEventListener("close", () => {
   storyQuestion.reset();
+  resetEnglishPreview();
   dossier.controller?.abort();
-  if ($("hide-read").getAttribute("aria-pressed") === "true" && state.view !== "saved") renderStories();
+  if ($("hide-read").getAttribute("aria-pressed") === "true" && state.view !== "saved" ||
+      state.view === "saved" && $("saved-read-filter").value !== "all") renderStories();
   const url = new URL(location.href);
   url.searchParams.delete("article");
   history.replaceState(null, "", url);
-  const fallback = $("stories").querySelector(`[data-story-card-id="${CSS.escape(dossier.openerId)}"] .card-dossier-btn`);
+  const fallback = $("stories").querySelector(`[data-story-card-id="${CSS.escape(dossier.openerId)}"] .card-dossier-btn`) ||
+    (state.view === "saved" ? $("saved-search") : $("reading-title"));
   const trigger = dossier.trigger?.isConnected && dossier.trigger.getClientRects().length ? dossier.trigger : fallback;
   (trigger || $("cmd-palette-btn")).focus({ preventScroll: true });
   dossier.article = null;
@@ -2577,6 +2773,7 @@ $("dossier-drawer").addEventListener("close", () => {
 });
 $("dossier-drawer").addEventListener("keydown", (event) => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return;
+  if (event.target instanceof HTMLElement && (event.target.isContentEditable || event.target.closest("input, textarea, select"))) return;
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
     moveDossier(event.key === "ArrowLeft" ? -1 : 1);
@@ -2853,6 +3050,11 @@ function listCommands() {
     { label: "Open Research Desk", run: () => { location.href = "/research.html"; } },
     { label: "Build a personalized brief", run: () => $("nav-builder").click() },
     { label: "Read the daily briefing", run: () => $("view-briefing").click() },
+    { label: "Catch up since your last visit", run: () => {
+      $("view-catchup").click();
+      $("reading-title").focus({ preventScroll: true });
+      $("reading-room").scrollIntoView({ block: "start", behavior: "instant" });
+    } },
     { label: "Preview the Global Top 5", run: () => $("world-preview").click() },
     { label: "Email the Global Top 5", run: () => {
       $("view-briefing").click();
@@ -2998,7 +3200,7 @@ $("command-dialog").addEventListener("close", () => {
   commandInput.removeAttribute("aria-activedescendant");
 });
 
-for (const id of ["command-dialog", "dossier-drawer"]) {
+for (const id of ["command-dialog", "coverage-dialog", "dossier-drawer"]) {
   $(id).addEventListener("click", (event) => {
     const dialog = event.currentTarget;
     if (event.target !== dialog) return;
@@ -3025,7 +3227,7 @@ window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   const palette = $("command-dialog");
   if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "k") {
-    if ($("mail-dialog").open || $("dossier-drawer").open || $("composer").classList.contains("open")) return;
+    if ($("mail-dialog").open || $("dossier-drawer").open || $("coverage-dialog").open || $("composer").classList.contains("open")) return;
     event.preventDefault();
     if (palette.open) palette.close();
     else openCommandPalette();

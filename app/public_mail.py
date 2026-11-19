@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from email_validator import EmailNotValidError, validate_email
 
-from app.brand import BRIEF_SUBJECT, NAME, VERIFICATION_SUBJECT
+from app.brand import BRIEF_SUBJECT, NAME, PUBLIC_SITE, VERIFICATION_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import mail_capacity
 
@@ -63,8 +63,10 @@ def seal(purpose, payload, ttl):
 
 
 def unseal(purpose, token):
+    if not token or len(token) > 2048:
+        return None
     try:
-        encoded, proof = (token or "").split(".", 1)
+        encoded, proof = token.split(".", 1)
         if not hmac.compare_digest(digest_key(purpose + ":" + encoded), proof):
             return None
         expiry, payload = json.loads(base64.urlsafe_b64decode(encoded))
@@ -79,7 +81,7 @@ def cookie(response, key, purpose, payload, ttl):
         seal(purpose, payload, ttl),
         max_age=ttl,
         httponly=True,
-        secure=os.getenv("PUBLIC_ORIGIN", "").startswith("https://"),
+        secure=bool(os.getenv("VERCEL")) or os.getenv("PUBLIC_ORIGIN", "").startswith("https://"),
         samesite="strict",
         path="/api/mail",
     )
@@ -99,10 +101,24 @@ def address_key(request):
     return digest_key("ip:" + client)
 
 
-def verified_recipient(request: Request):
+def session_email(token):
+    payload = unseal("session", token)
+    return payload.get("email") if isinstance(payload, dict) else payload
+
+
+def session_recipient(request: Request, store=None):
     if len(os.getenv("MAIL_SESSION_SECRET", "")) < 32:
         return None
-    recipient = unseal("session", request.cookies.get(SESSION))
+    token = request.cookies.get(SESSION)
+    recipient = session_email(token)
+    if not isinstance(recipient, str):
+        return None
+    store = store or get_store()
+    return recipient if store and not store.mail_session_revoked(digest_key("session-token:" + token)) else None
+
+
+def verified_recipient(request: Request):
+    recipient = session_recipient(request)
     return recipient if isinstance(recipient, str) and is_pilot_address(recipient) else None
 
 
@@ -128,6 +144,12 @@ def normalize(email):
 
 
 def verify_human(token, request):
+    origin_host = urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname
+    allowed_hosts = {origin_host}
+    allowed_hosts.update(os.getenv("TURNSTILE_ALLOWED_HOSTNAMES", "").lower().replace(",", " ").split())
+    hostname = request.url.hostname
+    if hostname not in allowed_hosts:
+        return False
     try:
         response = httpx.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -139,7 +161,7 @@ def verify_human(token, request):
         return (
             result.get("success") is True
             and result.get("action") == "verify_email"
-            and result.get("hostname") == urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname
+            and result.get("hostname") == hostname
         )
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "The bot check is temporarily unavailable.") from None
@@ -165,7 +187,7 @@ def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kw
 def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
     # 1. Resend API
     if os.getenv("RESEND_API_KEY"):
-        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or "brief@ai-news-to-email-generator.vercel.app"
+        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or f"brief@{urlsplit(PUBLIC_SITE).hostname}"
         email_headers = {}
         if unsubscribe_url:
             email_headers["List-Unsubscribe"] = f"<{unsubscribe_url}>"
@@ -237,12 +259,13 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
         parsed = urlparse(smtp_url)
         if parsed.scheme not in {"smtp", "smtps"} or not parsed.hostname:
             raise ValueError("Invalid SMTP configuration")
-        sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else "brief@ai-news-to-email-generator.vercel.app")
+        sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else
+                                           f"brief@{urlsplit(PUBLIC_SITE).hostname}")
         msg = EmailMessage()
         msg["From"] = sender
         msg["To"] = recipient
         msg["Subject"] = subject
-        msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+        msg["Message-ID"] = f"<{key}@{urlsplit(PUBLIC_SITE).hostname}>"
         if unsubscribe_url:
             msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
             msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
@@ -274,7 +297,7 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
     msg["From"] = sender
     msg["To"] = recipient
     msg["Subject"] = subject
-    msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+    msg["Message-ID"] = f"<{key}@{urlsplit(PUBLIC_SITE).hostname}>"
     if unsubscribe_url:
         msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
         msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
@@ -385,13 +408,26 @@ def verify(body: VerifyBody, request: Request, response: Response):
         ident, email = pending
         if store.consume_code(ident, digest_key("mailbox:" + email), digest_key(f"code:{ident}:{body.code}")):
             response.delete_cookie(CHALLENGE, path="/api/mail")
-            cookie(response, SESSION, "session", email, SESSION_TTL)
+            cookie(response, SESSION, "session", {"email": email, "nonce": secrets.token_urlsafe(16)}, SESSION_TTL)
             return {"verified": True, "email": email}
     raise HTTPException(400, "That code is invalid or expired. Request a new code.")
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(request: Request, response: Response):
+    if len(os.getenv("MAIL_SESSION_SECRET", "")) >= 32:
+        token = request.cookies.get(SESSION)
+        pending = unseal("challenge", request.cookies.get(CHALLENGE))
+        recipient = session_email(token)
+        if recipient or pending:
+            store = get_store()
+            if not store:
+                raise HTTPException(503, "Mail sign-out is temporarily unavailable. Try again shortly.")
+            if recipient:
+                store.revoke_mail_session(digest_key("session-token:" + token), time.time() + SESSION_TTL)
+            if pending:
+                ident, email = pending
+                store.discard_code(ident, digest_key("mailbox:" + email))
     for name in (SESSION, CHALLENGE):
         response.delete_cookie(name, path="/api/mail")
     return {"verified": False}
@@ -400,7 +436,7 @@ def logout(response: Response):
 @router.post("/send")
 def send(body: SendBody, request: Request):
     store = required_store()
-    recipient = unseal("session", request.cookies.get(SESSION))
+    recipient = session_recipient(request, store)
     if recipient and not is_pilot_address(recipient):
         raise HTTPException(403, "Email delivery is in a limited test.")
     if not recipient:

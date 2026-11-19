@@ -28,7 +28,7 @@ def process_anthropic_markdown(limit: Optional[int] = None) -> dict:
                 failed += 1
         except Exception as e:
             failed += 1
-            print(f"Error processing article {article.guid}: {e}")
+            print(f"Anthropic article processing failed ({type(e).__name__}).")
             continue
     
     return {

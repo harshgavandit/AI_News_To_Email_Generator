@@ -1,6 +1,12 @@
 .env
 .env.*
 !.env.example
+.vercel
+**/google-service-account.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
 .venv
 node_modules
 .git

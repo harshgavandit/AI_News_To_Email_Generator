@@ -235,12 +235,13 @@ def evidence_clusters(rows, *, include_single=False):
     return clusters
 
 
-def answer_schema(evidence, *, global_compare=False, quoted=False):
+def answer_schema(evidence, *, global_compare=False, quoted=False, fixed_quotes=False):
     source_id = Literal[tuple(row["id"] for row in evidence)]
     kinds = Literal["shared", "single_source", "difference", "attributed"] if global_compare else Literal["fact", "analysis"]
+    quote = Literal[tuple(dict.fromkeys(row["excerpt"] for row in evidence))] if fixed_quotes else str
     claim = create_model("ResearchClaim", __config__=ConfigDict(extra="forbid"),
                          text=(str, ...), kind=(kinds, ...), source_ids=(list[source_id], ...),
-                         **({"quotes": (list[str], ...)} if global_compare or quoted else {}))
+                         **({"quotes": (list[quote], ...)} if global_compare or quoted else {}))
     return create_model("ResearchAnswer", __config__=ConfigDict(extra="forbid"),
                         status=(Literal["answered", "insufficient"], ...), claims=(list[claim], ...), limitations=(str, ...))
 
@@ -299,14 +300,18 @@ def validate_answer(answer, evidence, *, allow_technology_titles=False):
 
 def synthesize(store, mode, question, records, *, cacheable=False, language="en"):
     technology_mode = mode == "technology"
+    visit_mode = mode == "visit_catchup"
     evidence = [row for row in records if row["excerpt"] or (technology_mode and technology_title_evidence(row))][:8]
+    if visit_mode:
+        evidence = [{**row, "excerpt": " ".join(row["excerpt"].split())} for row in evidence]
+        evidence = [row for row in evidence if 12 <= len(row["excerpt"]) <= 360]
     empty = {"claims": [], "limitations": ""}
     if not evidence:
         return dict(empty, status="insufficient", limitations="The archive does not contain excerpts that answer this request.")
     if not ai_enabled():
         return dict(empty, status="unavailable", limitations="AI analysis is unavailable. Explore the source evidence below.")
     global_compare = mode == "global_compare"
-    quoted = mode in {"project", "technology"}
+    quoted = mode in {"project", "technology", "visit_catchup"}
     model = (os.getenv("NEWS_AI_ANALYSIS_MODEL") or get_openai_model()) if mode in {"compare", "global_compare"} else get_openai_model()
     system = INSTRUCTIONS + f"\nWrite the answer in {OUTPUT_LANGUAGES.get(language, 'English')}; preserve source names and uncertainty."
     fields = ("id", "title", "publisher", "excerpt", "published_at")
@@ -326,6 +331,10 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
                    " and only for release, advisory, or incident records from a registered source or project repository. A title does not establish"
                    " what changed internally, who is affected, or how to respond. Identify those evidence gaps in limitations.")
         fields += ("coverage", "language", "record_kind", "entity_match")
+    elif visit_mode:
+        system += (" Write up to four short catch-up claims, each with one or two source IDs. "
+                   "For every source ID, select the entire supplied excerpt as its quote. "
+                   "Keep quotes in the same order as source IDs and cite the excerpt only when it directly supports the claim.")
     elif quoted:
         system += " Supply one short verbatim quote from the original language per cited excerpt, in the order of source_ids. Label gaps explicitly."
         fields += ("coverage", "language", "record_kind", "entity_match")
@@ -337,7 +346,7 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
         return cached
     if not reserve(store, "answers", 180, 1500):
         return dict(empty, status="budget_limited", limitations="AI analysis reached its daily limit. Source evidence is still available.")
-    schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted)
+    schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted, fixed_quotes=visit_mode)
     try:
         response = generate_response(payload, system, schema, max_tokens=1300, model=model)
         answer = validate_answer(schema.model_validate_json(response), evidence, allow_technology_titles=technology_mode)

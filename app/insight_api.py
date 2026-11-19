@@ -8,7 +8,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app import ai_insights, event_intelligence, monitoring, public_mail, radar_store, research, stack_intelligence, technology, watch_rules
+from app import ai_insights, event_intelligence, monitoring, public_mail, radar_store, research, stack_intelligence, technology, visit_catchup, watch_rules
 from app.coverage import TOPICS, public_article
 from app.provenance import source_history
 from app.launch_store import get_store
@@ -179,6 +179,24 @@ def catch_up(body: ai_insights.CatchupRequest, request: Request, response: Respo
                              "source_basis": result["source_notice"]}
     response.headers["Cache-Control"] = "private, no-store"
     return result
+
+
+@router.post("/api/intelligence/visit-catchup")
+def catch_up_since_visit(body: visit_catchup.VisitCatchupRequest, request: Request, response: Response):
+    from app.server import admit_expensive, rate_limit
+
+    try:
+        since, as_of, window = visit_catchup.visit_window(body)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    store = archive()
+    if body.analyze:
+        monitoring.protect_write(request)
+        admit_expensive(store, request, "visit-catchup-analysis", 6, 600)
+    else:
+        rate_limit(request, "visit-catchup-evidence", 60)
+    response.headers["Cache-Control"] = "private, no-store"
+    return visit_catchup.build_visit_catchup(store, since, as_of, window, analyze=body.analyze)
 
 
 @router.post("/api/intelligence/package-check")

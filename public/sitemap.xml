@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/</loc>
+    <loc>https://getinformdaily.com/</loc>
   </url>
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/sources.html</loc>
+    <loc>https://getinformdaily.com/sources.html</loc>
   </url>
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/research.html</loc>
+    <loc>https://getinformdaily.com/research.html</loc>
   </url>
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/about.html</loc>
+    <loc>https://getinformdaily.com/technology.html</loc>
   </url>
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/privacy.html</loc>
+    <loc>https://getinformdaily.com/about.html</loc>
   </url>
   <url>
-    <loc>https://ai-news-to-email-generator.vercel.app/trust.html</loc>
+    <loc>https://getinformdaily.com/privacy.html</loc>
+  </url>
+  <url>
+    <loc>https://getinformdaily.com/trust.html</loc>
   </url>
 </urlset>

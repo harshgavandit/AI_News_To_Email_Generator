@@ -25,7 +25,9 @@ def build_briefing(rows, *, hours=24, limit=5):
         except (KeyError, TypeError, ValueError):
             continue
     pool = deduplicate(eligible)
-    ordered = diverse_stories(pool, min(len(pool), limit * 3), lead_with_incident=True)
+    english = [story for story in pool if story["language"] == "en" and story["excerpt_language"] in ("en", "und")]
+    ordered = diverse_stories(english, limit * 3, lead_with_incident=True)
+    ordered.extend(diverse_stories(pool, limit * 3, previous=ordered, lead_with_incident=True))
     selected, headlines = [], []
     for article in ordered:
         current = headline(article)
@@ -41,4 +43,4 @@ def build_briefing(rows, *, hours=24, limit=5):
     return {"articles": selected, "hours": hours, "updated_at": now.isoformat(),
             "latest_published_at": max((row["published_at"] for row in pool), default=None),
             "publishers": len({row["publisher"] for row in pool}), "total_candidates": len(pool),
-            "basis": "Recent publisher reporting, official updates and research, selected for topic and publisher diversity."}
+            "basis": "Recent publisher reporting, official updates and research, with English stories prioritized across regions."}

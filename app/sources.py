@@ -31,6 +31,7 @@ class Source:
     collection: str = ""
     reviewed_at: str = ""
     publisher_group: str = ""
+    require_english: bool = False
 
     @property
     def content_format(self):
@@ -536,6 +537,7 @@ def validate_source(source):
         or source.topic not in {"ai", "software", "startups", "security", "chips", "bigtech", "research", "industry", "outages", "video"}
         or source.coverage not in {"reporting", "publisher", "article", "release", "advisory", "preprint", "journal", "discussion", "status"}
         or source.content_format not in {"news", "blog", "newsletter", "paper", "release", "video", "podcast"}
+        or source.require_english and source.language.casefold().split("-", 1)[0] != "en"
         or source.refresh_minutes not in range(0, 1441) or 0 < source.refresh_minutes < 5
         or source.publisher_group and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", source.publisher_group)):
         raise ValueError(f"Invalid or duplicate reviewed source: {source.id}")

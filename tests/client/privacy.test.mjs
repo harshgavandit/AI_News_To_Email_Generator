@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
-import { clearReadingData, dataCounts, readBrowserData, readingGroups } from '../../public/privacy-data.js';
+import { clearReadingData, dataCounts, hasVisitHistory, readBrowserData, readingGroups } from '../../public/privacy-data.js';
 
 const analytics = readFileSync(new URL('../../public/analytics.js', import.meta.url), 'utf8');
 const markup = readFileSync(new URL('../../public/privacy.html', import.meta.url), 'utf8');
@@ -60,7 +60,7 @@ test('clear controls require selection and explicit confirmation, and cancellati
   const dom = mount();
   try {
     const { window } = dom, { document, localStorage } = window;
-    Object.assign(window, { clearReadingData, dataCounts, readBrowserData, readingGroups });
+    Object.assign(window, { clearReadingData, dataCounts, hasVisitHistory, readBrowserData, readingGroups });
     const dialog = document.getElementById('clear-data-dialog');
     dialog.showModal = () => dialog.setAttribute('open', '');
     dialog.close = () => dialog.removeAttribute('open');
@@ -79,6 +79,37 @@ test('clear controls require selection and explicit confirmation, and cancellati
     document.getElementById('confirm-clear-data').click();
     assert.equal(localStorage.getItem('informa-saved-v1'), null);
     assert.equal(document.getElementById('count-bookmarks').textContent, '0');
+  } finally { dom.window.close(); }
+});
+
+test('background monitoring deletion discloses shared-project effects and requires confirmation', async () => {
+  const dom = mount();
+  try {
+    const { window } = dom, { document } = window;
+    Object.assign(window, { clearReadingData, dataCounts, hasVisitHistory, readBrowserData, readingGroups });
+    const requests = [];
+    window.monitorInbox = async (_path, options = {}) => {
+      requests.push(options.method || 'GET');
+      return {active: options.method !== 'DELETE'};
+    };
+    const dialog = document.getElementById('delete-monitoring-dialog');
+    dialog.showModal = () => dialog.setAttribute('open', '');
+    dialog.close = () => dialog.removeAttribute('open');
+    window.eval(controls);
+    await new Promise(resolve => setImmediate(resolve));
+    const deleteButton = document.getElementById('delete-background-watches');
+    assert.equal(deleteButton.hidden, false);
+    deleteButton.click();
+    assert.equal(dialog.hasAttribute('open'), true);
+    assert.match(dialog.textContent, /research projects you own/);
+    document.getElementById('keep-monitoring').click();
+    assert.deepEqual(requests, ['GET']);
+    deleteButton.click();
+    document.getElementById('confirm-delete-monitoring').click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(requests, ['GET', 'DELETE']);
+    assert.equal(deleteButton.hidden, true);
+    assert.equal(dialog.hasAttribute('open'), false);
   } finally { dom.window.close(); }
 });
 
@@ -111,7 +142,7 @@ test('opt-in loads analytics with URL redaction and drops events after consent w
 test('privacy controls explain unavailable browser storage instead of claiming success', () => {
   const dom = mount({ blocked: true });
   try {
-    Object.assign(dom.window, { clearReadingData, dataCounts, readBrowserData, readingGroups });
+    Object.assign(dom.window, { clearReadingData, dataCounts, hasVisitHistory, readBrowserData, readingGroups });
     assert.doesNotThrow(() => dom.window.eval(controls));
     assert.equal(dom.window.document.getElementById('export-browser-data').disabled, true);
     assert.equal(dom.window.document.getElementById('clear-browser-data').disabled, true);

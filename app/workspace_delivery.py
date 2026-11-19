@@ -14,7 +14,7 @@ from app.launch_store import get_store
 from app.news import canonical_url
 from app.web_digest import markdown_text, story_attribution
 
-router = APIRouter(prefix="/api/deliver")
+router = APIRouter()
 
 
 class WebhookRequest(BaseModel):
@@ -78,15 +78,16 @@ def message_payload(digest: dict, provider: str) -> dict:
     return {"type": "message", "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "content": card}]}
 
 
-@router.post("/webhook")
+@router.post("/api/deliver/webhook", include_in_schema=False)
+@router.post("/api/mail/workspace")
 def dispatch(body: WebhookRequest, request: Request):
+    recipient = public_mail.verified_recipient(request)
+    if not recipient:
+        raise HTTPException(401, "Verify your inbox before sending to a workspace.")
     try:
         provider = webhook_provider(body.url)
     except ValueError:
         raise HTTPException(422, "Enter a valid HTTPS Slack or Teams Workflows webhook URL.") from None
-    recipient = public_mail.verified_recipient(request)
-    if not recipient:
-        raise HTTPException(401, "Verify your inbox before sending to a workspace.")
     store = get_store()
     if not store:
         raise HTTPException(503, "Workspace delivery is temporarily unavailable.")
@@ -97,6 +98,7 @@ def dispatch(body: WebhookRequest, request: Request):
     identity = public_mail.digest_key(f"webhook:{destination}:{body.preview_id}")
     status, accepted = store.reserve_delivery(identity, [], windows=[
         (f"dispatch-ip:{public_mail.address_key(request)}", 3600, 5), (f"webhook:{destination}", 3600, 5),
+        ("webhook-mailbox:" + public_mail.digest_key(recipient), 3600, 5),
     ])
     if status == "limited":
         raise HTTPException(429, "Workspace delivery is limited to five sends per hour.",

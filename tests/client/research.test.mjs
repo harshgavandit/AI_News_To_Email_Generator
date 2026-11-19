@@ -26,6 +26,55 @@ function mountResearch(window) {
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+test('Research Desk presets prepare the query and discard a follow-up when a new search replaces its evidence', async () => {
+  const dom = new JSDOM(markup, { url: 'https://informa.test/research.html', runScripts: 'outside-only' });
+  const { window } = dom;
+  const { document } = window;
+  const byId = (id) => document.getElementById(id);
+  const requests = [];
+  let finishFollowUp;
+  const item = { id: 'release', title: 'Kubernetes releases', excerpt: 'A new release is available.',
+    publisher: 'Kubernetes', url: 'https://example.org/release', published_at: '2026-11-14', language: 'en' };
+  window.readingGroups = readingGroups;
+  const response = (body) => ({ ok: true, json: async () => body });
+  window.fetch = async (path, options = {}) => {
+    if (path === '/api/intelligence/research') {
+      const body = JSON.parse(options.body);
+      requests.push(body);
+      return response({ retrieval: 'keyword', evidence: [item], clusters: [] });
+    }
+    if (path === '/api/intelligence/converse') {
+      requests.push({ ...JSON.parse(options.body), signal: options.signal });
+      return new Promise((resolve) => { finishFollowUp = () => resolve(response({ evidence: [item],
+        answer: { claims: [{ text: 'Older follow-up answer.', source_ids: [item.id] }] } })); });
+    }
+    return response({});
+  };
+  try {
+    mountResearch(window);
+    document.querySelector('[data-task="compare"]').click();
+    assert.equal(byId('research-mode').value, 'compare');
+    assert.match(byId('research-question').value, /cloud outages/);
+    assert.equal(requests.length, 0);
+    byId('research-hours').value = '2160';
+    byId('research-form').requestSubmit();
+    await flush();
+    byId('conversation-question').value = 'What changed?';
+    byId('conversation-form').requestSubmit();
+    await flush();
+    assert.equal(requests[1].hours, 720, 'Conversation API supports up to 30 days');
+    assert.deepEqual(requests[1].context_ids, [item.id]);
+    byId('research-question').value = 'A new research question';
+    byId('research-form').requestSubmit();
+    await flush();
+    assert.equal(requests[1].signal.aborted, true);
+    finishFollowUp();
+    await flush();
+    assert.equal(byId('conversation-transcript').textContent, '');
+    assert.equal(byId('conversation-form').querySelector('button').disabled, false);
+  } finally { window.close(); }
+});
+
 test('article analysis keeps citations in the Research Desk and preserves original attribution', async () => {
   const dom = new JSDOM(markup, { url: 'https://informa.test/research.html?article=s1', runScripts: 'outside-only' });
   const { window } = dom;

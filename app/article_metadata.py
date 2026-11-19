@@ -15,7 +15,7 @@ IMAGE_HOSTS = ("i.ytimg.com", "media.dev.to", "media2.dev.to", "cdn.hashnode.com
                "images.unsplash.com", "techcrunch.com", "theverge.com", "arstechnica.com",
                "cdn.arstechnica.net", "media.wired.com", "cdn.vox-cdn.com", "platform.theverge.com")
 METADATA_FIELDS = ("author", "author_url", "tags", "original_url", "discussion_url", "thumbnail_url", "points", "comments_count",
-                   "reading_time_minutes", "references", "technical_terms", "publication_date_precision")
+                   "reading_time_minutes", "references", "technical_terms", "publication_date_precision", "detected_language")
 TECHNICAL_TERMS = re.compile(r"\b(?:CVE-\d{4}-\d{4,}|GHSA-[a-z0-9-]{14}|[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+)\b", re.I)
 
 
@@ -52,6 +52,9 @@ def safe_thumbnail(value):
 def metadata_for(article):
     """Use a small allowlist; never persist arbitrary upstream objects or HTML."""
     metadata = {}
+    detected_language = article.get("detected_language")
+    if isinstance(detected_language, str) and re.fullmatch(r"und|[a-z]{2}(?:-[A-Z]{2})?", detected_language):
+        metadata["detected_language"] = detected_language
     if article.get("publication_date_precision") == "day":
         metadata["publication_date_precision"] = "day"
     terms = article.get("technical_terms")

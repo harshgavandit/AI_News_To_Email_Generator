@@ -74,8 +74,8 @@ def run_daily_pipeline(hours: int = 24, top_n: int = 10) -> dict:
             logger.error(f"✗ Failed to send email: {email_result.get('error', 'Unknown error')}")
         
     except Exception as e:
-        logger.error(f"Pipeline failed with error: {e}", exc_info=True)
-        results["error"] = str(e)
+        logger.error("legacy_pipeline_failed error_type=%s", type(e).__name__)
+        results["error"] = "The daily pipeline could not complete."
     
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()

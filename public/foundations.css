@@ -15,13 +15,13 @@
 :root {
   --font-ui: "Instrument Sans", "Segoe UI", sans-serif;
   --serif: "Instrument Serif", Georgia, serif;
-  --light-background: #f5f6f3;
-  --light-paper: #ffffff;
-  --light-ink: #1c2b25;
-  --light-muted: #57665e;
-  --light-line: #dce3dd;
-  --light-green: #20543e;
-  --light-sage: #e9f0e9;
+  --light-background: #f4f3ee;
+  --light-paper: #fffefa;
+  --light-ink: #162926;
+  --light-muted: #53635e;
+  --light-line: #dcded4;
+  --light-green: #14544b;
+  --light-sage: #e3eeea;
   --bg: var(--light-background);
   --paper: var(--light-paper);
   --ink: var(--light-ink);
@@ -36,8 +36,10 @@
   --surface-bottom: #fcfdfb;
   --control-surface: #ffffff;
   --edge-highlight: #ffffff;
-  --wash: #edf2ed;
-  --canvas: #edf0ec;
+  --wash: #ebf1ed;
+  --canvas: #eeece4;
+  --edition-accent: #975a2d;
+  --editorial-rule: #b98251;
   --button-edge: #ffffff38;
   --action-bottom: #174530;
   --shadow-small: 0 1px 2px #14291c05, 0 4px 12px -6px #14291c12;
@@ -51,23 +53,25 @@
   --motion-panel: 220ms;
 }
 :root[data-theme="dark"] {
-  --bg: #131b17;
-  --paper: #1b251f;
-  --ink: #ebf0e8;
-  --muted: #adbcaf;
-  --line: #34463c;
-  --green: #b1d5a6;
-  --sage: #293d2e;
+  --bg: #101c1c;
+  --paper: #172725;
+  --ink: #eff1e9;
+  --muted: #b2c3bc;
+  --line: #354945;
+  --green: #a7d9c8;
+  --sage: #28443e;
   --subtle: #223027;
   --lead: #26392b;
-  --surface-top: #202c25;
-  --surface-bottom: #1b251f;
-  --control-surface: #18221c;
+  --surface-top: #20322e;
+  --surface-bottom: #172725;
+  --control-surface: #142320;
   --edge-highlight: #ffffff0d;
-  --wash: #24372b;
-  --canvas: #151f1a;
+  --wash: #233833;
+  --canvas: #172421;
+  --edition-accent: #f0bc82;
+  --editorial-rule: #b78052;
   --button-edge: #ffffff46;
-  --action-bottom: #a4c599;
+  --action-bottom: #95c5b6;
   --shadow-small: 0 1px 2px #0002, 0 4px 12px -6px #0005;
   --shadow-raised: 0 2px 4px #0003, 0 14px 32px -16px #0009;
   --shadow-overlay: 0 12px 32px #0004, 0 40px 100px -28px #000a;
@@ -108,6 +112,10 @@ button:disabled, select:disabled, fieldset:disabled :is(input, textarea, button)
 .site-tools .theme-select { width: auto; background-color: var(--control-surface); font-size: 12px; }
 .site-header .site-nav > a { position: relative; padding-inline: 2px; }
 .site-header .site-nav a[aria-current="page"] { color: var(--green); }
+.site-header :is(.brand-name, .site-nav a) { font-weight: 650; }
+.site-header .brand-icon { box-shadow: 0 1px 0 #ffffff48, 0 3px 9px #132c3129; }
+.site-header { border-bottom-color: var(--line); }
+.site-footer { border-top-color: var(--line); }
 .text-button { transition: color var(--motion-fast), background-color var(--motion-fast); }
 .text-button:hover { color: var(--green); }
 .eyebrow { color: var(--green); }

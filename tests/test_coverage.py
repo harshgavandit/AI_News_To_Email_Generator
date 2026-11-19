@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.coverage import REGION_LABELS, public_article, region_matches, topic_for
+from app.coverage import REGION_LABELS, article_source, public_article, region_matches, topic_for
 from app.sources import BY_ID
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
@@ -71,7 +71,8 @@ def test_publisher_regions_keep_the_region_code_and_original_name():
     assert REGION_LABELS["MENA"] == "Middle East & North Africa"
     assert region_matches(mena, "MENA") and not region_matches(mena, "Africa")
     assert public_article(mena)["region"] == "Middle East & North Africa"
-    assert public_article(france)["language"] == "de"
+    assert article_source(france).language == "de"
+    assert public_article(france)["language"] == "en"
     assert public_article(france)["region_id"] == "EU"
 
 
