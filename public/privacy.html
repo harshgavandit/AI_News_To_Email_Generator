@@ -96,11 +96,13 @@
       <section class="analytics-panel" aria-labelledby="analytics-title">
         <div>
           <p class="eyebrow">An optional choice</p>
-          <h2 id="analytics-title">Audience analytics</h2>
-          <p>Off by default. If you opt in, Vercel Web Analytics helps count visits and understand broad usage. Search terms, URL parameters, and fragments are removed from page-view URLs. We honor Global Privacy Control and Do Not Track signals for this optional feature.</p>
+          <h2 id="analytics-title">Audience and performance analytics</h2>
+          <p>Both are off by default. Audience analytics helps count visits. Performance metrics help us spot slow pages and layout shifts. We remove query parameters and fragments from reported URLs and honor Global Privacy Control and Do Not Track.</p>
           <p id="analytics-status" class="small" role="status">Optional analytics stays off until you choose to enable it.</p>
+          <p id="performance-status" class="small" role="status">Performance metrics stay off until you choose to enable them.</p>
         </div>
-        <div><label for="analytics-choice">Optional analytics in this browser</label><select id="analytics-choice"><option value="denied">Off</option><option value="granted">On</option></select>
+        <div><label for="analytics-choice">Audience analytics</label><select id="analytics-choice"><option value="denied">Off</option><option value="granted">On</option></select>
+          <label for="performance-choice">Performance metrics</label><select id="performance-choice"><option value="denied">Off</option><option value="granted">On</option></select>
           <p class="small">Changing this choice reloads the page.</p>
         </div>
       </section>
@@ -136,6 +138,7 @@
               <li><strong>AI:</strong> OpenAI processes material used for AI briefs, research answers, and semantic search.</li>
               <li><strong>Email and bot protection:</strong> Configured delivery providers handle verification and requested messages. Cloudflare Turnstile may process browser signals when the email feature asks for a bot check.</li>
               <li><strong>Optional analytics:</strong> Vercel Web Analytics loads only with your choice enabled and no browser privacy signal requesting it be disabled. Its provider describes it as cookie-free. See <a href="https://vercel.com/docs/analytics/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel’s analytics privacy information ↗</a>.</li>
+              <li><strong>Optional performance metrics:</strong> Vercel Speed Insights measures page performance after you opt in. See <a href="https://vercel.com/docs/speed-insights/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel’s Speed Insights privacy information ↗</a>.</li>
               <li><strong>Publishers:</strong> Opening original links takes you to another service. Some article thumbnails are loaded from publisher or image hosts, which receive the image request. Their own privacy practices apply.</li>
             </ul>
           </section>

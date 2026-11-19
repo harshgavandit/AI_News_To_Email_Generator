@@ -8,11 +8,12 @@ const analytics = readFileSync(new URL('../../public/analytics.js', import.meta.
 const markup = readFileSync(new URL('../../public/privacy.html', import.meta.url), 'utf8');
 const controls = readFileSync(new URL('../../public/privacy.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/gm, '');
 
-function mount({ consent, signal, blocked = false } = {}) {
+function mount({ consent, performanceConsent, signal, blocked = false } = {}) {
   const dom = new JSDOM(markup, { url: 'https://informa.test/privacy.html?private=hidden', runScripts: 'outside-only' });
   const { window } = dom;
   window.monitorInbox = async () => ({ active: false });
   if (consent) window.localStorage.setItem('informa-analytics-consent', consent);
+  if (performanceConsent) window.localStorage.setItem('informa-performance-consent', performanceConsent);
   if (signal === 'gpc') Object.defineProperty(window.navigator, 'globalPrivacyControl', { value: true });
   if (signal === 'dnt') Object.defineProperty(window.navigator, 'doNotTrack', { value: '1' });
   if (blocked) Object.defineProperty(window, 'localStorage', { get() { throw new Error('Unavailable'); } });
@@ -88,6 +89,7 @@ for (const options of [{}, { consent: 'denied' }, { consent: 'granted', signal: 
     try {
       dom.window.eval(analytics);
       assert.equal(dom.window.document.querySelector('script[src="/_vercel/insights/script.js"]'), null);
+      assert.equal(dom.window.document.querySelector('script[src="/_vercel/speed-insights/script.js"]'), null);
     } finally { dom.window.close(); }
   });
 }
@@ -98,6 +100,7 @@ test('opt-in loads analytics with URL redaction and drops events after consent w
     const { window } = dom;
     window.eval(analytics);
     assert.ok(window.document.querySelector('script[src="/_vercel/insights/script.js"]'));
+    assert.equal(window.document.querySelector('script[src="/_vercel/speed-insights/script.js"]'), null);
     const redact = window.vaq.find(([name]) => name === 'beforeSend')[1];
     const event = { type: 'pageview', url: 'https://informa.test/?q=private&token=secret#details' };
     assert.equal(redact(event).url, 'https://informa.test/');
@@ -106,6 +109,25 @@ test('opt-in loads analytics with URL redaction and drops events after consent w
     assert.equal(redact(event), null);
     assert.equal(redact({ url: 'invalid' }), null);
   } finally { dom.window.close(); }
+});
+
+test('performance opt-in is independent, redacts URLs and honors withdrawal and browser privacy signals', () => {
+  for (const signal of [undefined, 'gpc', 'dnt']) {
+    const dom = mount({ performanceConsent: 'granted', signal });
+    try {
+      const { window } = dom;
+      window.eval(analytics);
+      assert.equal(window.document.querySelector('script[src="/_vercel/insights/script.js"]'), null);
+      const script = window.document.querySelector('script[src="/_vercel/speed-insights/script.js"]');
+      assert.equal(Boolean(script), !signal);
+      if (signal) continue;
+      const redact = window.siq.find(([name]) => name === 'beforeSend')[1];
+      const event = { url: 'https://informa.test/development.html?id=private#evidence', value: 1000 };
+      assert.deepEqual(JSON.parse(JSON.stringify(redact(event))), { url: 'https://informa.test/development.html', value: 1000 });
+      window.localStorage.setItem('informa-performance-consent', 'denied');
+      assert.equal(redact(event), null);
+    } finally { dom.window.close(); }
+  }
 });
 
 test('privacy controls explain unavailable browser storage instead of claiming success', () => {
