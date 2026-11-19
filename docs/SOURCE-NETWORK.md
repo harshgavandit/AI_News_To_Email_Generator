@@ -64,6 +64,14 @@ not independently establish a paper's accuracy or peer-review outcome.
 
 ## Runtime architecture
 
+The November 19 additions bring the enabled catalog to 513 sources. They cover
+Francophone and East African technology, Thai and Philippine news, Spanish-language
+WIRED, EU digital policy, space, medical technology, and Gulf tech investment.
+OpenAI and Vercel add first-party service status. Latitude Media contributes
+technology-relevant videos from its official channel. WIRED en Español, The Circuit,
+and Latitude Media are indexed as headlines with source links. The Circuit and
+Latitude Media use the technology filter.
+
 Core sources remain in `app/sources.py`. New reviewed entries live in
 `app/source_catalog.json`. Pack loading performs no network requests and rejects
 duplicate IDs/endpoints, non-public URLs, unsupported formats/types and invalid

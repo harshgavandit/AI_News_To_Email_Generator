@@ -5105,5 +5105,246 @@
     "collection": "Systems and software",
     "article_paths": [],
     "reviewed_at": "2026-11-17"
+  },
+  {
+    "id": "digital-business-africa",
+    "group": "digital-business-africa",
+    "label": "Digital Business Africa",
+    "url": "https://www.digitalbusiness.africa/feed/",
+    "hosts": [
+      "digitalbusiness.africa"
+    ],
+    "topic": "industry",
+    "region": "Africa",
+    "language": "fr",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19"
+  },
+  {
+    "id": "techtrendske",
+    "group": "techtrendske",
+    "label": "TechTrendsKE",
+    "url": "https://techtrendske.co.ke/feed/",
+    "hosts": [
+      "techtrendske.co.ke"
+    ],
+    "topic": "industry",
+    "region": "Africa",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19"
+  },
+  {
+    "id": "blognone",
+    "group": "blognone",
+    "label": "Blognone",
+    "url": "https://www.blognone.com/atom.xml",
+    "hosts": [
+      "blognone.com"
+    ],
+    "topic": "industry",
+    "region": "APAC",
+    "language": "th",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "article_paths": [
+      "/node/"
+    ]
+  },
+  {
+    "id": "yugatech",
+    "group": "yugatech",
+    "label": "YugaTech",
+    "url": "https://www.yugatech.com/feed/",
+    "hosts": [
+      "yugatech.com"
+    ],
+    "topic": "industry",
+    "region": "APAC",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "article_paths": [
+      "/news/"
+    ]
+  },
+  {
+    "id": "wired-es",
+    "group": "wired-es",
+    "label": "WIRED en Español",
+    "url": "https://es.wired.com/feed/rss",
+    "hosts": [
+      "es.wired.com"
+    ],
+    "topic": "industry",
+    "region": "Latin America",
+    "language": "es-419",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "publisher_group": "wired",
+    "article_paths": [
+      "/articulos/",
+      "/review/"
+    ],
+    "headline_only": true
+  },
+  {
+    "id": "eu-digital-strategy",
+    "group": "eu-digital-strategy",
+    "label": "European Commission Digital Strategy",
+    "url": "https://digital-strategy.ec.europa.eu/en/rss.xml",
+    "hosts": [
+      "digital-strategy.ec.europa.eu"
+    ],
+    "topic": "industry",
+    "region": "EU",
+    "language": "en",
+    "format": "news",
+    "coverage": "publisher",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "article_paths": [
+      "/en/news/"
+    ]
+  },
+  {
+    "id": "spacenews",
+    "group": "spacenews",
+    "label": "SpaceNews",
+    "url": "https://spacenews.com/feed/",
+    "hosts": [
+      "spacenews.com"
+    ],
+    "topic": "industry",
+    "region": "Global",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "excluded_paths": [
+      "/press-release/",
+      "/press-releases/",
+      "/sponsored/"
+    ]
+  },
+  {
+    "id": "medtech-dive",
+    "group": "medtech-dive",
+    "label": "MedTech Dive",
+    "url": "https://www.medtechdive.com/feeds/news/",
+    "hosts": [
+      "medtechdive.com"
+    ],
+    "topic": "industry",
+    "region": "Global",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "article_paths": [
+      "/news/"
+    ]
+  },
+  {
+    "id": "openai-status",
+    "group": "openai-status",
+    "label": "OpenAI Status",
+    "url": "https://status.openai.com/feed.rss",
+    "hosts": [
+      "status.openai.com"
+    ],
+    "topic": "outages",
+    "region": "Global",
+    "language": "en",
+    "format": "news",
+    "coverage": "status",
+    "kind": "status",
+    "collection": "Service status",
+    "reviewed_at": "2026-11-19",
+    "publisher_group": "openai",
+    "article_paths": [
+      "/incidents/",
+      "//incidents/"
+    ]
+  },
+  {
+    "id": "vercel-status",
+    "group": "vercel-status",
+    "label": "Vercel Status",
+    "url": "https://vercel.statuspage.io/history.atom",
+    "hosts": [
+      "vercel.statuspage.io",
+      "vercel-status.com"
+    ],
+    "topic": "outages",
+    "region": "Global",
+    "language": "en",
+    "format": "news",
+    "coverage": "status",
+    "kind": "status",
+    "collection": "Service status",
+    "reviewed_at": "2026-11-19",
+    "article_paths": [
+      "/incidents/"
+    ]
+  },
+  {
+    "id": "the-circuit-tech",
+    "group": "the-circuit-tech",
+    "label": "The Circuit Technology",
+    "url": "https://circuit.news/feed/",
+    "hosts": [
+      "circuit.news"
+    ],
+    "topic": "startups",
+    "region": "Middle East & North Africa",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "tech_only": true,
+    "headline_only": true
+  },
+  {
+    "id": "latitude-media",
+    "group": "latitude-media",
+    "label": "Latitude Media",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC1dCBgJnwO5fgNVEn2BgQbg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "industry",
+    "region": "Global",
+    "language": "en",
+    "format": "video",
+    "coverage": "reporting",
+    "kind": "video",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19",
+    "tech_only": true,
+    "headline_only": true
   }
 ]

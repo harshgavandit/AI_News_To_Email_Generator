@@ -1719,7 +1719,7 @@ function renderDigest() {
     const citation = node("div", "digest-meta");
     citation.append(
       node("span", "digest-rank", String(index + 1)),
-      node("span", "", a.publisher || a.sourceName || a.article_type || "Source"),
+      node("span", "", [a.publisher || a.sourceName || a.article_type || "Source", a.author].filter(Boolean).join(" · ")),
       node("span", "digest-topic", a.topic_label || "Technology"),
     );
     const region = publisherRegion(a);

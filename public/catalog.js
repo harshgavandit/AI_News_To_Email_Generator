@@ -46,6 +46,7 @@ export const languageOptions = {
   ar: "Arabic",
   fa: "Persian",
   vi: "Vietnamese",
+  th: "Thai",
   tr: "Turkish",
   pl: "Polish",
   und: "Not specified",

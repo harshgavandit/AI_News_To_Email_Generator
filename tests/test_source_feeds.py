@@ -3,6 +3,7 @@ from email.utils import format_datetime
 from html import escape
 
 from app import news
+from app.coverage import public_article
 from app.sources import BY_ID
 
 
@@ -94,3 +95,30 @@ def test_medium_uses_the_same_id_across_feeds_without_losing_publisher_link(monk
     monkeypatch.setattr(news, "fetch_bytes", lambda _: fixture("https://medium.com.evil.example/abc123def456"))
     rows, status = news.read_feed(BY_ID["medium-programming"])
     assert rows == [] and not status["available"]
+
+
+def test_latitude_media_keeps_technology_headlines_without_video_metadata(monkeypatch):
+    content = feed(
+        ("Can AI data centers ease the power crunch?", "https://www.youtube.com/watch?v=D7D1CPOoub4", ()),
+        ("Congress debates electricity prices", "https://www.youtube.com/watch?v=hIoTWnAekCc", ()),
+    ).replace(b"</item>", b"<description>Publisher notes and a sponsor message.</description></item>")
+    monkeypatch.setattr(news, "fetch_bytes", lambda _: content)
+
+    (article,), status = news.read_feed(BY_ID["latitude-media"])
+    card = public_article(article)
+    assert status["available"] and status["rejected_entries"] == 1
+    assert card["sourceUrl"] == "https://www.youtube.com/watch?v=D7D1CPOoub4"
+    assert card["reading_access"]["mode"] == "headline_only"
+    assert not card["has_excerpt"] and "thumbnail_url" not in card
+
+
+def test_circuit_keeps_gulf_tech_investment_and_filters_general_business(monkeypatch):
+    content = feed(
+        ("Gulf investors back a new data center", "https://circuit.news/2026/11/19/data-center", ()),
+        ("Property developer opens a new golf resort", "https://circuit.news/2026/11/19/golf-resort", ()),
+    )
+    monkeypatch.setattr(news, "fetch_bytes", lambda _: content)
+    (article,), status = news.read_feed(BY_ID["the-circuit-tech"])
+    assert status["available"] and status["rejected_entries"] == 1
+    assert public_article(article)["region_id"] == "MENA"
+    assert BY_ID["wired-es"].publisher_family == BY_ID["wired"].publisher_family

@@ -134,6 +134,7 @@ def build_world(articles, hours, all_pool=None, *, scope=(), includes_pins=False
             "url": item["url"],
             "article_type": item["source"],
             "publisher": item["publisher"],
+            "author": item.get("author", ""),
             "topic": item["topic"],
             "topic_label": label,
             "published_at": item["published_at"],

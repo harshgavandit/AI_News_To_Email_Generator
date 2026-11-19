@@ -297,7 +297,7 @@ def read_feed(task, *, validators=None, known_urls=()):
                 if not article_in_scope(s, parts.path, title, tags):
                     continue
                 media = entry.get("media_description") or ""
-                raw_desc = media or entry.get("summary") or entry.get("description") or ""
+                raw_desc = "" if s.headline_only else (media or entry.get("summary") or entry.get("description") or "")
                 desc = "" if s.id == "hacker-news" else sanitize_story_excerpt(
                     raw_desc, s.group, title, channel=s.label, video_fallback=False)
                 post = MEDIUM_POST.fullmatch(entry.get("id", "")) if medium else None
@@ -310,7 +310,7 @@ def read_feed(task, *, validators=None, known_urls=()):
                     "publisher": s.label, "published_at": published.isoformat(), "kind": s.kind,
                     "category": feed_category(tags),
                 }
-                media_items = entry.get("media_thumbnail") or entry.get("media_content") or []
+                media_items = [] if s.headline_only else (entry.get("media_thumbnail") or entry.get("media_content") or [])
                 image = next((item.get("url", "") for item in media_items if isinstance(item, dict)), "")
                 story_record.update(metadata_for({"tags": tags,
                     "technical_terms": extract_technical_terms(raw_desc),

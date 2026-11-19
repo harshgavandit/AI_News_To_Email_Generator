@@ -185,8 +185,16 @@ DUTCH_SIGNALS = (
     ("chips", headline_pattern(r"halfgeleiders?|videokaarten?|processors?")),
     ("ai", headline_pattern(r"kunstmatige intelligentie|taalmodellen?")),
 )
+THAI_SIGNALS = (
+    ("outages", re.compile(r"ระบบล่ม|บริการล่ม|เข้าใช้งานไม่ได้")),
+    ("security", re.compile(r"ช่องโหว่|แรนซัมแวร์|ข้อมูลรั่วไหล|ความปลอดภัยไซเบอร์")),
+    ("startups", re.compile(r"สตาร์ทอัพ|ระดมทุน")),
+    ("chips", re.compile(r"เซมิคอนดักเตอร์|สมาร์ทโฟน|การ์ดจอ|ชิป")),
+    ("ai", re.compile(r"ปัญญาประดิษฐ์|โมเดลภาษา|เจเนอเรทีฟ")),
+    ("software", re.compile(r"โอเพนซอร์ส|ซอฟต์แวร์|คลาวด์")),
+)
 LOCAL_SIGNALS = {"ja": JAPANESE_SIGNALS, "ko": KOREAN_SIGNALS, "zh-TW": TRADITIONAL_CHINESE_SIGNALS,
-                 "ar": ARABIC_SIGNALS, "nl": DUTCH_SIGNALS}
+                 "ar": ARABIC_SIGNALS, "nl": DUTCH_SIGNALS, "th": THAI_SIGNALS}
 
 
 def article_source(article):
@@ -244,8 +252,8 @@ def public_article(article):
     published_at = article.get("published_at", "")
     
     raw_summary = article.get("cleanSummary") or article.get("description") or article.get("summary") or ""
-    if source and source.id == "hacker-news":
-        raw_summary = ""  # The syndicated feed carries link labels and popularity counters.
+    if source and (source.headline_only or source.id == "hacker-news"):
+        raw_summary = ""
     # Earlier releases stored a headline-derived sentence for videos with no excerpt.
     synthetic_video = article.get("source") == "youtube" and raw_summary.startswith(f"Video by {publisher} covering ")
     clean_summary = sanitize_story_excerpt("" if synthetic_video else raw_summary, article.get("source", ""),
@@ -276,7 +284,8 @@ def public_article(article):
         "readingTimeMinutes": reading_time,
         "reading_time_basis": "publisher" if article.get("reading_time_minutes") else "excerpt",
         "summary_basis": article.get("summary_basis") or ("publisher_excerpt" if has_excerpt else "headline_only"),
-        "reading_policy": "full_text" if article.get("_reading_access", {}).get("mode") == "full_text" else "excerpt",
+        "reading_policy": ("full_text" if article.get("_reading_access", {}).get("mode") == "full_text" else
+                           "headline_only" if source and source.headline_only else "excerpt"),
         "author_key": author_identity(article),
         "reading_access": article.get("_reading_access") or {
             "mode": "excerpt" if has_excerpt else "headline_only",
@@ -299,7 +308,10 @@ def public_article(article):
     })
     if source and source.coverage == "preprint":
         result["research_status"] = "preprint"
-    if article.get("kind") == "video" and len(url) <= 2048:
+    if source and source.headline_only:
+        for field in ("thumbnail_url", "references", "technical_terms"):
+            result.pop(field, None)
+    elif article.get("kind") == "video" and len(url) <= 2048:
         thumbnail = youtube_thumbnail(url)
         if thumbnail:
             result["thumbnail_url"] = thumbnail
