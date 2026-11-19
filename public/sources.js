@@ -86,7 +86,7 @@ function sourceRow(source) {
   if (source.focus) coverage.append(node("strong", "", source.focus));
   if (source.type) coverage.append(node("span", "", source.type));
   if (source.format) {
-    const schedule = source.refresh_policy === "daily" ? "daily refresh from 8:00 a.m. IST" : `checks every ${source.refresh_minutes || 5} min`;
+    const schedule = "checks at 8 a.m. and 8 p.m. IST";
     coverage.append(node("span", "", source.enabled ? `${source.format} · ${schedule}` : source.format));
   }
 
@@ -100,6 +100,7 @@ function sourceRow(source) {
       dns_failed: "The publisher’s feed host did not resolve.",
       tls_failed: "A secure connection to the feed could not be established.",
       connection_failed: "The publisher’s feed could not be reached.",
+      feed_not_found: "The publisher’s feed URL returned 404 or 410.",
       rate_limited: "The publisher limited requests.",
       access_denied: "The publisher denied feed access.",
     };

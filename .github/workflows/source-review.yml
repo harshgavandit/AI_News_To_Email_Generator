@@ -1,7 +1,5 @@
 name: Review publisher discovery and source health
 on:
-  schedule:
-    - cron: '17 4 * * 1'
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,7 +22,7 @@ jobs:
       - name: Discover publisher-declared feeds
         run: uv run python -m scripts.discover_source_feeds --seeds app/discovery_seeds.json --report reports/discovered-feeds.json
       - name: Validate reviewed source pack
-        run: uv run python -m scripts.check_source_pack app/source_catalog.json --recheck-existing --report reports/source-health.json
+        run: uv run python -m scripts.check_source_pack app/source_catalog.json --report reports/source-health.json
       - name: Retain review evidence
         if: always()
         uses: actions/upload-artifact@v4

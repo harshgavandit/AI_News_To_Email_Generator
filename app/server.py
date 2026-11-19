@@ -42,7 +42,7 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import daily_refresh_plan, feed_freshness, morning_refresh_at, refresh_mode, refresh_plan, refresh_sources, source_catalog
+from app.ingestion import SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness, latest_sweep, refresh_sources, source_catalog, sweep_plan
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
@@ -759,68 +759,97 @@ def mail_job_health(authorization: str | None = Header(default=None)):
 
 
 @app.get("/api/jobs/refresh")
-def refresh_job(authorization: str | None = Header(default=None)):
+def refresh_job(run: str | None = None, authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
-    if refresh_mode() == "adaptive":
-        return adaptive_refresh_job(source_store())
+    if run != "scheduled":
+        return {"status": "inactive"}  # Legacy workers and fallback crons cannot fetch.
+    return run_sweep()
+
+
+@app.post("/api/jobs/feed-sweep")
+def scheduled_feed_sweep(response: Response, authorization: str | None = Header(default=None),
+                         scheduled_at: str = Header(alias="ce-vssscheduledat", max_length=48)):
+    secret = os.getenv("CRON_SECRET", "")
+    if len(secret) < 16 or not hmac.compare_digest(authorization or "", f"Bearer {secret}"):
+        raise HTTPException(401, "Unauthorized.")
+    if os.getenv("VERCEL_ENV") in {"preview", "development"}:
+        return {"status": "inactive"}
+    try:
+        scheduled = datetime.fromisoformat(scheduled_at)
+    except ValueError as exc:
+        raise HTTPException(422, "Invalid sweep time.") from exc
+    result = run_sweep(expected_slot=scheduled)
+    incomplete = result["status"] == "closed" or result.get("remaining") or result.get("unconfirmed")
+    if incomplete:
+        response.status_code = 503
+        for ident in result.get("unconfirmed", ()):
+            logger.error("publisher_check_interrupted source_id=%s scheduled=%s", ident, scheduled.isoformat())
+        for ident in result.get("unfinished", ()):
+            logger.error("publisher_check_not_started source_id=%s scheduled=%s reason=sweep_budget", ident,
+                         scheduled.isoformat())
+    logger.log(logging.WARNING if incomplete or result.get("deferrals") else logging.INFO,
+               "publisher_sweep scheduled=%s status=%s checked=%s healthy=%s remaining=%s deferred=%s unconfirmed=%s",
+               scheduled.isoformat(), result["status"], result.get("checked"), result.get("healthy"),
+               result.get("remaining"), result.get("deferrals"), result.get("unconfirmed"))
+    return result
+
+
+def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None):
     now = datetime.now(timezone.utc)
-    morning = morning_refresh_at(now)
-    if now < morning:
-        return {"status": "waiting", "scheduled_at": morning.isoformat()}
+    scheduled = latest_sweep(now)
+    closes = scheduled + SWEEP_WINDOW
+    next_sweep = (scheduled + SWEEP_INTERVAL).isoformat()
+    if now >= closes or (expected_slot is not None and expected_slot != scheduled):
+        return {"status": "closed", "scheduled_at": next_sweep}
 
     store = source_store()
-    lease = store.claim_refresh()
+    if owner and not store.admit([("admin-refresh", str(int(time.time()) // 60), 4 if source_ids and not source else 1)]):
+        raise HTTPException(429, "Wait a minute before refreshing again.")
+    lease = store.claim_refresh(lease_seconds=360)
     if lease is None:
+        if owner:
+            raise HTTPException(429, "A feed refresh is already running.")
         return {"status": "already_started"}
     try:
+        slot = scheduled.isoformat(timespec="minutes")
         before = store.source_state(include_archive=False)
-        pending, deferred = daily_refresh_plan(before, morning, now)
-        next_morning = (morning + timedelta(days=1)).isoformat()
-        if not pending:
-            return {"status": "complete", "checked": 0, "remaining": 0,
-                    "deferred": deferred, "scheduled_at": next_morning}
-        refresh_sources(store, source_ids=pending, maximum=128, include_archive=False)
-        after = store.source_state(include_archive=False)
-        remaining, deferred = daily_refresh_plan(after, morning, datetime.now(timezone.utc))
-        checked = {source_id for source_id in pending if (after.get(source_id, {}).get("checked") or 0) >= morning.timestamp()}
-        if not remaining:
+        attempts = store.feed_attempts(slot)
+        pending, deferred = sweep_plan(before, scheduled, now, attempts=attempts, source_ids=source_ids,
+                                       host_backoffs=store.feed_host_backoffs(now.timestamp()))
+        after, remaining = before, pending
+        if pending:
+            refresh_sources(store, source, source_ids=pending, scheduled=scheduled,
+                            maximum=None if expected_slot is not None else 64,
+                            deadline=time.monotonic() + 230 if expected_slot is not None else None)
+            after = store.source_state(include_archive=False)
+            attempts = store.feed_attempts(slot)
+            now = datetime.now(timezone.utc)
+            remaining, deferred = sweep_plan(after, scheduled, now, attempts=attempts, source_ids=source_ids,
+                                             host_backoffs=store.feed_host_backoffs(now.timestamp()))
+
+        checked = {ident for ident in pending if (after.get(ident, {}).get("checked") or 0) >= scheduled.timestamp()}
+        if checked and not remaining and not owner:
             store.prune()
-        if not checked:
+        if pending and not checked and now < closes:
             raise HTTPException(503, "The feed refresh batch made no progress.")
-        result = {"status": "refreshed", "checked": len(checked),
-                  "healthy": sum(after[source_id]["available"] is True for source_id in checked),
-                  "remaining": len(remaining), "deferred": deferred}
-        if not remaining:
-            result["scheduled_at"] = next_morning
+        failures = [{"id": ident, "label": BY_ID[ident].label, "reason": after[ident].get("error") or "unknown"}
+                    for ident in sorted(checked) if after[ident]["available"] is False
+                    or (after[ident].get("retry_at") or 0) > now.timestamp()]
+        result = {"status": "refreshed" if checked else "complete", "checked": len(checked),
+                  "healthy": sum(after[ident]["available"] is True for ident in checked), "failures": failures,
+                  "remaining": len(remaining), "deferred": len(deferred)}
+        if not remaining or now >= closes or expected_slot is not None:
+            interrupted = {ident for ident in attempts if (source_ids is None or ident in source_ids)
+                           and (after.get(ident, {}).get("checked") or 0) < scheduled.timestamp()}
+            result["unconfirmed"] = sorted(interrupted)
+            if remaining:
+                result["unfinished"] = sorted(remaining)
+            result["deferrals"] = [{"id": ident, "label": BY_ID[ident].label,
+                "retry_at": datetime.fromtimestamp(deferred[ident], timezone.utc).isoformat()} for ident in sorted(deferred)]
+            result["scheduled_at"] = next_sweep
+            if remaining and now >= closes:
+                result["status"] = "closed"
         return result
-    finally:
-        store.finish_refresh(lease)
-
-
-def adaptive_refresh_job(store):
-    lease = store.claim_refresh()
-    if lease is None:
-        return {"status": "already_started"}
-    try:
-        before = store.source_state(include_archive=False)
-        due = refresh_plan(before, due_only=True)
-        if not due:
-            return {"status": "complete", "mode": "adaptive", "checked": 0, "remaining": 0}
-        refresh_sources(store, due_only=True, maximum=64, per_host=12, include_archive=False, prune=False)
-        after = store.source_state(include_archive=False)
-        changed = [source.id for source in due if after.get(source.id, {}).get("checked") !=
-                   before.get(source.id, {}).get("checked")]
-        remaining = refresh_plan(after, due_only=True)
-        if not changed:
-            raise HTTPException(503, "The feed refresh batch made no progress.")
-        cleanup = store.claim_refresh(scheduled=True, scope="archive-cleanup")
-        if cleanup is not None:
-            try:
-                store.prune()
-            finally:
-                store.finish_refresh(cleanup, cooldown=3600, scope="archive-cleanup")
-        return {"status": "refreshed", "mode": "adaptive", "checked": len(changed),
-                "healthy": sum(after[ident]["available"] is True for ident in changed), "remaining": len(remaining)}
     finally:
         store.finish_refresh(lease)
 
@@ -832,17 +861,8 @@ def refresh_admin(batch: SourceRefresh | None = None, source: str | None = None,
         raise HTTPException(404, "Unknown source.")
     if source and batch:
         raise HTTPException(422, "Choose one source or a source batch.")
-    store = source_store()
-    if not store.admit([("admin-refresh", str(int(time.time()) // 60), 4 if batch else 1)]):
-        raise HTTPException(429, "Wait a minute before refreshing again.")
-    lease = store.claim_refresh()
-    if lease is None:
-        raise HTTPException(429, "A feed refresh is already running.")
-    try:
-        return {"sources": refresh_sources(store, source, source_ids=set(batch.source_ids) if batch else None,
-                                           maximum=128 if source is None and batch is None else None)}
-    finally:
-        store.finish_refresh(lease)
+    selected = {source} if source else set(batch.source_ids) if batch else None
+    return {**run_sweep(source=source, source_ids=selected, owner=True), "sources": source_catalog(source_store())}
 
 
 @app.get("/api/news")

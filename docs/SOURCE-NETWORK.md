@@ -69,23 +69,17 @@ Core sources remain in `app/sources.py`. New reviewed entries live in
 duplicate IDs/endpoints, non-public URLs, unsupported formats/types and invalid
 polling configuration. Pack entries do not create arbitrary public URL fetching.
 
-Scheduled adaptive refreshes select due sources by oldest deadline. Each batch
-is capped at 64 sources and twelve per host, with two concurrent fetches per
-host and fourteen overall. Two batches can run per five-minute GitHub tick.
-Readers reload the archive without contacting publishers. The existing database
-lease serializes refresh jobs across instances; retention cleanup runs at most hourly.
-Per-source intervals, conditional RSS requests and Retry-After/backoff reduce
-unnecessary requests. Five-minute job scheduling is a target, not a timing SLA.
-More than one job may be needed to drain a backlog. Source health remains public.
+Vercel Schedules runs publisher sweeps at 08:00 and 20:00 IST, with a
+45-minute window. The worker checks up to two feeds concurrently per host
+and fourteen overall. Manual recovery batches check up to 64 sources and twelve
+feeds per host. A shared lease prevents overlaps and each source can be claimed once
+in each sweep. Conditional RSS requests and publisher backoff reduce traffic.
+Readers reload the archive without contacting publishers.
 
-`FEED_REFRESH_MODE=daily` retains the optional 08:00 India-time sweep; adaptive
-refresh is the default. This setting does not change subscriber delivery times.
-
-Typical configured intervals are five minutes for advisories/status, ten to
-fifteen minutes for reporting, thirty minutes for technical blogs, one hour for
-releases/newsletters/podcasts, and longer for journals or infrequent blogs.
-Freshness tolerances account for the declared cadence. Directory rows show the
-interval, last check, retry and retained-content state.
+The catalog's cadence values prioritize checks within a sweep. Directory rows
+show the public schedule, last check, retry and retained-content state. The
+public ingestion report tracks sweep progress, deferred checks and outstanding
+claims. Subscriber delivery times are set separately.
 
 `brief_feed_checks` stores bounded operational history for seven days: source,
 check time, availability, item count, unchanged state, latency and error code.
@@ -130,15 +124,16 @@ Promotion validates an atomic merged file and preserves existing entries. It
 does not enable failed candidates. For an existing-pack endpoint audit, add
 `--recheck-existing`. Use normal tests and release review before deploying.
 
-The weekly `source-review.yml` workflow checks the reviewed seed pages and the
-addition pack, retaining JSON evidence as a 30-day Actions artifact. It never
-enables a discovered URL automatically. Publisher identity, permitted usage,
-content relevance and article hosts still require review. Runtime checks and
-seven-day health history continue between these weekly catalog audits.
+The manually dispatched `source-review.yml` workflow checks reviewed seed pages
+and new additions and retains JSON evidence as a 30-day Actions artifact.
+Publisher identity, permitted usage, content relevance and article hosts
+require review before enabling a discovered URL. The scheduled sweeps maintain
+the seven-day health history for existing sources.
 
 Existing owner-authenticated source pause/resume remains available. Owner
 refresh also accepts `{"source_ids":["reviewed-id"]}` batches of up to 12 IDs for
-bootstrap/recovery; it enforces the global lease and never accepts URLs.
+bootstrap or recovery during an open sweep. It uses the same lease and publisher
+claims as the scheduler and accepts only catalog IDs.
 
 ## Public tools and verification
 

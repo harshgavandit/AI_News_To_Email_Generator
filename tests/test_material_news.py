@@ -168,7 +168,7 @@ def test_refresh_urgency_preserves_old_source_fairness_and_backoff(monkeypatch):
     state = {fast.id: {"checked": now - 3600}, slow.id: {"checked": now - 7200}, oldest.id: {"checked": now - 100000}}
     assert ingestion.refresh_plan(state, maximum=2, now=now) == [oldest, fast]
     state[fast.id]["retry_at"] = now + 600
-    assert fast not in ingestion.refresh_plan(state, due_only=True, now=now)
+    assert fast not in ingestion.refresh_plan(state, now=now)
 
 
 def test_public_monitor_distinguishes_stalled_ingestion_and_sampled_coverage(tmp_path, monkeypatch):

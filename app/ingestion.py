@@ -1,53 +1,54 @@
 """Scheduled and admin-triggered refresh; browsing never waits on it with a store."""
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import UTC, datetime, timedelta, timezone
 from collections import Counter, defaultdict
+import logging
 import threading
 import time
-import os
 from urllib.parse import urlsplit
 
 from app.coverage import region_id
 from app.news import FEED_WORKERS, read_feed
 from app.sources import DEFAULT_SOURCES
 
-FRESH_FOR = timedelta(minutes=45)
 INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
-DAILY_REFRESH_GRACE = timedelta(minutes=45)
-HOST_GATES = defaultdict(lambda: threading.Semaphore(2))
+SWEEP_INTERVAL = timedelta(hours=12)
+SWEEP_WINDOW = timedelta(minutes=45)
+HOST_WORKERS = 2
+HOST_GATES = defaultdict(lambda: threading.Semaphore(HOST_WORKERS))
+logger = logging.getLogger(__name__)
 
 
-def refresh_mode():
-    return "daily" if os.getenv("FEED_REFRESH_MODE", "").casefold() == "daily" else "adaptive"
-
-
-def morning_refresh_at(now):
-    return now.astimezone(INDIA_TIME).replace(hour=8, minute=0, second=0, microsecond=0).astimezone(UTC)
+def latest_sweep(now):
+    local = now.astimezone(INDIA_TIME)
+    scheduled = local.replace(hour=20 if local.hour >= 20 else 8, minute=0, second=0, microsecond=0).astimezone(UTC)
+    return scheduled if now >= scheduled else scheduled - SWEEP_INTERVAL
 
 
 def source_enabled(source, state):
     return source.enabled and state.get("enabled", True)
 
 
-def daily_refresh_plan(state, morning, now):
-    """One scheduled check per enabled source per India calendar day."""
-    pending = {source.id for source in DEFAULT_SOURCES
+def sweep_plan(state, scheduled, now, *, attempts=(), source_ids=None, host_backoffs=None):
+    """One scheduled check per enabled source in each 08:00 and 20:00 IST sweep."""
+    host_backoffs = host_backoffs or {}
+    pending = {source.id: max(state.get(source.id, {}).get("retry_at") or 0, host_backoffs.get(feed_host(source), 0))
+               for source in DEFAULT_SOURCES
                if source_enabled(source, state.get(source.id, {}))
-               and (state.get(source.id, {}).get("checked") or 0) < morning.timestamp()}
-    ready = {source_id for source_id in pending
-             if (state.get(source_id, {}).get("retry_at") or 0) <= now.timestamp()}
-    return ready, len(pending - ready)
+               and source.id not in attempts
+               and (source_ids is None or source.id in source_ids)
+               and (state.get(source.id, {}).get("checked") or 0) < scheduled.timestamp()}
+    deferred = {ident: retry for ident, retry in pending.items() if retry > now.timestamp()}
+    return pending.keys() - deferred.keys(), deferred
 
 
-def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=None, now=None, per_host=6):
+def refresh_plan(state, *, only=None, source_ids=None, maximum=None, now=None, per_host=12):
     now = now or datetime.now(UTC).timestamp()
     candidates = [source for source in DEFAULT_SOURCES if (only is None or source.id == only)
         and source_enabled(source, state.get(source.id, {}))
         and (state.get(source.id, {}).get("retry_at") or 0) <= now
-        and (source_ids is None or source.id in source_ids)
-        and (not due_only or state.get(source.id, {}).get("available") is False
-             or (state.get(source.id, {}).get("checked") or 0) + source.poll_minutes * 60 <= now)]
-    # Normalize by cadence so fast news does not wait behind quiet weekly blogs.
+        and (source_ids is None or source.id in source_ids)]
+    # Use legacy cadence as a priority weight within each sweep.
     candidates.sort(key=lambda source: (-(now - (state.get(source.id, {}).get("checked") or 0)) /
                                        (source.poll_minutes * 60), source.id))
     if maximum is None:
@@ -59,7 +60,7 @@ def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=N
     for source in ordered:
         if source.id in seen:
             continue
-        host = urlsplit(source.url).hostname.removeprefix("www.")
+        host = feed_host(source)
         if hosts[host] >= per_host:
             continue
         selected.append(source)
@@ -70,56 +71,100 @@ def refresh_plan(state, *, only=None, source_ids=None, due_only=False, maximum=N
     return selected
 
 
-def timed_read(source, **kwargs):
+def feed_host(source):
+    return urlsplit(source.url).hostname.removeprefix("www.")
+
+
+def timed_read(source, *, claim=None, **kwargs):
     started = time.monotonic()
-    with HOST_GATES[urlsplit(source.url).hostname.removeprefix("www.")]:
-        items, status = read_feed(source, **kwargs)
+    with HOST_GATES[feed_host(source)]:
+        if claim is not None and not claim(source.id):
+            return None
+        try:
+            items, status = read_feed(source, **kwargs)
+        except Exception as error:
+            # Exception text can contain signed URLs. Retain only its type.
+            logger.warning("publisher_parser_error source_id=%s error_type=%s", source.id, type(error).__name__)
+            items, status = [], {"available": False, "error": "parser_failed"}
     return items, dict(status, duration_ms=round((time.monotonic() - started) * 1000))
 
 
-def refresh_sources(store, only=None, *, source_ids=None, due_only=False, maximum=None, include_archive=True, per_host=6, prune=True):
+def refresh_sources(store, only=None, *, source_ids=None, maximum=None, scheduled=None, deadline=None):
     state = store.source_state(include_archive=False)
     now = datetime.now(UTC).timestamp()
-    active = refresh_plan(state, only=only, source_ids=source_ids, due_only=due_only, maximum=maximum, now=now,
-                          per_host=per_host)
+    active = refresh_plan(state, only=only, source_ids=source_ids, maximum=maximum, now=now)
     validators = store.current_feed_validators() if any(feed.integration == "rss" for feed in active) else {}
+    host_backoffs = store.feed_host_backoffs(now) if scheduled is not None else {}
+
+    def claim(source_id):
+        return (scheduled <= datetime.now(UTC) < scheduled + SWEEP_WINDOW
+                and (deadline is None or time.monotonic() < deadline)
+                and store.claim_feed_check(source_id, scheduled.isoformat(timespec="minutes")))
+
     with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
-        futures = {}
-        for source in active:
-            saved = validators.get(source.id, {})
-            if source.integration == "publisher-metadata":
-                future = pool.submit(timed_read, source, known_urls=store.source_article_urls(source.id))
-            elif source.integration == "rss":
-                # A targeted owner refresh requests a complete snapshot for recovery.
-                cached = saved if only is None and saved.get("feed_url") == source.url else {}
-                future = pool.submit(timed_read, source, validators=cached)
-            else:
-                future = pool.submit(timed_read, source)
-            futures[future] = source
-        for future in as_completed(futures):
-            try:
-                items, status = future.result()
-            except Exception:
-                # A malformed feed must not stop the other publishers from updating.
-                items, status = [], {"available": False, "error": "parser_failed"}
-            source = futures[future]
-            store.ingest(source.id, items, status["available"], status.get("error"),
-                         feed_url=source.url if source.integration == "rss" else None,
-                         validators=status.get("validators"), unchanged=status.get("unchanged", False),
-                         retry_after=status.get("retry_after", 0),
-                         duration_ms=status.get("duration_ms"),
-                         diagnostics=({"observed": status["observed_entries"], "rejected": status["rejected_entries"]}
-                             if "observed_entries" in status else None))
-    if prune and only is None and source_ids is None:
+        futures, hosts = {}, Counter()
+        pending = [(source, feed_host(source)) for source in active]
+        while pending or futures:
+            # Keep a congested publisher from tying up all workers for unrelated hosts.
+            if deadline is not None and time.monotonic() >= deadline:
+                pending.clear()
+            while pending and len(futures) < FEED_WORKERS:
+                index = next((i for i, (_, host) in enumerate(pending) if hosts[host] < HOST_WORKERS), None)
+                if index is None:
+                    break
+                source, host = pending.pop(index)
+                if host_backoffs.get(host, 0) > time.time():
+                    continue
+                saved = validators.get(source.id, {})
+                options = {"claim": claim} if scheduled is not None else {}
+                if source.integration == "publisher-metadata":
+                    options["known_urls"] = store.source_article_urls(source.id)
+                elif source.integration == "rss":
+                    options["validators"] = saved if only is None and saved.get("feed_url") == source.url else {}
+                futures[pool.submit(timed_read, source, **options)] = (source, host)
+                hosts[host] += 1
+            done, _ = wait(futures, return_when=FIRST_COMPLETED)
+            for future in done:
+                source, host = futures.pop(future)
+                hosts[host] -= 1
+                result = future.result()
+                if result is not None:
+                    record_check(store, source, *result)
+                    status = result[1]
+                    limited = status.get("rate_limit_host")
+                    if scheduled is not None and limited and len(limited) <= 140:
+                        until = time.time() + max(900, status.get("retry_after", 0))
+                        if until > host_backoffs.get(limited, 0):
+                            store.defer_feed_host(limited, until)
+                            host_backoffs[limited] = until
+
+    if scheduled is not None:
+        return
+    if only is None and source_ids is None:
         store.prune()
-    return source_catalog(store, include_archive=include_archive)
+    return source_catalog(store)
+
+
+def record_check(store, source, items, status):
+    if not status["available"] or status.get("retry_after") or status.get("error") == "rate_limited":
+        logger.warning("publisher_check_%s source_id=%s publisher=%r reason=%s duration_ms=%s retry_after_seconds=%s",
+                       "partial" if status["available"] else "failed", source.id, source.label, status.get("error") or "unknown",
+                       status.get("duration_ms"), status.get("retry_after", 0))
+    store.ingest(source.id, items, status["available"], status.get("error"),
+                 feed_url=source.url if source.integration == "rss" else None,
+                 validators=status.get("validators"), unchanged=status.get("unchanged", False),
+                 retry_after=status.get("retry_after", 0),
+                 duration_ms=status.get("duration_ms"),
+                 diagnostics=({"observed": status["observed_entries"], "rejected": status["rejected_entries"]}
+                     if "observed_entries" in status else None))
 
 
 def source_catalog(store=None, *, include_archive=True):
     states = store.source_state(include_archive=include_archive) if store else {}
     now = datetime.now(UTC)
-    morning = morning_refresh_at(now)
-    cutoff = (now - FRESH_FOR).isoformat()
+    scheduled = latest_sweep(now)
+    attempts = store.feed_attempts(scheduled.isoformat(timespec="minutes")) if store else set()
+    host_backoffs = store.feed_host_backoffs(now.timestamp()) if store else {}
     result = []
     for s in DEFAULT_SOURCES:
         state = states.get(s.id, {})
@@ -128,30 +173,26 @@ def source_catalog(store=None, *, include_archive=True):
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
         feed["retained_count"] = state.get("retained_count", 0)
-        mode = refresh_mode()
-        feed.update(refresh_policy=mode, refresh_minutes=1440 if mode == "daily" else s.poll_minutes)
-        retry = state.get("retry_at") or 0
-        if mode == "daily":
-            next_check = morning
-            if (state.get("checked") or 0) >= morning.timestamp():
-                next_check += timedelta(days=1)
-            if retry > next_check.timestamp():
-                retry_time = datetime.fromtimestamp(retry, UTC)
-                next_check = morning_refresh_at(retry_time)
-                if next_check < retry_time:
-                    next_check += timedelta(days=1)
-        else:
-            due = (state.get("checked") or 0) + s.poll_minutes * 60
-            next_check = datetime.fromtimestamp(max(now.timestamp(), due, retry), UTC)
+        feed.update(refresh_policy="twice_daily", refresh_minutes=720)
+        retry = max(state.get("retry_at") or 0, host_backoffs.get(feed_host(s), 0))
+        next_check = scheduled
+        if (now >= scheduled + SWEEP_WINDOW or s.id in attempts
+                or (state.get("checked") or 0) >= scheduled.timestamp()):
+            next_check += SWEEP_INTERVAL
+        if retry > next_check.timestamp():
+            retry_time = datetime.fromtimestamp(retry, UTC)
+            next_check = latest_sweep(retry_time)
+            if next_check < retry_time:
+                next_check += SWEEP_INTERVAL
         feed["next_check_at"] = next_check.isoformat() if feed["enabled"] else None
         latest = feed["latest_published_at"]
         feed["content_status"] = ("no_retained_content" if not latest else
             "quiet" if latest < (now - timedelta(days=30)).isoformat() else "recent")
         if state.get("error"):
             feed["error"] = state["error"]
-        if feed["enabled"] and (state.get("retry_at") or 0) > now.timestamp():
-            feed["retry_at"] = timestamp(state["retry_at"])
-        feed["freshness"] = (source_freshness(feed, cutoff) if feed["enabled"] else "paused")
+        if feed["enabled"] and retry > now.timestamp():
+            feed["retry_at"] = timestamp(retry)
+        feed["freshness"] = (source_freshness(feed, now) if feed["enabled"] else "paused")
         result.append(feed)
     return result
 
@@ -160,19 +201,12 @@ def timestamp(value):
     return datetime.fromtimestamp(value, UTC).isoformat() if value else None
 
 
-def source_freshness(feed, cutoff):
+def source_freshness(feed, now):
     if feed["available"] is False:
         return "failed"
     if not feed.get("last_success"):
         return "pending"
-    if feed.get("refresh_policy") == "daily":
-        adjusted_now = datetime.fromisoformat(cutoff) + FRESH_FOR - DAILY_REFRESH_GRACE
-        deadline = morning_refresh_at(adjusted_now)
-        if deadline > adjusted_now:
-            deadline -= timedelta(days=1)
-    else:
-        tolerance = max(45, feed.get("refresh_minutes", 5) * 2)
-        deadline = datetime.fromisoformat(cutoff) - timedelta(minutes=tolerance - 45)
+    deadline = latest_sweep(now - SWEEP_WINDOW)
     return "stale" if datetime.fromisoformat(feed["last_success"]) < deadline else "fresh"
 
 
@@ -186,10 +220,10 @@ def selected_feeds(catalog, *, source="all", publisher="", kind="all", region=""
 
 def feed_freshness(catalog, **filters):
     active = selected_feeds(catalog, **filters)
-    cutoff = (datetime.now(UTC) - FRESH_FOR).isoformat()
+    now = datetime.now(UTC)
     counts = dict(enabled=len(active), fresh=0, stale=0, failed=0, pending=0)
     for feed in active:
-        counts[source_freshness(feed, cutoff)] += 1
+        counts[source_freshness(feed, now)] += 1
 
     if counts["fresh"]:
         status = "fresh" if counts["fresh"] == len(active) else "degraded"
@@ -205,21 +239,28 @@ def feed_freshness(catalog, **filters):
 def ingestion_health(store, catalog=None):
     """Expose scheduler progress and source-specific deadlines without masking a backlog."""
     catalog = catalog if catalog is not None else source_catalog(store, include_archive=False)
-    now = datetime.now(UTC).timestamp()
+    now = datetime.now(UTC)
     state = store.source_state(include_archive=False)
     active = [feed for feed in catalog if feed["enabled"]]
-    due = refresh_plan(state, due_only=True, now=now)
+    scheduled = latest_sweep(now)
+    attempts = store.feed_attempts(scheduled.isoformat(timespec="minutes"))
+    due, deferred = sweep_plan(state, scheduled, now, attempts=attempts, host_backoffs=store.feed_host_backoffs(now.timestamp()))
+    unconfirmed = {feed["id"] for feed in active if feed["id"] in attempts
+                   and (state.get(feed["id"], {}).get("checked") or 0) < scheduled.timestamp()}
     last_check = max((state.get(feed["id"], {}).get("checked") or 0 for feed in active), default=0)
-    lag = sorted(max(0, now - state[feed["id"]]["checked"] - feed["refresh_minutes"] * 60)
+    expected = latest_sweep(now - SWEEP_WINDOW).timestamp()
+    lag = sorted(max(0, expected - state[feed["id"]]["checked"])
                  for feed in active if state.get(feed["id"], {}).get("checked"))
-    critical = [feed for feed in active if feed["refresh_minutes"] <= 15]
+    priority = {source.id for source in DEFAULT_SOURCES if source.poll_minutes <= 15}
+    critical = [feed for feed in active if feed["id"] in priority]
     overdue_critical = [feed for feed in critical if
-        (state.get(feed["id"], {}).get("checked") or 0) + feed["refresh_minutes"] * 60 < now]
-    stalled = not last_check or now - last_check > 20 * 60
-    return {"status": "stalled" if stalled else "backlogged" if len(overdue_critical) > len(critical) / 2 else "running",
-            "last_check_at": timestamp(last_check), "seconds_since_check": round(now - last_check) if last_check else None,
-            "due_sources": len(due), "deferred_sources": sum(bool(feed.get("retry_at")) for feed in active),
+        (state.get(feed["id"], {}).get("checked") or 0) < expected]
+    closed = now >= scheduled + SWEEP_WINDOW
+    return {"status": "stalled" if active and last_check < expected else
+                      "backlogged" if closed and (due or unconfirmed) else "running",
+            "last_check_at": timestamp(last_check), "seconds_since_check": round(now.timestamp() - last_check) if last_check else None,
+            "due_sources": len(due), "deferred_sources": len(deferred), "unconfirmed_sources": len(unconfirmed),
             "pending_sources": sum(not state.get(feed["id"], {}).get("checked") for feed in active),
             "priority_sources": len(critical), "priority_sources_overdue": len(overdue_critical),
             "p95_overdue_seconds": round(lag[min(len(lag) - 1, int(len(lag) * .95))]) if lag else 0,
-            "notice": "Cadences are targets. Publisher availability and scheduler starts determine observed latency."}
+            "notice": "Publisher checks are scheduled at 08:00 and 20:00 IST. Each sweep has a 45-minute window."}

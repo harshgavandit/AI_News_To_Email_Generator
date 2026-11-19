@@ -93,9 +93,10 @@ def test_scheduler_uses_a_scoped_secret_and_rejects_a_batch_without_progress(arc
     _, client = archive
     monkeypatch.delenv("CRON_SECRET", raising=False)
     monkeypatch.setenv("FEED_REFRESH_SECRET", "dedicated-test-refresh-secret")
-    monkeypatch.setattr(server, "morning_refresh_at", lambda now: now - timedelta(hours=1))
-    monkeypatch.setattr(server, "refresh_sources", lambda store, **kwargs: [{"enabled": True, "available": False}])
-    assert client.get("/api/jobs/refresh").status_code == 401
+    monkeypatch.setattr(server, "latest_sweep", lambda now: now - timedelta(minutes=1))
+    monkeypatch.setattr(server, "refresh_sources", lambda *args, **kwargs: None)
+    path = "/api/jobs/refresh?run=scheduled"
+    assert client.get(path).status_code == 401
     headers = {"Authorization": "Bearer dedicated-test-refresh-secret"}
     assert client.post("/api/admin/sources", headers=headers).status_code == 401
-    assert client.get("/api/jobs/refresh", headers=headers).status_code == 503
+    assert client.get(path, headers=headers).status_code == 503

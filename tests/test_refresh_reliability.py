@@ -1,4 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
+from pathlib import Path
 from datetime import UTC, datetime, timedelta
 from threading import Barrier
 from types import SimpleNamespace
@@ -7,8 +9,16 @@ import pytest
 import httpx
 from fastapi.testclient import TestClient
 
-from app import ingestion, launch_store, news, server
+from app import discovery, discovery_health, ingestion, launch_store, news, server
 from app.sources import BY_ID
+
+SWEEP = "/api/jobs/refresh?run=scheduled"
+JOB_HEADERS = {"Authorization": "Bearer scoped-refresh-for-tests"}
+OWNER_HEADERS = {"Authorization": "Bearer owner-key-for-tests"}
+VERCEL_HEADERS = {"Authorization": "Bearer cron-secret-for-tests"}
+VERCEL_SWEEP = "/api/jobs/feed-sweep"
+MORNING = datetime(2026, 11, 17, 2, 30, tzinfo=UTC)
+EVENING = MORNING + timedelta(hours=12)
 
 
 def test_direct_feed_rate_limits_preserve_previous_records(monkeypatch):
@@ -38,10 +48,11 @@ def test_direct_feed_rate_limits_preserve_previous_records(monkeypatch):
 
 @pytest.fixture
 def archive(tmp_path, monkeypatch):
-    monkeypatch.setenv("FEED_REFRESH_MODE", "daily")
     store = launch_store.connect(f"sqlite:///{tmp_path / 'refresh.db'}")
     monkeypatch.setattr(server, "get_store", lambda: store)
+    monkeypatch.setattr(discovery_health, "get_store", lambda: store)
     monkeypatch.setenv("FEED_REFRESH_SECRET", "scoped-refresh-for-tests")
+    monkeypatch.setenv("CRON_SECRET", "cron-secret-for-tests")
     monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests")
     return store, TestClient(server.app)
 
@@ -78,7 +89,7 @@ def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch
         leases = list(pool.map(claim, (store, second_worker)))
     lease, = (value for value in leases if value is not None)
     monkeypatch.setattr(server, "refresh_sources", lambda *_: pytest.fail("An active refresh already holds the lease"))
-    assert client.get("/api/jobs/refresh", headers={"Authorization": "Bearer scoped-refresh-for-tests"}).json()["status"] == "already_started"
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "already_started"
     assert client.post("/api/admin/refresh", headers={"Authorization": "Bearer owner-key-for-tests"}).status_code == 429
 
     monkeypatch.setattr(launch_store.time, "time", lambda: lease + 1)
@@ -88,7 +99,7 @@ def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch
     assert store.claim_refresh() is None
 
 
-def test_failed_daily_check_preserves_snapshot_until_a_targeted_retry(archive, monkeypatch, daily_clock):
+def test_failed_check_is_logged_and_keeps_snapshot_until_evening(archive, monkeypatch, daily_clock, caplog):
     store, client = archive
     daily_clock(datetime(2026, 11, 16, 3, tzinfo=UTC))
     store.ingest("bbc-tech", [], True)
@@ -102,14 +113,18 @@ def test_failed_daily_check_preserves_snapshot_until_a_targeted_retry(archive, m
         return [], {"available": available, "error": error}
 
     monkeypatch.setattr(ingestion, "read_feed", fetch)
-    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
-    result = client.get("/api/jobs/refresh", headers=headers).json()
+    result = client.get(SWEEP, headers=JOB_HEADERS).json()
     assert (result["checked"], result["healthy"], result["remaining"]) == (1, 0, 0)
+    assert result["failures"] == [{"id": "bbc-tech", "label": BY_ID["bbc-tech"].label, "reason": "fetch_failed"}]
+    assert "publisher_check_failed source_id=bbc-tech" in caplog.text
     assert store.source_state()["bbc-tech"]["last_success"] == previous
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
-    owner = {"Authorization": "Bearer owner-key-for-tests"}
-    response = client.post("/api/admin/refresh?source=bbc-tech", headers=owner)
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
+    response = client.post("/api/admin/refresh?source=bbc-tech", headers=OWNER_HEADERS)
+    assert response.json()["sources"][0]["available"] is False
+    daily_clock(EVENING)
+    response = client.post("/api/admin/refresh?source=bbc-tech", headers=OWNER_HEADERS)
     assert response.json()["sources"][0]["available"] is True
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["checked"] == 0
 
 
 def test_publisher_freshness_is_separate_from_overall_archive_health(archive, daily_clock):
@@ -198,19 +213,22 @@ def test_conditional_refresh_preserves_articles_through_not_modified_and_outage(
         state = store.source_state()[source.id]
         assert state["available"] == expected_available and state["count"] == 1 and state["retained_count"] == 1
         assert store.current_feed_validators()[source.id]["resource_url"] == target
+        assert store.current_feed_validators()[source.id]["expires"] > datetime.now(UTC).timestamp() + 12 * 3600
     ingestion.refresh_sources(store, only=source.id)
     assert requests == [(source.url, None), (target, None), (source.url, None), (target, 'W/"rss-v1"'),
                         (source.url, None), (target, 'W/"rss-v1"'), (source.url, None), (target, None)]
     assert store.source_state()[source.id]["available"] is True
 
 
-def test_region_reload_reads_archive_and_only_owner_can_refresh_a_source(archive, monkeypatch):
+def test_region_reload_reads_archive_and_only_owner_can_refresh_a_source(archive, monkeypatch, daily_clock):
     store, client = archive
     ids = {"tech-in-asia", "sifted", "bbc-tech"}
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id in ids))
+    daily_clock(MORNING - timedelta(hours=12))
     store.ingest("bbc-tech", [], True)
     store.ingest("sifted", [], False, "fetch_failed")
     store.ingest("tech-in-asia", [], False, "fetch_failed")
+    daily_clock(MORNING)
     refreshed = []
 
     def fetch(source, **kwargs):
@@ -243,12 +261,14 @@ def test_reader_cannot_start_a_publisher_fetch_even_on_an_empty_archive(archive,
     assert client.get("/api/news?hours=12&force=true").json()["articles"] == []
 
 
-def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch):
+def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch, daily_clock):
     store, client = archive
-    now = datetime.now(UTC)
+    now = MORNING
+    monkeypatch.setattr(discovery, "datetime", ingestion.datetime)
+    monkeypatch.setattr(launch_store, "datetime", ingestion.datetime)
     source = next(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech")
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
-    monkeypatch.setattr(launch_store.time, "time", lambda: (now - timedelta(minutes=16)).timestamp())
+    daily_clock(now - timedelta(minutes=16))
 
     def story(ident, age):
         return {"id": ident, "title": f"Story {ident}", "description": "Story details.",
@@ -258,7 +278,7 @@ def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch
     recent = story("recent", timedelta(hours=11, minutes=59))
     older = story("older", timedelta(hours=12, minutes=1))
     store.ingest(source.id, [older, recent], True)
-    monkeypatch.setattr(launch_store.time, "time", now.timestamp)
+    daily_clock(now)
     newest = story("newest", timedelta(minutes=5))
     fetched = []
 
@@ -280,11 +300,9 @@ def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch
     assert {row["digest_id"] for row in preview["digest"]["articles"]} == {"newest", "recent"}
 
 
-def test_morning_sweep_drains_host_limited_batches_once_at_eight(archive, monkeypatch, daily_clock):
+def test_sweeps_check_the_full_catalog_once_each_and_respect_boundaries(archive, monkeypatch, daily_clock):
     _, client = archive
-    github = tuple(source for source in ingestion.DEFAULT_SOURCES if source.group == "github-releases")[:8]
-    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", github)
-    assert len(github) == 8
+    sources = {source.id for source in ingestion.DEFAULT_SOURCES if source.enabled}
     attempts = []
 
     def fetch(source, **kwargs):
@@ -292,64 +310,55 @@ def test_morning_sweep_drains_host_limited_batches_once_at_eight(archive, monkey
         return [], {"available": True}
 
     monkeypatch.setattr(ingestion, "read_feed", fetch)
-    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
-    morning = datetime(2026, 11, 17, 2, 30, tzinfo=UTC)
-    daily_clock(morning - timedelta(seconds=1))
-    assert client.get("/api/jobs/refresh", headers=headers).json() == {"status": "waiting", "scheduled_at": morning.isoformat()}
-    assert not attempts
-    daily_clock(morning)
-    first = client.get("/api/jobs/refresh", headers=headers).json()
-    assert (first["checked"], first["remaining"]) == (6, 2)
-    second = client.get("/api/jobs/refresh", headers=headers).json()
-    assert (second["checked"], second["remaining"]) == (2, 0)
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
-    assert len(attempts) == len(set(attempts)) == 8
-
-    daily_clock(morning + timedelta(hours=23))
-    assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 8
-    daily_clock(morning + timedelta(days=1, minutes=46))
-    assert client.get("/api/ready").json()["freshness"]["counts"]["stale"] == 8
-
-
-def test_adaptive_refresh_runs_before_morning_and_drains_bounded_batches(archive, monkeypatch, daily_clock):
-    store, client = archive
     monkeypatch.setenv("FEED_REFRESH_MODE", "adaptive")
-    daily_clock(datetime(2026, 11, 17, 1, tzinfo=UTC))
-    sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:70]
-    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
-    attempts, cleanups = [], []
-    monkeypatch.setattr(store, "prune", lambda: cleanups.append(True))
+    for scheduled in (MORNING, EVENING):
+        attempts.clear()
+        daily_clock(scheduled - timedelta(seconds=1))
+        assert client.get(SWEEP, headers=JOB_HEADERS).json() == {"status": "closed", "scheduled_at": scheduled.isoformat()}
+        assert client.post("/api/admin/refresh?source=bbc-tech", headers=OWNER_HEADERS).json()["status"] == "closed"
+        daily_clock(scheduled)
+        headers = {**VERCEL_HEADERS, "ce-vssscheduledat": scheduled.isoformat()}
+        assert client.post(VERCEL_SWEEP, headers={**headers, **JOB_HEADERS}).status_code == 401
+        late = {**headers, "ce-vssscheduledat": (scheduled - timedelta(hours=12)).isoformat()}
+        assert client.post(VERCEL_SWEEP, headers=late).status_code == 503
+        for path in ("/api/jobs/refresh", "/api/jobs/refresh?fallback=02"):
+            assert client.get(path, headers=JOB_HEADERS).json() == {"status": "inactive"}
+        assert not attempts
+        response = client.post(VERCEL_SWEEP, headers=headers)
+        assert response.status_code == 200
+        result = response.json()
+        assert result["remaining"] == 0
+        assert not result["unconfirmed"]
+        assert result["checked"] == len(sources)
+        assert client.post(VERCEL_SWEEP, headers=headers).json()["status"] == "complete"
+        assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
+        assert len(attempts) == len(sources) and set(attempts) == sources
+        daily_clock(scheduled + timedelta(minutes=45))
+        assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "closed"
+        assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == len(sources)
+        assert client.get("/api/discovery/ingestion").json()["status"] == "running"
 
-    def fetch(source, **kwargs):
-        attempts.append(source.id)
-        return [], {"available": True}
 
-    monkeypatch.setattr(ingestion, "read_feed", fetch)
-    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
-    first = client.get("/api/jobs/refresh", headers=headers).json()
-    assert first["mode"] == "adaptive" and first["checked"] <= 64 and first["remaining"] > 0
-    for _ in range(4):
-        result = client.get("/api/jobs/refresh", headers=headers).json()
-        if result["remaining"] == 0:
-            break
-    assert result["remaining"] == 0
-    assert len(attempts) == len(set(attempts)) == 70
-    assert len(cleanups) == 1
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
-    feeds = ingestion.source_catalog(store)
-    assert all(feed["refresh_policy"] == "adaptive" for feed in feeds)
-    assert {feed["refresh_minutes"] for feed in feeds} != {1440}
-    assert all(feed["checked_at"] < feed["next_check_at"] for feed in feeds)
+def test_only_the_vercel_schedule_starts_publisher_sweeps():
+    root = Path(__file__).resolve().parents[1]
+    config = json.loads((root / "vercel.json").read_text(encoding="utf-8"))
+    assert config["schedules"] == {"publisher-feed-sweep": {
+        "schedule": "0 8,20 * * *", "timezone": "Asia/Kolkata",
+        "path": VERCEL_SWEEP, "requestMethod": "POST",
+    }}
+    assert all(item["path"].startswith("/api/jobs/intelligence") for item in config["crons"])
+    workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
+    assert "if: github.event_name == 'workflow_dispatch'" in refresh_job
+    assert "--retry" not in refresh_job
 
 
-def test_adaptive_refresh_respects_per_source_cadence_and_retry_after(archive, monkeypatch, daily_clock):
+def test_publisher_backoff_skips_evening_and_recovers_the_next_morning(archive, monkeypatch, daily_clock):
     store, client = archive
-    monkeypatch.delenv("FEED_REFRESH_MODE", raising=False)
     source = BY_ID["bbc-tech"]
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
-    moment = datetime(2026, 11, 17, 1, tzinfo=UTC)
-    daily_clock(moment)
-    replies = iter([(True, None, 0), (False, "rate_limited", 3600), (True, None, 0)])
+    daily_clock(MORNING)
+    replies = iter([(False, "rate_limited", 13 * 3600), (True, None, 0)])
     calls = []
 
     def fetch(feed, **kwargs):
@@ -358,14 +367,62 @@ def test_adaptive_refresh_respects_per_source_cadence_and_retry_after(archive, m
         return [], {"available": available, "error": error, "retry_after": retry}
 
     monkeypatch.setattr(ingestion, "read_feed", fetch)
-    headers = {"Authorization": "Bearer scoped-refresh-for-tests"}
-    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 1
-    daily_clock(moment + timedelta(minutes=source.poll_minutes - 1))
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
-    daily_clock(moment + timedelta(minutes=source.poll_minutes))
-    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 0
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["healthy"] == 0
+    daily_clock(EVENING)
+    result = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert result["checked"] == 0 and result["deferred"] == 1
+    assert result["deferrals"][0]["retry_at"] == (MORNING + timedelta(hours=13)).isoformat()
+    assert len(calls) == 1
+    daily_clock(MORNING + timedelta(days=1))
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["healthy"] == 1
     assert len(calls) == 2
-    assert client.get("/api/jobs/refresh", headers=headers).json()["status"] == "complete"
-    daily_clock(moment + timedelta(minutes=source.poll_minutes + 61))
-    assert client.get("/api/jobs/refresh", headers=headers).json()["healthy"] == 1
-    assert len(calls) == 3
+
+
+def test_interrupted_claim_survives_restart_and_recovers_in_the_next_sweep(archive, monkeypatch, daily_clock):
+    store, client = archive
+    source = BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (source,))
+    morning = MORNING.isoformat(timespec="minutes")
+    daily_clock(MORNING)
+    assert store.claim_feed_check(source.id, morning)
+    restarted = launch_store.Store(str(store.engine.url))
+    monkeypatch.setattr(server, "get_store", lambda: restarted)
+    assert not restarted.claim_feed_check(source.id, morning)
+    fetched = []
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: (fetched.append(feed.id) or [], {"available": True}))
+    result = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert result["checked"] == 0 and result["unconfirmed"] == [source.id]
+    assert not fetched
+    daily_clock(EVENING)
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["healthy"] == 1
+    assert fetched == [source.id]
+
+
+def test_explicit_host_rate_limit_stops_queued_feeds_and_survives_a_new_runner(archive, monkeypatch, daily_clock):
+    store, client = archive
+    same_host = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled and
+                      ingestion.feed_host(source) == "github.com")[:5]
+    other = BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (*same_host, other))
+    fetched = []
+
+    def read(source, **kwargs):
+        fetched.append(source.id)
+        if source == other:
+            return [], {"available": True}
+        request = httpx.Request("GET", source.url)
+        response = httpx.Response(429, headers={"Retry-After": "46800"}, request=request)
+        error = httpx.HTTPStatusError("Rate limited", request=request, response=response)
+        return [], {"available": False, **news.http_failure(error)}
+
+    monkeypatch.setattr(ingestion, "read_feed", read)
+    daily_clock(MORNING)
+    first = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert first["checked"] == 3 and first["deferred"] == 3 and first["healthy"] == 1
+    assert len(fetched) == 3 and other.id in fetched
+    restarted = launch_store.Store(str(store.engine.url))
+    monkeypatch.setattr(server, "get_store", lambda: restarted)
+    daily_clock(EVENING)
+    evening = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert evening["checked"] == 1 and evening["deferred"] == len(same_host)
+    assert fetched[-1] == other.id
