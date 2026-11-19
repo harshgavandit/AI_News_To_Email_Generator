@@ -1,12 +1,11 @@
 import { monitorInbox } from "./monitor-inbox.js";
 import { developmentLink } from "./development-link.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
-import { readingGroups } from "./privacy-data.js";
+import { markDevelopmentsSeen, seenDevelopments } from "./development-seen.js";
 import { node, requestJSON, sourceLink } from "./evidence-ui.js";
 
 const byId = id => document.getElementById(id);
 const feedback = byId("inbox-page-status");
-const seenKey = readingGroups.inbox.key;
 
 function linkTo(label, url) {
   const link = node("a", label);
@@ -34,8 +33,10 @@ function renderWatches(data) {
   const filters = byId("inbox-watches");
   list.replaceChildren();
   filters.replaceChildren();
+  byId("inbox-start-watches").hidden = data.active && data.watches.length > 0;
+  byId("inbox-manage-watches").hidden = !data.active || !data.watches.length;
   byId("inbox-watch-status").textContent = !data.available ? "Background monitoring is unavailable." :
-    !data.active ? "Enable background monitoring in the Research Desk to receive alerts here." :
+    !data.active || !data.watches.length ? "Pick a topic to receive matching stories here." :
     `${data.unread} unread watch alerts`;
   for (const alert of data.alerts) {
     const item = node("li");
@@ -54,7 +55,7 @@ function renderWatches(data) {
     }));
     list.append(item);
   }
-  if (data.active && !list.children.length) list.append(node("li", "No alerts in the current watch selection."));
+  if (data.active && data.watches.length && !list.children.length) list.append(node("li", "No alerts in the current watch selection."));
   for (const watch of data.watches) {
     const item = node("li");
     const actions = node("div", null, "reader-actions");
@@ -74,36 +75,31 @@ function renderWatches(data) {
   }
 }
 
-function seenDevelopments() {
-  try {
-    const data = JSON.parse(localStorage.getItem(seenKey));
-    return data && typeof data === "object" && !Array.isArray(data) ? data : {};
-  } catch { return {}; }
-}
-
 async function renderFollows() {
   const list = byId("inbox-follows");
-  list.replaceChildren();
+  const explore = byId("inbox-explore");
   const followed = followedStories().filter(developmentLink).slice(0, 40);
   if (!followed.length) {
+    list.replaceChildren();
+    explore.hidden = false;
     byId("inbox-follow-status").textContent = "Follow a development from its timeline to see it here.";
     return;
   }
   const { events } = await requestJSON(`/api/intelligence/events?${new URLSearchParams({ limit: 40, followed: followed.join(",") })}`,
     { signal: AbortSignal.timeout(15000) });
+  list.replaceChildren();
+  explore.hidden = events.length > 0;
   const seen = seenDevelopments();
   let unread = 0;
   for (const event of events) {
     const item = node("li");
-    const changed = seen[event.id] !== event.digest_version;
+    const changed = Number(seen[event.id] ?? 0) < Number(event.digest_version);
     if (changed) unread++;
     item.append(linkTo(event.title, developmentLink(event.id)), node("p",
       changed ? "Unread update" : "Seen", "research-meta"));
     const actions = node("div", null, "reader-actions");
     if (changed) actions.append(action("Mark seen", () => {
-      const current = seenDevelopments();
-      current[event.id] = event.digest_version;
-      localStorage.setItem(seenKey, JSON.stringify(Object.fromEntries(Object.entries(current).filter(([id]) => followed.includes(id)))));
+      markDevelopmentsSeen([event]);
       feedback.textContent = "Development marked seen in this browser.";
       return renderFollows();
     }));

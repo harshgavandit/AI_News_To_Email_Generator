@@ -13,7 +13,7 @@ export function coverageWarning(snapshot) {
   return notes.length ? `Source coverage may be incomplete · ${notes.join(" · ")}.` : "";
 }
 
-export function freshnessNotice(snapshot, doc = document) {
+export function freshnessNotice(snapshot, doc = document, { compact = false } = {}) {
   if (!snapshot?.counts) return null;
   const section = doc.createElement("section");
   section.className = "reader-freshness";
@@ -22,7 +22,13 @@ export function freshnessNotice(snapshot, doc = document) {
   scope.textContent = snapshot.scope;
   const summary = doc.createElement("p");
   summary.textContent = `Latest recorded check: ${moment(snapshot.checked_at)}. ${coverageWarning(snapshot)}`;
-  section.append(scope, summary);
+  if (compact) {
+    const detail = doc.createElement("details");
+    const heading = doc.createElement("summary");
+    heading.textContent = coverageWarning(snapshot) ? "Source coverage may be incomplete" : "Source check details";
+    detail.append(heading, scope, summary);
+    section.append(detail);
+  } else section.append(scope, summary);
   if (snapshot.feeds?.length) {
     const detail = doc.createElement("details");
     const heading = doc.createElement("summary");

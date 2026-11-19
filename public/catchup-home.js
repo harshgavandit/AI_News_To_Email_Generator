@@ -1,4 +1,5 @@
 import { readingGroups } from "./privacy-data.js";
+import { seenDevelopments } from "./development-seen.js";
 
 const visitKey = readingGroups.checkpoint.key;
 
@@ -29,5 +30,5 @@ export function homeCatchupRequest(storage, since, feedback, technologies) {
   const { role, interests, stack, topics, followed_events, language, depth } = saved;
   const profile = { role, interests, stack, topics, followed_events, language, depth,
     feedback, followed_technologies: technologies, length: 10 };
-  return { profile, hours: 720, since: since / 1000, summary_only: true };
+  return { profile, hours: 720, since: since / 1000, seen: seenDevelopments(storage), summary_only: true };
 }

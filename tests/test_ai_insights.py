@@ -329,6 +329,9 @@ def test_catchup_and_development_search_return_meaningful_changes_over_http(tmp_
     assert update["change_sources"][0]["change_label"] == "Resolved"
     assert update["change_sources"][0]["excerpt"] == revised["description"]
     assert update["change_sources"][0]["url"] == report["url"]
+    assert client.post("/api/intelligence/catchup", json={
+        **payload, "seen": {event: update["digest_version"]},
+    }).json()["events"] == []
     assert client.get("/api/intelligence/events", params={"q": "Northstar outage", "hours": 12}).json()["events"][0]["id"] == event
     assert client.get("/api/intelligence/events", params={"q": "Northstar satellites", "hours": 12}).json()["events"] == []
 

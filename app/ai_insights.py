@@ -107,7 +107,7 @@ class ExplainRequest(BaseModel):
 class CatchupRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     profile: RadarProfile = Field(default_factory=RadarProfile)
-    seen: dict[str, str] = Field(default_factory=dict, max_length=200)
+    seen: dict[str, str] = Field(default_factory=dict, max_length=320)
     hours: Literal[24, 168, 720] = 168
     since: float | None = Field(default=None, ge=0, le=2147483647)
     summary_only: bool = False

@@ -72,7 +72,9 @@ test('Inbox separates follow read state from server watch delivery controls', as
   const env = mount(markup, 'https://informa.test/inbox.html');
   const previousFetch = globalThis.fetch;
   const id = 'f'.repeat(32);
+  const other = 'e'.repeat(32);
   localStorage.setItem('informa-radar-v1', JSON.stringify({ followed_events: [id] }));
+  localStorage.setItem('informa-inbox-seen-v1', JSON.stringify({ [other]: '3' }));
   const calls = [];
   let snoozed = false;
   globalThis.fetch = async (path, options = {}) => {
@@ -90,7 +92,7 @@ test('Inbox separates follow read state from server watch delivery controls', as
     assert.equal(document.querySelector('#inbox-follows a').search, `?id=${id}`);
     document.querySelector('#inbox-follows button').click();
     await until(() => document.getElementById('inbox-follow-status').textContent === '0 unread followed developments');
-    assert.equal(JSON.parse(localStorage.getItem('informa-inbox-seen-v1'))[id], '2');
+    assert.deepEqual(JSON.parse(localStorage.getItem('informa-inbox-seen-v1')), { [other]: '3', [id]: '2' });
     document.querySelector('#inbox-watches button').click();
     await until(() => document.querySelector('#inbox-watches button').textContent === 'Resume');
     assert.ok(calls.some(([path, method]) => path === '/api/intelligence/inbox/watches/cloud/delivery' && method === 'PUT'));
@@ -356,10 +358,12 @@ test('returning readers open Catch up and can mark cited updates as read', async
   const requests = [];
   const article = { id: 'news', title: 'Regional network outage', publisher: 'Provider status',
     url: 'https://example.org/incident', cleanSummary: 'The provider is investigating.' };
+  const first = 'a'.repeat(32), next = 'b'.repeat(32);
   globalThis.fetch = async (url, options) => {
     if (url === '/api/intelligence/catchup') {
       requests.push(JSON.parse(options.body));
-      const events = requests.length > 1 ? [] : [{ id: 'a'.repeat(32), title: article.title,
+      const events = requests.length > 2 ? [] : [{ id: requests.length === 1 ? first : next,
+        digest_version: '2', title: requests.length === 1 ? article.title : 'Another development',
         updated_at: new Date().toISOString(), articles: [article], source_count: 2,
         change_sources: [{ change_label: 'Resolved', excerpt: 'Service has been restored.', url: article.url, publisher: article.publisher }],
       }];
@@ -376,9 +380,14 @@ test('returning readers open Catch up and can mark cited updates as read', async
     assert.equal(requests[0].summary_only, true);
     assert.equal(results.querySelector('a').href, article.url);
     document.getElementById('home-catchup-mark').click();
+    await until(() => results.textContent.includes('Another development'));
+    assert.deepEqual(requests[1].seen, { [first]: '2' });
+    document.getElementById('home-catchup-mark').click();
     await until(() => document.getElementById('home-catchup-status').textContent.includes('caught up'));
-    assert.ok(Number(localStorage.getItem('informa-catchup-checkpoint')) > lastVisit);
-    document.getElementById('view-feed').click();
+    assert.deepEqual(requests[2].seen, { [first]: '2', [next]: '2' });
+    assert.ok(requests.every(request => request.since === lastVisit / 1000));
+    document.getElementById('home-catchup-browse').click();
+    assert.equal(document.getElementById('reading-title').textContent, 'All stories');
     const input = document.getElementById('search');
     input.value = 'cloud outage';
     input.dispatchEvent(new window.Event('input', { bubbles: true }));
