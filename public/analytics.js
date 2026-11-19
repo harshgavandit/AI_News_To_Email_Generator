@@ -1,16 +1,19 @@
-// Optional analytics is loaded only after a reader opts in on Privacy & Controls.
+// Each optional collector has its own choice on Privacy & Controls.
 (() => {
-  const key = "informa-analytics-consent";
-  function allowed() {
+  const audience = "informa-analytics-consent";
+  const performance = "informa-performance-consent";
+  function allowed(key) {
     try {
       return navigator.globalPrivacyControl !== true && navigator.doNotTrack !== "1" &&
         localStorage.getItem(key) === "granted";
     } catch { return false; }
   }
-  if (allowed()) {
-    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    window.va("beforeSend", (event) => {
-      if (!allowed()) return null;
+  function load(key, command, source) {
+    if (!allowed(key)) return;
+    const queue = `${command}q`;
+    window[command] ||= function () { (window[queue] ||= []).push(arguments); };
+    window[command]("beforeSend", (event) => {
+      if (!allowed(key)) return null;
       try {
         const url = new URL(event.url);
         url.search = "";
@@ -19,11 +22,15 @@
       } catch { return null; }
     });
     const script = document.createElement("script");
-    script.src = "/_vercel/insights/script.js";
+    script.src = source;
     script.defer = true;
     document.head.append(script);
   }
+  if (!document.currentScript?.hasAttribute("data-performance-only")) {
+    load(audience, "va", "/_vercel/insights/script.js");
+  }
+  load(performance, "si", "/_vercel/speed-insights/script.js");
   window.addEventListener("storage", (event) => {
-    if (event.key === key || event.key === null) location.reload();
+    if (event.key === audience || event.key === performance || event.key === null) location.reload();
   });
 })();

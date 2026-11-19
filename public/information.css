@@ -74,6 +74,7 @@
 .analytics-panel p { max-width: 750px; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .analytics-panel label { display: block; margin-bottom: 8px; font-size: 12px; }
 .analytics-panel select { width: 100%; min-height: 44px; background: var(--paper); }
+.analytics-panel select + label { margin-top: 12px; }
 .privacy-dialog { max-width: 500px; width: calc(100% - 32px); padding: 28px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: var(--paper); box-shadow: var(--shadow-overlay); }
 .privacy-dialog::backdrop { background: #0c191c88; backdrop-filter: blur(3px); }
 .privacy-dialog h2 { font: 400 30px/1.2 var(--serif); margin: 0 0 18px; }

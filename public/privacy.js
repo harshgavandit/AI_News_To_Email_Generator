@@ -81,27 +81,33 @@ deleteMonitor.addEventListener("click", async () => {
   } finally { deleteMonitor.disabled = false; }
 });
 
-const analytics = byId("analytics-choice");
-function reflectAnalytics() {
-  analytics.disabled = false;
-  const blocked = navigator.globalPrivacyControl === true || navigator.doNotTrack === "1";
-  try { analytics.value = localStorage.getItem("informa-analytics-consent") === "granted" ? "granted" : "denied"; }
-  catch { analytics.disabled = true; }
-  if (blocked) {
-    analytics.value = "denied";
-    analytics.disabled = true;
+function bindAnalyticsChoice(choice, status, key, label) {
+  function reflect() {
+    choice.value = "denied";
+    choice.disabled = navigator.globalPrivacyControl === true || navigator.doNotTrack === "1";
+    if (choice.disabled) {
+      status.textContent = "This setting is off because your browser requests privacy protection.";
+      return;
+    }
+    try {
+      const enabled = localStorage.getItem(key) === "granted";
+      choice.value = enabled ? "granted" : "denied";
+      status.textContent = `${label} ${enabled ? "enabled" : "disabled"} in this browser.`;
+    } catch {
+      choice.disabled = true;
+      status.textContent = "This setting is unavailable because browser storage is blocked.";
+    }
   }
-  byId("analytics-status").textContent = blocked ? "Optional analytics is off because your browser requests privacy protection." :
-    analytics.value === "granted" ? "Optional audience analytics is on. Search terms and URL parameters are removed from page-view events." :
-      "Optional audience analytics is off. Essential hosting and security logs still apply.";
+  choice.addEventListener("change", () => {
+    try {
+      localStorage.setItem(key, choice.value);
+      location.reload();
+    } catch { status.textContent = "Your choice could not be saved. Check browser storage settings before trying again."; }
+  });
+  window.addEventListener("storage", (event) => { if (event.key === key || event.key === null) reflect(); });
+  reflect();
 }
-analytics.addEventListener("change", () => {
-  try {
-    localStorage.setItem("informa-analytics-consent", analytics.value);
-    // Reload ends any analytics script already running and applies the new choice before loading one.
-    location.reload();
-  } catch { byId("analytics-status").textContent = "Your choice could not be saved. Check browser storage settings before trying again."; }
-});
-window.addEventListener("storage", () => { refresh(); reflectAnalytics(); });
+bindAnalyticsChoice(byId("analytics-choice"), byId("analytics-status"), "informa-analytics-consent", "Audience analytics");
+bindAnalyticsChoice(byId("performance-choice"), byId("performance-status"), "informa-performance-consent", "Performance metrics");
+window.addEventListener("storage", refresh);
 refresh();
-reflectAnalytics();
