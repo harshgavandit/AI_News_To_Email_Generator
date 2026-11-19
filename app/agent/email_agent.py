@@ -22,6 +22,7 @@ class RankedArticleDetail(BaseModel):
     article_type: str
     reasoning: Optional[str] = None
     publisher: str = ""
+    author: str = ""
     topic: str = ""
     topic_label: str = "Technology"
     coverage: str = ""

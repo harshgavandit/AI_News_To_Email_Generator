@@ -70,6 +70,24 @@ def test_due_plan_is_bounded_host_aware_and_fair(monkeypatch):
     assert second[0] not in ingestion.refresh_plan(state, source_ids=pending, maximum=8, now=now + 2)
 
 
+def test_thai_feed_surfaces_by_language_and_topic_and_keeps_credit_in_the_brief(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'thai.db'}")
+    story = item("blognone", title="พบช่องโหว่ใหม่ในซอฟต์แวร์", ident="node/123")
+    story.update(author="example-editor")
+    store.ingest("blognone", [story], True)
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    client = TestClient(server.app)
+
+    assert client.get("/api/sources").json()["languages"]["th"] == "Thai"
+    payload = client.get("/api/news", params={"language": "th", "region": "APAC", "topic": "security"}).json()
+    (article,) = payload["articles"]
+    assert (article["publisher"], article["author"], article["sourceUrl"]) == (
+        "Blognone", "example-editor", story["url"])
+    digest = client.post("/api/digest", json={"edition": "world", "language": "th"}).json()["digest"]
+    assert "Blognone · example-editor" in digest["html"]
+    assert "Blognone · example-editor" in digest["markdown"]
+
+
 def test_check_history_opml_and_podcast_api(tmp_path, monkeypatch):
     store = Store(f"sqlite:///{tmp_path / 'network.db'}")
     source = BY_ID["practicalai"]

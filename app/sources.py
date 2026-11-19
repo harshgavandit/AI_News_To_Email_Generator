@@ -32,6 +32,7 @@ class Source:
     reviewed_at: str = ""
     publisher_group: str = ""
     pause_reason: str = ""
+    headline_only: bool = False
 
     @property
     def content_format(self):
@@ -71,7 +72,7 @@ class Source:
             "region": self.region,
             "language": self.language,
             "integration": self.integration,
-            "reading_policy": "excerpt",
+            "reading_policy": "headline_only" if self.headline_only else "excerpt",
             "author_name": self.author_name,
             "author_url": self.author_url,
             "format": self.content_format,
@@ -599,5 +600,6 @@ LANGUAGES = {code: label for code, label in (
     ("zh-CN", "Chinese (Simplified)"), ("zh-TW", "Chinese (Traditional)"), ("ar", "Arabic"),
     ("und", "Not specified"),
     ("tr", "Turkish"), ("pl", "Polish"), ("fa", "Persian"), ("vi", "Vietnamese"),
+    ("th", "Thai"),
 ) if any(source.language == code for source in DEFAULT_SOURCES)}
 LANGUAGES.update({source.language: source.language for source in DEFAULT_SOURCES if source.language not in LANGUAGES})

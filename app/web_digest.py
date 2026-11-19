@@ -46,7 +46,7 @@ def story_attribution(article):
     region = article.get("region", "")
     status = article.get("research_status") or article.get("coverage")
     return " · ".join(part for part in (
-        publisher, region if region != "Global" else "", (article.get("published_at") or "")[:10],
+        publisher, article.get("author"), region if region != "Global" else "", (article.get("published_at") or "")[:10],
         COVERAGE_LABELS.get(status, ""), SUMMARY_LABELS.get(article.get("summary_basis"), ""),
     ) if part)
 
@@ -229,6 +229,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             article_type=item["source"],
             reasoning=sanitize_text(rank.reasoning, 300) if rank else None,
             publisher=item.get("publisher", ""),
+            author=source.get("author", ""),
             topic=source["topic"],
             topic_label=source["topic_label"],
             coverage=source["coverage"],
