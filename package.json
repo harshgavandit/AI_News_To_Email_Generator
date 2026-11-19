@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-web.mjs",
+    "build:botid": "node scripts/build-web.mjs --update-botid",
     "test": "node --test tests/client/*.test.mjs",
     "lint": "node --check middleware.js && node --check public/app.js && node --check public/catalog.js && node --check public/sources.js && node --check public/theme.js && node --check public/analytics.js && node --check public/saved-views.js && node --check public/preferences.js && node --check public/contribute.js && node --check public/reading-content.js"
   },
