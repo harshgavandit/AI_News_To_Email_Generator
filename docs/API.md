@@ -94,7 +94,7 @@ Add `?stream=true` to receive newline-delimited JSON. Events contain a numbered 
 
 Story `summary_basis` is `ai_feed_summary`, `publisher_excerpt`, or `headline_only`. A personalized result also reports synthesis status, the number of AI summaries, and whether final ordering came from the model or from the initial selection. Original titles and links always come from the feed records.
 
-`POST /api/email` requires the owner bearer token and the signed, expiring digest response. The recipient is fixed by server configuration. The `/api/mail` routes verify an inbox before sending a stored preview and accept an explicit opt-in for the daily global edition. `/api/deliver/webhook` requires a verified inbox and accepts supported HTTPS Slack and Teams webhook URLs.
+`POST /api/email` requires the owner bearer token and the signed, expiring digest response. The recipient is fixed by server configuration. The `/api/mail` routes verify an inbox before sending a stored preview and accept an explicit opt-in for the daily global edition. `POST /api/mail/workspace` uses the verified mail cookie and accepts supported HTTPS Slack and Teams webhook URLs.
 
 `GET /api/mail/config` also reports `remaining_today` for the verified inbox, with a three-brief UTC daily limit. `GET /api/mail/delivery/{preview_id}` returns that inbox's delivery outcome, update timestamp, remaining allowance and whether provider webhook tracking is configured. It remains available after the preview expires, for the delivery record's 30-day retention. Another inbox receives 404 and a signed-out reader receives 401. Both responses use private, no-store caching and omit provider IDs and recipient addresses from receipts.
 

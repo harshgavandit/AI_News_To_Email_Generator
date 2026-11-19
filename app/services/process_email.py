@@ -85,10 +85,10 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
             "articles_count": len(result.articles)
         }
     except ValueError as e:
-        logger.error(f"Error sending email: {e}")
+        logger.error("legacy_mail_failed error_type=%s", type(e).__name__)
         return {
             "success": False,
-            "error": str(e)
+            "error": "Mail delivery could not be confirmed."
         }
 
 

@@ -26,6 +26,7 @@ def workspace(tmp_path, monkeypatch):
     store = Store(f"sqlite:///{tmp_path / 'enterprise.db'}")
     monkeypatch.setattr(server, "get_store", lambda: store)
     monkeypatch.setattr(workspace_delivery, "get_store", lambda: store)
+    monkeypatch.setattr(public_mail, "get_store", lambda: store)
     monkeypatch.setattr("app.ingestion.read_feed", lambda _, **kwargs: ([], {"available": True}))
     monkeypatch.setenv("MAIL_SESSION_SECRET", "long-test-secret-only-for-enterprise-tests")
     monkeypatch.delenv("MAIL_PILOT_MODE", raising=False)
@@ -75,9 +76,9 @@ def test_workspace_dispatch_checks_recipient_and_url_and_is_idempotent(workspace
     store.save_preview(preview, {"articles": [{"title": "<!channel> published a report", "url": "https://openai.com/test"}]},
                        datetime.now(UTC).timestamp() + 3600)
     request = {"url": "https://hooks.slack.com/services/T123/B456/fake-token", "preview_id": preview}
-    assert client.post("/api/deliver/webhook", json=request).status_code == 401
-    client.cookies.set(public_mail.SESSION, public_mail.seal("session", "reader@example.org", 600))
-    assert client.post("/api/deliver/webhook", json={**request, "url": "https://hooks.slack.com.evil.example/services/T/B/X"}).status_code == 422
+    assert client.post("/api/mail/workspace", json=request).status_code == 401
+    client.cookies.set(public_mail.SESSION, public_mail.seal("session", "reader@example.org", 600), path="/api/mail")
+    assert client.post("/api/mail/workspace", json={**request, "url": "https://example.org/workspace"}).status_code == 422
     response = Mock()
     response.__enter__ = Mock(return_value=response)
     response.__exit__ = Mock(return_value=False)
@@ -87,7 +88,7 @@ def test_workspace_dispatch_checks_recipient_and_url_and_is_idempotent(workspace
     transport.stream.return_value = response
     monkeypatch.setattr(workspace_delivery.httpx, "Client", Mock(return_value=transport))
     for _ in range(2):
-        assert client.post("/api/deliver/webhook", json=request).json()["status"] == "accepted"
+        assert client.post("/api/mail/workspace", json=request).json()["status"] == "accepted"
     assert transport.stream.call_count == 1
     blocks = transport.stream.call_args.kwargs["json"]["blocks"]
     assert blocks[-1]["text"]["type"] == "plain_text"

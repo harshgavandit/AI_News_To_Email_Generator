@@ -57,7 +57,7 @@ def process_digests(limit: Optional[int] = None) -> dict:
                 logger.warning(f"✗ Failed to generate digest for {article_type} {article_id}")
         except Exception as e:
             failed += 1
-            logger.error(f"✗ Error processing {article_type} {article_id}: {e}")
+            logger.error("legacy_digest_failed article_type=%s error_type=%s", article_type, type(e).__name__)
     
     logger.info(f"Processing complete: {processed} processed, {failed} failed out of {total} total")
     

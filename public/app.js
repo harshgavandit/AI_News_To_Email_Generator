@@ -2105,7 +2105,7 @@ async function performDelivery() {
   const pending = state.pending;
   if (!pending) throw new Error("Prepare a brief before sending.");
   const result = await jsonPost(
-    pending.kind === "webhook" ? "/api/deliver/webhook" : "/api/mail/send",
+    pending.kind === "webhook" ? "/api/mail/workspace" : "/api/mail/send",
     pending.kind === "webhook"
       ? { preview_id: pending.preview.preview_id, url: pending.url }
       : {

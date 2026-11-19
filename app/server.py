@@ -75,6 +75,7 @@ app.include_router(research_projects.public_router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
@@ -94,11 +95,15 @@ class LimitRequestBody:
         self.app = app
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or scope["method"] not in {"POST", "PATCH", "PUT"}:
+        if scope["type"] != "http" or scope["method"] not in WRITE_METHODS:
             await self.app(scope, receive, send)
             return
         request = Request(scope, receive)
-        length = request.headers.get("content-length", "")
+        lengths = request.headers.getlist("content-length")
+        if len(lengths) > 1 or lengths and (not lengths[0].isascii() or not lengths[0].isdecimal()):
+            await JSONResponse({"detail": "Invalid request length."}, status_code=400)(scope, receive, send)
+            return
+        length = lengths[0] if lengths else ""
         chunks = bytearray()
         if not length.isdecimal() or (len(length) <= 12 and int(length) <= MAX_REQUEST_BYTES):
             try:
@@ -256,28 +261,29 @@ def signature(digest: dict, expires: int) -> str:
 
 def require_owner(authorization: str | None, *, detail="Enter the owner access key to send to the configured Gmail inbox."):
     secret = os.getenv("ADMIN_TOKEN", "")
-    if not secret or not authorization or not hmac.compare_digest(authorization, f"Bearer {secret}"):
+    if not secret or not authorization or not hmac.compare_digest(authorization.encode(), f"Bearer {secret}".encode()):
         raise HTTPException(401, detail)
+
+
+def allowed_write_origin(request: Request):
+    if request.headers.get("sec-fetch-site") in {"cross-site", "same-site"}:
+        return False
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True  # Service callers use bearer tokens or provider signatures.
+    scheme = "https" if os.getenv("VERCEL") else request.url.scheme
+    return origin == f"{scheme}://{request.url.netloc}"
 
 
 @app.middleware("http")
 async def response_headers(request: Request, call_next):
     request_id = secrets.token_hex(8)
     started = time.monotonic()
-    if request.method in {"POST", "PATCH"}:
-        from urllib.parse import urlsplit
-        origin = request.headers.get("origin")
-        if origin:
-            try:
-                parsed = urlsplit(origin)
-                allowed = parsed.scheme in {"https", "http"} and parsed.netloc == request.headers.get("host")
-            except ValueError:
-                allowed = False
-            if not allowed:
-                return JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403,
-                                    headers={"Cache-Control": "no-store", "X-Request-ID": request_id})
     try:
-        response = await call_next(request)
+        if request.method in WRITE_METHODS and not allowed_write_origin(request):
+            response = JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403)
+        else:
+            response = await call_next(request)
     except SQLAlchemyError as error:
         logger.warning("database_unavailable request_id=%s error_type=%s", request_id, type(error).__name__)
         response = JSONResponse({"detail": "The news database is temporarily unavailable."}, status_code=503)
@@ -290,6 +296,9 @@ async def response_headers(request: Request, call_next):
         response.headers["X-Robots-Tag"] = "noindex"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.scheme == "https" or os.getenv("VERCEL"):
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
     response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data: https://i.ytimg.com https://media.dev.to https://media2.dev.to https://cdn.hashnode.com https://images.unsplash.com https://techcrunch.com https://theverge.com https://arstechnica.com https://cdn.arstechnica.net https://media.wired.com https://cdn.vox-cdn.com https://platform.theverge.com; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     if request.url.path == "/api/docs":
         # Swagger's standard template loads its UI assets from jsDelivr.
@@ -297,6 +306,7 @@ async def response_headers(request: Request, call_next):
     if request.url.path.startswith("/api/mail/unsubscribe/"):
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
+    response.headers["Content-Security-Policy"] += "; object-src 'none'"
     if request.url.path.startswith("/api") and "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
     if request.url.path.startswith("/api"):
@@ -679,7 +689,7 @@ def update_source(source_id: str, body: SourceUpdate, authorization: str | None 
 
 def require_job_secret(authorization):
     secrets_ = [os.getenv(name, "") for name in ("CRON_SECRET", "FEED_REFRESH_SECRET")]
-    if not authorization or not any(len(secret) >= 16 and hmac.compare_digest(authorization, f"Bearer {secret}")
+    if not authorization or not any(len(secret) >= 16 and hmac.compare_digest(authorization.encode(), f"Bearer {secret}".encode())
                                     for secret in secrets_):
         raise HTTPException(401, "Unauthorized.")
 
@@ -1133,7 +1143,7 @@ def prepare_digest(body, store, name, focus, world, progress):
 def email(body: EmailRequest, request: Request, authorization: str | None = Header(default=None)):
     require_owner(authorization)
     rate_limit(request, "email", 2)
-    if body.expires < time.time() or not hmac.compare_digest(body.signature, signature(body.digest, body.expires)):
+    if body.expires < time.time() or not hmac.compare_digest(body.signature.encode(), signature(body.digest, body.expires).encode()):
         raise HTTPException(400, "This preview has expired or changed. Generate a new digest first.")
     if not all(os.getenv(k) for k in ("MY_EMAIL", "APP_PASSWORD")):
         raise HTTPException(503, "Gmail is not configured. Add MY_EMAIL and APP_PASSWORD in the server settings.")
