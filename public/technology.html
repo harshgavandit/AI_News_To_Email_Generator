@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Follow technology releases, advisories, research, and reporting in Informa AI." />
+    <link rel="canonical" href="https://getinformdaily.com/technology.html" />
     <title>Technology pages · Informa AI</title>
     <link rel="icon" href="/informa-ai-icon.png" />
     <script src="/theme.js"></script>
@@ -13,24 +14,28 @@
     <link rel="stylesheet" href="/foundations.css" />
     <link rel="stylesheet" href="/research.css" />
     <link rel="stylesheet" href="/intelligence-pages.css" />
+    <link rel="stylesheet" href="/polish.css" />
     <script type="module" src="/technology-pages.js"></script>
   </head>
   <body>
     <a class="skip" href="#technology-title">Skip to technology</a>
     <header class="site-header"><div class="topbar wrap">
       <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
-      <nav class="site-nav research-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a><a href="/research.html">Research Desk</a><a href="/projects.html">Projects</a></nav>
+      <nav class="site-nav research-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a><a href="/research.html">Research Desk</a><a href="/technology.html" aria-current="page">Technologies</a><a href="/projects.html">Projects</a></nav>
       <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
     </div></header>
     <main class="wrap research-main intelligence-page">
       <section class="research-header"><p class="research-label">Technology pages</p><h1 id="technology-title">Follow a technology</h1><p id="technology-intro">Find releases, security advisories, incidents, research, and related reporting together.</p></section>
-      <nav id="technology-directory" class="intelligence-actions" aria-label="Technology directory"></nav>
+      <nav id="technology-directory" class="research-section-nav" aria-label="Technology directory"></nav>
       <p id="technology-status" class="research-status" role="status">Loading technology pages…</p>
       <div class="technology-layout" id="technology-content" hidden>
         <div class="research-workspace">
           <section class="research-panel" aria-labelledby="technology-updates">
             <div class="intelligence-actions"><h2 id="technology-updates">Source timeline</h2><label class="intelligence-filter">Time range <select id="technology-window"><option value="168">7 days</option><option value="720" selected>30 days</option><option value="2160">90 days</option></select></label></div>
-            <div id="technology-records"></div>
+            <div id="technology-record-filters" class="technology-record-filters" role="group" aria-label="Filter source timeline"></div>
+            <p id="technology-record-status" class="research-status" role="status"></p>
+            <button id="technology-record-retry" type="button" class="button secondary" hidden>Retry loading timeline</button>
+            <div id="technology-records" aria-busy="false"></div>
           </section>
         </div>
         <aside class="research-rail" aria-label="Technology actions">
@@ -46,7 +51,7 @@
             <form id="technology-ask">
               <label for="technology-question">Ask about this technology</label>
               <input id="technology-question" name="question" maxlength="320" placeholder="e.g. Which releases are relevant to developers?" />
-              <p class="research-note">Uses retained publisher excerpts. Your question may be sent to OpenAI.</p>
+              <p class="research-note">The answer draws on publisher excerpts from the selected time range. Your question may be sent to OpenAI.</p>
               <button class="button primary" type="submit">Ask with sources</button>
             </form>
             <p id="technology-answer-status" class="research-status" role="status"></p>

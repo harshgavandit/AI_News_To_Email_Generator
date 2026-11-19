@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.115,<1",
     "httpx>=0.28,<1",
     "feedparser>=6.0.12",
+    "langdetect==1.0.9",
     "markdown>=3.7.0",
     "markdownify>=0.11.6",
     "openai>=2.7.2",

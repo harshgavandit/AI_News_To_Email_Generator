@@ -13,6 +13,7 @@ import threading
 import time
 
 from app.news import read_feed
+from app.article_language import article_language, excerpt_language, is_english_article
 from app.sources import DEFAULT_SOURCES, Source, load_source_pack, validate_source
 from urllib.parse import urlsplit
 
@@ -40,12 +41,20 @@ def main():
             source = Source(**{key: tuple(value) if key in {"hosts", "article_paths", "excluded_paths", "sitemap_paths"}
                               else value for key, value in row.items()})
             validate_source(source)
+            english_feed = source.language.casefold().split("-", 1)[0] == "en"
+            if source.id not in existing_ids and not english_feed:
+                return dict(result, status="language_excluded", language=source.language)
             with gates[urlsplit(row["url"]).hostname]:
                 items, state = read_feed(source)
             cutoff = datetime.now(UTC) - timedelta(days=90)
             recent = [item for item in items if cutoff <= datetime.fromisoformat(item["published_at"]) <= datetime.now(UTC)]
+            english = sum(is_english_article(item) for item in recent)
+            other_languages = sum(any(code not in ("en", "und") for code in
+                                       (article_language(item), excerpt_language(item.get("description")))) for item in recent)
             result.update(status="active" if recent and state["available"] else "dormant" if state["available"] else "unavailable",
                 parsed_entries=len(items), recent_entries=len(recent), error=state.get("error"),
+                english_entries=english, non_english_entries=other_languages,
+                english_verified=english_feed and bool(recent) and not other_languages and english * 5 >= len(recent) * 4,
                 latest_published_at=max((item["published_at"] for item in items), default=None),
                 sample_urls=[item["url"] for item in recent[:2]],
                 seconds=round(time.monotonic() - started, 3))
@@ -58,8 +67,10 @@ def main():
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps({"checked_at": datetime.now(UTC).isoformat(), "results": results}, indent=2), encoding="utf-8")
     if args.promote:
-        active = {row["id"] for row in results if row["status"] == "active"}
-        approved = [{**row, "reviewed_at": datetime.now(UTC).date().isoformat()} for row in candidates if row["id"] in active]
+        active = {row["id"] for row in results if row["status"] == "active" and row["english_verified"]}
+        approved = [{**row, "reviewed_at": datetime.now(UTC).date().isoformat(),
+                     **({"require_english": True} if row["id"] not in existing_ids else {})}
+                    for row in candidates if row["id"] in active]
         args.promote.parent.mkdir(parents=True, exist_ok=True)
         retained = json.loads(args.promote.read_text(encoding="utf-8")) if args.promote.exists() else []
         merged = {row["id"]: row for row in retained}
@@ -69,7 +80,7 @@ def main():
         load_source_pack(temporary)
         temporary.replace(args.promote)
     print(json.dumps({status: sum(row["status"] == status for row in results) for status in
-                      ("active", "dormant", "unavailable", "already_integrated", "invalid_configuration")}))
+                      ("active", "dormant", "unavailable", "already_integrated", "invalid_configuration", "language_excluded")}))
 
 
 if __name__ == "__main__":

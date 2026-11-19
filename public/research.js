@@ -15,6 +15,10 @@ const form = byId("research-form");
 const question = byId("research-question");
 const topic = byId("research-topic");
 const mode = byId("research-mode");
+const language = byId("research-language");
+const conversationDesk = byId("conversation-desk");
+const conversationForm = byId("conversation-form");
+const conversationStatus = byId("conversation-status");
 const submit = byId("research-submit");
 const status = byId("research-status");
 const results = byId("research-results");
@@ -32,6 +36,8 @@ let inbox = null;
 let inboxBusy = false;
 let conversation = [];
 let conversationIds = [];
+let conversationRequest;
+let conversationScope;
 const radarKey = readingGroups.radar.key;
 let followedEvents = [];
 let viewedRevisions = {};
@@ -125,6 +131,8 @@ function render(data, titles) {
   };
   if (data.answer) {
     const answer = panel(data.answer.status === "answered" ? titles.answer : "Evidence limits");
+    answer.id = "research-answer";
+    answer.firstElementChild.tabIndex = -1;
     if (data.answer.claims.length) {
       const claims = element("ol", "", "research-claims");
       for (const claim of data.answer.claims) {
@@ -150,6 +158,8 @@ function render(data, titles) {
   }
   if (data.clusters?.length) {
     const section = panel("Stories covering the same development");
+    section.id = "research-coverage";
+    section.firstElementChild.tabIndex = -1;
     const list = element("ul", "", "research-clusters");
     for (const cluster of data.clusters) {
       const item = element("li", cluster.title);
@@ -166,6 +176,8 @@ function render(data, titles) {
   }
   if (!data.evidence.length) return;
   const evidence = panel(titles.evidence);
+  evidence.id = "research-evidence";
+  evidence.firstElementChild.tabIndex = -1;
   const toolbar = element("header", "", "research-export");
   toolbar.append(evidence.firstElementChild);
   const exportButton = element("button", "Download notes", "button secondary");
@@ -195,11 +207,14 @@ function render(data, titles) {
     const technical = ["release", "preprint", "journal"].includes(row.coverage);
     const explain = element("button", technical ? "Build technical brief" : "Explain this story", "text-button");
     explain.type = "button";
+    const output = element("div", "", "explanation-result");
+    output.id = `research-explanation-${index + 1}`;
+    output.hidden = true;
+    output.setAttribute("role", "status");
+    explain.setAttribute("aria-controls", output.id);
     explain.addEventListener("click", async () => {
       explain.disabled = true;
-      const output = element("div", "", "explanation-result");
-      item.append(output);
-      output.setAttribute("role", "status");
+      output.hidden = false;
       output.textContent = "Checking the publisher excerpt…";
       try {
         const answer = await api("/api/intelligence/explain", { article_id: row.id,
@@ -219,15 +234,24 @@ function render(data, titles) {
       } catch (error) { output.textContent = error.message; }
       finally { explain.disabled = false; }
     });
-    item.append(heading, element("p", meta.filter(Boolean).join(" · "), "research-meta"), excerpt,
-      link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`), explain,
-      link("Save to a project", `/projects.html?source=${encodeURIComponent(row.id)}`), historyControl(row.id));
+    const tools = element("div", "", "research-evidence-actions");
+    tools.append(link("Open in Reading Room", `/?article=${encodeURIComponent(row.id)}#reading-room`), explain,
+      link("Save to a project", `/projects.html?source=${encodeURIComponent(row.id)}`));
+    item.append(heading, element("p", meta.filter(Boolean).join(" · "), "research-meta"), excerpt, tools, output, historyControl(row.id));
     list.append(item);
   }
   evidence.append(list);
   results.append(evidence);
   conversationIds = data.evidence.map((row) => row.id).slice(0, 8);
-  byId("conversation-desk").hidden = !data.evidence.length;
+  conversationDesk.hidden = false;
+  if (data.answer || data.clusters?.length) {
+    const navigation = element("nav", "", "research-section-nav research-results-nav");
+    navigation.setAttribute("aria-label", "Research results sections");
+    if (data.answer) navigation.append(link(data.answer.status === "answered" ? "Findings" : "Evidence limits", "#research-answer"));
+    if (data.clusters?.length) navigation.append(link("Related coverage", "#research-coverage"));
+    navigation.append(link(`Sources (${data.evidence.length})`, "#research-evidence"), link("Follow-up", "#conversation-desk"));
+    results.prepend(navigation);
+  }
 }
 
 function languageName(code) {
@@ -235,21 +259,65 @@ function languageName(code) {
 }
 
 const taskLabels = { search: "Find sources", developments: "Find developments", analyze: "Answer with sources", compare: "Compare coverage", global_compare: "Compare across languages", brief: "Build a topic brief" };
+const taskHelp = {
+  search: "Find matching publisher records in the retained archive.",
+  developments: "Group matching reports into the developments they describe.",
+  analyze: "Ask a question and review the source excerpts behind each finding.",
+  compare: "See what publishers agree on and where their reporting differs.",
+  global_compare: "Compare available reporting across source languages and choose the answer language.",
+  brief: "Prepare a cited overview of the main developments and open questions on a topic.",
+};
+
 function syncSearchDestinations() {
   const context = { q: question.value, hours: Number(byId("research-hours").value), topic: topic.value };
   for (const [id, target] of [["search-articles", "articles"], ["search-developments", "developments"], ["search-ask", "analyze"]]) {
     const item = byId(id);
+    if (!item) continue;
     item.href = searchLink(target, context);
     if (target === mode.value) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   }
-  submit.textContent = taskLabels[mode.value];
+  submit.textContent = taskLabels[mode.value] || "Search";
 }
+
+function updateResearchMode() {
+  submit.textContent = taskLabels[mode.value] || "Search";
+  const help = byId("research-mode-help");
+  if (help) help.textContent = taskHelp[mode.value] || "Search publisher evidence.";
+  const languageField = byId("research-language-field");
+  if (languageField) languageField.hidden = mode.value !== "global_compare";
+  syncSearchDestinations();
+}
+
 form.addEventListener("input", syncSearchDestinations);
 form.addEventListener("change", syncSearchDestinations);
+for (const option of byId("radar-language").options) language.add(option.cloneNode(true));
+mode.addEventListener("change", updateResearchMode);
+for (const starter of form.querySelectorAll("[data-task][data-query]")) {
+  starter.addEventListener("click", () => {
+    question.value = starter.dataset.query;
+    mode.value = starter.dataset.task;
+    updateResearchMode();
+    question.focus();
+  });
+}
+
+function resetConversation() {
+  conversationRequest?.abort();
+  conversationRequest = undefined;
+  conversation = [];
+  conversationIds = [];
+  conversationScope = undefined;
+  conversationDesk.hidden = true;
+  byId("conversation-transcript").replaceChildren();
+  conversationForm.reset();
+  conversationForm.querySelector("button[type=submit]").disabled = false;
+  conversationStatus.textContent = "";
+}
 
 async function search(body) {
   currentRequest?.abort();
+  resetConversation();
   const controller = new AbortController();
   currentRequest = controller;
   results.replaceChildren();
@@ -277,6 +345,8 @@ async function search(body) {
     }
     const data = await api("/api/intelligence/research", body, controller.signal);
     if (controller !== currentRequest) return;
+    conversationScope = { hours: Math.min(body.scope?.hours || 720, 720), topic: body.scope?.topic || "all",
+      language: body.language || byId("radar-language").value };
     const label = data.retrieval === "hybrid" ? "Keyword and semantic search" : "Keyword search";
     status.textContent = data.evidence.length ?
       `${data.evidence.length} source${data.evidence.length === 1 ? "" : "s"} · ${label}` :
@@ -303,22 +373,25 @@ form.addEventListener("submit", (event) => {
   conversation = [];
   history.replaceState(null, "", searchLink(mode.value, { q, hours: Number(byId("research-hours").value), topic: topic.value }));
   byId("conversation-transcript").replaceChildren();
-  search({ q, mode: mode.value, ...(mode.value === "global_compare" && { language: byId("radar-language").value }),
+  search({ q, mode: mode.value, ...(mode.value === "global_compare" && { language: language.value }),
     scope: { hours: Number(byId("research-hours").value), topic: topic.value } });
 });
 
-byId("conversation-form").addEventListener("submit", async (event) => {
+conversationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = byId("conversation-question"), button = event.currentTarget.querySelector("button[type=submit]");
   const prompt = input.value.trim();
-  if (!prompt || button.disabled) return;
+  if (!prompt || button.disabled || !conversationScope || !conversationIds.length) return;
+  const controller = new AbortController();
+  conversationRequest = controller;
   button.disabled = true;
-  status.textContent = "Finding the next answer in the linked source evidence…";
+  conversationStatus.textContent = "Finding the next answer in the linked source evidence…";
   try {
     const data = await api("/api/intelligence/converse", {
       question: prompt, history: conversation.slice(-8), context_ids: conversationIds.slice(0, 8),
-      hours: Number(byId("research-hours").value), topic: topic.value || "all", language: byId("radar-language").value,
-    });
+      ...conversationScope,
+    }, controller.signal);
+    if (controller.signal.aborted) return;
     conversation.push({ role: "user", content: prompt });
     const exchange = element("article", "", "conversation-turn");
     exchange.append(element("h3", prompt));
@@ -338,9 +411,14 @@ byId("conversation-form").addEventListener("submit", async (event) => {
     conversation = conversation.slice(-8);
     conversationIds = [...new Set([...conversationIds, ...(data.evidence || []).map((entry) => entry.id)])].slice(0, 8);
     input.value = "";
-    status.textContent = `${data.evidence?.length || 0} linked sources used for this follow-up.`;
-  } catch (error) { status.textContent = error.message; }
-  finally { button.disabled = false; }
+    conversationStatus.textContent = `${data.evidence?.length || 0} linked sources used for this follow-up.`;
+  } catch (error) { if (!controller.signal.aborted) conversationStatus.textContent = error.message; }
+  finally {
+    if (conversationRequest === controller) {
+      conversationRequest = undefined;
+      button.disabled = false;
+    }
+  }
 });
 
 function radarProfile() {
@@ -848,6 +926,8 @@ byId("show-daily").addEventListener("click", () => {
   currentRequest?.abort();
   currentRequest = null;
   submit.disabled = false;
+  resetConversation();
+  conversationScope = { hours: 24, topic: "all", language: byId("radar-language").value };
   results.setAttribute("aria-busy", "false");
   status.textContent = "Intelligence briefing · Past 24 hours";
   render(daily, { answer: "AI intelligence briefing", evidence: "Briefing sources", context: "Past 24 hours" });
@@ -864,6 +944,8 @@ api("/api/trending").then(({ trending, momentum_window_hours }) => {
     button.addEventListener("click", () => {
       question.value = trend.query;
       topic.value = "all";
+      mode.value = "search";
+      updateResearchMode();
       byId("research-hours").value = "168";
       question.focus();
       if (!submit.disabled) form.requestSubmit();
@@ -883,7 +965,7 @@ const article = searchParams.get("article");
 if (article && /^[a-zA-Z0-9_-]{1,40}$/.test(article)) {
   mode.value = "analyze";
   byId("research-hours").value = "720";
-  submit.textContent = taskLabels.analyze;
+  updateResearchMode();
   search({ article_id: article, mode: "analyze" });
 } else {
   try {

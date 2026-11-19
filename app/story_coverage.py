@@ -62,17 +62,24 @@ def compare_coverage(article, candidates, limit=5):
     anchor = headline(article)
     if not anchor:
         return []
+    anchor_family = BY_ID[article["source_id"]].publisher_family
     ranked = []
     for row in candidates:
-        if row["id"] != article["id"] and row["publisher"] != article["publisher"]:
-            if match := coverage_match(anchor, headline(row)):
-                ranked.append((match[0], row["published_at"], row["id"], match[1], row))
+        source = BY_ID.get(row.get("source_id"))
+        if (not source or row["id"] == article["id"] or source.publisher_family == anchor_family
+                or row["publisher"] == article["publisher"]):
+            continue
+        if match := coverage_match(anchor, headline(row)):
+            ranked.append((match[0], row["published_at"], row["id"], match[1], row))
     publishers, links = {article["publisher"]}, {story_identity(article)}
+    families = {anchor_family}
     result = []
     for _, _, _, reason, row in sorted(ranked, key=lambda item: item[:3], reverse=True):
+        family = BY_ID[row["source_id"]].publisher_family
         identity = story_identity(restore_metadata(row))
-        if row["publisher"] in publishers or identity in links:
+        if family in families or row["publisher"] in publishers or identity in links:
             continue
+        families.add(family)
         publishers.add(row["publisher"])
         links.add(identity)
         result.append(dict(row, related_reason=reason))

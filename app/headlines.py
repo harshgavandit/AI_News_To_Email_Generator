@@ -1,6 +1,8 @@
 """Front-page selections from recent reporting and reviewed developing stories."""
 from datetime import UTC, datetime, timedelta
 
+from app.article_metadata import restore_metadata
+from app.article_language import article_language
 from app.coverage import public_article
 from app.intelligence import story_identity
 from app.selection import words
@@ -9,6 +11,8 @@ from app.story_coverage import coverage_match, headline
 from app.news_signals import COMMERCE, news_score, impact_score
 
 HEADLINE_HOURS = 72
+DEVELOPING_CANDIDATE_LIMIT = 160
+DEVELOPING_SOURCE_LIMIT = 5
 
 
 def headline_score(article, now):
@@ -18,27 +22,39 @@ def headline_score(article, now):
 def developing_coverage(rows, prepared):
     """Group recent matching reports without treating a shared company as the same event."""
     result, represented = [], []
-    for anchor in rows[:160]:
+    candidates = rows[:DEVELOPING_CANDIDATE_LIMIT]
+    for anchor in candidates:
         current = prepared[anchor["id"]]
         if impact_score(anchor) < 10 or any(coverage_match(current, old) for old in represented):
             continue
-        matches = [anchor, *(row for row in rows[:160] if row["id"] != anchor["id"]
+        matches = [anchor, *(row for row in candidates if row["id"] != anchor["id"]
                              and coverage_match(current, prepared[row["id"]]))]
-        publishers, sources = set(), []
+        publishers, links, matched_sources = set(), set(), []
         for row in matches:
             source = BY_ID[row["source_id"]]
             if source.publisher_family in publishers:
                 continue
-            sources.append({"publisher": row["publisher"], "label": row["title"], "url": row["url"]})
+            identity = story_identity(restore_metadata(row))
+            if identity in links:
+                continue
             publishers.add(source.publisher_family)
-            if len(sources) == 5:
-                break
-        if len(sources) < 2:
+            links.add(identity)
+            matched_sources.append(row)
+        if len(matched_sources) < 2:
             continue
-        public = public_article(anchor)
-        result.append({"id": anchor["id"], "title": anchor["title"], "topic": public["topic_label"],
+        shown = [public_article(row) for row in matched_sources[:DEVELOPING_SOURCE_LIMIT]]
+        public = shown[0]
+        sources = [{"publisher": row["publisher"], "label": row["title"], "url": row["url"],
+                    "article_id": row["id"], "published_at": row["published_at"],
+                    "date_precision": row.get("publication_date_precision"),
+                    "coverage": row["coverage"], "language": row["language"],
+                    "publisher_family": row["publisher_family"], "excerpt": row["cleanSummary"]}
+                   for row in shown]
+        result.append({"id": anchor["id"], "article_id": anchor["id"], "title": anchor["title"],
+            "topic": public["topic_label"],
             "summary": public["cleanSummary"], "updated_at": max(row["published_at"] for row in matches),
-            "query": anchor["title"][:150], "sources": sources, "basis": "matching_publisher_headlines"})
+            "query": anchor["title"][:150], "sources": sources, "source_count": len(matched_sources),
+            "source_count_basis": "distinct_publisher_families_in_sample", "basis": "matching_publisher_headlines"})
         represented.append(current)
         if len(result) == 2:
             break
@@ -59,7 +75,12 @@ def build_headlines(rows, *, now=None, limit=4):
             eligible.append(article)
 
     eligible.sort(key=lambda article: headline_score(article, now), reverse=True)
-    prepared = {row["id"]: headline(row) for row in eligible[:160]}
+    # Check a bounded shortlist so the first request after deployment never has to
+    # reclassify the entire archive while the next scheduled ingest labels it.
+    shortlist = eligible[:DEVELOPING_CANDIDATE_LIMIT]
+    shortlist.sort(key=lambda article: article_language(restore_metadata(article)) == "en", reverse=True)
+    eligible[:DEVELOPING_CANDIDATE_LIMIT] = shortlist
+    prepared = {row["id"]: headline(row) for row in eligible[:DEVELOPING_CANDIDATE_LIMIT]}
     coverage = developing_coverage(eligible, prepared)
     picked, publishers, used_regions, used_topics, seen_titles = [], set(), set(), set(), []
     links, headlines = set(), []

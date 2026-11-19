@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from app.sanitation import sanitize_article, sanitize_story_excerpt
 from app.sources import BY_ID
+from app.article_language import article_language, excerpt_language
 from app.article_metadata import restore_metadata, author_identity
 
 TOPICS = {
@@ -265,7 +266,8 @@ def public_article(article):
     reading_time = article.get("reading_time_minutes") or max(1, (words_count + 199) // 200)
 
     private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
-                      "community_relevant", "source_eligible", "classification_version", "_feed_ids", "_reading_access", "_reading_content"}
+                      "community_relevant", "source_eligible", "classification_version", "detected_language", "_feed_ids",
+                      "_reading_access", "_reading_content"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
@@ -304,7 +306,8 @@ def public_article(article):
         "url": url,
         "published_at": published_at,
         "coverage": source.coverage if source else "publisher",
-        "language": source.language if source else "en",
+        "language": article_language(article),
+        "excerpt_language": excerpt_language(clean_summary),
     })
     if source and source.coverage == "preprint":
         result["research_status"] = "preprint"

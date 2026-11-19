@@ -45,6 +45,7 @@
     <link rel="stylesheet" href="/desk.css" />
     <link rel="stylesheet" href="/polish.css" />
     <link rel="stylesheet" href="/reader-tools.css" />
+    <link rel="stylesheet" href="/visit-catchup.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -109,6 +110,8 @@
             <h1 id="hero-title">The technology desk.</h1>
             <p>Global technology news, research, and releases, with the sources behind each story.</p>
           </div>
+
+          <div id="edition-coverage" class="edition-coverage" hidden></div>
         </section>
       <div class="desk-layout">
         <section
@@ -158,7 +161,7 @@
               <a href="/inbox.html">Inbox <span aria-hidden="true">↗</span></a>
             </div>
             <div class="reading-stream-actions">
-              <span class="keyboard-hints" title="When a story has focus, use J and K to browse, P to pin, and S to save."><kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin · <kbd>S</kbd> save</span>
+              <span id="story-keyboard-hints" class="keyboard-hints" title="When a story has focus, use J and K to browse, P to pin, and S to save."><kbd>J</kbd>/<kbd>K</kbd> browse · <kbd>P</kbd> pin · <kbd>S</kbd> save</span>
               <button id="refresh" class="reading-reload text-button" type="button" aria-label="Reload latest stories">
                 <span aria-hidden="true">↻</span> Reload archive
               </button>
@@ -166,6 +169,7 @@
           </div>
           <section id="personalization" class="personalization" aria-label="Your news interests" hidden>
             <p><strong>Your interests. A wider perspective.</strong> Select what you follow; discover recent stories from across the archive.</p>
+            <p id="reading-interests-summary" class="muted"></p>
             <details>
               <summary>Manage interests &amp; followed sources</summary>
               <form>
@@ -192,12 +196,20 @@
           </section>
           <section id="briefing-intro" class="briefing-intro" aria-label="About this briefing" hidden>
             <div class="briefing-overview">
-              <p id="briefing-context">A selection from the last 24 hours.</p>
+              <div><h3>The last 24 hours</h3>
+                <p id="briefing-context">Selecting a concise cross-section of technology reporting and research.</p>
+                <div id="briefing-progress" class="briefing-progress" hidden>
+                  <label id="briefing-progress-label" for="briefing-progress-meter"></label>
+                  <progress id="briefing-progress-meter" value="0" max="1"></progress>
+                </div>
+              </div>
               <div class="briefing-actions">
-                <button type="button" id="briefing-email" class="text-button" aria-controls="daily-delivery">Email this brief</button>
-                <button type="button" id="briefing-pin" class="text-button" hidden>Customize brief</button>
+                <button type="button" id="briefing-continue" class="button primary" hidden>Start reading</button>
+                <button type="button" id="briefing-email" class="button secondary">Get this brief by email</button>
+                <button type="button" id="briefing-pin" class="button secondary" hidden>Customize this selection</button>
               </div>
             </div>
+            <div id="daily-delivery-slot"></div>
           </section>
           <section id="home-catchup" class="briefing-intro" aria-label="Since your last visit" hidden>
             <div class="briefing-overview">
@@ -210,6 +222,33 @@
             </div>
             <div id="home-catchup-freshness"></div>
             <div id="home-catchup-results"></div>
+          </section>
+          <section id="visit-catchup" class="visit-catchup" aria-labelledby="visit-catchup-title" hidden>
+            <h3 id="visit-catchup-title">What changed?</h3>
+            <div id="visit-catchup-content"></div>
+          </section>
+          <section id="saved-library" class="saved-library" aria-label="Saved library controls" hidden>
+            <div class="library-intro">
+              <p><strong>Your reading list</strong></p>
+              <p class="muted">Stories saved in this browser. Search by headline, publisher, or topic.</p>
+            </div>
+            <div class="library-controls">
+              <div>
+                <label for="saved-search">Search saved stories</label>
+                <div class="library-search">
+                  <input id="saved-search" type="search" maxlength="150" placeholder="Search your reading list" />
+                  <button id="saved-search-clear" type="button" class="text-button" aria-label="Clear saved search" hidden>Clear</button>
+                </div>
+              </div>
+              <div>
+                <label for="saved-read-filter">Reading status</label>
+                <select id="saved-read-filter">
+                  <option value="all">All saved stories</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                </select>
+              </div>
+            </div>
           </section>
           <div id="feed-controls">
             <div class="reading-discovery">
@@ -383,6 +422,10 @@
               </button>
             </div>
           </div>
+          <div id="read-action-notice" class="read-action-notice" hidden>
+            <p id="read-action-message" role="status"></p>
+            <button id="undo-mark-read" type="button" class="text-button">Undo</button>
+          </div>
           <p id="story-action-status" class="sr-only" role="status"></p>
           <div id="stories" class="stories" aria-busy="true"></div>
           <button
@@ -393,7 +436,6 @@
           >
             Load more stories <span aria-hidden="true">↓</span>
           </button>
-          <div id="daily-delivery-slot" hidden></div>
         </section>
         <aside id="composer" class="composer" aria-labelledby="composer-title">
           <div class="builder-header">
@@ -874,6 +916,9 @@
           <section class="dossier-section">
             <h3 id="dossier-basis" class="dossier-section-title"></h3>
             <p id="dossier-summary" class="dossier-text" dir="auto"></p>
+            <button id="dossier-translate" type="button" class="text-button" aria-controls="dossier-english-preview" aria-expanded="false" hidden>Show English preview</button>
+            <p id="dossier-translation-status" class="dossier-reading-notice" role="status"></p>
+            <div id="dossier-english-preview" hidden></div>
             <div id="dossier-full-body" class="dossier-full-body" hidden></div>
             <p id="dossier-reading-notice" class="dossier-reading-notice">Publisher-supplied excerpt. Read the original for the complete article, images, and any subscriber content.</p>
             <a id="dossier-research" class="text-button" href="/research.html">Analyze this story and its coverage ↗</a>
@@ -943,5 +988,25 @@
         <button id="audio-stop-btn" class="audio-control-btn" type="button">Stop</button>
       </div>
     </div>
+    <dialog id="coverage-dialog" class="coverage-dialog" aria-labelledby="coverage-dialog-title">
+      <div class="coverage-dialog-shell">
+        <header class="coverage-dialog-header">
+          <div>
+            <p class="eyebrow">Developing story</p>
+            <h2 id="coverage-dialog-title" tabindex="-1" dir="auto"></h2>
+            <p id="coverage-dialog-note" class="muted"></p>
+          </div>
+          <form method="dialog"><button class="dialog-close" type="submit" aria-label="Close coverage comparison">×</button></form>
+        </header>
+        <div class="coverage-dialog-controls">
+          <div class="segmented" role="group" aria-label="Coverage layout">
+            <button id="coverage-compare" type="button" aria-pressed="true">Compare</button>
+            <button id="coverage-timeline" type="button" aria-pressed="false">Timeline</button>
+          </div>
+          <a id="coverage-archive" class="text-button">Search the archive →</a>
+        </div>
+        <ol id="coverage-dialog-sources" class="coverage-comparison" aria-label="Publisher coverage"></ol>
+      </div>
+    </dialog>
   </body>
 </html>

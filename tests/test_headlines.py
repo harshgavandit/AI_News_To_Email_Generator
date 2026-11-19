@@ -6,6 +6,7 @@ from app import news, server
 from app.headlines import build_headlines
 from app.launch_store import Store
 from app.sources import BY_ID
+from app.story_coverage import compare_coverage
 
 
 def article(ident, provider, title, age, now):
@@ -50,6 +51,45 @@ def test_headlines_leave_room_for_other_regions_during_an_apac_news_spike():
             article("europe", "tech-eu", "A European startup secures a customer", 10, now),
             article("africa", "itweb", "South African telecom operator expands network", 16, now)]
     assert {a["id"] for a in build_headlines(rows, now=now, limit=3)["articles"]} == {"asia", "europe", "africa"}
+
+
+def test_developing_story_exposes_comparison_metadata_and_sampled_source_count(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'developing.db'}")
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    now = datetime.now(UTC)
+    title = "MongoDB acquires Firebolt to expand real time analytics"
+    providers = ("microsoft-source", "microsoft-official-blog", "bbc-tech", "the-verge", "ars-technica",
+                 "wired", "tech-eu", "9to5google")
+    rows = [article(f"report-{i}", provider, title, i + 1, now) for i, provider in enumerate(providers)]
+    rows[2]["description"] = "<p>A short publisher-supplied excerpt.</p>"
+    for row in rows:
+        store.ingest(row["source_id"], [row], True)
+    response = TestClient(server.app).get("/api/headlines")
+    assert response.status_code == 200
+    feature, = response.json()["coverage"]
+    assert feature["id"] == feature["article_id"] == rows[0]["id"]
+    assert feature["source_count"] == 7
+    assert feature["source_count_basis"] == "distinct_publisher_families_in_sample"
+    assert [source["article_id"] for source in feature["sources"]] == [row["id"] for row in rows[:6] if row != rows[1]]
+    official, reporting, *_ = feature["sources"]
+    assert official["coverage"] == "publisher" and official["publisher_family"] == "microsoft"
+    assert reporting == {"publisher": rows[2]["publisher"], "label": title, "url": rows[2]["url"],
+                         "article_id": rows[2]["id"], "published_at": rows[2]["published_at"], "date_precision": None,
+                         "coverage": "reporting", "language": "en", "publisher_family": "bbc-tech",
+                         "excerpt": "A short publisher-supplied excerpt."}
+    store.engine.dispose()
+
+
+def test_article_comparison_keeps_highest_ranked_report_per_publisher_family():
+    now = datetime(2026, 11, 15, 12, tzinfo=UTC)
+    title = "Microsoft launches cloud analytics platform for enterprise customers"
+    official = article("first", "microsoft-source", title, 2, now)
+    blog = article("second", "microsoft-official-blog", title, 3, now)
+    independent = article("report", "bbc-tech", title, 1, now)
+    assert [row["id"] for row in compare_coverage(official, [blog, independent])] == ["report"]
+    comparison = compare_coverage(independent, [blog, official])
+    assert [row["id"] for row in comparison] == ["first"]
+    assert comparison[0]["related_reason"] == "Closely matching headlines"
 
 
 def test_general_publisher_feed_keeps_only_tech_and_original_links(monkeypatch):

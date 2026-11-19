@@ -1,3 +1,4 @@
+import { isVisitRecord, VISIT_HISTORY_KEY } from "./visit-history.js";
 // Only these application-owned keys can be exported or reset. Never clear an origin wholesale.
 export const readingGroups = Object.freeze({
   bookmarks: { label: "Saved stories", key: "informa-saved-v1" },
@@ -10,7 +11,7 @@ export const readingGroups = Object.freeze({
   impact: { label: "Personal impact targets", key: "informa-impact-v1" },
   inbox: { label: "Developments marked seen", key: "informa-inbox-seen-v1" },
 });
-const exportKeys = [...Object.values(readingGroups).map(({ key }) => key),
+const exportKeys = [...Object.values(readingGroups).map(({ key }) => key), VISIT_HISTORY_KEY,
   "informa-theme", "informa-story-layout", "informa-hide-read", "informa-analytics-consent", "informa-performance-consent"];
 
 export function readBrowserData(storage) {
@@ -28,9 +29,14 @@ export function clearReadingData(storage, groups) {
   if (!selected.length || selected.some((group) => !Object.hasOwn(readingGroups, group)))
     throw new Error("Choose at least one reading data category.");
   for (const group of selected) storage.removeItem(readingGroups[group].key);
+  if (selected.includes("history")) storage.removeItem(VISIT_HISTORY_KEY);
   // Other Reading Room tabs must discard their old in-memory copies as well.
   storage.setItem("informa-reader-reset", String(Date.now()));
   return selected.map((group) => readingGroups[group].label);
+}
+
+export function hasVisitHistory(data) {
+  return isVisitRecord(data[VISIT_HISTORY_KEY]);
 }
 
 export function dataCounts(data) {

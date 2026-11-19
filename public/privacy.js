@@ -1,4 +1,4 @@
-import { clearReadingData, dataCounts, readBrowserData, readingGroups } from "/privacy-data.js";
+import { clearReadingData, dataCounts, hasVisitHistory, readBrowserData, readingGroups } from "/privacy-data.js";
 import { monitorInbox } from "./monitor-inbox.js";
 
 const byId = (id) => document.getElementById(id);
@@ -8,11 +8,15 @@ let pending = [];
 
 function refresh() {
   try {
-    const counts = dataCounts(readBrowserData(localStorage));
+    const data = readBrowserData(localStorage);
+    const counts = dataCounts(data);
     byId("export-browser-data").disabled = false;
     byId("clear-browser-data").disabled = false;
     for (const [key, count] of Object.entries(counts)) byId(`count-${key}`).textContent = String(count);
     byId("privacy-storage-note").textContent = "Stored in this browser. These reading lists do not sync to an account.";
+    byId("privacy-visit-history").textContent = hasVisitHistory(data) ?
+      "Catch-up visit timing is saved in this browser. Clear Read history to remove it." :
+      "No catch-up visit timing is saved in this browser.";
   } catch {
     byId("privacy-storage-note").textContent = "Browser storage is unavailable. Reading data cannot be inspected or changed here.";
     byId("export-browser-data").disabled = true;
@@ -62,6 +66,10 @@ byId("confirm-clear-data").addEventListener("click", () => {
 
 const monitorStatus = byId("privacy-monitor-status");
 const deleteMonitor = byId("delete-background-watches");
+const monitorDialog = byId("delete-monitoring-dialog");
+const keepMonitor = byId("keep-monitoring");
+const confirmMonitor = byId("confirm-delete-monitoring");
+const deleteStatus = byId("delete-monitoring-status");
 function showMonitoring(active) {
   monitorStatus.textContent = active ? "Background monitoring is enabled in this browser." : "This browser has no active background monitoring session.";
   deleteMonitor.hidden = !active;
@@ -69,16 +77,27 @@ function showMonitoring(active) {
 monitorInbox().then((data) => showMonitoring(data?.active)).catch(() => {
   monitorStatus.textContent = "Background monitoring status is temporarily unavailable.";
 });
-deleteMonitor.addEventListener("click", async () => {
-  deleteMonitor.disabled = true;
+deleteMonitor.addEventListener("click", () => {
+  deleteStatus.textContent = "";
+  monitorDialog.showModal();
+});
+keepMonitor.addEventListener("click", () => monitorDialog.close());
+monitorDialog.addEventListener("cancel", (event) => { if (confirmMonitor.disabled) event.preventDefault(); });
+confirmMonitor.addEventListener("click", async () => {
+  confirmMonitor.disabled = true;
+  keepMonitor.disabled = true;
+  deleteStatus.textContent = "Deleting monitoring data…";
   try {
     await monitorInbox("", { method: "DELETE" });
     showMonitoring(false);
     try { localStorage.setItem("informa-reader-reset", String(Date.now())); } catch { /* Other tabs check on their next poll. */ }
-    monitorStatus.textContent = "Background watches and alert history were deleted.";
+    monitorStatus.textContent = "Background monitoring data and research projects owned by this session were deleted.";
+    monitorDialog.close();
+    monitorStatus.tabIndex = -1;
+    monitorStatus.focus();
   } catch (error) {
-    monitorStatus.textContent = error.message;
-  } finally { deleteMonitor.disabled = false; }
+    deleteStatus.textContent = error.message;
+  } finally { confirmMonitor.disabled = false; keepMonitor.disabled = false; }
 });
 
 function bindAnalyticsChoice(choice, status, key, label) {

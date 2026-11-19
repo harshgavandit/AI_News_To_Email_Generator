@@ -12,22 +12,22 @@ const fragment = new URLSearchParams(location.hash.slice(1));
 const tokenFormat = /^[A-Za-z0-9_-]{43}$/;
 const articleFormat = /^[a-zA-Z0-9_-]{1,40}$/;
 const incomingArticle = articleFormat.test(params.get("source") || "") ? params.get("source") : "";
-let incoming;
 let active;
 let loading;
+const noteDrafts = new Map();
 
-function action(text, run, primary = false) {
+function action(text, run, primary = false, feedback = status) {
   const button = node("button", text, `button ${primary ? "primary" : "secondary"}`);
   button.type = "button";
-  button.addEventListener("click", () => perform(button, run));
+  button.addEventListener("click", () => perform(button, run, feedback));
   return button;
 }
 
-async function perform(button, run) {
+async function perform(button, run, feedback = status) {
   button.disabled = true;
-  status.textContent = "Working…";
-  try { status.textContent = await run() || ""; }
-  catch (error) { status.textContent = error.message; }
+  feedback.textContent = "Working…";
+  try { feedback.textContent = await run() || ""; }
+  catch (error) { feedback.textContent = error.message; }
   finally { button.disabled = false; }
 }
 
@@ -63,60 +63,75 @@ function renderSources(project, section) {
     const row = node("article", null, "intelligence-section");
     if (source.evidence) row.append(sourceList([source.evidence], (item) => item.append(historyControl(source.id))));
     else row.append(node("p", "This saved source is no longer available in the retained archive.", "research-note"));
+    const key = `${project.id}:${source.id}`;
+    const note = node("details", null, "project-note");
+    note.open = noteDrafts.has(key);
+    const summary = node("summary", source.note ? "Edit project note" : "Add a project note");
     const field = node("textarea");
-    field.value = source.note;
+    field.value = noteDrafts.get(key) ?? source.note;
+    field.readOnly = !source.evidence;
     field.maxLength = 1500;
     field.rows = 2;
-    const label = node("label", "Private project note");
+    const label = node("label", "Note for project collaborators");
     label.append(field);
     const form = node("form");
     const actions = node("div", null, "intelligence-actions");
     const submit = node("button", "Save note", "button secondary");
     submit.type = "submit";
     submit.disabled = !source.evidence;
+    const feedback = node("p", "", "research-status");
+    feedback.setAttribute("role", "status");
+    field.addEventListener("input", () => noteDrafts.set(key, field.value));
     actions.append(submit, action("Remove source", async () => {
       if (!confirm("Remove this source and its note from the project?")) return;
       await requestJSON(`${root}/${project.id}/sources/${encodeURIComponent(source.id)}`, { method: "DELETE" });
-      await openProject(project.id);
+      noteDrafts.delete(key);
+      if (active === project.id) await openProject(project.id);
       return "Source removed.";
     }));
-    form.append(label, actions);
+    if (!source.evidence) summary.textContent = "View note or remove source";
+    form.append(label, node("p", "Notes are visible to collaborators in this project. Published brief links include the saved source evidence.", "research-meta"), actions, feedback);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       perform(submit, async () => {
-        await requestJSON(`${root}/${project.id}/sources`, { method: "PUT", body: { article_id: source.id, note: field.value } });
+        const saved = field.value;
+        await requestJSON(`${root}/${project.id}/sources`, { method: "PUT", body: { article_id: source.id, note: saved } });
+        if (noteDrafts.get(key) === saved) noteDrafts.delete(key);
+        summary.textContent = saved ? "Edit project note" : "Add a project note";
         return "Project note saved.";
-      });
+      }, feedback);
     });
-    row.append(form);
+    note.append(summary, form);
+    row.append(note);
     section.append(row);
   }
 }
 
 async function saveSource(project, id) {
   await requestJSON(`${root}/${project.id}/sources`, { method: "PUT", body: { article_id: id } });
-  await openProject(project.id);
+  if (active === project.id) await openProject(project.id);
   return "Source added to the project.";
 }
 
 function renderDiscover(project, section) {
   const matches = node("div");
+  const feedback = node("p", "", "research-status");
+  feedback.setAttribute("role", "status");
   section.append(action("Find new evidence", async () => {
     matches.replaceChildren();
     const data = await requestJSON(`${root}/${project.id}/discover`);
     if (!data.evidence.length) return "No unsaved archive records match these keywords in the past 30 days.";
     matches.append(sourceList(data.evidence, (item, row) => item.append(action("Add to project", () => saveSource(project, row.id)))));
     return `${data.evidence.length} unsaved records match the project’s keywords.`;
-  }), matches);
+  }, false, feedback), feedback, matches);
   if (!incomingArticle || project.sources.some((row) => row.id === incomingArticle)) return;
   const importRow = node("div", null, "intelligence-actions");
-  if (incoming) importRow.append(sourceLink(incoming));
   importRow.append(action("Save selected source here", () => saveSource(project, incomingArticle), true));
   section.append(importRow);
 }
 
 function renderBriefs(project, section) {
-  section.append(node("h2", "Team briefs"), node("p", "A published link includes the question and cited sources. Anyone with the link can read it while it is active.", "research-note"));
+  section.append(node("p", "Anyone with a published link can read the project question and cited sources. Links expire after 90 days and can be revoked sooner.", "research-note"));
   const history = node("ol", null, "research-evidence");
   const shareOutput = node("div");
   for (const brief of project.briefs) {
@@ -129,10 +144,12 @@ function renderBriefs(project, section) {
     actions.append(action("Share link", () => exposeLink(shareOutput, "Read-only brief link", link.href)), action("Revoke link", async () => {
       if (!confirm("Revoke access to this brief link?")) return;
       await requestJSON(`${root}/${project.id}/briefs/${brief.id}`, { method: "DELETE" });
-      await openProject(project.id);
+      if (active === project.id) await openProject(project.id);
       return "Brief link revoked.";
     }));
-    row.append(link, actions);
+    row.append(link);
+    if (brief.expires) row.append(node("p", `Expires ${dated(brief.expires)}`, "research-meta"));
+    row.append(actions);
     history.append(row);
   }
   if (history.children.length) section.append(history);
@@ -150,12 +167,15 @@ function renderBriefs(project, section) {
   const windowLabel = node("label", "Source period");
   windowLabel.append(window);
   form.append(audienceLabel, windowLabel, submit);
+  if (submit.disabled) form.append(node("p", "Save an available source before publishing a brief.", "research-meta"));
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     perform(submit, async () => {
       const data = await requestJSON(`${root}/${project.id}/brief`, { method: "POST", body: { audience: audience.value, window: window.value } });
-      await openProject(project.id);
-      exposeLink(byId("project-brief-link"), "Read-only brief link", portableLink("brief", data.id));
+      if (active === project.id) {
+        await openProject(project.id);
+        if (active === project.id) exposeLink(byId("project-brief-link"), "Read-only brief link", portableLink("brief", data.id));
+      }
       return data.answer.status === "answered" ? "Cited brief published." : "Source brief published. AI analysis was unavailable or had insufficient evidence.";
     });
   });
@@ -163,15 +183,38 @@ function renderBriefs(project, section) {
   section.append(form, shareOutput);
 }
 
+function projectSection(title, id) {
+  const section = node("section", null, "intelligence-section");
+  section.setAttribute("aria-labelledby", id);
+  const heading = node("h3", title);
+  heading.id = id;
+  section.append(heading);
+  return section;
+}
+
+function projectHeading(text) {
+  const heading = node("h2", text);
+  heading.id = "project-detail-title";
+  heading.tabIndex = -1;
+  return heading;
+}
+
 function renderProject(project) {
-  detail.replaceChildren(node("h2", project.question), node("p", `Archive keywords: ${project.keywords}`, "research-meta"));
-  const discovery = node("section", null, "intelligence-section");
-  discovery.append(node("h3", "Related evidence"));
+  const heading = projectHeading(project.question);
+  const summary = node("p", `${project.owner ? "Owner" : "Collaborator"} · ${project.sources.length} saved sources`, "project-role");
+  const navigation = node("nav", null, "research-section-nav project-sections");
+  navigation.setAttribute("aria-label", "Project sections");
+  for (const [id, label] of [["project-discover-title", "Discover evidence"], ["project-sources-title", "Saved sources"], ["project-brief-title", "Team briefs"]]) {
+    const anchor = node("a", label);
+    anchor.href = `#${id}`;
+    navigation.append(anchor);
+  }
+  detail.replaceChildren(summary, heading, node("p", `Archive keywords: ${project.keywords}`, "research-meta"), navigation);
+  const discovery = projectSection("Related evidence", "project-discover-title");
   renderDiscover(project, discovery);
-  const evidence = node("section", null, "intelligence-section");
-  evidence.append(node("h3", "Saved sources"));
+  const evidence = projectSection("Saved sources", "project-sources-title");
   renderSources(project, evidence);
-  const team = node("section", null, "intelligence-section");
+  const team = projectSection("Team briefs", "project-brief-title");
   renderBriefs(project, team);
   detail.append(discovery, evidence, team);
   if (!project.owner) return;
@@ -191,6 +234,7 @@ function renderProject(project) {
   }), action("Delete project", async () => {
     if (!confirm("Delete this project, its notes, and all published brief links?")) return;
     await requestJSON(`${root}/${project.id}`, { method: "DELETE" });
+    for (const key of noteDrafts.keys()) if (key.startsWith(`${project.id}:`)) noteDrafts.delete(key);
     active = undefined;
     await loadProjects();
     return "Project deleted.";
@@ -203,18 +247,32 @@ function markActive() {
   for (const button of byId("project-list").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.projectId === active));
 }
 
-async function openProject(id) {
+async function openProject(id, { focus = false } = {}) {
   loading?.abort();
   const controller = new AbortController();
   loading = controller;
   active = id;
   markActive();
+  detail.inert = true;
   detail.setAttribute("aria-busy", "true");
   try {
     const project = await requestJSON(`${root}/${id}`, { signal: controller.signal });
-    if (loading === controller) renderProject(project);
-  } catch (error) { if (!controller.signal.aborted) throw error; }
-  finally { if (loading === controller) detail.setAttribute("aria-busy", "false"); }
+    if (loading !== controller) return;
+    renderProject(project);
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      active = undefined;
+      markActive();
+      detail.replaceChildren(projectHeading("Could not open this project"), node("p", "Select the project again to retry."));
+      throw error;
+    }
+  } finally {
+    if (loading === controller) {
+      detail.inert = false;
+      detail.setAttribute("aria-busy", "false");
+      if (focus) byId("project-detail-title").focus();
+    }
+  }
 }
 
 async function loadProjects() {
@@ -222,13 +280,17 @@ async function loadProjects() {
   const list = byId("project-list");
   list.replaceChildren();
   for (const project of data.projects) {
-    const button = action(project.question, () => openProject(project.id));
+    const button = action(project.question, () => openProject(project.id, { focus: true }));
+    button.className = "project-directory-item";
     button.dataset.projectId = project.id;
     list.append(button);
   }
   const selected = data.projects.find((row) => row.id === active) || data.projects[0];
   if (selected) await openProject(selected.id);
-  else detail.replaceChildren(node("h2", "Create your first project"), node("p", "Use the form to save a question and archive keywords."));
+  else {
+    list.append(node("p", "No projects yet.", "research-meta"));
+    detail.replaceChildren(projectHeading("Create your first project"), node("p", "Start with a question and keywords. Then gather sources, add notes, or create a cited brief."));
+  }
 }
 
 async function initWorkspace() {
@@ -243,6 +305,7 @@ async function initWorkspace() {
 
 async function showSharedBrief(token) {
   const data = await requestJSON("/api/intelligence/briefs/open", { method: "POST", body: { token } });
+  byId("project-context").textContent = "Shared research brief";
   byId("project-title").textContent = data.question;
   byId("project-intro").textContent = `${data.audience} brief · ${data.period} · ${dated(data.created)}`;
   const brief = byId("shared-brief");
@@ -288,7 +351,17 @@ async function initialize() {
     for (const row of rows) createForm.elements.namedItem("technology").add(new Option(row.name, row.id));
   }).catch(() => {});
   if (incomingArticle) {
-    try { incoming = (await requestJSON(`/api/intelligence/source-history/${incomingArticle}`)).source; }
+    try {
+      const incoming = (await requestJSON(`/api/intelligence/source-history/${incomingArticle}`)).source;
+      if (incoming) {
+        const preview = byId("project-selected-source");
+        const description = node("p", null, "research-meta");
+        description.append(`${incoming.publisher} · `, sourceLink(incoming));
+        preview.append(node("h2", "Source selected"), description,
+          node("p", "Choose or create a project, then use Save selected source here in Related evidence."));
+        preview.hidden = false;
+      }
+    }
     catch { /* The server checks availability again when saving. */ }
   }
   await Promise.all([technologies, initWorkspace()]);

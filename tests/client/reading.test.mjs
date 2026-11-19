@@ -7,6 +7,7 @@ import { createPreferences } from '../../public/preferences.js';
 import { readingContent } from '../../public/reading-content.js';
 import { createDeliveryStatus } from '../../public/delivery-status.js';
 import { createStoryQuestion } from '../../public/story-question.js';
+import { createCoverageDialog } from '../../public/coverage-dialog.js';
 
 const html = readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
 const authorKey = `author-${'a'.repeat(32)}`;
@@ -540,4 +541,34 @@ test('author workspace submits privately and owner review requires an explicit p
     assert.equal(document.querySelector('#contribution-list .submission-card'), null);
     assert.equal(document.getElementById('contribution-body').value, '');
   } finally { globalThis.fetch = fetchBefore; env.close(); }
+});
+
+
+test('coverage comparison shows source evidence and sorts timestamps without reordering results', () => {
+  const env = mount();
+  const dialog = document.getElementById('coverage-dialog');
+  const trigger = document.getElementById('view-briefing');
+  const story = { title: 'A technology release', source_count: 4, sources: [
+    { publisher: 'Later report', label: 'A release update', article_id: 'release-2', published_at: '2026-11-18T13:00:00Z',
+      coverage: 'reporting', url: 'https://publisher.example/update', excerpt: 'The publisher excerpt.' },
+    { publisher: 'Earlier report', label: 'A release announced', article_id: 'release-1', published_at: '2026-11-18T12:00:00Z',
+      coverage: 'publisher', url: 'https://official.example/announcement' },
+  ] };
+  try {
+    const open = createCoverageDialog(dialog, { readableTime: value => value, externalLink(url, text) {
+      const link = document.createElement('a'); link.href = url; link.textContent = text; return link;
+    } });
+    open(story, trigger);
+    assert.equal(dialog.open, true);
+    assert.equal(document.activeElement.id, 'coverage-dialog-title');
+    assert.match(dialog.querySelector('#coverage-dialog-note').textContent, /Showing 2 of 4 matched publisher groups/);
+    assert.match(dialog.querySelector('.coverage-publication').textContent, /The publisher excerpt/);
+    assert.match(dialog.querySelector('a[aria-label="Open Later report in reader"]').getAttribute('href'), /article=release-2/);
+    dialog.querySelector('#coverage-timeline').click();
+    assert.equal(dialog.querySelector('.coverage-publication strong').textContent, 'Earlier report');
+    assert.match(dialog.querySelector('.coverage-publication').textContent, /Headline and source link available/);
+    assert.equal(story.sources[0].publisher, 'Later report');
+    dialog.close();
+    assert.equal(document.activeElement, trigger);
+  } finally { env.close(); }
 });

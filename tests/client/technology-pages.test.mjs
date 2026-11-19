@@ -51,6 +51,75 @@ test('technology page renders archive groups and follows a technology before ask
   } finally { dom.window.close(); }
 });
 
+test('technology timeline restores its URL filters, keeps display-only filtering local and retries a failed window', async () => {
+  const requests = [];
+  let retryWindow = false;
+  const dom = mount('technology.html', 'technology.html?tech=kubernetes&hours=168&type=advisory', 'technology-pages.js', async (path) => {
+    requests.push(path);
+    if (path.endsWith('hours=2160') && !retryWindow) {
+      retryWindow = true;
+      return { ok: false, json: async () => ({ detail: 'Timeline unavailable.' }) };
+    }
+    const data = path.endsWith('/technologies') ? { technologies: [tech] } : { records: [
+      { ...source, record_kind: 'release', entity_match: 'registered_source' },
+      { ...source, id: 'advisory', title: 'Sample advisory', record_kind: 'advisory', entity_match: 'mention' },
+    ] };
+    return { ok: true, json: async () => data };
+  });
+  try {
+    const { document } = dom.window;
+    const record = document.getElementById('technology-records');
+    const range = document.getElementById('technology-window');
+    await tick();
+    assert.equal(range.value, '168');
+    assert.match(record.textContent, /Sample advisory.*Mentioned in publisher text/s);
+    assert.doesNotMatch(record.textContent, /Sample release/);
+    document.querySelector('[data-kind="all"]').click();
+    assert.equal(requests.length, 2);
+    assert.match(record.textContent, /Sample release/);
+    assert.equal(new URL(dom.window.location.href).searchParams.has('type'), false);
+    range.value = '2160';
+    range.dispatchEvent(new dom.window.Event('change'));
+    await tick();
+    const retry = document.getElementById('technology-record-retry');
+    assert.equal(retry.hidden, false);
+    retry.click();
+    await tick();
+    assert.equal(retry.hidden, true);
+    assert.match(record.textContent, /Sample release/);
+    assert.equal(new URL(dom.window.location.href).searchParams.get('hours'), '2160');
+  } finally { dom.window.close(); }
+});
+
+test('project notes retain an unsaved draft when switching between projects', async () => {
+  const projects = [{ id: 'one', question: 'First project', keywords: 'Kubernetes', owner: true },
+    { id: 'two', question: 'Second project', keywords: 'OpenAI', owner: false }];
+  const root = '/api/intelligence/inbox/projects';
+  const dom = mount('projects.html', 'projects.html', 'research-projects.js', async (path) => {
+    const project = projects.find((item) => path === `${root}/${item.id}`);
+    const data = path.endsWith('/technologies') ? { technologies: [tech] } : path === root ? { projects }
+      : project ? { ...project, sources: [{ id: source.id, note: '', evidence: source }], briefs: [] }
+      : { available: true, active: true, alerts: [], watches: [] };
+    return { ok: true, json: async () => data };
+  });
+  try {
+    const { document, Event } = dom.window;
+    await tick();
+    const field = document.querySelector('#project-detail textarea');
+    field.value = 'Unsaved working note';
+    field.dispatchEvent(new Event('input'));
+    document.querySelector('[data-project-id="two"]').click();
+    await tick();
+    assert.match(document.getElementById('project-detail').textContent, /Collaborator/);
+    assert.equal(document.querySelector('#project-detail textarea').value, '');
+    document.querySelector('[data-project-id="one"]').click();
+    await tick();
+    assert.equal(document.querySelector('#project-detail textarea').value, 'Unsaved working note');
+    assert.equal(document.querySelector('.project-note').open, true);
+    assert.equal(document.activeElement.id, 'project-detail-title');
+  } finally { dom.window.close(); }
+});
+
 test('brief opens from its fragment without loading the private workspace', async () => {
   const token = 'a'.repeat(43);
   const requests = [];

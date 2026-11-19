@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#f6f7f4" />
     <meta name="robots" content="noindex" />
     <meta name="description" content="Give Informa AI permission to offer your article in its reading room. Verify your inbox, submit your text, and track editorial review." />
+    <link rel="canonical" href="https://getinformdaily.com/contribute.html" />
     <title>For authors — Informa AI</title>
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
     <script src="/theme.js"></script>
@@ -27,12 +28,12 @@
           <a href="/research.html">Research Desk</a><a href="/sources.html">Sources</a><a href="/contribute.html" aria-current="page">For authors</a></nav>
       <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><a class="button primary" href="/#reading-room">Explore stories</a></div>
     </div></header>
-    <main id="contribution-main" class="wrap contribution-main">
-      <header class="contribution-intro"><p class="eyebrow">The author workspace</p><h1>Let readers go deeper.</h1><p>Offer full-text reading permission for an article already listed in Informa AI. Your attribution and original link stay attached. Every submission is reviewed before it becomes public.</p></header>
+    <main id="contribution-main" class="wrap contribution-main" tabindex="-1">
+      <header class="contribution-intro"><p class="eyebrow">For authors</p><h1>Share your work with readers.</h1><p>Grant full-text reading permission for an article already in Informa AI. Your name and original link stay attached. Each submission is reviewed before publication.</p><nav class="author-actions" aria-label="Author workspace links"><a class="text-button" href="#submissions-title">View your submissions <span aria-hidden="true">↓</span></a><a class="text-button" href="/trust.html#rights">Read about publisher rights <span aria-hidden="true">↗</span></a></nav></header>
       <ol class="author-steps" aria-label="How to contribute">
-        <li><a href="#identity-title"><span aria-hidden="true">01</span><strong>Verify your inbox</strong><small>Identify your submissions</small></a></li>
-        <li><a href="#article-lookup"><span aria-hidden="true">02</span><strong>Find your article</strong><small>Use its Informa AI article ID</small></a></li>
-        <li><a href="#submit-title"><span aria-hidden="true">03</span><strong>Offer reading permission</strong><small>Submit your text for review</small></a></li>
+        <li><a href="#identity-title"><span aria-hidden="true">1</span><strong>Verify your inbox</strong><small id="author-step-inbox">Connect your email address</small></a></li>
+        <li><a href="#article-lookup"><span aria-hidden="true">2</span><strong>Find your article</strong><small id="author-step-article">Use an Informa AI story link</small></a></li>
+        <li><a href="#submit-title"><span aria-hidden="true">3</span><strong>Offer reading permission</strong><small id="author-step-permission">Submit your text for review</small></a></li>
       </ol>
       <div class="contribution-layout">
         <aside class="contribution-panel" aria-labelledby="identity-title">
@@ -44,11 +45,12 @@
         </aside>
         <section class="contribution-panel" aria-labelledby="submit-title">
           <h2 id="submit-title" tabindex="-1">Offer an article for in-platform reading</h2>
-          <form id="article-lookup" class="lookup-form" tabindex="-1"><label for="contribution-article">Informa AI article ID</label><p class="small">Open your article in the Reading Room and choose “Offer full-text reading permission” to fill this automatically.</p><div class="lookup-entry"><input id="contribution-article" pattern="[A-Za-z0-9_-]{1,40}" maxlength="40" required /><button type="submit" class="button secondary">Find article</button></div></form>
+          <form id="article-lookup" class="lookup-form" tabindex="-1"><label for="contribution-article">Informa AI story link or article ID</label><p class="small" id="contribution-article-help">Paste a link from Informa AI. You can also open a story and choose “Offer full-text reading permission” to fill this automatically.</p><div class="lookup-entry"><input id="contribution-article" aria-describedby="contribution-article-help" maxlength="2048" autocomplete="off" spellcheck="false" required /><button type="submit" class="button secondary">Find article</button></div></form>
           <div id="contribution-selected" class="contribution-selected" hidden><strong id="contribution-title"></strong><a id="contribution-original" target="_blank" rel="noopener noreferrer">View original ↗</a></div>
           <p id="lookup-status" class="status" role="status"></p>
+          <p class="contribution-pending" id="contribution-pending">Verify your inbox and find the article to unlock the submission form.</p>
           <form id="contribution-form">
-            <fieldset id="contribution-fields" disabled>
+            <fieldset id="contribution-fields" disabled hidden>
               <label for="contribution-author">Rights holder or author name</label><input id="contribution-author" maxlength="140" minlength="2" autocomplete="name" required />
               <label for="contribution-body">Article text in Markdown</label><textarea id="contribution-body" rows="16" minlength="200" maxlength="30000" required spellcheck="false"></textarea><p class="small">Text and code are supported. Embedded images, scripts, and remote assets are removed. Maximum 30,000 characters / 60 KB.</p>
               <label for="contribution-evidence">How can the owner verify your permission?</label><textarea id="contribution-evidence" rows="4" minlength="30" maxlength="2000" required placeholder="Explain your relationship to this article and where the owner can verify your publishing or syndication rights."></textarea>
@@ -59,7 +61,7 @@
           </form><p id="contribution-status" class="status" role="status" aria-live="polite"></p>
         </section>
       </div>
-      <section class="contribution-panel" aria-labelledby="submissions-title"><div class="contribution-heading"><h2 id="submissions-title">Your submissions</h2><button id="contribution-reload" type="button" class="text-button" disabled>Refresh</button></div><p id="contribution-list-status" class="status" role="status">Verify your inbox to see your private submissions.</p><div id="contribution-list" class="contribution-list"></div></section>
+      <section class="contribution-panel" aria-labelledby="submissions-title"><div class="contribution-heading"><h2 id="submissions-title" tabindex="-1">Your submissions</h2><button id="contribution-reload" type="button" class="text-button" disabled>Refresh</button></div><p id="contribution-list-status" class="status" role="status">Verify your inbox to see your private submissions.</p><div id="contribution-list" class="contribution-list"></div></section>
       <details id="editor-workspace" class="contribution-panel editorial-workspace"><summary>Owner editorial review</summary><p>Owner access is required. The key is held in this page’s memory for the current session and is never saved to browser storage.</p>
         <form id="editor-login" class="lookup-form"><label for="editor-token">Owner access key</label><input id="editor-token" type="password" autocomplete="off" required /><button class="button secondary" type="submit">Open review queue</button></form>
         <div id="editor-controls" hidden><label for="editor-state">Submission status</label><select id="editor-state"><option value="pending">Pending review</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="withdrawn">Withdrawn</option><option value="revoked">Revoked</option></select><button id="editor-refresh" class="text-button" type="button">Refresh queue</button><button id="editor-signout" class="text-button" type="button">Lock owner workspace</button></div>

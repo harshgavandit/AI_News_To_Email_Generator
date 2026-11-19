@@ -18,7 +18,7 @@ from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from email_validator import EmailNotValidError, validate_email
 
-from app.brand import BRIEF_SUBJECT, NAME, VERIFICATION_SUBJECT
+from app.brand import BRIEF_SUBJECT, NAME, PUBLIC_SITE, VERIFICATION_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import mail_capacity
 
@@ -144,6 +144,12 @@ def normalize(email):
 
 
 def verify_human(token, request):
+    origin_host = urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname
+    allowed_hosts = {origin_host}
+    allowed_hosts.update(os.getenv("TURNSTILE_ALLOWED_HOSTNAMES", "").lower().replace(",", " ").split())
+    hostname = request.url.hostname
+    if hostname not in allowed_hosts:
+        return False
     try:
         response = httpx.post(
             "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -155,7 +161,7 @@ def verify_human(token, request):
         return (
             result.get("success") is True
             and result.get("action") == "verify_email"
-            and result.get("hostname") == urlsplit(os.environ["PUBLIC_ORIGIN"]).hostname
+            and result.get("hostname") == hostname
         )
     except (httpx.HTTPError, ValueError):
         raise HTTPException(503, "The bot check is temporarily unavailable.") from None
@@ -181,7 +187,7 @@ def send_message(recipient, subject, body, html, key, unsubscribe_url=None, **kw
 def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
     # 1. Resend API
     if os.getenv("RESEND_API_KEY"):
-        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or "brief@ai-news-to-email-generator.vercel.app"
+        sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL") or f"brief@{urlsplit(PUBLIC_SITE).hostname}"
         email_headers = {}
         if unsubscribe_url:
             email_headers["List-Unsubscribe"] = f"<{unsubscribe_url}>"
@@ -253,12 +259,13 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
         parsed = urlparse(smtp_url)
         if parsed.scheme not in {"smtp", "smtps"} or not parsed.hostname:
             raise ValueError("Invalid SMTP configuration")
-        sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else "brief@ai-news-to-email-generator.vercel.app")
+        sender = os.getenv("MAIL_FROM") or (unquote(parsed.username) if parsed.username else
+                                           f"brief@{urlsplit(PUBLIC_SITE).hostname}")
         msg = EmailMessage()
         msg["From"] = sender
         msg["To"] = recipient
         msg["Subject"] = subject
-        msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+        msg["Message-ID"] = f"<{key}@{urlsplit(PUBLIC_SITE).hostname}>"
         if unsubscribe_url:
             msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
             msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
@@ -290,7 +297,7 @@ def send_via_transport(recipient, subject, body, html, key, unsubscribe_url):
     msg["From"] = sender
     msg["To"] = recipient
     msg["Subject"] = subject
-    msg["Message-ID"] = f"<{key}@ai-news-to-email-generator.vercel.app>"
+    msg["Message-ID"] = f"<{key}@{urlsplit(PUBLIC_SITE).hostname}>"
     if unsubscribe_url:
         msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
         msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"

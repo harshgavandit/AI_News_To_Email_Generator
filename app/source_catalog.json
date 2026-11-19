@@ -5346,5 +5346,44 @@
     "reviewed_at": "2026-11-19",
     "tech_only": true,
     "headline_only": true
+  },
+  {
+    "id": "techcentral-za",
+    "require_english": true,
+    "group": "techcentral-za",
+    "label": "TechCentral",
+    "url": "https://techcentral.co.za/feed/",
+    "hosts": [
+      "techcentral.co.za"
+    ],
+    "topic": "industry",
+    "region": "Africa",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-19"
+  },
+  {
+    "id": "datacenterdynamics",
+    "require_english": true,
+    "group": "datacenterdynamics",
+    "label": "DatacenterDynamics",
+    "url": "https://www.datacenterdynamics.com/rss/",
+    "hosts": [
+      "www.datacenterdynamics.com"
+    ],
+    "topic": "software",
+    "region": "Global",
+    "language": "en",
+    "format": "news",
+    "coverage": "reporting",
+    "kind": "news",
+    "article_paths": [
+      "/en/news/"
+    ],
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-19"
   }
 ]

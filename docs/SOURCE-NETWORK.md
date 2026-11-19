@@ -107,6 +107,8 @@ any person or transmit an email address.
 
 ## Adding and auditing sources
 
+Follow the [English-language source policy](ENGLISH-SOURCE-POLICY.md) when reviewing candidates.
+
 Discover only feed links declared on a publisher page:
 
 ```powershell
@@ -114,9 +116,11 @@ python -m scripts.discover_source_feeds https://publisher.example/blog
 python -m scripts.discover_source_feeds --seeds app/discovery_seeds.json --report discovered-feeds.json
 ```
 
-Review the publisher, format, article hosts, paths, region and content rights,
-then prepare a candidate JSON list using the existing catalog shape. Validate
-transport, parsing and recent records without activating it:
+Review the publisher, format, article hosts, paths, region and content rights.
+Use English-language feeds for new sources, including English editions from
+publishers that serve multiple languages. Existing multilingual sources remain
+available. Prepare a candidate JSON list using the existing catalog shape and
+validate transport, parsing and recent records without activating it:
 
 ```powershell
 python -m scripts.check_source_pack candidates.json --report source-audit.json
@@ -128,6 +132,9 @@ After reviewing the report, merge successful entries into the existing pack:
 python -m scripts.check_source_pack candidates.json --report source-audit.json --promote app/source_catalog.json
 ```
 
+Promotion requires at least 80% verified English in the sampled recent entries
+and zero detected non-English entries. Ambiguous samples count against the 80%
+threshold. New feeds accept only verified English stories during ingestion.
 Promotion validates an atomic merged file and preserves existing entries. It
 does not enable failed candidates. For an existing-pack endpoint audit, add
 `--recheck-existing`. Use normal tests and release review before deploying.
