@@ -58,6 +58,29 @@ def test_global_budget_defers_remaining_schedules(batch_store, monkeypatch):
     assert mail_capacity().digests == 45
 
 
+def test_batch_scheduled_mail_contains_saved_curiosity_cards(batch_store, monkeypatch):
+    from app.curiosity import curiosity_article
+
+    store = batch_store
+    mailbox = public_mail.digest_key("mailbox:reader@example.org")
+    store.subscribe(mailbox, "reader@example.org", "UTC", time.time() - 10)
+    store.save_curiosity_selection(mailbox, [curiosity_article("attention-is-all-you-need")])
+    response = httpx.Response(200, json={"data": [{"id": "provider-accepted"}]},
+                              request=httpx.Request("POST", "https://api.resend.com/emails/batch"))
+    post = Mock(return_value=response)
+    monkeypatch.setattr(mail_batches.httpx, "post", post)
+
+    result = mail_batches.run_batch_worker(store, lambda: {
+        "html": "<html><body><p>Daily</p></body></html>", "markdown": "Daily"})
+
+    assert result["sent"] == 1
+    message = post.call_args.kwargs["json"][0]
+    assert "Attention Is All You Need" in message["text"]
+    assert "Google Research" in message["text"]
+    assert "https://research.google/pubs/attention-is-all-you-need" in message["text"]
+    assert "Curiosity Cards" in message["html"]
+
+
 def test_resend_transient_retry_keeps_payload_and_idempotency_key(batch_store, monkeypatch):
     post = Mock(side_effect=[httpx.ReadTimeout('lost response'), httpx.Response(200, json={'id': 'provider-1'},
         request=httpx.Request('POST', 'https://api.resend.com/emails'))])

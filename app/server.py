@@ -46,6 +46,7 @@ from app.ingestion import SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness, latest_s
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
+from app.curiosity import build_curiosity_cards, curiosity_article
 from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
@@ -85,6 +86,7 @@ _headline_cache = Cache("headlines-v8")
 _signals_cache = Cache("signals-v1")
 _trending_cache = Cache("trending-v7")
 _briefing_cache = Cache("briefing-v2")
+_curiosity_cache = Cache("curiosity-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 FEED_FILTERS = ("source", "publisher", "kind", "region", "coverage", "language")
@@ -347,6 +349,24 @@ def collect_news():
 def discovery_options():
     return {"topics": TOPICS, "subjects": SUBJECTS, "regions": REGION_LABELS,
             "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
+
+
+@app.get("/api/curiosity")
+def curiosity(limit: int = Query(default=24, ge=1, le=24)):
+    """Return reviewed evergreen engineering insights plus quality-ranked archive cards.
+
+    This endpoint reads the local archive only. Publisher synchronization remains on the
+    existing scheduled 08:00/20:00 IST feed sweeps.
+    """
+    key = str(limit)
+    cards, _ = _curiosity_cache.get(key)
+    if cards is None:
+        with _curiosity_cache.key_lock(key):
+            cards, _ = _curiosity_cache.get(key)
+            if cards is None:
+                cards = build_curiosity_cards(get_store(), limit=limit)
+                _curiosity_cache.put(key, cards, ttl=1800)
+    return {"cards": cards, "updated_at": datetime.now(timezone.utc).isoformat(), "selection_limit": 5}
 
 
 class RecommendationScope(BaseModel):
@@ -1095,6 +1115,9 @@ def prepare_digest(body, store, name, focus, world, progress):
         available = (store.world_candidates(body.hours, body.sources, **filters) if world else
                      store.candidates(body.hours, body.sources, search_terms(focus), **filters))
         pins = store.pinned_articles(body.pinned_ids)
+        found = {article["id"] for article in pins}
+        pins.extend(article for ident in body.pinned_ids if ident not in found
+                    and (article := curiosity_article(ident)) is not None)
     else:
         archive = collect_news()["articles"]
         now = datetime.now(timezone.utc)

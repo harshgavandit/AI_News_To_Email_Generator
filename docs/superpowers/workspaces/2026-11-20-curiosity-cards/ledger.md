@@ -1,0 +1,10 @@
+# Curiosity Cards execution ledger
+
+Base commit: `3139128d20257f7725b634fd3435dfd6fec3bd92`
+
+- Task 1 start: Current checkout is `main`; user previously directed that completed work be released to production and left committed. Design uses the existing allowed publisher-listing integration, which checks robots.txt and bounds same-host metadata requests. No publisher refresh endpoint will be run during implementation/tests.
+- Ruling: Keep Stripe/Uber public listing discovery only through the existing robots-aware, path-allowlisted metadata connector — their verified robots rules allow the selected English blog paths, but no official RSS endpoint was confirmed — this keeps discovery within published crawl policy; if policy interpretation is wrong, those two sources could be less stable than an RSS/API source.
+- Curated seeds include the requested Google Research monorepo paper, Transformer paper, and foundational Google File System, MapReduce, Bigtable, and Spanner papers; other reviewed links cover Anthropic, OpenAI, Meta, Uber, Netflix, and the supplied FlashAttention article. Card summaries retain their editorial/source basis and point to the canonical publisher page; no article bodies are copied.
+- Feature verification: `tests/test_curiosity.py` + `tests/test_source_feeds.py` passed (16); `tests/test_mail_batches.py -k 'not signed_bounce'` passed (5, 1 deselected); targeted schedule inclusion/removal, verified mailbox write, and batch card delivery passed (1 each). `npm test` passed (65); `npm run lint`, `npm run build`, Python `compileall`, Ruff, and `git diff --check` passed.
+- Environment limitation: the broader existing `TestClient`-based mail suites stalled under Windows Python 3.14 / Starlette's Proactor event loop. They were stopped without making external requests. The feature paths above passed in isolated tests. The complete Linux CI run is still the release gate.
+- Feature verification did not run feed synchronization, call external AI APIs, send real email, or write production data.

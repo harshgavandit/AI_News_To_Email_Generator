@@ -11,7 +11,7 @@ from app import public_mail
 from app.brand import DAILY_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import batch_sender, mail_capacity
-from app.web_digest import public_site, safe_email_html, safe_href
+from app.web_digest import markdown_text, public_site, safe_email_html, safe_href
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,47 @@ def with_unsubscribe(brief, url, *, scheduled=False):
         html = brief["html"]
         html = html.replace("</body>", f"{link}</body>") if "</body>" in html else html + link
     return dict(brief, html=html, markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
+
+
+def append_curiosity_section(brief, cards):
+    """Append short, source-linked card snapshots to a scheduled email."""
+    cards = cards[:5]
+    if not cards:
+        return brief
+    rows_html = []
+    rows_markdown = []
+    for card in cards:
+        title = str(card.get("title", ""))[:500]
+        summary = str(card.get("summary", ""))[:900]
+        company = str(card.get("company") or card.get("publisher") or "Technology")[:140]
+        publisher = str(card.get("publisher") or "Original source")[:140]
+        url = safe_href(card.get("url"))
+        if not title or not summary or url == "#":
+            continue
+        safe_url = escape(url, quote=True)
+        rows_html.append(
+            '<li style="margin:0 0 16px;">'
+            f'<h3 style="font:600 16px/1.4 Arial,sans-serif;margin:0 0 5px;">'
+            f'<a href="{safe_url}" style="color:#294a3b;">{escape(title)}</a></h3>'
+            f'<p style="font-size:12px;color:#697169;margin:0 0 6px;">{escape(company)} · {escape(publisher)}</p>'
+            f'<p style="font-size:13px;line-height:1.6;margin:0 0 5px;">{escape(summary)}</p>'
+            f'<a href="{safe_url}" style="font-size:12px;color:#294a3b;">Read the original source →</a></li>'
+        )
+        rows_markdown.append(
+            f'- **{markdown_text(title)}** — {markdown_text(company)} · {markdown_text(publisher)}\n'
+            f'  {markdown_text(summary)}\n  Original source: {url}'
+        )
+    if not rows_html:
+        return brief
+    items_html = "".join(rows_html)
+    section_html = (
+        '<section style="margin:28px 0 0;padding:20px 0 0;border-top:2px solid #dedfd5;">'
+        '<h2 style="font:600 20px/1.3 Georgia,serif;color:#252e29;margin:0 0 16px;">Curiosity Cards</h2>'
+        f'<ul style="list-style:none;padding:0;margin:0;">{items_html}</ul></section>'
+    )
+    return dict(brief, markdown=f'{brief["markdown"]}\n\n## Curiosity Cards\n\n' + "\n\n".join(rows_markdown),
+                html=brief["html"].replace("</body>", f"{section_html}</body>")
+                if "</body>" in brief["html"] else brief["html"] + section_html)
 
 
 def personalized_morning_brief(store, mailbox, fallback, load_events):
@@ -139,6 +180,7 @@ def run_due_subscriptions(generate_fn):
         if not store.subscription(mailbox)["enabled"]:
             continue
         message = with_unsubscribe(content, unsub_url, scheduled=True)
+        message = append_curiosity_section(message, store.curiosity_selection(mailbox))
         try:
             accepted = public_mail.send_message(
                 email,

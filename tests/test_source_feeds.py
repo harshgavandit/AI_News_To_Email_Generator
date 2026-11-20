@@ -122,3 +122,48 @@ def test_circuit_keeps_gulf_tech_investment_and_filters_general_business(monkeyp
     assert status["available"] and status["rejected_entries"] == 1
     assert public_article(article)["region_id"] == "MENA"
     assert BY_ID["wired-es"].publisher_family == BY_ID["wired"].publisher_family
+
+
+def test_curiosity_company_sources_use_reviewed_rss_or_robot_rules(monkeypatch):
+    assert BY_ID["meta-engineering"].url == "https://engineering.fb.com/feed/"
+    assert BY_ID["meta-engineering"].integration == "rss"
+    assert BY_ID["meta-engineering"].kind == "engineering"
+    assert BY_ID["razorpay-engineering"].url == "https://engineering.razorpay.com/feed"
+    assert BY_ID["razorpay-engineering"].require_english
+    assert BY_ID["medium-gordicaleksa"].url == "https://gordicaleksa.medium.com/feed"
+    assert BY_ID["medium-gordicaleksa"].require_english
+    assert BY_ID["stripe-engineering"].integration == "publisher-metadata"
+    assert BY_ID["uber-engineering"].integration == "publisher-metadata"
+    assert BY_ID["stripe-engineering"].article_paths == ("/blog/",)
+    assert BY_ID["uber-engineering"].article_paths == ("/us/en/blog/",)
+    assert BY_ID["uber-engineering"].require_english
+
+    source = BY_ID["stripe-engineering"]
+    calls = []
+    article_url = "https://stripe.com/blog/engineering/zero-downtime-migrations"
+    published = datetime.now(UTC).isoformat()
+    article = f'''<html><head>
+      <meta property="og:title" content="How we built zero-downtime migrations">
+      <meta property="article:published_time" content="{published}">
+      <meta name="description" content="The infrastructure team explains the migration architecture and reliability safeguards used for production databases.">
+      <script type="application/ld+json">{{"@type":"BlogPosting","headline":"How we built zero-downtime migrations","datePublished":"{published}","description":"The infrastructure team explains the migration architecture and reliability safeguards used for production databases."}}</script>
+      </head><body></body></html>'''.encode()
+
+    def fake_fetch(url):
+        calls.append(url)
+        if url == "https://stripe.com/robots.txt":
+            return b"User-agent: *\nAllow: /blog/\nDisallow: /blog/private/\n"
+        if url == source.url:
+            return f'<a href="{article_url}">Engineering article</a>'.encode()
+        if url == article_url:
+            return article
+        raise AssertionError(f"unexpected fetch URL: {url}")
+
+    monkeypatch.setattr(news, "fetch_bytes", fake_fetch)
+    rows, status = news.read_feed(source)
+
+    assert status["available"] is True
+    assert [row["title"] for row in rows] == ["How we built zero-downtime migrations"]
+    assert rows[0]["url"] == article_url
+    assert all("stripe.com" in url for url in calls)
+    assert calls.count(article_url) == 1

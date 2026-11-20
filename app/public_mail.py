@@ -15,7 +15,7 @@ import zoneinfo
 
 import httpx
 from fastapi import APIRouter, HTTPException, Path, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from email_validator import EmailNotValidError, validate_email
 
 from app.brand import BRIEF_SUBJECT, NAME, PUBLIC_SITE, VERIFICATION_SUBJECT
@@ -332,6 +332,20 @@ class SendBody(StrictBody):
     timezone: str | None = Field(default=None, max_length=64)
 
 
+class CuriositySelectionBody(StrictBody):
+    article_ids: list[str] = Field(default_factory=list, max_length=5)
+
+    @field_validator("article_ids")
+    @classmethod
+    def unique_article_ids(cls, values):
+        if any(not isinstance(value, str) or not 1 <= len(value) <= 80
+               or not all(char.isalnum() or char in "_-" for char in value) for value in values):
+            raise ValueError("Choose valid curiosity cards.")
+        if len(values) != len(set(values)):
+            raise ValueError("Remove duplicate curiosity cards from the selection.")
+        return values
+
+
 @router.get("/config")
 def config(request: Request, response: Response):
     response.headers["Cache-Control"] = "private, no-store"
@@ -339,7 +353,7 @@ def config(request: Request, response: Response):
     email = verified_recipient(request) if enabled else None
     store = get_store() if email else None
     remaining = max(0, 3 - store.mail_used(digest_key("mailbox:" + email), day())) if store else None
-    return {
+    result = {
         "enabled": enabled,
         "pilot": enabled and os.getenv("MAIL_PILOT_MODE") == "1",
         "site_key": os.getenv("TURNSTILE_SITE_KEY") if enabled else None,
@@ -350,6 +364,42 @@ def config(request: Request, response: Response):
         "remaining_today": remaining,
         "delivery_tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET")),
     }
+    if email and store:
+        mailbox = digest_key("mailbox:" + email)
+        subscription = store.subscription(mailbox)
+        result.update({
+            "scheduled_enabled": bool(subscription and subscription.get("enabled")),
+            "curiosity_ids": [card["id"] for card in store.curiosity_selection(mailbox)],
+            "curiosity_selection_limit": 5,
+        })
+    return result
+
+
+def _require_same_origin(request: Request):
+    if request.headers.get("sec-fetch-site") == "cross-site":
+        raise HTTPException(403, "Cross-site requests are not allowed.")
+    origin = request.headers.get("origin")
+    scheme = "https" if os.getenv("VERCEL") else request.url.scheme
+    expected = f"{scheme}://{request.url.netloc}"
+    if not origin or origin.rstrip("/") != expected:
+        raise HTTPException(403, "Use the Informa AI site to update this selection.")
+
+
+@router.put("/curiosity")
+def update_curiosity_selection(body: CuriositySelectionBody, request: Request, response: Response):
+    response.headers["Cache-Control"] = "private, no-store"
+    store = required_store()
+    recipient = verified_recipient(request)
+    if not recipient:
+        raise HTTPException(401, "Verify your inbox before selecting scheduled curiosity cards.")
+    _require_same_origin(request)
+    from app.curiosity import resolve_curiosity_cards
+    cards = resolve_curiosity_cards(store, body.article_ids)
+    if len(cards) != len(body.article_ids):
+        raise HTTPException(422, "A selected curiosity card is no longer available. Refresh the collection and try again.")
+    mailbox = digest_key("mailbox:" + recipient)
+    store.save_curiosity_selection(mailbox, cards)
+    return {"curiosity_ids": [card["id"] for card in cards], "curiosity_selection_limit": 5}
 
 
 @router.get("/delivery/{preview_id}")

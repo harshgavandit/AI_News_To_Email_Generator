@@ -18,6 +18,7 @@ import { markDevelopmentsSeen } from "./development-seen.js";
 import { createCoverageDialog } from "./coverage-dialog.js";
 import { createVisitCatchup } from "./visit-catchup.js";
 import { openVisit } from "./visit-history.js";
+import { renderCuriosityCards } from "./curiosity.js";
 
 const $ = (id) => document.getElementById(id);
 const views = ["feed", "for-you", "saved", "briefing", "catchup"];
@@ -57,6 +58,9 @@ const state = {
   pending: null,
   tab: "build",
   delivery: "email",
+  curiosityCards: [],
+  curiosityVisibleCount: 4,
+  curiosityPendingScheduledId: "",
 };
 const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d", 2160: "90d" };
 const readingViews = ["feed", "for-you", "saved", "briefing", "catchup"];
@@ -356,6 +360,111 @@ async function loadSignals() {
     }));
     $("priority-signals").hidden = !articles.length;
   } catch { /* Optional; search and reading continue when signals are unavailable. */ }
+}
+
+function renderCuriosity() {
+  const container = $("curiosity-cards");
+  const ids = state.mail?.curiosity_ids || [];
+  renderCuriosityCards(container, state.curiosityCards, {
+    pinnedIds: [...state.pins.keys()],
+    scheduledIds: ids,
+    verified: Boolean(state.mail?.verified),
+    scheduledEnabled: Boolean(state.mail?.scheduled_enabled),
+    visibleCount: state.curiosityVisibleCount,
+    onPin: (article) => {
+      const wasPinned = state.pins.has(String(article.id));
+      togglePin(article);
+      if (!wasPinned && state.pins.has(String(article.id))) openBuilder("build", container);
+      renderCuriosity();
+    },
+    onToggleScheduled: (article, selected) => {
+      if (!state.mail?.verified) {
+        state.curiosityPendingScheduledId = article.id;
+        void beginCuriosityVerification(article);
+        return;
+      }
+      void setCuriosityScheduled(article, !selected);
+    },
+    onShowMore: () => {
+      state.curiosityVisibleCount += 4;
+      renderCuriosity();
+    },
+  });
+  $("curiosity-schedule-note").textContent = !state.mail?.verified
+    ? "Verify an inbox to save cards for a scheduled brief. Source links always open with the publisher."
+    : state.mail.scheduled_enabled
+      ? "Selected cards will be included in your scheduled brief alongside the original links."
+      : "Selections are saved privately. Enable scheduled delivery when you send a brief to receive them.";
+}
+
+async function loadCuriosity() {
+  const container = $("curiosity-cards");
+  container.setAttribute("aria-busy", "true");
+  const [collection, mailbox] = await Promise.allSettled([
+    request("/api/curiosity?limit=24"),
+    request("/api/mail/config"),
+  ]);
+  if (collection.status === "fulfilled") state.curiosityCards = collection.value.cards || [];
+  else status("curiosity-status", "Curiosity Cards could not load. Try refreshing the page.", true);
+  if (mailbox.status === "fulfilled") state.mail = mailbox.value;
+  container.setAttribute("aria-busy", "false");
+  renderCuriosity();
+}
+
+async function setCuriosityScheduled(article, selected) {
+  const before = [...(state.mail?.curiosity_ids || [])];
+  const next = new Set(before);
+  selected ? next.add(article.id) : next.delete(article.id);
+  if (next.size > Number(state.mail?.curiosity_selection_limit || 5)) {
+    status("curiosity-status", "Choose up to five cards for your scheduled brief.", true);
+    return false;
+  }
+  state.mail.curiosity_ids = [...next];
+  renderCuriosity();
+  try {
+    const result = await request("/api/mail/curiosity", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article_ids: state.mail.curiosity_ids }),
+    });
+    state.mail.curiosity_ids = result.curiosity_ids || [];
+    status("curiosity-status", selected ? "Saved for your scheduled brief." : "Removed from your scheduled brief.");
+    return true;
+  } catch (error) {
+    state.mail.curiosity_ids = before;
+    status("curiosity-status", error.message, true);
+    return false;
+  } finally {
+    renderCuriosity();
+  }
+}
+
+async function beginCuriosityVerification(article) {
+  if (state.pending || $("mail-dialog").open) return;
+  mailOpener = document.activeElement;
+  state.pending = { kind: "curiosity", statusId: "curiosity-status", email: "", cardId: article.id };
+  try {
+    state.mail = await request("/api/mail/config");
+    renderCuriosity();
+    if (!state.mail.enabled) throw new Error("Inbox verification is currently unavailable.");
+    if (state.mail.verified) {
+      await setCuriosityScheduled(article, true);
+      state.pending = null;
+      state.curiosityPendingScheduledId = "";
+      return;
+    }
+    mailStep("request-code");
+    $("mail-address").value = "";
+    status("mail-status", "");
+    $("mail-dialog").showModal();
+    $("mail-address").focus();
+    await loadCaptcha();
+  } catch (error) {
+    state.pending = null;
+    state.curiosityPendingScheduledId = "";
+    status("curiosity-status", error.message, true);
+    renderCuriosity();
+  }
 }
 function readingFilters() {
   return {
@@ -2263,6 +2372,7 @@ async function beginDelivery(pending) {
   status(pending.statusId, "Checking inbox verification…");
   try {
     state.mail = await request("/api/mail/config");
+    renderCuriosity();
     if (!state.mail.enabled || !pending.preview?.preview_id) {
       throw new Error(
         "Email verification is currently unavailable. You can copy or download your brief.",
@@ -2350,10 +2460,10 @@ $("mail-dialog").addEventListener("close", () => {
   $("owner-key").value = "";
   captchaToken = "";
   if (state.pending) {
-    status(
-      state.pending.statusId,
-      "Your brief is ready. Verify your email when you want to send it.",
-    );
+    if (state.pending.kind === "curiosity")
+      status("curiosity-status", "Inbox verification was closed. Your card selection was not changed.");
+    else status(state.pending.statusId, "Your brief is ready. Verify your email when you want to send it.");
+    state.curiosityPendingScheduledId = "";
     state.pending = null;
   }
   toggleDeliveryButtons(false);
@@ -2411,6 +2521,19 @@ $("verify-code").addEventListener("submit", (event) =>
   submitMail(event, async () => {
     await jsonPost("/api/mail/verify", { code: $("mail-code").value });
     $("mail-code").value = "";
+    if (state.pending?.kind === "curiosity") {
+      state.mail = await request("/api/mail/config");
+      const article = state.curiosityCards.find((item) => item.id === state.curiosityPendingScheduledId);
+      const saved = article ? await setCuriosityScheduled(article, true) : false;
+      state.curiosityPendingScheduledId = "";
+      state.pending = null;
+      $("mail-dialog").close();
+      if (!article || saved) status("curiosity-status", article
+        ? "Inbox verified and card saved for your scheduled brief."
+        : "Inbox verified. Choose a card to include in your scheduled brief.");
+      renderCuriosity();
+      return;
+    }
     mailStep("send-brief");
     status("mail-status", "Inbox verified. Sending your prepared brief…");
     await performDelivery();
@@ -2522,6 +2645,7 @@ loadNews().then(() => openLinkedArticle());
 loadHeadlines();
 loadSignals();
 loadTrending();
+loadCuriosity();
 deliveryStatus.restore();
 window.addEventListener("hashchange", () => {
   if (location.hash === "#composer") openBuilder("build", $("nav-builder"));

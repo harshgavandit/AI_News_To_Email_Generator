@@ -10,15 +10,37 @@ body { text-rendering: optimizeLegibility; }
 .priority-signal p, .signal-type { font-size: 11px; margin: 4px 0 0; line-height: 1.5; }
 .signal-type { color: var(--green); }
 .signal-notice { color: var(--muted); margin-bottom: 0; }
-.curiosity-spotlight { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(150deg, var(--wash), var(--paper) 58%); box-shadow: var(--shadow-small); }
-.curiosity-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font: 600 10px/1.5 var(--font-ui); letter-spacing: .045em; text-transform: uppercase; }
-.curiosity-label { color: var(--green); }
-.curiosity-meta time { flex: none; font-variant-numeric: tabular-nums; }
-.curiosity-spotlight h2 { margin: 13px 0 8px; color: var(--ink); font: 500 20px/1.2 var(--serif); }
-.curiosity-byline { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.55; }
-.curiosity-summary { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
-.curiosity-link { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; margin-top: 10px; color: var(--green); font-size: 12px; font-weight: 650; text-decoration: none; }
+.curiosity-section { min-width: 0; padding: 19px 16px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(155deg, var(--wash), var(--paper) 54%); box-shadow: var(--shadow-small); }
+.curiosity-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.curiosity-label { color: var(--green); font: 700 9px/1.5 var(--font-ui); letter-spacing: .11em; text-transform: uppercase; }
+.curiosity-section-heading h2 { margin: 5px 0 0; color: var(--ink); font: 500 22px/1.2 var(--serif); }
+.curiosity-section-mark { display: grid; place-items: center; width: 35px; height: 35px; border: 1px solid var(--line); border-radius: 50%; color: var(--green); background: var(--paper); font-size: 17px; box-shadow: inset 0 1px 0 var(--edge-highlight); }
+.curiosity-intro { margin: 11px 0 15px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.curiosity-schedule-note { margin: 0 0 12px; color: var(--muted); line-height: 1.55; }
+.curiosity-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 11px; }
+.curiosity-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(145deg, var(--paper), var(--surface-bottom, var(--paper))); box-shadow: inset 0 1px 0 var(--edge-highlight), 0 2px 8px rgb(31 49 38 / 4%); transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease; }
+.curiosity-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--green) 32%, var(--line)); box-shadow: var(--shadow-small), inset 0 1px 0 var(--edge-highlight); }
+.curiosity-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font: 650 9px/1.5 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; }
+.curiosity-company { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--green); }
+.curiosity-year { flex: none; font-variant-numeric: tabular-nums; }
+.curiosity-card-title { margin: 8px 0 5px; font: 520 17px/1.3 var(--serif); color: var(--ink); }
+.curiosity-card .curiosity-byline { margin: 0 0 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.curiosity-summary-basis { display: inline-block; margin-bottom: 5px; color: var(--muted); font: 600 9px/1.45 var(--font-ui); letter-spacing: .04em; text-transform: uppercase; }
+.curiosity-card .curiosity-summary { display: -webkit-box; overflow: hidden; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
+.curiosity-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; padding: 0; list-style: none; }
+.curiosity-tag { padding: 3px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--wash); color: var(--muted); font-size: 9px; line-height: 1.4; }
+.curiosity-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.curiosity-reading-time { flex: none; color: var(--muted); font-size: 9px; }
+.curiosity-link { display: inline-flex; min-height: 32px; align-items: center; justify-content: flex-end; gap: 5px; color: var(--green); font-size: 10px; font-weight: 650; text-align: right; text-decoration: none; }
 .curiosity-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.curiosity-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 8px; }
+.curiosity-action { min-height: 34px; padding: 6px 9px; font-size: 10px; }
+.curiosity-action[aria-pressed="true"] { border-color: var(--green); background: var(--sage); color: var(--green); }
+.curiosity-schedule { min-height: 34px; padding: 4px 6px; font-size: 10px; text-align: left; }
+.curiosity-schedule[aria-pressed="true"] { color: var(--green); font-weight: 700; }
+.curiosity-empty { margin: 0; padding: 16px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.curiosity-show-more { display: inline-flex; align-items: center; min-height: 42px; margin-top: 7px; padding-inline: 8px; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .curiosity-card { transition: none; } .curiosity-card:hover { transform: none; } }
 .coverage-overview, .story-check { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); margin-bottom: 16px; }
 .coverage-overview summary, .story-check summary { cursor: pointer; font-weight: 600; }
 .coverage-overview p, .story-check p { color: var(--muted); line-height: 1.6; font-size: 13px; }

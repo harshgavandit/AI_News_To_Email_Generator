@@ -186,3 +186,33 @@ def test_subscription_retry_after_ambiguous_send_does_not_duplicate(mail, monkey
     result = mail_schedule.run_due_subscriptions(lambda: {'markdown': 'Daily', 'html': '<p>Daily</p>'})
     assert result['unconfirmed'] == 1
     assert mail_schedule.run_due_subscriptions(lambda: {'markdown': 'Daily', 'html': '<p>Daily</p>'})['sent'] == 0
+
+
+def test_scheduled_brief_includes_saved_curiosity_cards_and_removal_stops_future_inclusion(mail, monkeypatch):
+    from app import mail_schedule
+    from app.curiosity import curiosity_article
+
+    store, _, inbox = mail
+    monkeypatch.setattr(mail_schedule, 'get_store', lambda: store)
+    mailbox = public_mail.digest_key('mailbox:reader@example.org')
+    store.subscribe(mailbox, 'reader@example.org', 'UTC', time.time() - 10)
+    store.save_curiosity_selection(mailbox, [curiosity_article('attention-is-all-you-need')])
+
+    result = mail_schedule.run_due_subscriptions(lambda: {
+        'markdown': 'Daily technology brief', 'html': '<html><body><p>Daily brief</p></body></html>'})
+
+    assert result['sent'] == 1
+    assert '## Curiosity Cards' in inbox[-1]['body']
+    assert 'Attention Is All You Need' in inbox[-1]['body']
+    assert 'Google Research' in inbox[-1]['body']
+    assert 'https://research.google/pubs/attention-is-all-you-need' in inbox[-1]['body']
+    assert '<h2' in inbox[-1]['html'] and 'Curiosity Cards' in inbox[-1]['html']
+    assert 'https://research.google/pubs/attention-is-all-you-need' in inbox[-1]['html']
+
+    store.save_curiosity_selection(mailbox, [])
+    store.subscribe(mailbox, 'reader@example.org', 'UTC', time.time() - 10)
+    result = mail_schedule.run_due_subscriptions(lambda: {
+        'markdown': 'Second daily technology brief', 'html': '<html><body><p>Daily brief</p></body></html>'})
+
+    assert result['sent'] == 1
+    assert 'Curiosity Cards' not in inbox[-1]['body']

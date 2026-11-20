@@ -120,11 +120,12 @@ def releases(slug, name, url, host, *, article_paths=()):
 
 
 def article_feed(slug, name, url, *hosts, group=None, topic="software", author_name="", author_url="",
-                 region="Global", language="en"):
+                 region="Global", language="en", require_english=False):
     if group == "medium":
         hosts = ("medium.com", *hosts)
     return Source(slug, group or slug, name, "engineering", url, hosts, topic=topic, coverage="article",
-                  author_name=author_name, author_url=author_url, region=region, language=language)
+                  author_name=author_name, author_url=author_url, region=region, language=language,
+                  require_english=require_english)
 
 
 # Global Multi-Category Feed Matrix
@@ -137,6 +138,8 @@ DEFAULT_SOURCES = (
     Source("google-deepmind", "google-deepmind", "Google DeepMind", "research", "https://deepmind.google/blog/rss.xml", ("deepmind.google", "blog.google")),
     Source("google-research", "google-research", "Google Research", "research", "https://research.google/blog/rss/", ("research.google", "research.google.com")),
     Source("meta-ai", "meta-ai", "Meta AI Engineering", "research", "https://engineering.fb.com/category/ai-research/feed/", ("engineering.fb.com",)),
+    Source("meta-engineering", "meta", "Engineering at Meta", "engineering", "https://engineering.fb.com/feed/",
+           ("engineering.fb.com",), topic="software", require_english=True),
     Source("hugging-face", "hugging-face", "Hugging Face Blog", "engineering", "https://huggingface.co/blog/feed.xml", ("huggingface.co",)),
     Source("arxiv-ai", "arxiv-ai", "arXiv AI", "research", "https://rss.arxiv.org/rss/cs.AI", ("arxiv.org",),
            topic="research", coverage="preprint"),
@@ -254,6 +257,12 @@ DEFAULT_SOURCES = (
     reporting("infoq", "InfoQ", "https://feed.infoq.com/", "infoq.com", topic="software"),
     Source("aws-news", "aws-news", "AWS News Blog", "engineering", "https://aws.amazon.com/blogs/aws/feed/", ("aws.amazon.com",), topic="software"),
     Source("cloudflare-blog", "cloudflare-blog", "Cloudflare Blog", "engineering", "https://blog.cloudflare.com/rss/", ("blog.cloudflare.com",), topic="software"),
+    Source("stripe-engineering", "stripe", "Stripe Engineering", "engineering", "https://stripe.com/blog",
+           ("stripe.com",), topic="software", coverage="article", language="en",
+           article_paths=("/blog/",), integration="publisher-metadata", require_english=True),
+    Source("uber-engineering", "uber", "Uber Engineering", "engineering", "https://www.uber.com/us/en/blog/",
+           ("uber.com", "www.uber.com"), topic="software", coverage="article", region="Global", tech_only=True,
+           language="en", article_paths=("/us/en/blog/",), integration="publisher-metadata", require_english=True),
     article_feed("cncf-blog", "Cloud Native Computing Foundation", "https://www.cncf.io/blog/feed/", "cncf.io"),
     Source("vercel", "vercel", "Vercel Changelog", "engineering", "https://vercel.com/atom", ("vercel.com",), topic="software"),
     Source("kubernetes", "kubernetes", "Kubernetes Blog", "engineering", "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software"),
@@ -295,6 +304,11 @@ DEFAULT_SOURCES = (
                  author_url="https://medium.com/@NetflixTechBlog"),
     article_feed("airbnb-engineering", "Airbnb Engineering on Medium", "https://medium.com/feed/airbnb-engineering",
                  "airbnb.io", group="medium"),
+    article_feed("razorpay-engineering", "Razorpay Engineering on Medium", "https://engineering.razorpay.com/feed",
+                 "engineering.razorpay.com", group="medium", author_name="Razorpay Engineering", require_english=True),
+    article_feed("medium-gordicaleksa", "Aleksa Gordić on Medium", "https://gordicaleksa.medium.com/feed",
+                 "gordicaleksa.medium.com", group="medium", topic="ai", author_name="Aleksa Gordić",
+                 author_url="https://gordicaleksa.medium.com/", language="en", require_english=True),
     article_feed("ux-collective", "UX Collective on Medium", "https://uxdesign.cc/feed", "uxdesign.cc", group="medium"),
     article_feed("medium-codex", "CodeX on Medium", "https://medium.com/feed/codex", group="medium"),
     article_feed("medium-proandroiddev", "ProAndroidDev on Medium", "https://medium.com/feed/proandroiddev",

@@ -122,6 +122,9 @@ subscriptions = Table("brief_subscriptions", schema,
     Column("next_run", Float, nullable=False, index=True),
     Column("enabled", Boolean, nullable=False, default=True),
     Column("claimed", Float, nullable=False, default=0.0))
+mail_curiosity = Table("brief_mail_curiosity", schema,
+    Column("mailbox", String(64), primary_key=True), Column("payload", Text, nullable=False),
+    Column("updated", Float, nullable=False))
 mail_batches = Table("brief_mail_batches", schema,
     Column("id", String(64), primary_key=True),
     Column("created", Float, nullable=False), Column("retry_at", Float, nullable=False),
@@ -223,6 +226,7 @@ class Store:
         self._syndication_ready = False
         self._feed_state_ready = False
         self._mail_revocations_ready = False
+        self._curiosity_schema_ready = False
         self._schema_lock = threading.Lock()
         self._source_stats_lock = threading.Lock()
         self._source_stats = {}
@@ -232,6 +236,7 @@ class Store:
             self.ensure_discovery_schema()
             self._event_tables_ready = True
             self._radar_tables_ready = True
+            self._curiosity_schema_ready = True
 
     def ensure_discovery_schema(self):
         # Existing deployments can upgrade in place. Old code can still write during rollout.
@@ -660,6 +665,49 @@ class Store:
                 ) for term in terms))).order_by(*order).limit(300)).mappings().all()
                 return list({r["id"]: dict(r) for r in [*recent, *ranked]}.values())
             return [dict(r) for r in recent]
+
+    def curiosity_candidates(self, source_ids, *, hours=90 * 24, limit=200):
+        """Return a bounded set of archived engineering/research excerpts, without refreshing feeds."""
+        if not source_ids:
+            return []
+        stmt = self.query(hours).where(articles.c.source_id.in_(tuple(source_ids)))
+        with self.engine.connect() as conn:
+            return [dict(row) for row in conn.execute(
+                stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc()).limit(max(1, min(limit, 500)))
+            ).mappings()]
+
+    def ensure_curiosity_schema(self):
+        if self._curiosity_schema_ready:
+            return
+        with self._schema_lock, self.engine.begin() as conn:
+            if not inspect(conn).has_table(mail_curiosity.name):
+                if self.engine.dialect.name == "postgresql":
+                    conn.exec_driver_sql("SET LOCAL lock_timeout = '5s'")
+                    conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
+                mail_curiosity.create(conn, checkfirst=True)
+        self._curiosity_schema_ready = True
+
+    def curiosity_selection(self, mailbox):
+        self.ensure_curiosity_schema()
+        with self.engine.connect() as conn:
+            payload = conn.scalar(select(mail_curiosity.c.payload).where(mail_curiosity.c.mailbox == mailbox))
+        return json.loads(payload) if payload else []
+
+    def save_curiosity_selection(self, mailbox, cards):
+        """Atomically replace one verified mailbox's bounded card snapshots."""
+        self.ensure_curiosity_schema()
+        snapshot_fields = ("id", "title", "company", "publisher", "summary", "url", "tags", "read_minutes")
+        snapshots = []
+        for card in cards[:5]:
+            snapshots.append({key: card[key] for key in snapshot_fields if key in card})
+        with self.engine.begin() as conn:
+            if not snapshots:
+                conn.execute(delete(mail_curiosity).where(mail_curiosity.c.mailbox == mailbox))
+                return
+            stmt = self.insert(mail_curiosity).values(mailbox=mailbox, payload=json.dumps(snapshots), updated=time.time())
+            conn.execute(stmt.on_conflict_do_update(index_elements=[mail_curiosity.c.mailbox], set_={
+                "payload": stmt.excluded.payload, "updated": stmt.excluded.updated,
+            }))
 
     def _admit(self, conn, policies):
         for scope, bucket, ceiling in sorted(policies, key=lambda policy: (policy[0] not in {"digests", "outbound"}, policy)):
