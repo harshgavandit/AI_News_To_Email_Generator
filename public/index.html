@@ -83,6 +83,7 @@
           <button type="button" data-workspace-view="for-you"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" focusable="false"><path d="M3 5h14M3 10h14M3 15h14" /><path d="M7 3v4M13 8v4M8 13v4" stroke-width="3" /></svg></span> For you</button>
           <button type="button" data-workspace-view="saved"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" focusable="false"><path d="M5 3h10v14l-5-3-5 3V3Z" /></svg></span> Saved <span id="sidebar-saved-count" class="nav-count"></span></button>
           <button type="button" data-workspace-view="catchup"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9a7 7 0 1 1 1 5M3 4v5h5M10 6v4l3 2" /></svg></span> Catch up</button>
+          <a class="workspace-nav-link" id="curiosity-nav-link" href="#curiosity-spotlight"><span aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m10 2.8 1.8 5.4 5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4-5.4-1.8 5.4-1.8L10 2.8Z" /><path d="m15.9 2.4.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5Z" /></svg></span> Curiosity Cards</a>
         </nav>
         <div class="sidebar-section">
           <a class="sidebar-secondary" href="/inbox.html">Inbox ↗</a>
@@ -684,7 +685,7 @@
         </div>
         <div id="headlines-content" class="headlines-content"></div>
       </section>
-      <section id="curiosity-spotlight" class="curiosity-section" aria-labelledby="curiosity-title">
+      <section id="curiosity-spotlight" class="curiosity-section" aria-labelledby="curiosity-title" tabindex="-1">
         <div class="curiosity-section-heading">
           <div><span class="curiosity-label">Behind the build</span><h2 id="curiosity-title">Curiosity Cards</h2></div>
           <span class="curiosity-section-mark" aria-hidden="true">✳</span>

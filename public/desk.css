@@ -10,11 +10,12 @@
 .workspace-sidebar { position: sticky; top: calc(var(--header-offset) + 24px); padding-block: 20px; padding-inline-end: 10px; max-height: calc(100dvh - var(--header-offset) - 24px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .workspace-content { min-width: 0; }
 .workspace-links { display: grid; gap: 4px; }
-.workspace-links button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: start; min-height: 42px; padding: 9px 11px; background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 8px; font-size: 13px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; transition: background-color var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
-.workspace-links button > span:first-child { width: 18px; font-size: 19px; text-align: center; color: var(--green); }
-.workspace-links button > span:has(svg) { display: grid; place-items: center; flex: 0 0 18px; }
+.workspace-links button, .workspace-links .workspace-nav-link { width: 100%; display: flex; align-items: center; gap: 10px; text-align: start; min-height: 42px; padding: 9px 11px; background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 8px; font-size: 13px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; transition: background-color var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
+.workspace-links .workspace-nav-link { text-decoration: none; }
+.workspace-links button > span:first-child, .workspace-links .workspace-nav-link > span:first-child { width: 18px; font-size: 19px; text-align: center; color: var(--green); }
+.workspace-links button > span:has(svg), .workspace-links .workspace-nav-link > span:has(svg) { display: grid; place-items: center; flex: 0 0 18px; }
 .workspace-links svg { width: 18px; height: 18px; }
-.workspace-links button:hover, .sidebar-secondary:hover { color: var(--ink); background: var(--sage); }
+.workspace-links button:hover, .workspace-links .workspace-nav-link:hover, .sidebar-secondary:hover { color: var(--ink); background: var(--sage); }
 .workspace-links button[aria-current="page"], .workspace-links button[aria-pressed="true"] { color: var(--green); background: var(--sage); font-weight: 650; border-color: var(--accent-line); box-shadow: inset 0 1px 0 var(--edge-highlight); }
 .workspace-links .nav-count { margin-inline-start: auto; color: var(--muted); font-size: 12px; width: auto; }
 .sidebar-section { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }

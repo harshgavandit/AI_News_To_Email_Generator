@@ -650,6 +650,7 @@ for (const button of document.querySelectorAll("[data-workspace-view]")) {
     $("reading-title").focus({ preventScroll: true });
   });
 }
+$("curiosity-nav-link").addEventListener("click", closeWorkspaceMenu);
 function openHomeEdition(view) {
   $(`view-${view}`).click();
   $("reading-title").focus();
