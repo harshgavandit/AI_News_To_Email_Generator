@@ -197,3 +197,13 @@ Promotion appends only the listed candidates with `reviewed_at` and `require_eng
 ### November 21, 2026 results
 
 Validation run 44917117113 checked all 190 candidates: 97 were active and English-verified, 40 were active but failed the original English check, 30 had no entries in 90 days and 23 were unreachable. The English check then changed: release, video and podcast feeds rely on their reviewed language, and article feeds pass at 60% detected English with at most 10% confidently foreign. The 97 were promoted with six arXiv categories (empty only because arXiv publishes no RSS on weekends). Run 44917920438 rechecked 50 (the 40, two moved repositories and eight corrected URLs): 33 passed and were promoted. Ten more were active, well-known English publishers or projects that still fell short of the detector threshold on code-heavy or very short titles (Jane Street, LLVM, Slashdot, Node Weekly, Data Engineering Weekly, watchTowr Labs, AI as Normal Technology, Medium Kubernetes, the MCP TypeScript SDK and Unsloth); they were promoted after manual review, article feeds with `require_english` so any confidently foreign item is still dropped. Seven corrected URLs remained unreachable and stay out, as do the dormant and blocked candidates. Enabled sources: 518 before, 664 after.
+
+### Source policy: quiet is not broken
+
+Informa AI is a broad directory of reliable, mostly English technology sources. It shows headlines, short excerpts or summaries and direct links to the original publisher; it does not reproduce articles. A source is judged on whether its feed works, not on how often it publishes:
+
+- **Active**: the feed was fetched and parsed and has entries from the last 90 days.
+- **Quiet**: the feed was fetched and parsed but has no entries from the last 90 days. Quiet feeds are promoted and kept; their language is judged on whatever entries they have, or on the review when they have none. In production the same distinction appears as `content_status` (`recent`, `quiet`, `no_retained_content`), which never marks a source as failed.
+- **Unavailable**: the feed could not be fetched or parsed (`feed_not_found`, `access_denied`, `invalid_feed`, repeated `fetch_failed`, `no_eligible_entries`). Only these are rejected or paused, with a recorded reason.
+
+Fresh daily news comes from ranking and the reader's time window, not from removing quieter publishers. On November 21, 2026 the 21 quiet candidates from run 44917117113 (for example Andrej Karpathy's blog, The Gradient, Stanford AI Lab, V8, AutoGen, Aider, Keras and Nuclei releases) were promoted on this basis; Google's Gemini cookbook release feed was left out because it is documentation, not news. Enabled sources: 685.

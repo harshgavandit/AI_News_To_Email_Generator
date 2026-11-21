@@ -8254,5 +8254,423 @@
     "collection": "Systems and software",
     "reviewed_at": "2026-11-21",
     "require_english": true
+  },
+  {
+    "id": "ai2-blog",
+    "group": "medium",
+    "label": "Ai2 Blog on Medium",
+    "url": "https://medium.com/feed/ai2-blog",
+    "hosts": [
+      "medium.com",
+      "blog.allenai.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "changelog-news",
+    "group": "changelog-news",
+    "label": "Changelog News",
+    "url": "https://changelog.com/news/feed",
+    "hosts": [
+      "changelog.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 180,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "hard-fork",
+    "group": "hard-fork",
+    "label": "Hard Fork",
+    "url": "https://feeds.simplecast.com/l2i9YnTd",
+    "hosts": [
+      "nytimes.com",
+      "simplecast.com"
+    ],
+    "kind": "podcast",
+    "topic": "industry",
+    "coverage": "article",
+    "format": "podcast",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "karpathy-blog",
+    "group": "karpathy-blog",
+    "label": "Andrej Karpathy Blog",
+    "url": "https://karpathy.github.io/feed.xml",
+    "hosts": [
+      "karpathy.github.io"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 1440,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "paypal-tech",
+    "group": "medium",
+    "label": "PayPal Technology",
+    "url": "https://medium.com/feed/paypal-tech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-aider-ai-aider",
+    "group": "github-releases",
+    "label": "Aider-AI/aider Releases",
+    "url": "https://github.com/Aider-AI/aider/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/Aider-AI/aider/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-continuedev-continue",
+    "group": "github-releases",
+    "label": "continuedev/continue Releases",
+    "url": "https://github.com/continuedev/continue/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/continuedev/continue/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-flowiseai-flowise",
+    "group": "github-releases",
+    "label": "FlowiseAI/Flowise Releases",
+    "url": "https://github.com/FlowiseAI/Flowise/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/FlowiseAI/Flowise/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-huggingface-smolagents",
+    "group": "github-releases",
+    "label": "huggingface/smolagents Releases",
+    "url": "https://github.com/huggingface/smolagents/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/huggingface/smolagents/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-huggingface-text-generation-inference",
+    "group": "github-releases",
+    "label": "huggingface/text-generation-inference Releases",
+    "url": "https://github.com/huggingface/text-generation-inference/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/huggingface/text-generation-inference/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-keras-team-keras",
+    "group": "github-releases",
+    "label": "keras-team/keras Releases",
+    "url": "https://github.com/keras-team/keras/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/keras-team/keras/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-letta-ai-letta",
+    "group": "github-releases",
+    "label": "letta-ai/letta Releases",
+    "url": "https://github.com/letta-ai/letta/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/letta-ai/letta/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-microsoft-autogen",
+    "group": "github-releases",
+    "label": "microsoft/autogen Releases",
+    "url": "https://github.com/microsoft/autogen/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/microsoft/autogen/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-projectdiscovery-nuclei",
+    "group": "github-releases",
+    "label": "projectdiscovery/nuclei Releases",
+    "url": "https://github.com/projectdiscovery/nuclei/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/projectdiscovery/nuclei/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "sebastian-ruder",
+    "group": "sebastian-ruder",
+    "label": "NLP News — Sebastian Ruder",
+    "url": "https://newsletter.ruder.io/feed",
+    "hosts": [
+      "newsletter.ruder.io"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 180,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "stanford-ai-lab",
+    "group": "stanford-ai-lab",
+    "label": "Stanford AI Lab Blog",
+    "url": "https://ai.stanford.edu/blog/feed.xml",
+    "hosts": [
+      "ai.stanford.edu"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "synced-review",
+    "group": "synced-review",
+    "label": "Synced",
+    "url": "https://syncedreview.com/feed/",
+    "hosts": [
+      "syncedreview.com"
+    ],
+    "kind": "news",
+    "topic": "ai",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "the-gradient",
+    "group": "the-gradient",
+    "label": "The Gradient",
+    "url": "https://thegradient.pub/rss/",
+    "hosts": [
+      "thegradient.pub"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "v8-blog",
+    "group": "v8-blog",
+    "label": "V8 Blog",
+    "url": "https://v8.dev/blog.atom",
+    "hosts": [
+      "v8.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "yt-theprimeagen",
+    "group": "youtube",
+    "label": "ThePrimeagen",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC8ENHE5xdFSwx71u3fDH5Xw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-yannic-kilcher",
+    "group": "youtube",
+    "label": "Yannic Kilcher",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCZHmQk67mSJgfCCTn7xBfew",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
   }
 ]

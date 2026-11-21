@@ -1,8 +1,10 @@
 """Validate a proposed reviewed source pack before enabling it.
 
-Run against a local JSON candidate list. Reports transport, parsed items and
-recent-entry eligibility; never edits the production catalog or submits URLs to
-the application. Use --promote only after reviewing the report and publishers.
+Run against a local JSON candidate list. Reports transport, parsed items and recent
+entries. A working feed with no entries in 90 days is "quiet", not broken, and can still
+be promoted; only feeds that cannot be fetched or parsed are rejected. Never edits the
+production catalog or submits URLs to the application. Use --promote only after
+reviewing the report and publishers.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -40,6 +42,17 @@ def english_enough(source, recent, english, other_languages):
     return english * 5 >= recent * 3 and other_languages * 10 <= recent
 
 
+# Informa AI keeps a broad directory: a reachable, parseable feed is worth listing even when
+# its publisher has been quiet. Only a feed that cannot be fetched or parsed is rejected.
+PROMOTABLE = {"active", "quiet"}
+
+
+def feed_status(state, recent):
+    if not state.get("available"):
+        return "unavailable"
+    return "active" if recent else "quiet"
+
+
 def requires_english(row):
     return row.get("coverage") not in LANGUAGE_FROM_REVIEW and row.get("kind") not in LANGUAGE_FROM_REVIEW_KINDS
 
@@ -74,13 +87,17 @@ def main():
                 items, state = read_feed(source)
             cutoff = datetime.now(UTC) - timedelta(days=90)
             recent = [item for item in items if cutoff <= datetime.fromisoformat(item["published_at"]) <= datetime.now(UTC)]
-            english = sum(is_english_article(item) for item in recent)
+            # A working feed with nothing new is quiet, not broken. Its language is judged on
+            # whatever entries it has, or on the review when it has none.
+            sample = recent or items
+            english = sum(is_english_article(item) for item in sample)
             other_languages = sum(any(code not in ("en", "und") for code in
-                                       (article_language(item), excerpt_language(item.get("description")))) for item in recent)
-            result.update(status="active" if recent and state["available"] else "dormant" if state["available"] else "unavailable",
+                                       (article_language(item), excerpt_language(item.get("description")))) for item in sample)
+            result.update(status=feed_status(state, recent),
                 parsed_entries=len(items), recent_entries=len(recent), error=state.get("error"),
                 english_entries=english, non_english_entries=other_languages,
-                english_verified=english_feed and bool(recent) and english_enough(source, len(recent), english, other_languages),
+                language_basis="entries" if sample else "review",
+                english_verified=english_feed and (not sample or english_enough(source, len(sample), english, other_languages)),
                 latest_published_at=max((item["published_at"] for item in items), default=None),
                 sample_urls=[item["url"] for item in recent[:2]],
                 seconds=round(time.monotonic() - started, 3))
@@ -93,7 +110,7 @@ def main():
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps({"checked_at": datetime.now(UTC).isoformat(), "results": results}, indent=2), encoding="utf-8")
     if args.promote:
-        active = {row["id"] for row in results if row["status"] == "active" and row["english_verified"]}
+        active = {row["id"] for row in results if row["status"] in PROMOTABLE and row["english_verified"]}
         approved = [{**row, "reviewed_at": datetime.now(UTC).date().isoformat(),
                      **({"require_english": True} if row["id"] not in existing_ids and requires_english(row) else {})}
                     for row in candidates if row["id"] in active]
@@ -106,7 +123,7 @@ def main():
         load_source_pack(temporary)
         temporary.replace(args.promote)
     print(json.dumps({status: sum(row["status"] == status for row in results) for status in
-                      ("active", "dormant", "unavailable", "already_integrated", "invalid_configuration", "language_excluded")}))
+                      ("active", "quiet", "unavailable", "already_integrated", "invalid_configuration", "language_excluded")}))
 
 
 if __name__ == "__main__":

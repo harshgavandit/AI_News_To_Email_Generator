@@ -94,3 +94,11 @@ def test_promoted_release_and_video_sources_do_not_filter_by_detected_language()
     from app.sources import BY_ID
     assert not BY_ID["release-oven-sh-bun"].require_english and not BY_ID["yt-openai"].require_english
     assert BY_ID["engadget"].require_english and BY_ID["engadget"].reviewed_at
+
+
+def test_a_working_feed_without_recent_posts_is_quiet_and_promotable():
+    from scripts.check_source_pack import PROMOTABLE, feed_status
+    assert feed_status({"available": True}, recent=[]) == "quiet"
+    assert feed_status({"available": True}, recent=[{}]) == "active"
+    assert feed_status({"available": False, "error": "feed_not_found"}, recent=[]) == "unavailable"
+    assert {"active", "quiet"} == PROMOTABLE
