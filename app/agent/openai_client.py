@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-6-luna"  # gpt-4o-mini shuts down on 14 Jan 2027.
 # Each task maps to a cost tier. Cheap, high-volume work uses the fast tier; multi-source
 # comparison uses the deep tier. Tiers are configured with NEWS_AI_MODEL_<TIER>.
 TASK_TIERS = {
@@ -49,6 +49,28 @@ def route_model(task: str = "general") -> str:
     return configured or get_openai_model()
 
 
+REASONING_DEFAULTS = {"fast": "medium", "standard": "medium", "deep": "medium"}
+REASONING_LEVELS = ("none", "minimal", "low", "medium", "high", "xhigh", "max")
+REASONING_HEADROOM = 2000  # Reasoning tokens count against max_completion_tokens.
+
+
+def reasoning_effort(model: str, task: str = "general") -> str | None:
+    """Reasoning effort for reasoning-capable models; None for models that reject the parameter.
+
+    All tiers default to medium; NEWS_AI_REASONING_<TIER> can override each tier.
+    """
+    name = model.lower()
+    if not (name.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4")) and "chat" not in name):
+        return None
+    tier = tier_for(task)
+    value = (os.getenv(f"NEWS_AI_REASONING_{tier.upper()}") or REASONING_DEFAULTS[tier]).strip().lower()
+    if value not in REASONING_LEVELS:
+        value = REASONING_DEFAULTS[tier]
+    if value == "none" and any(family in name for family in ("-sol", "-astra")):
+        value = "low"  # The larger GPT-6 models have no "none" setting.
+    return value
+
+
 def fallback_model(primary: str) -> str | None:
     candidate = os.getenv("NEWS_AI_FALLBACK_MODEL", DEFAULT_MODEL)
     return candidate if candidate and candidate != primary else None
@@ -82,9 +104,13 @@ def _fallback_worthy(error) -> bool:
     return isinstance(error, APIConnectionError) or (isinstance(error, APIStatusError) and error.status_code >= 500)
 
 
-def _complete(model, messages, max_tokens, response_model):
+def _complete(model, messages, max_tokens, response_model, task="general"):
     completions = get_client().chat.completions
     options = dict(model=model, messages=messages, max_completion_tokens=max_tokens)
+    if effort := reasoning_effort(model, task):
+        options["reasoning_effort"] = effort
+        if effort != "none":
+            options["max_completion_tokens"] = max_tokens + REASONING_HEADROOM
     if response_model:
         completion = completions.parse(**options, response_format=response_model)
         parsed = completion.choices[0].message.parsed
@@ -111,7 +137,7 @@ def generate_response(prompt: str, system_prompt: str = "Return JSON.", response
     for index, current in enumerate(candidates):
         for attempt in range(2):
             try:
-                content, usage = _complete(current, messages, max_tokens, response_model)
+                content, usage = _complete(current, messages, max_tokens, response_model, task)
                 _record(task, current, usage)
                 return content
             except (APIConnectionError, APIStatusError) as error:

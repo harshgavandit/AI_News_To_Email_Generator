@@ -49,7 +49,7 @@ def fake_client(behaviour):
 
 
 def test_tasks_route_to_tiers_with_overrides(store, monkeypatch):
-    assert openai_client.route_model("explain") == openai_client.route_model("compare") == "gpt-4o-mini"
+    assert openai_client.route_model("explain") == openai_client.route_model("compare") == "gpt-6-luna"
     monkeypatch.setenv("OPENAI_MODEL", "base-model")
     monkeypatch.setenv("NEWS_AI_MODEL_FAST", "fast-model")
     monkeypatch.setenv("NEWS_AI_ANALYSIS_MODEL", "legacy-analysis")
@@ -72,12 +72,12 @@ def test_unavailable_model_falls_back_and_usage_is_recorded(store, monkeypatch):
     client, calls = fake_client(behaviour)
     monkeypatch.setattr(openai_client, "get_client", lambda: client)
     assert openai_client.generate_response("x", task="compare") == "{}"
-    assert calls == ["gpt-4o", "gpt-4o-mini"]
+    assert calls == ["gpt-4o", "gpt-6-luna"]
     rows = {(row["task"], row["model"]): row for row in ai_usage.summary(store)}
     assert rows[("compare", "gpt-4o")]["failures"] == 1
-    success = rows[("compare", "gpt-4o-mini")]
+    success = rows[("compare", "gpt-6-luna")]
     assert (success["calls"], success["prompt"], success["completion"]) == (1, 1000, 500)
-    assert success["estimated_usd"] == pytest.approx((1000 * 0.15 + 500 * 0.60) / 1_000_000)
+    assert success["estimated_usd"] == pytest.approx((1000 * 0.10 + 500 * 0.50) / 1_000_000)
 
 
 def test_authentication_errors_do_not_fall_back(store, monkeypatch):
@@ -88,7 +88,7 @@ def test_authentication_errors_do_not_fall_back(store, monkeypatch):
     monkeypatch.setattr(openai_client, "get_client", lambda: client)
     with pytest.raises(AuthenticationError):
         openai_client.generate_response("x", task="analyze")
-    assert calls == ["gpt-4o-mini"]
+    assert calls == ["gpt-6-luna"]
 
 
 def test_daily_budget_stops_calls_and_is_reported_as_budget_limited(store, monkeypatch):
@@ -122,7 +122,7 @@ def test_owner_ai_usage_report(store, monkeypatch):
     data = client.get("/api/admin/ai-usage", headers={"Authorization": f"Bearer {OWNER}"}).json()
     today, = data["days"]
     assert (today["calls"], today["failures"], today["prompt"]) == (2, 1, 2000)
-    assert data["routing"]["fast"] == "gpt-4o-mini" and data["tasks"]["compare"] == "deep"
+    assert data["routing"]["fast"] == "gpt-6-luna" and data["tasks"]["compare"] == "deep"
     assert data["spend_today_usd"] == pytest.approx(today["estimated_usd"])
 
 
@@ -156,3 +156,34 @@ def test_suggest_endpoint_returns_interpretation(store):
     assert data["interpretation"]["filters"]["coverage"] == "advisory"
     assert data["interpretation"]["summary"].startswith("“ransomware”")
     assert client.get("/api/search/suggest", params={"q": "ransomware"}).json()["interpretation"] is None
+
+
+def test_reasoning_effort_is_sent_only_to_reasoning_models(store, monkeypatch):
+    assert openai_client.reasoning_effort("gpt-4o-mini", "explain") is None
+    assert openai_client.reasoning_effort("gpt-6-luna", "explain") == "medium"
+    assert openai_client.reasoning_effort("gpt-6-luna", "analyze") == "medium"
+    assert openai_client.reasoning_effort("gpt-6.2-sol", "explain") == "medium"
+    monkeypatch.setenv("NEWS_AI_REASONING_DEEP", "medium")
+    assert openai_client.reasoning_effort("gpt-6.1-terra", "compare") == "medium"
+    monkeypatch.setenv("NEWS_AI_REASONING_FAST", "bogus")
+    assert openai_client.reasoning_effort("gpt-6-luna", "explain") == "medium"
+
+
+def test_reasoning_models_get_effort_and_token_headroom(store, monkeypatch):
+    seen = []
+
+    def create(**options):
+        seen.append(options)
+        return Mock(choices=[Mock(message=Mock(content="{}"))], usage=Mock(prompt_tokens=10, completion_tokens=5))
+
+    monkeypatch.setattr(openai_client, "get_client", lambda: Mock(chat=Mock(completions=Mock(create=create))))
+    monkeypatch.setenv("NEWS_AI_MODEL_STANDARD", "gpt-6-luna")
+    openai_client.generate_response("x", task="analyze", max_tokens=1300)
+    assert seen[-1]["reasoning_effort"] == "medium" and seen[-1]["max_completion_tokens"] == 1300 + openai_client.REASONING_HEADROOM
+    monkeypatch.setenv("NEWS_AI_MODEL_FAST", "gpt-6-luna")
+    openai_client.generate_response("x", task="explain", max_tokens=900)
+    assert seen[-1]["reasoning_effort"] == "medium" and seen[-1]["max_completion_tokens"] == 900 + openai_client.REASONING_HEADROOM
+    monkeypatch.setenv("NEWS_AI_MODEL_FAST", "gpt-4o-mini")
+    openai_client.generate_response("x", task="explain", max_tokens=900)
+    assert "reasoning_effort" not in seen[-1]
+    assert ai_usage.estimate("gpt-6-luna", 1_000_000, 1_000_000) == 0.6
