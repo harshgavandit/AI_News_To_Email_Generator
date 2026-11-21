@@ -339,7 +339,7 @@ def test_sweeps_check_the_full_catalog_once_each_and_respect_boundaries(archive,
         assert client.get("/api/discovery/ingestion").json()["status"] == "running"
 
 
-def test_only_the_vercel_schedule_starts_publisher_sweeps():
+def test_publisher_followup_drains_only_inside_the_two_daily_sweep_windows():
     root = Path(__file__).resolve().parents[1]
     config = json.loads((root / "vercel.json").read_text(encoding="utf-8"))
     assert config["schedules"] == {"publisher-feed-sweep": {
@@ -349,7 +349,10 @@ def test_only_the_vercel_schedule_starts_publisher_sweeps():
     assert all(item["path"].startswith("/api/jobs/intelligence") for item in config["crons"])
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
-    assert "if: github.event_name == 'workflow_dispatch'" in refresh_job
+    assert "github.event_name == 'workflow_dispatch'" in refresh_job
+    assert "- cron: '15 2,14 * * *'" in workflow
+    assert "github.event.schedule == '15 2,14 * * *'" in refresh_job
+    assert "github.event.schedule == '2-57/5 * * * *'" not in refresh_job
     assert "--retry" not in refresh_job
 
 
