@@ -103,7 +103,8 @@ export function createSearchSuggestions({ input, list, request, onSelect, delay 
   input.addEventListener("input", () => {
     clearTimeout(timer);
     const query = input.value.trim();
-    if (query.length < 2) {
+    // Saved views and URL restores set the value programmatically; only a reader typing needs suggestions.
+    if (query.length < 2 || document.activeElement !== input) {
       sequence++;
       return close();
     }

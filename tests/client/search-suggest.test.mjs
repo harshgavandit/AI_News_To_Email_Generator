@@ -56,7 +56,9 @@ test('suggestions render as a grouped, accessible listbox and support keyboard s
 
 test('short queries, failed requests and stale responses never show suggestions', async () => {
   let release;
+  const unexpected = [];
   const env = await setup(async url => {
+    if (url.includes('restored')) unexpected.push(url);
     if (url.endsWith('q=fail')) throw new Error('offline');
     if (url.endsWith('q=slow')) await new Promise(resolve => { release = resolve; });
     return { suggestions: SUGGESTIONS };
@@ -64,6 +66,11 @@ test('short queries, failed requests and stale responses never show suggestions'
   try {
     await env.type('s');
     assert.equal(env.list.hidden, true);
+    env.input.blur();
+    await env.type('restored view');
+    assert.equal(env.list.hidden, true);
+    assert.deepEqual(unexpected, [], 'programmatic values set while the box is unfocused do not fetch suggestions');
+    env.input.focus();
     await env.type('fail');
     assert.equal(env.list.hidden, true);
     await env.type('slow');
