@@ -126,6 +126,220 @@ CURATED_CURIOSITY = (
           ("Live streaming", "Reliability", "Operations", "Scaling"), 15, "netflix-techblog",
           authors="Brett Axler · Casper Choffat · Alo Lowry", publisher_detail="Netflix TechBlog · Medium publisher estimate",
           read_time_basis="publisher"),
+
+    # --- Google: cluster management, traffic, latency, monorepo practice ---------------------------
+    _seed("google-borg", "Large-scale cluster management at Google with Borg",
+          "https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/", "Google Research", "Google", 2015,
+          "The Borg paper describes the cluster manager that runs hundreds of thousands of jobs across Google’s clusters, covering admission control, task packing, over-commitment and the isolation needed to mix latency-sensitive services with batch work.",
+          ("Cluster management", "Scheduling", "Infrastructure"), 25, "google-research",
+          authors="Abhishek Verma and co-authors", publisher_detail="EuroSys research paper"),
+    _seed("google-borg-omega-kubernetes", "Borg, Omega, and Kubernetes",
+          "https://research.google/pubs/borg-omega-and-kubernetes/", "Google Research", "Google", 2016,
+          "Lessons from three generations of Google container-management systems, and how experience with Borg and Omega shaped the design of Kubernetes.",
+          ("Containers", "Kubernetes", "Cluster management"), 14, "google-research",
+          authors="Brendan Burns · Brian Grant · David Oppenheimer · Eric Brewer · John Wilkes",
+          publisher_detail="ACM Queue article"),
+    _seed("google-maglev", "Maglev: A Fast and Reliable Software Network Load Balancer",
+          "https://research.google/pubs/maglev-a-fast-and-reliable-software-network-load-balancer/", "Google Research", "Google", 2016,
+          "How Google serves traffic through a distributed software load balancer on commodity servers, using consistent hashing and connection tracking to spread packets evenly and survive machine failures.",
+          ("Load balancing", "Networking", "Traffic"), 18, "google-research",
+          authors="Daniel E. Eisenbud and co-authors", publisher_detail="USENIX NSDI research paper"),
+    _seed("google-tail-at-scale", "The Tail at Scale",
+          "https://research.google/pubs/the-tail-at-scale/", "Google Research", "Google", 2013,
+          "Why rare slow responses dominate latency in large fan-out services, and techniques such as hedged and tied requests that keep user-facing systems responsive despite variable component latency.",
+          ("Latency", "Distributed systems", "Performance"), 15, "google-research",
+          authors="Jeffrey Dean · Luiz André Barroso", publisher_detail="Communications of the ACM"),
+    _seed("google-dapper", "Dapper, a Large-Scale Distributed Systems Tracing Infrastructure",
+          "https://research.google/pubs/dapper-a-large-scale-distributed-systems-tracing-infrastructure/", "Google Research",
+          "Google", 2010,
+          "Google’s production tracing system follows requests across many services with low overhead and sampling, and helped inspire the distributed tracing tools used widely today.",
+          ("Observability", "Tracing", "Microservices"), 16, "google-research",
+          authors="Benjamin H. Sigelman and co-authors", publisher_detail="Google technical report"),
+    _seed("google-sre-book", "Site Reliability Engineering: How Google Runs Production Systems",
+          "https://sre.google/sre-book/table-of-contents/", "Google SRE", "Google", 2016,
+          "Google’s free book on running production services, covering error budgets, monitoring, on-call, incident response, postmortems and how SRE teams balance reliability with release velocity.",
+          ("Reliability", "Operations", "SRE"), 30, "google-research", publisher_detail="O’Reilly book, free online edition"),
+    _seed("google-swe-book", "Software Engineering at Google",
+          "https://abseil.io/resources/swe-book", "Abseil", "Google", 2020,
+          "Lessons on programming over time at Google scale: code review, testing culture, large-scale changes, dependency management, and build and version-control practices around the monorepo.",
+          ("Engineering culture", "Monorepo", "Testing"), 30, "google-research",
+          authors="Titus Winters · Tom Manshreck · Hyrum Wright", publisher_detail="O’Reilly book, free online edition"),
+    # --- Anthropic: Claude Code and agent engineering --------------------------------------------
+    _seed("anthropic-teams-claude-code", "How Anthropic teams use Claude Code",
+          "https://claude.com/resources/articles/how-anthropic-teams-use-claude-code", "Claude by Anthropic", "Anthropic", 2025,
+          "Anthropic describes how its own engineering, security, data and non-technical teams use Claude Code day to day, from navigating unfamiliar codebases to debugging and automating routine work.",
+          ("Claude Code", "Developer workflow", "AI agents"), 15, "anthropic-engineering",
+          publisher_detail="Anthropic case study"),
+    _seed("claude-code-best-practices", "Best practices for Claude Code",
+          "https://code.claude.com/docs/en/best-practices", "Claude Code Docs", "Anthropic", 2025,
+          "Practical guidance from the Claude Code team on giving an agent context, planning before coding, verifying changes with tests and running several sessions in parallel.",
+          ("Claude Code", "Agentic coding", "Developer workflow"), 15, "anthropic-engineering",
+          publisher_detail="Claude Code documentation"),
+    _seed("anthropic-building-effective-agents", "Building effective agents",
+          "https://www.anthropic.com/research/building-effective-agents", "Anthropic", "Anthropic", 2024,
+          "Anthropic distinguishes workflows from agents and describes composable patterns such as prompt chaining, routing, parallelization and orchestrator-workers, arguing for simple designs over heavy frameworks.",
+          ("AI agents", "Architecture", "LLM systems"), 12, "anthropic-engineering", publisher_detail="Anthropic engineering article"),
+    _seed("anthropic-multi-agent-research", "How we built our multi-agent research system",
+          "https://www.anthropic.com/research/multi-agent-research-system", "Anthropic", "Anthropic", 2025,
+          "The engineering behind Claude’s Research feature: a lead agent that plans and delegates to parallel subagents, plus the prompting, evaluation and production-reliability lessons from running it.",
+          ("Multi-agent systems", "Evaluation", "Production AI"), 18, "anthropic-engineering",
+          publisher_detail="Anthropic engineering article"),
+    _seed("anthropic-context-engineering", "Effective context engineering for AI agents",
+          "https://www.anthropic.com/research/effective-context-engineering-for-ai-agents", "Anthropic", "Anthropic", 2025,
+          "Why context is a finite resource for agents, and techniques such as just-in-time retrieval, compaction, structured note-taking and sub-agents for long-running tasks.",
+          ("Context engineering", "AI agents", "LLM systems"), 14, "anthropic-engineering",
+          publisher_detail="Anthropic engineering article"),
+    _seed("anthropic-writing-tools", "Writing effective tools for AI agents",
+          "https://www.anthropic.com/research/writing-tools-for-agents", "Anthropic", "Anthropic", 2025,
+          "How Anthropic designs, evaluates and iterates on tools for agents, including choosing the right tools, namespacing, returning meaningful context and using Claude to improve tool descriptions.",
+          ("Tool design", "AI agents", "Evaluation"), 14, "anthropic-engineering", publisher_detail="Anthropic engineering article"),
+    _seed("anthropic-postmortem-2025", "A postmortem of three recent issues",
+          "https://www.anthropic.com/research/a-postmortem-of-three-recent-issues", "Anthropic", "Anthropic", 2025,
+          "Anthropic’s technical postmortem of three infrastructure bugs that degraded some Claude responses, how serving across several hardware platforms made them hard to detect, and the changes made afterwards.",
+          ("Postmortem", "Reliability", "Inference infrastructure"), 14, "anthropic-engineering",
+          publisher_detail="Anthropic engineering postmortem"),
+    # --- OpenAI: infrastructure behind training and ChatGPT ---------------------------------------
+    _seed("openai-kubernetes-7500", "Scaling Kubernetes to 7,500 nodes",
+          "https://openai.com/index/scaling-kubernetes-to-7500-nodes/", "OpenAI", "OpenAI", 2021,
+          "OpenAI explains running research workloads on a very large Kubernetes cluster, including networking, API server and etcd load, monitoring, health checks and GPU scheduling.",
+          ("Kubernetes", "GPU infrastructure", "Scaling"), 15, "openai-news", publisher_detail="OpenAI engineering article"),
+    _seed("openai-kubernetes-2500", "Scaling Kubernetes to 2,500 nodes",
+          "https://openai.com/index/scaling-kubernetes-to-2500-nodes/", "OpenAI", "OpenAI", 2018,
+          "The earlier chapter of OpenAI’s cluster story: the etcd, networking, DNS and image-pull problems found while growing a Kubernetes cluster for deep learning research.",
+          ("Kubernetes", "Infrastructure", "Scaling"), 10, "openai-news", publisher_detail="OpenAI engineering article"),
+    # --- Microsoft: engineering ecosystem --------------------------------------------------------
+    _seed("microsoft-largest-git-repo", "The largest Git repo on the planet",
+          "https://devblogs.microsoft.com/bharry/the-largest-git-repo-on-the-planet/", "Brian Harry’s Blog", "Microsoft", 2017,
+          "How Microsoft moved Windows development into a single Git repository of roughly 300 GB and millions of files, and the virtualized file system work that made Git usable at that size.",
+          ("Monorepo", "Git", "Developer infrastructure"), 10, "engineering-at-microsoft",
+          authors="Brian Harry", publisher_detail="Microsoft Developer Blogs"),
+    _seed("microsoft-scaling-git", "Scaling Git (and some back story)",
+          "https://devblogs.microsoft.com/bharry/scaling-git-and-some-back-story/", "Brian Harry’s Blog", "Microsoft", 2017,
+          "The background to Microsoft’s move to Git: why the company standardized its engineering systems and the performance problems that had to be solved for very large repositories.",
+          ("Git", "Engineering systems", "Scaling"), 12, "engineering-at-microsoft",
+          authors="Brian Harry", publisher_detail="Microsoft Developer Blogs"),
+    _seed("microsoft-learn-mcp", "How we built the Microsoft Learn MCP Server",
+          "https://devblogs.microsoft.com/engineering-at-microsoft/how-we-built-the-microsoft-learn-mcp-server/",
+          "Engineering@Microsoft", "Microsoft", 2026,
+          "Microsoft describes building a Model Context Protocol server so GitHub Copilot and other agents can ground answers in current Microsoft Learn documentation.",
+          ("MCP", "AI agents", "Documentation"), 10, "engineering-at-microsoft", publisher_detail="Engineering@Microsoft"),
+    # --- Payments: Stripe, Razorpay, Airbnb ---------------------------------------------------------
+    _seed("stripe-online-migrations", "Online migrations at scale",
+          "https://stripe.com/blog/online-migrations", "Stripe", "Stripe", 2017,
+          "Stripe’s four-step pattern for moving data models with zero downtime while payments keep flowing: dual writes, changing reads, changing writes and removing the old data.",
+          ("Data migrations", "Payments", "Reliability"), 12, "stripe-engineering", publisher_detail="Stripe engineering blog"),
+    _seed("stripe-idempotency", "Designing robust and predictable APIs with idempotency",
+          "https://stripe.com/blog/idempotency", "Stripe", "Stripe", 2017,
+          "Why network failures make payment APIs dangerous to retry, and how idempotency keys with exponential backoff let clients retry safely without charging twice.",
+          ("API design", "Payments", "Distributed systems"), 10, "stripe-engineering", publisher_detail="Stripe engineering blog"),
+    _seed("stripe-rate-limiters", "Scaling your API with rate limiters",
+          "https://stripe.com/blog/rate-limiters", "Stripe", "Stripe", 2017,
+          "The four kinds of request and concurrency limiters and load shedders Stripe uses to keep its API available under traffic spikes, with guidance on rolling them out safely.",
+          ("Rate limiting", "Traffic", "Reliability"), 10, "stripe-engineering", publisher_detail="Stripe engineering blog"),
+    _seed("razorpay-kafka-upi", "Five Years of Kafka at Razorpay’s UPI Switch",
+          "https://engineering.razorpay.com/tryst-with-kafka-2f5cef766c45", "Razorpay Engineering", "Razorpay", 2026,
+          "Razorpay’s UPI Switch, which processes real-time payments with NPCI, is built around Kafka. The team reviews the decisions, operational incidents and optimizations from five years of running it.",
+          ("Payments", "Kafka", "Event-driven systems"), 14, "razorpay-engineering",
+          authors="Kshitij Nawandar", publisher_detail="Razorpay Engineering on Medium"),
+    _seed("razorpay-reliable-deploys", "How We Deploy Reliably at Razorpay",
+          "https://engineering.razorpay.com/how-we-deploy-reliably-at-razorpay-52ddf676caf8", "Razorpay Engineering", "Razorpay", 2026,
+          "Most payment incidents start with a deployment, so Razorpay invests in progressive canaries, canaries for Kafka consumers, rollouts ordered by merchant criticality and alert-driven canary analysis.",
+          ("Deployment", "Payments", "Reliability"), 12, "razorpay-engineering",
+          authors="Anusha Musthaphak", publisher_detail="Razorpay Engineering on Medium"),
+    _seed("airbnb-payment-orchestration", "Rebuilding Payment Orchestration at Airbnb",
+          "https://medium.com/airbnb-engineering/rebuilding-payment-orchestration-at-airbnb-341d194a781b",
+          "The Airbnb Tech Blog", "Airbnb", 2026,
+          "Airbnb explains why it rebuilt the system that coordinates payment flows across processors and payment methods, and the design choices behind the new orchestration layer.",
+          ("Payments", "Orchestration", "Distributed systems"), 12, "airbnb-engineering",
+          publisher_detail="The Airbnb Tech Blog on Medium"),
+    # --- Palo Alto Networks: security data and AI platforms ---------------------------------------
+    _seed("paloalto-unified-data-platform", "How Palo Alto Networks built a multi-tenant scalable Unified Data Platform",
+          "https://cloud.google.com/blog/topics/partners/palo-alto-networks-builds-a-multi-tenant-unified-data-platform",
+          "Google Cloud Blog", "Palo Alto Networks", 2026,
+          "Palo Alto Networks replaced about 30,000 single-tenant data pipelines for firewall logs, telemetry and threat events with a multi-tenant platform on Dataflow, Pub/Sub and BigQuery.",
+          ("Data platforms", "Security", "Multi-tenancy"), 10, "google-cloud-blog",
+          publisher_detail="Google Cloud Blog · written with Palo Alto Networks engineers"),
+    _seed("paloalto-synonym-rag", "Bridging the Language Gap: Our Journey to a Synonym-Aware RAG System",
+          "https://live.paloaltonetworks.com/t5/engineering-blogs/bridging-the-language-gap-our-journey-to-a-synonym-aware-rag/ba-p/1236616",
+          "Palo Alto Networks Engineering", "Palo Alto Networks", 2025,
+          "How Palo Alto Networks handled acronyms, aliases and product names in internal search, so retrieval-augmented answers still find the right documents when users and documents use different terms.",
+          ("RAG", "Search", "Enterprise AI"), 12, "paloalto-engineering", publisher_detail="Palo Alto Networks Engineering Blogs"),
+    # --- Traffic, microservices and data at internet companies ----------------------------------------
+    _seed("uber-domain-microservices", "Introducing Domain-Oriented Microservice Architecture",
+          "https://www.uber.com/blog/microservice-architecture/", "Uber Engineering", "Uber", 2020,
+          "How Uber grouped roughly 2,200 microservices into domains, layers and gateways to reduce the complexity of a very large service architecture without abandoning microservices.",
+          ("Microservices", "Architecture", "Scaling"), 15, "uber-engineering", publisher_detail="Uber Engineering"),
+    _seed("uber-big-data-platform", "Uber’s Big Data Platform: 100+ Petabytes with Minute Latency",
+          "https://www.uber.com/blog/uber-big-data-platform/", "Uber Engineering", "Uber", 2018,
+          "Four generations of Uber’s data platform, and how Hudi brought incremental updates to a Hadoop data lake holding more than 100 petabytes.",
+          ("Data platforms", "Hadoop", "Data engineering"), 18, "uber-engineering", publisher_detail="Uber Engineering"),
+    _seed("cloudflare-pingora", "How we built Pingora, the proxy that connects Cloudflare to the Internet",
+          "https://blog.cloudflare.com/how-we-built-pingora-the-proxy-that-connects-cloudflare-to-the-internet/",
+          "Cloudflare Blog", "Cloudflare", 2022,
+          "Why Cloudflare replaced NGINX with an in-house Rust proxy, and how its multithreaded design and connection reuse cut CPU and memory use while serving more than a trillion requests a day.",
+          ("Proxies", "Rust", "Traffic"), 12, "cloudflare-blog", publisher_detail="Cloudflare Blog"),
+    _seed("cloudflare-outage-2019", "Details of the Cloudflare outage on July 2, 2019",
+          "https://blog.cloudflare.com/details-of-the-cloudflare-outage-on-july-2-2019/", "Cloudflare Blog", "Cloudflare", 2019,
+          "A detailed postmortem of how one regular expression in a WAF rule exhausted CPU across Cloudflare’s network, and the process and engineering changes that followed.",
+          ("Postmortem", "Reliability", "Regular expressions"), 20, "cloudflare-blog",
+          authors="John Graham-Cumming", publisher_detail="Cloudflare Blog"),
+    _seed("netflix-zuul-2", "Zuul 2: The Netflix Journey to Asynchronous, Non-Blocking Systems",
+          "https://netflixtechblog.com/zuul-2-the-netflix-journey-to-asynchronous-non-blocking-systems-45947377fb5c",
+          "Netflix Technology Blog", "Netflix", 2016,
+          "Netflix rebuilt its edge gateway on an asynchronous, non-blocking architecture and explains the trade-offs in throughput, connection handling and debuggability that came with it.",
+          ("API gateway", "Asynchronous systems", "Traffic"), 10, "netflix-techblog", publisher_detail="Netflix TechBlog"),
+    _seed("meta-tao", "TAO: The power of the graph",
+          "https://engineering.fb.com/2013/06/25/core-infra/tao-the-power-of-the-graph/", "Engineering at Meta", "Meta", 2013,
+          "Facebook’s geographically distributed data store for the social graph, which serves billions of reads per second through a caching layer in front of MySQL.",
+          ("Graph storage", "Caching", "Distributed systems"), 8, "meta-engineering", publisher_detail="Engineering at Meta"),
+    _seed("meta-memcache", "Scaling Memcache at Facebook",
+          "https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala", "USENIX", "Meta", 2013,
+          "How Facebook built a distributed key-value cache from memcached that serves billions of requests per second, covering cluster, region and cross-region consistency problems.",
+          ("Caching", "Scaling", "Consistency"), 20, "meta-engineering",
+          authors="Rajesh Nishtala and co-authors", publisher_detail="USENIX NSDI research paper"),
+    _seed("spotify-event-delivery", "Spotify’s Event Delivery – The Road to the Cloud (Part I)",
+          "https://engineering.atspotify.com/2016/02/spotifys-event-delivery-the-road-to-the-cloud-part-i",
+          "Spotify Engineering", "Spotify", 2016,
+          "How Spotify’s system for delivering hundreds of thousands of events per second worked, why it was outgrowing its design, and how the team planned the move to Google Cloud Pub/Sub.",
+          ("Event delivery", "Data pipelines", "Cloud migration"), 10, "spotify-engineering", publisher_detail="Spotify Engineering"),
+    _seed("amazon-dynamo", "Amazon’s Dynamo",
+          "https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html", "All Things Distributed", "Amazon", 2007,
+          "The Dynamo paper describes a highly available key-value store that trades strict consistency for availability, using consistent hashing, vector clocks, sloppy quorums and hinted handoff.",
+          ("Databases", "Availability", "Distributed systems"), 30, "aws-architecture",
+          authors="Giuseppe DeCandia and co-authors", publisher_detail="SOSP research paper"),
+    _seed("aws-timeouts-retries-jitter", "Timeouts, retries, and backoff with jitter",
+          "https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter",
+          "AWS Builder Center", "Amazon", 2019,
+          "From the Amazon Builders’ Library: how Amazon chooses timeouts, when retries make outages worse, and how exponential backoff with jitter prevents synchronized retry storms.",
+          ("Resilience", "Retries", "Distributed systems"), 12, "aws-architecture",
+          authors="Marc Brooker", publisher_detail="Amazon Builders’ Library"),
+    _seed("discord-trillions-messages", "How Discord Stores Trillions of Messages",
+          "https://discord.com/blog/how-discord-stores-trillions-of-messages", "Discord Engineering", "Discord", 2023,
+          "Why Discord moved its message storage from Cassandra to ScyllaDB, and the Rust data services that coalesce requests to protect the database from hot partitions.",
+          ("Databases", "Rust", "Scaling"), 15, "engineering-discord", publisher_detail="Discord Engineering Blog"),
+    _seed("slack-outage-2021", "Slack’s Outage on January 4th 2021",
+          "https://slack.engineering/slacks-outage-on-january-4th-2021/", "Engineering at Slack", "Slack", 2021,
+          "A postmortem of how network saturation in a cloud provider triggered cascading failures in Slack’s autoscaling and provisioning on the first working day of the year.",
+          ("Postmortem", "Autoscaling", "Reliability"), 12, "engineering-slack", publisher_detail="Engineering at Slack"),
+    _seed("shopify-deconstructing-monolith", "Deconstructing the Monolith: Designing Software that Maximizes Developer Productivity",
+          "https://shopify.engineering/deconstructing-monolith-designing-software-maximizes-developer-productivity",
+          "Shopify Engineering", "Shopify", 2019,
+          "Why Shopify chose a modular monolith over microservices for its core Rails application, and how it introduced component boundaries without splitting the codebase.",
+          ("Modular monolith", "Architecture", "Developer productivity"), 12, "engineering-shopify",
+          publisher_detail="Shopify Engineering"),
+    _seed("figma-database-scaling", "How Figma’s databases team lived to tell the scale",
+          "https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/", "Figma Blog", "Figma", 2024,
+          "How Figma scaled PostgreSQL through rapid growth by partitioning vertically and then sharding horizontally, including the query engine and migration tooling the team built.",
+          ("PostgreSQL", "Sharding", "Database scaling"), 18, "figma-blog", publisher_detail="Figma engineering blog"),
+    _seed("dropbox-sync-engine", "Rewriting the heart of our sync engine",
+          "https://dropbox.tech/infrastructure/rewriting-the-heart-of-our-sync-engine", "Dropbox Tech", "Dropbox", 2020,
+          "Why Dropbox rewrote its desktop sync engine in Rust, and the testing, data-model and incremental-rollout strategy that made the rewrite safe.",
+          ("Rewrites", "Rust", "Testing"), 18, "engineering-dropbox", publisher_detail="Dropbox Tech Blog"),
+    _seed("github-merge-queue", "How GitHub uses merge queue to ship hundreds of changes every day",
+          "https://github.blog/engineering/engineering-principles/how-github-uses-merge-queue-to-ship-hundreds-of-changes-every-day/",
+          "The GitHub Blog", "GitHub", 2024,
+          "How GitHub moved its monolith deployments to a merge queue that groups and tests pull requests together, reducing deploy wait times for hundreds of daily changes.",
+          ("CI/CD", "Monorepo", "Developer productivity"), 8, "github-engineering", publisher_detail="GitHub engineering blog"),
 )
 SEEDS_BY_ID = {article["id"]: article for article in CURATED_CURIOSITY}
 
@@ -280,24 +494,54 @@ def _card(article, summaries):
     }
 
 
+MAX_CURIOSITY_CARDS = 72
+# Fresh archive discoveries get a reserved share so evergreen seeds never crowd them out.
+FRESH_SLOT_SHARE = 3
+MAX_FRESH_CARDS = 24
+
+
+def _fresh_discoveries(store, limit):
+    if not store or limit <= 0:
+        return []
+    candidates = store.curiosity_candidates(_candidate_sources(), hours=90 * 24, limit=200)
+    eligible = [restore_metadata(article) for article in candidates if is_curiosity_candidate(article)]
+    # Stable tie-breaks: higher technical signal, then newer publication, then ID.
+    eligible.sort(key=lambda item: str(item.get("id", "")))
+    eligible.sort(key=lambda item: str(item.get("published_at", "")), reverse=True)
+    eligible.sort(key=curiosity_score, reverse=True)
+    # Compare against every reviewed seed, not just the ones shown, so a seed never reappears as "fresh".
+    seen = list(CURATED_CURIOSITY)
+    fresh = []
+    for article in eligible:
+        if _is_duplicate(article, seen):
+            continue
+        seen.append(article)
+        fresh.append(article)
+        if len(fresh) == limit:
+            break
+    return fresh
+
+
+def _interleave(seeds, fresh):
+    """Show a fresh discovery after every two evergreen seeds, then whatever is left."""
+    ordered = []
+    seeds, fresh = list(seeds), list(fresh)
+    while seeds or fresh:
+        ordered.extend(seeds[:2])
+        del seeds[:2]
+        if fresh:
+            ordered.append(fresh.pop(0))
+    return ordered
+
+
 def build_curiosity_cards(store, *, limit=24):
     """Blend verified evergreen seeds with high-signal records in the archive."""
-    limit = max(1, min(int(limit), 24))
-    selected = [deepcopy(article) for article in CURATED_CURIOSITY[:limit]]
-    remaining = limit - len(selected)
-    if remaining and store:
-        candidates = store.curiosity_candidates(_candidate_sources(), hours=90 * 24, limit=200)
-        eligible = [restore_metadata(article) for article in candidates if is_curiosity_candidate(article)]
-        # Stable tie-breaks: higher technical signal, then newer publication, then ID.
-        eligible.sort(key=lambda item: str(item.get("id", "")))
-        eligible.sort(key=lambda item: str(item.get("published_at", "")), reverse=True)
-        eligible.sort(key=curiosity_score, reverse=True)
-        for article in eligible:
-            if _is_duplicate(article, selected):
-                continue
-            selected.append(article)
-            if len(selected) == limit:
-                break
+    limit = max(1, min(int(limit), MAX_CURIOSITY_CARDS))
+    reserve = min(MAX_FRESH_CARDS, max(1, limit // FRESH_SLOT_SHARE)) if limit > 1 else 0
+    fresh = _fresh_discoveries(store, max(reserve, limit - len(CURATED_CURIOSITY)))
+    seed_count = min(len(CURATED_CURIOSITY), limit - min(len(fresh), reserve))
+    fresh = fresh[:limit - seed_count]
+    selected = _interleave([deepcopy(article) for article in CURATED_CURIOSITY[:seed_count]], fresh)
 
     summaries = {}
     summary_targets = [article for article in selected if not article.get("curiosity_seed")]

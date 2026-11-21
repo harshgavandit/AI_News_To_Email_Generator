@@ -38,6 +38,15 @@ body { text-rendering: optimizeLegibility; }
 .curiosity-action[aria-pressed="true"] { border-color: var(--green); background: var(--sage); color: var(--green); }
 .curiosity-schedule { min-height: 34px; padding: 4px 6px; font-size: 10px; text-align: left; }
 .curiosity-schedule[aria-pressed="true"] { color: var(--green); font-weight: 700; }
+.curiosity-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
+.curiosity-origin-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.curiosity-chip { min-height: 30px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--muted); font: 650 10px/1.3 var(--font-ui); cursor: pointer; box-shadow: inset 0 1px 0 var(--edge-highlight); transition: border-color 150ms ease, background 150ms ease, color 150ms ease; }
+.curiosity-chip:hover { border-color: color-mix(in srgb, var(--green) 40%, var(--line)); color: var(--ink); }
+.curiosity-chip[aria-pressed="true"] { border-color: var(--green); background: var(--sage); color: var(--green); }
+.curiosity-company-filter { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font: 650 9px/1.4 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
+.curiosity-company-select { min-height: 30px; max-width: 190px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: 500 11px/1.3 var(--font-ui); text-transform: none; letter-spacing: 0; }
+.curiosity-company { margin-right: auto; }
+.curiosity-fresh { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--sage); color: var(--green); font-weight: 700; }
 .curiosity-empty { margin: 0; padding: 16px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .curiosity-show-more { display: inline-flex; align-items: center; min-height: 42px; margin-top: 7px; padding-inline: 8px; font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { .curiosity-card { transition: none; } .curiosity-card:hover { transform: none; } }

@@ -11615,5 +11615,39 @@
       "/getzep/graphiti/releases/tag/"
     ],
     "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "engineering-at-microsoft",
+    "group": "engineering-at-microsoft",
+    "label": "Engineering@Microsoft",
+    "url": "https://devblogs.microsoft.com/engineering-at-microsoft/feed/",
+    "hosts": [
+      "devblogs.microsoft.com"
+    ],
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "kind": "engineering",
+    "reviewed_at": "2026-11-21",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "language": "en"
+  },
+  {
+    "id": "paloalto-engineering",
+    "group": "paloalto-engineering",
+    "label": "Palo Alto Networks Engineering Blogs",
+    "url": "https://live.paloaltonetworks.com/twzvq79624/rss/board?board.id=Engineering-Blogs",
+    "hosts": [
+      "live.paloaltonetworks.com"
+    ],
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "kind": "engineering",
+    "reviewed_at": "2026-11-21",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "language": "en"
   }
 ]

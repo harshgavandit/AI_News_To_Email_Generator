@@ -114,13 +114,92 @@ def test_archive_discovery_ranks_and_deduplicates_against_evergreen_seeds(monkey
                      for item in articles]
     })
 
-    cards = curiosity.build_curiosity_cards(store, limit=len(curiosity.CURATED_CURIOSITY) + 2)
+    cards = curiosity.build_curiosity_cards(store, limit=24)
     ids = [card["id"] for card in cards]
 
-    assert ids[:len(curiosity.CURATED_CURIOSITY)] == [card["id"] for card in curiosity.CURATED_CURIOSITY]
+    assert len(ids) == 24 and len(set(ids)) == 24
     assert ids.count("duplicate-url") == 0
-    assert ids[-2:] == ["unique-systems-story", "lower-signal-story"]
-    assert cards[-1]["summary_basis"] == "publisher_excerpt"
+    # Fresh discoveries are interleaved after every two evergreen seeds, in rank order.
+    assert ids[2] == "unique-systems-story" and ids[5] == "lower-signal-story"
+    seeds = [ident for ident in ids if ident not in {"unique-systems-story", "lower-signal-story"}]
+    assert seeds == [card["id"] for card in curiosity.CURATED_CURIOSITY[:22]]
+    fresh = {card["id"]: card for card in cards if not card["seed"]}
+    assert set(fresh) == {"unique-systems-story", "lower-signal-story"}
+    assert fresh["lower-signal-story"]["summary_basis"] == "publisher_excerpt"
+
+    everything = curiosity.build_curiosity_cards(store, limit=72)
+    assert len(everything) == len(curiosity.CURATED_CURIOSITY) + 2
+    assert {card["id"] for card in everything} >= set(curiosity.SEEDS_BY_ID)
+
+
+def test_fresh_discoveries_keep_reserved_slots_when_archive_is_large(monkeypatch, tmp_path):
+    from app import curiosity, web_digest
+
+    store = Store(f"sqlite:///{(tmp_path / 'curiosity-many.sqlite').as_posix()}")
+    recent = (datetime.now(UTC) - timedelta(days=2)).isoformat()
+    words = ("queue cache shard ledger router index search billing storage gateway compiler scheduler planner "
+             "tracer kernel network payments identity audit streaming warehouse rollout canary sidecar mesh "
+             "feature registry backup quota metering sandbox runner fleet edge replica tenant vector embeddings "
+             "consensus failover").split()
+
+    def story(index):
+        a, b, c = words[index], words[(index * 7 + 3) % len(words)], words[(index * 11 + 5) % len(words)]
+        return (f"Engineers explain the {a} architecture behind {b} {c}, with database replication, latency, "
+                f"Kubernetes deployment and reliability trade-offs from running {a} {b} in production.")
+
+    rows = [{"id": f"fresh-{index}", "source_id": "github-blog", "source": "github-blog", "publisher": "GitHub Blog",
+             "title": f"How we rebuilt {words[index]} for {words[(index * 7 + 3) % len(words)]} at scale",
+             "url": f"https://github.blog/engineering/story-{index}/", "published_at": recent,
+             "kind": "engineering", "category": "software", "description": story(index) + " " + story(index + 1)}
+            for index in range(len(words) - 1)]
+    monkeypatch.setattr(store, "curiosity_candidates", lambda source_ids, **kwargs: rows)
+    monkeypatch.setattr(web_digest, "build_digest", lambda articles, *args, **kwargs: {"articles": []})
+
+    cards = curiosity.build_curiosity_cards(store, limit=72)
+    fresh = [card for card in cards if not card["seed"]]
+    assert len(cards) == 72
+    assert len(fresh) == curiosity.MAX_FRESH_CARDS
+    assert len({card["url"] for card in cards}) == 72
+    assert curiosity.build_curiosity_cards(None, limit=500)[0]["id"] == curiosity.CURATED_CURIOSITY[0]["id"]
+    assert len(curiosity.build_curiosity_cards(None, limit=500)) == len(curiosity.CURATED_CURIOSITY)
+
+
+def test_expanded_seed_collection_is_unique_secure_and_covers_requested_companies():
+    from urllib.parse import urlsplit
+    from app import curiosity
+    from app.sources import BY_ID
+
+    seeds = curiosity.CURATED_CURIOSITY
+    assert len(seeds) >= 55
+    assert len({seed["id"] for seed in seeds}) == len(seeds)
+    assert len({seed["url"].rstrip("/") for seed in seeds}) == len(seeds)
+    assert len({seed["title"].casefold() for seed in seeds}) == len(seeds)
+    for seed in seeds:
+        parts = urlsplit(seed["url"])
+        assert parts.scheme == "https" and parts.netloc and not parts.query, seed["id"]
+        assert seed["source_id"] in BY_ID, seed["id"]
+        assert 60 <= len(seed["description"]) <= 400, seed["id"]
+        assert 1 <= len(seed["tags"]) <= 5 and 1 <= seed["read_minutes"] <= 45, seed["id"]
+        assert 1990 <= seed["year"] <= 2026, seed["id"]
+        assert not curiosity._promotional.search(f"{seed['title']} {seed['description']}"), seed["id"]
+        # Seeds must not collide with each other under the same near-duplicate test used for the archive.
+        others = [other for other in seeds if other["id"] != seed["id"]]
+        assert not curiosity._is_duplicate(seed, others), seed["id"]
+    companies = {seed["company"] for seed in seeds}
+    assert {"Google", "Anthropic", "OpenAI", "Microsoft", "Palo Alto Networks", "Stripe", "Razorpay", "Netflix",
+            "Uber", "Cloudflare", "Airbnb", "Meta", "Spotify"} <= companies
+    claude_code = [seed for seed in seeds if "Claude Code" in seed["tags"]]
+    assert len(claude_code) >= 2
+
+
+def test_new_engineering_feeds_feed_curiosity_discovery():
+    from app import curiosity
+    from app.sources import BY_ID
+
+    for ident in ("paloalto-engineering", "engineering-at-microsoft"):
+        source = BY_ID[ident]
+        assert source.enabled and source.kind == "engineering" and source.url.startswith("https://")
+        assert ident in curiosity._candidate_sources()
 
 
 def test_mailbox_curiosity_write_is_verified_origin_bound_and_limited(monkeypatch, tmp_path):
@@ -228,3 +307,51 @@ def test_new_english_curiosity_feeds_reject_non_english_items_at_ingest(tmp_path
 
     stored = store.pinned_articles([row["id"] for row in rows])
     assert [row["id"] for row in stored] == ["english-curiosity-entry"]
+
+
+@pytest.mark.parametrize("ident", ["claude-code-best-practices", "razorpay-kafka-upi", "paloalto-synonym-rag",
+                                   "openai-kubernetes-7500"])
+def test_new_seed_flows_from_brief_builder_into_email_html(monkeypatch, tmp_path, ident):
+    from app import server
+    from app.web_digest import safe_email_html
+
+    store = Store(f"sqlite:///{(tmp_path / 'curiosity-email.sqlite').as_posix()}")
+    seed = curiosity_article(ident)
+
+    def capture(articles, name, focus, **kwargs):
+        return {"title": "Reader brief", "articles": [
+            {"digest_id": item["id"], "title": item["title"], "summary": item["description"], "url": item["url"],
+             "publisher": item["publisher"], "source": item["source"]} for item in articles]}
+
+    monkeypatch.setattr(server, "select_candidates", lambda pool, focus, count, sources: [])
+    monkeypatch.setattr(server, "build_digest", capture)
+    digest = server.prepare_digest(server.DigestRequest(pinned_ids=[ident]), store, "Reader", "", False, None)
+
+    assert [item["url"] for item in digest["articles"]] == [seed["url"]]
+    assert digest["articles"][0]["title"] == seed["title"]
+    html = safe_email_html(digest)
+    from html import escape
+    from app.web_digest import safe_href
+    assert escape(safe_href(seed["url"]), quote=True) in html
+    assert escape(seed["title"], quote=False) in html
+    assert escape(seed["description"], quote=False) in html
+
+
+def test_scheduled_email_includes_new_curiosity_seed_cards(tmp_path):
+    from html import escape
+    from app import mail_schedule
+    from app.curiosity import resolve_curiosity_cards
+    from app.web_digest import safe_href
+
+    store = Store(f"sqlite:///{(tmp_path / 'curiosity-scheduled.sqlite').as_posix()}")
+    ids = ["google-borg", "stripe-idempotency", "microsoft-largest-git-repo"]
+    cards = resolve_curiosity_cards(store, ids)
+    assert [card["id"] for card in cards] == ids
+    brief = mail_schedule.append_curiosity_section(
+        {"markdown": "Brief", "html": "<html><body><p>Brief</p></body></html>"}, cards)
+    html = brief["html"]
+    assert html.index("Curiosity Cards") < html.index("</body>")
+    for card in cards:
+        assert safe_href(card["url"]) in html and safe_href(card["url"]) in brief["markdown"]
+        assert escape(card["title"], quote=False) in html
+        assert escape(card["summary"][:60], quote=False) in html

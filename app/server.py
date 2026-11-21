@@ -444,7 +444,7 @@ def discovery_options():
 
 
 @app.get("/api/curiosity")
-def curiosity(limit: int = Query(default=24, ge=1, le=24)):
+def curiosity(limit: int = Query(default=24, ge=1, le=72)):
     """Return reviewed evergreen engineering insights plus quality-ranked archive cards.
 
     This endpoint reads the local archive only. Publisher synchronization remains on the

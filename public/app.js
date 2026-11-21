@@ -61,6 +61,7 @@ const state = {
   delivery: "email",
   curiosityCards: [],
   curiosityVisibleCount: 4,
+  curiosityFilter: { origin: "all", company: "all" },
   curiosityPendingScheduledId: "",
 };
 const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d", 2160: "90d" };
@@ -372,6 +373,15 @@ function renderCuriosity() {
     verified: Boolean(state.mail?.verified),
     scheduledEnabled: Boolean(state.mail?.scheduled_enabled),
     visibleCount: state.curiosityVisibleCount,
+    filter: state.curiosityFilter,
+    onFilter: (filter) => {
+      const companyChanged = filter.company !== state.curiosityFilter.company;
+      state.curiosityFilter = filter;
+      state.curiosityVisibleCount = 4;
+      renderCuriosity();
+      container.querySelector(companyChanged
+        ? "[data-curiosity-company]" : `[data-curiosity-origin="${filter.origin}"]`)?.focus();
+    },
     onPin: (article) => {
       const wasPinned = state.pins.has(String(article.id));
       togglePin(article);
@@ -402,7 +412,7 @@ async function loadCuriosity() {
   const container = $("curiosity-cards");
   container.setAttribute("aria-busy", "true");
   const [collection, mailbox] = await Promise.allSettled([
-    request("/api/curiosity?limit=24"),
+    request("/api/curiosity?limit=72"),
     request("/api/mail/config"),
   ]);
   if (collection.status === "fulfilled") state.curiosityCards = collection.value.cards || [];

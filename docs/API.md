@@ -55,6 +55,16 @@ The two broad DEV streams require a technical title, excerpt, or topic tag. The 
 
 Reviewed source path and title constraints also apply to retained articles through the additive `source_eligible` field. SCMP Technology uses the publisher's technology feed and requires its technology article paths. Existing out-of-section records stay retained while discovery excludes them.
 
+## Curiosity Cards
+
+`GET /api/curiosity?limit=72` returns up to 72 engineering insight cards. It reads the local archive only and never triggers a publisher fetch; feeds are still collected by the scheduled 08:00 and 20:00 IST sweeps. Responses are cached for 30 minutes per `limit`.
+
+- Reviewed evergreen cards (`seed: true`) come from `CURATED_CURIOSITY` in `app/curiosity.py`. They cover engineering writing and papers from Google, Anthropic (including Claude Code), OpenAI, Microsoft, Palo Alto Networks, Stripe, Razorpay, Netflix, Uber, Cloudflare, Airbnb, Meta, Spotify, Amazon, Discord, Slack, Shopify, Figma, Dropbox and GitHub. Each card links to the publisher and carries an original short summary, never the article text.
+- Fresh cards (`seed: false`) are discovered continuously from retained posts of enabled English engineering and research feeds published in the last 90 days. They must pass `is_curiosity_candidate`, which requires a substantive excerpt and technical signals and rejects promotional copy. Duplicates of any reviewed seed or of another selected card are removed by canonical URL, title or near-identical wording. Their summaries come from the existing digest model, with the publisher excerpt as a fallback.
+- At least a third of the requested cards, up to 24, are reserved for fresh discoveries. A fresh card follows every two evergreen cards.
+- Every card includes `id`, `title`, `company`, `publisher`, `summary`, `summary_basis`, `tags`, `read_minutes`, `url`, `year` and `seed`. The web view adds All, Fresh and Classics chips and a company filter.
+- Card IDs can be pinned in the Brief Builder (`pinned_ids` on brief requests). A verified inbox can save up to five IDs with `PUT /api/mail/curiosity`, and scheduled emails then include them in a "Curiosity Cards" section with the headline, summary and source link.
+
 ## Reading and recommendations
 
 `GET /api/articles/{article_id}` returns an enabled, retained article, up to five related articles, a reading notice and `summary`. The summary includes `text`, `basis`, `limited_source` and an array of short extractive `highlights`. `publisher_excerpt` uses supplied excerpt sentences, while `headline_only` has no highlights. An active, owner-approved permission makes `reading` available with sanitized HTML, plain text and attribution. Highlights from that body use `licensed_article_extract` with `limited_source: false`. `also_indexed_by` lists enabled secondary feeds that supplied the same archived ID. Missing or paused-source articles return `404`. Detail responses use `no-store` and check permission on each read. The frontend uses `/?article=<id>#reading-room` for shareable links during the article's archive retention.

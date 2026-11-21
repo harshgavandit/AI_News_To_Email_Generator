@@ -94,3 +94,44 @@ test('longer collections reveal additional cards on demand', () => {
   assert.equal(container.querySelectorAll('article').length, 6);
   assert.equal(container.querySelector('[data-curiosity-show-more]'), null);
 });
+
+test('filters narrow cards by origin and company and report the selection', async () => {
+  const { filterCuriosityCards, curiosityCompanies, MAX_CURIOSITY_CARDS } = await import('../../public/curiosity.js');
+  const cards = [
+    { ...article, id: 'seed-google', seed: true },
+    { ...article, id: 'seed-stripe', company: 'Stripe', publisher: 'Stripe', seed: true },
+    { ...article, id: 'fresh-stripe', company: 'Stripe', publisher: 'Stripe', seed: false },
+  ];
+  assert.equal(MAX_CURIOSITY_CARDS, 72);
+  assert.deepEqual(curiosityCompanies(cards), ['Google', 'Stripe']);
+  assert.deepEqual(filterCuriosityCards(cards, { origin: 'fresh' }).map((c) => c.id), ['fresh-stripe']);
+  assert.deepEqual(filterCuriosityCards(cards, { origin: 'classic', company: 'Stripe' }).map((c) => c.id), ['seed-stripe']);
+
+  const document = new JSDOM('<section id="cards"></section>').window.document;
+  const container = document.querySelector('#cards');
+  const filters = [];
+  renderCuriosityCards(container, cards, { filter: { origin: 'all', company: 'Stripe' }, onFilter: (f) => filters.push(f) });
+  assert.deepEqual([...container.querySelectorAll('article')].map((n) => n.dataset.curiosityId), ['seed-stripe', 'fresh-stripe']);
+  assert.equal(container.querySelector('[data-curiosity-origin="all"]').getAttribute('aria-pressed'), 'true');
+  assert.match(container.querySelector('[data-curiosity-id="fresh-stripe"]').textContent, /Fresh/);
+  assert.doesNotMatch(container.querySelector('[data-curiosity-id="seed-stripe"] .curiosity-card-top').textContent, /Fresh/);
+  container.querySelector('[data-curiosity-origin="fresh"]').click();
+  const select = container.querySelector('[data-curiosity-company]');
+  select.value = 'Google';
+  select.dispatchEvent(new document.defaultView.Event('change'));
+  assert.deepEqual(filters, [{ origin: 'fresh', company: 'Stripe' }, { origin: 'all', company: 'Google' }]);
+
+  renderCuriosityCards(container, cards, { filter: { origin: 'fresh', company: 'Google' } });
+  assert.match(container.textContent, /No Curiosity Cards match this filter/);
+  assert.ok(container.querySelector('[data-curiosity-origin]'), 'filters stay available on an empty result');
+});
+
+test('collection renders up to 72 cards with show-more paging', () => {
+  const document = new JSDOM('<section id="cards"></section>').window.document;
+  const container = document.querySelector('#cards');
+  const cards = Array.from({ length: 80 }, (_, i) => ({ ...article, id: `card-${i}`, seed: true }));
+  renderCuriosityCards(container, cards, { visibleCount: 72 });
+  assert.equal(container.querySelectorAll('article').length, 72);
+  renderCuriosityCards(container, cards, { visibleCount: 4 });
+  assert.match(container.querySelector('[data-curiosity-show-more]').textContent, /Show 4 more/);
+});

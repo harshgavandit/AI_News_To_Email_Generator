@@ -14,18 +14,81 @@ function sourceHref(value) {
   }
 }
 
+export const MAX_CURIOSITY_CARDS = 72;
+const ORIGINS = [["all", "All"], ["fresh", "Fresh"], ["classic", "Classics"]];
+
+export function curiosityCompanies(cards) {
+  const counts = new Map();
+  for (const card of Array.isArray(cards) ? cards : []) {
+    const name = card?.company || card?.publisher;
+    if (typeof name === "string" && name) counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return [...counts.keys()].sort((a, b) => a.localeCompare(b));
+}
+
+export function filterCuriosityCards(cards, filter = {}) {
+  const origin = filter.origin || "all";
+  const company = filter.company || "all";
+  return (Array.isArray(cards) ? cards : []).filter((card) => {
+    if (!card) return false;
+    if (origin === "fresh" && card.seed) return false;
+    if (origin === "classic" && !card.seed) return false;
+    return company === "all" || (card.company || card.publisher) === company;
+  });
+}
+
+function renderFilters(document, all, filter, onFilter) {
+  const bar = element(document, "div", "curiosity-filters");
+  bar.setAttribute("role", "group");
+  bar.setAttribute("aria-label", "Filter Curiosity Cards");
+  const origins = element(document, "div", "curiosity-origin-chips");
+  for (const [value, label] of ORIGINS) {
+    const count = filterCuriosityCards(all, { origin: value }).length;
+    if (value !== "all" && !count) continue;
+    const chip = element(document, "button", "curiosity-chip", `${label} · ${count}`);
+    chip.type = "button";
+    chip.dataset.curiosityOrigin = value;
+    chip.setAttribute("aria-pressed", String((filter.origin || "all") === value));
+    chip.addEventListener("click", () => onFilter?.({ ...filter, origin: value }));
+    origins.append(chip);
+  }
+  bar.append(origins);
+  const companies = curiosityCompanies(all);
+  if (companies.length > 1) {
+    const label = element(document, "label", "curiosity-company-filter");
+    label.append(element(document, "span", "", "Company"));
+    const select = element(document, "select", "curiosity-company-select");
+    select.dataset.curiosityCompany = "";
+    select.append(new document.defaultView.Option("All companies", "all"));
+    for (const name of companies) select.append(new document.defaultView.Option(name, name));
+    select.value = companies.includes(filter.company) ? filter.company : "all";
+    select.addEventListener("change", () => onFilter?.({ ...filter, company: select.value }));
+    label.append(select);
+    bar.append(label);
+  }
+  return bar;
+}
+
 export function renderCuriosityCards(container, cards, options = {}) {
   const document = container.ownerDocument;
   const pinnedIds = new Set(options.pinnedIds || []);
   const scheduledIds = new Set(options.scheduledIds || []);
   const list = element(document, "div", "curiosity-grid");
-  const eligible = Array.isArray(cards) ? cards.slice(0, 24) : [];
+  const all = Array.isArray(cards) ? cards.slice(0, MAX_CURIOSITY_CARDS) : [];
+  const filter = options.filter || {};
+  const eligible = filterCuriosityCards(all, filter);
   const visibleCount = Math.max(1, Math.min(eligible.length, Number(options.visibleCount) || eligible.length));
+  const filters = all.length > 1 ? [renderFilters(document, all, filter, options.onFilter)] : [];
 
-  if (!eligible.length) {
+  if (!all.length) {
     const empty = element(document, "p", "curiosity-empty", options.message ||
       "No Curiosity Cards are available right now. The collection will update with the next content sync.");
     container.replaceChildren(empty);
+    return;
+  }
+  if (!eligible.length) {
+    container.replaceChildren(...filters,
+      element(document, "p", "curiosity-empty", "No Curiosity Cards match this filter."));
     return;
   }
 
@@ -36,6 +99,7 @@ export function renderCuriosityCards(container, cards, options = {}) {
 
     const top = element(document, "div", "curiosity-card-top");
     top.append(element(document, "span", "curiosity-company", card.company || card.publisher || "Technology"));
+    if (!card.seed) top.append(element(document, "span", "curiosity-fresh", "Fresh"));
     const year = card.year || (card.published_at && String(card.published_at).slice(0, 4));
     if (year) top.append(element(document, "time", "curiosity-year", String(year)));
     article.append(top);
@@ -94,10 +158,11 @@ export function renderCuriosityCards(container, cards, options = {}) {
   }
 
   if (!list.childElementCount) {
-    container.replaceChildren(element(document, "p", "curiosity-empty", "No Curiosity Cards are available right now."));
+    container.replaceChildren(...filters,
+      element(document, "p", "curiosity-empty", "No Curiosity Cards are available right now."));
     return;
   }
-  const content = [list];
+  const content = [...filters, list];
   if (visibleCount < eligible.length) {
     const more = element(document, "button", "text-button curiosity-show-more",
       `Show ${Math.min(4, eligible.length - visibleCount)} more Curiosity Cards`);
