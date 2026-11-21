@@ -1,61 +1,73 @@
 # Informa AI
 
-[Open Informa AI](https://getinformdaily.com/)
+**Global technology news, without the noise.** Informa AI collects stories from 834 reviewed English-language sources. You read the headlines and short summaries, then follow the link to the publisher for the full story.
 
-Browse global technology news, research, security advisories, developer articles, and official release notes. Sources include TechCrunch, The Verge, Ars Technica, WIRED, engineering blogs, selected Medium feeds, and public Hashnode, DEV Community and Hacker News APIs. Search headlines, excerpts, authors, and tags across up to 90 days of retained stories. Filter by topic, subject, publisher, region, language, source type, and time.
+**[Open Informa AI →](https://getinformdaily.com/)**
 
-The reviewed catalog contains 477 feed and API integrations, including independent technical writers, regional publications, research papers, project releases, newsletters, podcasts and video channels. The [source directory](https://getinformdaily.com/sources.html) shows check history, publication freshness and coverage gaps. Scheduled batches check fast-moving feeds more often and leave quieter sources on longer intervals.
+---
 
-Open Today’s Brief for a five-story catch-up and email that selection, or explore stories, topics and saved monitoring views. Ask a source-linked question inside the story reader, save an article, follow its publication or pin it to a brief. Hide read stories and compare supporting coverage. The interface supports light and dark themes, card and list reading, and mobile navigation.
+## Why Informa
 
-The Reading Room opens on **Today** for a new reader and **Catch up** when the browser has a reading checkpoint. Catch up shows selected developments since that checkpoint, including source-linked confirmations, scope changes, recoveries, and corrections when the source text supports them. Repeat reporting stays in the event timeline. **Mark these seen** clears the displayed updates so unread developments and later revisions can still appear. **All stories** opens the full feed. The search controls carry the query, topic, and time range between **Articles**, **Developments**, and **Ask with sources**.
+- **One place for tech news.** It covers news, research, engineering blogs, security advisories, release notes, newsletters and podcasts, from outlets such as TechCrunch, The Verge, Ars Technica and WIRED, plus Hacker News, DEV and Hashnode.
+- **Every summary shows its source.** Each one says whether it came from a publisher excerpt, a headline or AI. AI answers cite the sources they used.
+- **Built to save time.** A five-story daily brief, a "Catch up" view of what changed since your last visit, and a morning email that only includes news from what you follow.
+- **Respects publishers and readers.** It doesn't bypass paywalls or copy full articles. Analytics is off by default, and your reading data stays in your browser.
 
-Open a development from Catch up, search, or a personalized brief to see its timeline, linked source checks, and available publisher evidence on a shareable page. Save package versions or Azure, Google Cloud, and Cloudflare service-region pairs in Personal impact settings. **Check personal impact** compares exact package versions with OSV and cloud targets with the named provider’s archived status excerpt. Missing evidence returns **Unknown**. An optional AI explanation cites the matched cloud report.
+## What you can do
 
-The Inbox shows followed developments and alerts from background monitoring. Mark items seen, or snooze, mute, and resume a watch. These watch controls affect browser alerts. Morning email preferences are managed separately from a verified inbox.
+| | |
+|---|---|
+| 📰 **Reading Room** | Search 90 days of stories by topic, publisher, region, language or source type. Save stories, hide ones you've read and compare coverage. |
+| ⚡ **Catch up** | See what's new since your last visit, including confirmations, corrections and scope changes. Each development has its own timeline page. |
+| ✉️ **Briefs** | Get the Global Top 5 or build your own brief. Pin stories, export as Markdown, HTML or email, or send it to a verified inbox. |
+| 💡 **Curiosity Cards** | Behind-the-scenes engineering stories from Google, Anthropic, OpenAI, Stripe, Netflix, Uber, Cloudflare and others. New posts appear automatically, and you can add any card to a brief. |
+| 🔎 **[Research Desk](https://getinformdaily.com/research.html)** | Search publisher evidence, ask for analysis with citations and download notes. Watch up to six topics and get alerts in your Inbox. |
+| 🎯 **Personal impact** | Save your package versions and cloud regions to check whether a vulnerability or outage affects you. If there isn't enough evidence, it says **Unknown** instead of guessing. |
+| ⭐ **For You** | Follow publications, topics and authors to get a ranked feed built around your interests. |
 
-Open the [Research Desk](https://getinformdaily.com/research.html) to search publisher evidence, compare coverage, request cited analysis, and download research notes with source links. Opt in to background monitoring for up to six queries and review the private inbox when you return. The inbox updates after the archive and monitoring checks run. Delete watches and alerts under Privacy &amp; controls.
+## How sources work
 
-Open a story in the Reading Room to see its publisher excerpt and related reporting. When enough text is available, the story summary highlights sentences from the excerpt or an article shared with permission. Save articles, share a story link, pin reports to a brief, or keep a named view of your filters in this browser. In **For You**, follow publications, topic feeds, and authors alongside your interests. Search and filters narrow the articles before personalization ranks them. Coverage and related links show what connected the records, such as closely matching headlines or a shared CVE identifier.
+- Every source is reviewed for English content, a reputable publisher and permission to use its feed. Each one is listed in the **[source directory](https://getinformdaily.com/sources.html)**.
+- Feeds are refreshed twice a day, at **08:00 and 20:00 IST**. A source that hasn't posted lately is marked *quiet*, not *failed*.
+- Authors can submit their full text with permission in the **[author workspace](https://getinformdaily.com/contribute.html)**. The owner approves it, and the author can withdraw permission at any time.
 
-Preview the Global Top 5 or tailor a brief by coverage and reader perspective. Pin articles to include them and export the result as Markdown, HTML, or an email file. Briefs identify whether each summary comes from a publisher excerpt, a headline, or AI synthesis. Verified inboxes can receive a brief or opt in to the scheduled Global Top 5 when email delivery is configured.
+More: [About](https://getinformdaily.com/about.html) · [Source standards](https://getinformdaily.com/trust.html) · [Privacy & controls](https://getinformdaily.com/privacy.html)
 
-Each verified inbox can request up to three briefs per UTC day. Delivery receipts show provider acceptance and the remaining allowance. A configured Resend webhook adds delivery, delay and bounce updates. Readers can recheck status while keeping the prepared brief available to copy or download.
-
-Readers with verified, opted-in morning delivery can choose **Only new or meaningful updates from my follows** in the Research Desk. The same delivery schedule and inbox limits apply. The scheduler skips mornings with no matching developments and includes the reason each item was selected.
-
-The reader labels excerpts, headline-only records, and full articles shared with reviewed permission. Authors can verify their inbox and submit text and permission evidence for an already listed article in the [author workspace](https://getinformdaily.com/contribute.html). Only the owner can approve publication. Authors can withdraw permission; the owner can revoke it. Submissions and verified email addresses stay private during review.
-
-Hashnode discovery uses its free public feed endpoint, with bounded pagination and validation of dates and technology relevance. Publication-specific and individual-post API queries remain Pro-gated and are not used. Medium content comes from reviewed RSS feeds. No paywall bypass or automatic full-article extraction is performed. Coverage is limited to integrated sources and available history. Saved stories and followed lists stay on the originating browser.
-
-Meet the creator on [About](https://getinformdaily.com/about.html), review [source standards](https://getinformdaily.com/trust.html), and manage browser-stored reading data in [Privacy & controls](https://getinformdaily.com/privacy.html). Export your browser data or selectively clear saved stories, read history, interests, and monitoring views. Optional audience analytics is off by default and respects Global Privacy Control and Do Not Track signals.
+---
 
 ## Run locally
 
-Use Python 3.12 or later and Node.js 24.15 or later in the 24.x LTS line for frontend tests.
+Requires **Python 3.12+** and **Node.js 24.x**.
 
 ```sh
 uv sync --frozen
 npm ci
-uv run uvicorn app.server:app --reload
+NEWS_DATABASE_URL=sqlite:///./informa.db uv run uvicorn app.server:app --reload
 ```
 
-The Reading Room and Global Top 5 read the configured archive. Set `NEWS_DATABASE_URL=sqlite:///./informa.db` for an isolated local archive. Use the test fixtures for routine checks. See [.env.example](.env.example) for AI and delivery settings.
+See [.env.example](.env.example) for the AI and email settings.
+
+**Tests** (these use fixtures and never contact publishers):
 
 ```sh
-npm run lint
-npm run build
-npm test
+npm run lint && npm run build && npm test
 uv run ruff check app tests scripts main.py
 uv run pytest -q
-uv run python -m scripts.check_reader_quality
 ```
 
-Run live integration checks only for a deliberate source diagnosis. These commands contact publishers. For a specific issue, select only the affected sources:
+**Live source check** (only when diagnosing a feed, because it contacts publishers):
 
 ```sh
-uv run python -m scripts.check_sources
-uv run python -m scripts.check_sources --source dev-community --source dev-latest --source hacker-news
+uv run python -m scripts.check_sources --source hacker-news
 ```
 
-[Competitive review](docs/PRODUCT.md) · [Deployment and configuration](docs/LAUNCH.md) · [HTTP API](docs/API.md)
+## Docs
+
+| Guide | What's inside |
+|---|---|
+| [HTTP API](docs/API.md) | Every endpoint, including Curiosity Cards and briefs |
+| [Deployment](docs/LAUNCH.md) | Vercel, database, email and environment setup |
+| [Source network](docs/SOURCE-NETWORK.md) | How sources are validated and promoted |
+| [English source policy](docs/ENGLISH-SOURCE-POLICY.md) | Rules for adding and keeping sources |
+| [Product](docs/PRODUCT.md) | Product direction and competitive review |
+| [Security audit](docs/SECURITY-AUDIT-2026-11-21.md) | Latest audit and fixes |
