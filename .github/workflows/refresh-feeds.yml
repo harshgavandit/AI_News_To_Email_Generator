@@ -1,8 +1,11 @@
 name: Refresh world tech feeds
 on:
   schedule:
-    # This trigger only processes mail and intelligence.
+    # The frequent trigger only processes mail and intelligence.
     - cron: '2-57/5 * * * *'
+    # Finish any sources left due by Vercel's bounded 08:00/20:00 sweep.
+    # GitHub schedule cron is UTC; these times are 08:15 and 20:15 IST.
+    - cron: '15 2,14 * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
@@ -21,7 +24,7 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event_name == 'workflow_dispatch' && !inputs.intelligence_only
+    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && github.event.schedule == '15 2,14 * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
