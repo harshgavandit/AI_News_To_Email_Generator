@@ -262,7 +262,9 @@ DEFAULT_SOURCES = (
            article_paths=("/blog/",), integration="publisher-metadata", require_english=True),
     Source("uber-engineering", "uber", "Uber Engineering", "engineering", "https://www.uber.com/us/en/blog/",
            ("uber.com", "www.uber.com"), topic="software", coverage="article", region="Global", tech_only=True,
-           language="en", article_paths=("/us/en/blog/",), integration="publisher-metadata", require_english=True),
+           language="en", article_paths=("/us/en/blog/",), integration="publisher-metadata", require_english=True,
+           enabled=False, pause_reason="The blog listing has not yielded complete article metadata in any check "
+           "(metadata_incomplete). Paused until the listing or an official feed is reviewed."),
     article_feed("cncf-blog", "Cloud Native Computing Foundation", "https://www.cncf.io/blog/feed/", "cncf.io"),
     Source("vercel", "vercel", "Vercel Changelog", "engineering", "https://vercel.com/atom", ("vercel.com",), topic="software"),
     Source("kubernetes", "kubernetes", "Kubernetes Blog", "engineering", "https://kubernetes.io/feed.xml", ("kubernetes.io",), topic="software"),

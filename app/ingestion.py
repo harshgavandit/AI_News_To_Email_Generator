@@ -1,7 +1,7 @@
 """Scheduled and admin-triggered refresh; browsing never waits on it with a store."""
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import UTC, datetime, timedelta, timezone
-from collections import Counter, defaultdict
+from collections import Counter
 import logging
 import threading
 import time
@@ -15,7 +15,28 @@ INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
 SWEEP_INTERVAL = timedelta(hours=12)
 SWEEP_WINDOW = timedelta(minutes=45)
 HOST_WORKERS = 2
-HOST_GATES = defaultdict(lambda: threading.Semaphore(HOST_WORKERS))
+# Hosts that serve many reviewed feeds from robust infrastructure. GitHub release
+# Atom feeds (~80 sources) would otherwise drain two at a time and miss the sweep.
+HOST_LIMITS = {"github.com": 6}
+
+
+def host_limit(host):
+    return HOST_LIMITS.get(host, HOST_WORKERS)
+
+
+# Network blips and publisher 5xx responses often clear within seconds. A scheduled
+# sweep retries these once, after the rest of its queue, instead of waiting 12 hours.
+TRANSIENT_ERRORS = frozenset({"fetch_timeout", "fetch_failed", "connection_failed", "upstream_unavailable"})
+
+HOST_GATES = {}
+_HOST_GATES_LOCK = threading.Lock()
+
+
+def host_gate(host):
+    with _HOST_GATES_LOCK:
+        if host not in HOST_GATES:
+            HOST_GATES[host] = threading.Semaphore(host_limit(host))
+        return HOST_GATES[host]
 logger = logging.getLogger(__name__)
 
 
@@ -77,7 +98,7 @@ def feed_host(source):
 
 def timed_read(source, *, claim=None, **kwargs):
     started = time.monotonic()
-    with HOST_GATES[feed_host(source)]:
+    with host_gate(feed_host(source)):
         if claim is not None and not claim(source.id):
             return None
         try:
@@ -89,6 +110,27 @@ def timed_read(source, *, claim=None, **kwargs):
     return items, dict(status, duration_ms=round((time.monotonic() - started) * 1000))
 
 
+def next_source(pending, running, limit=host_limit):
+    """Pick the next eligible source, starting with the host that needs longest to drain.
+
+    Priority order is kept within a host. Starting the deepest queues first keeps a
+    host with many feeds from becoming the tail that runs past the sweep deadline.
+    """
+    queued = Counter(host for _, host in pending)
+    best, best_drain, seen = None, -1.0, set()
+    for index, (_, host) in enumerate(pending):
+        if host in seen:
+            continue  # Only each host's highest-priority source is a candidate.
+        seen.add(host)
+        allowed = limit(host)
+        if running[host] >= allowed:
+            continue
+        drain = queued[host] / allowed
+        if drain > best_drain:
+            best, best_drain = index, drain
+    return best
+
+
 def refresh_sources(store, only=None, *, source_ids=None, maximum=None, scheduled=None, deadline=None):
     state = store.source_state(include_archive=False)
     now = datetime.now(UTC).timestamp()
@@ -96,27 +138,37 @@ def refresh_sources(store, only=None, *, source_ids=None, maximum=None, schedule
     validators = store.current_feed_validators() if any(feed.integration == "rss" for feed in active) else {}
     host_backoffs = store.feed_host_backoffs(now) if scheduled is not None else {}
 
-    def claim(source_id):
+    def claim(source_id, retry=False):
+        slot = scheduled.isoformat(timespec="minutes") + (":retry" if retry else "")
         return (scheduled <= datetime.now(UTC) < scheduled + SWEEP_WINDOW
                 and (deadline is None or time.monotonic() < deadline)
-                and store.claim_feed_check(source_id, scheduled.isoformat(timespec="minutes")))
+                and store.claim_feed_check(source_id, slot))
+
+    # A host earns its larger allowance only after a healthy response in this run, so
+    # a rate-limited publisher still sees at most HOST_WORKERS requests before backoff.
+    proven = set()
+
+    def effective_limit(host):
+        return host_limit(host) if host in proven else min(HOST_WORKERS, host_limit(host))
 
     with ThreadPoolExecutor(max_workers=FEED_WORKERS) as pool:
         futures, hosts = {}, Counter()
         pending = [(source, feed_host(source)) for source in active]
+        retried = set()
         while pending or futures:
             # Keep a congested publisher from tying up all workers for unrelated hosts.
             if deadline is not None and time.monotonic() >= deadline:
                 pending.clear()
             while pending and len(futures) < FEED_WORKERS:
-                index = next((i for i, (_, host) in enumerate(pending) if hosts[host] < HOST_WORKERS), None)
+                index = next_source(pending, hosts, effective_limit)
                 if index is None:
                     break
                 source, host = pending.pop(index)
                 if host_backoffs.get(host, 0) > time.time():
                     continue
                 saved = validators.get(source.id, {})
-                options = {"claim": claim} if scheduled is not None else {}
+                retry = source.id in retried
+                options = {"claim": (lambda ident: claim(ident, retry=True)) if retry else claim} if scheduled is not None else {}
                 if source.integration == "publisher-metadata":
                     options["known_urls"] = store.source_article_urls(source.id)
                 elif source.integration == "rss":
@@ -131,7 +183,13 @@ def refresh_sources(store, only=None, *, source_ids=None, maximum=None, schedule
                 if result is not None:
                     record_check(store, source, *result)
                     status = result[1]
+                    if (scheduled is not None and source.id not in retried and status.get("available") is False
+                            and status.get("error") in TRANSIENT_ERRORS):
+                        retried.add(source.id)
+                        pending.append((source, host))
                     limited = status.get("rate_limit_host")
+                    if status.get("available") and not limited:
+                        proven.add(host)
                     if scheduled is not None and limited and len(limited) <= 140:
                         until = time.time() + max(900, status.get("retry_after", 0))
                         if until > host_backoffs.get(limited, 0):

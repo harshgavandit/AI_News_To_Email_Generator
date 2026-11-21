@@ -3959,8 +3959,7 @@
     "kind": "engineering",
     "collection": "Global technology",
     "article_paths": [],
-    "reviewed_at": "2026-11-17"
-  },
+    "reviewed_at": "2026-11-17", "enabled": false, "pause_reason": "The Atom feed has returned feed_not_found since November 19, 2026. Paused until a current NAVER D2 feed URL is reviewed."},
   {
     "id": "kakao-tech",
     "group": "kakao-tech",

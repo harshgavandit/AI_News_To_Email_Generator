@@ -3,9 +3,10 @@ on:
   schedule:
     # The frequent trigger only processes mail and intelligence.
     - cron: '2-57/5 * * * *'
-    # Finish any sources left due by Vercel's bounded 08:00/20:00 sweep.
-    # GitHub schedule cron is UTC; these times are 08:15 and 20:15 IST.
-    - cron: '15 2,14 * * *'
+    # Finish any sources left due by Vercel's bounded 08:00/20:00 IST sweep.
+    # GitHub schedule cron is UTC: 02:40 and 14:40 UTC are 08:10 and 20:10 IST,
+    # inside the 45-minute window and after Vercel's first batch has started.
+    - cron: '40 2,14 * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
@@ -24,7 +25,7 @@ concurrency:
 
 jobs:
   refresh:
-    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && github.event.schedule == '15 2,14 * * *')
+    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && github.event.schedule == '40 2,14 * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -50,6 +51,12 @@ jobs:
             jq -r '.deferrals[]? | "::warning::\(.label) (\(.id)): backoff until \(.retry_at)"' <<< "$result"
             jq -r '.unconfirmed[]? | "::error::\(.): started without a recorded result. Skipping repeat attempt."' <<< "$result"
             status=$(jq -r '.status' <<< "$result")
+            if [[ "$status" == "already_started" ]]; then
+              # Vercel's scheduled batch holds the refresh lease; wait for it and continue.
+              if (( SECONDS >= deadline )); then break; fi
+              sleep 30
+              continue
+            fi
             if [[ "$status" == "closed" ]]; then
               echo 'Publisher checks are only allowed in the 45-minute windows from 08:00 and 20:00 IST.'
               exit 0

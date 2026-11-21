@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import json
+from dataclasses import replace
 from pathlib import Path
 from datetime import UTC, datetime, timedelta
 from threading import Barrier
@@ -106,7 +107,8 @@ def test_failed_check_is_logged_and_keeps_snapshot_until_evening(archive, monkey
     previous = store.source_state()["bbc-tech"]["last_success"]
     daily_clock(datetime(2026, 11, 17, 3, tzinfo=UTC))
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id == "bbc-tech"))
-    outcomes = iter([(False, "fetch_failed"), (True, None)])
+    # The sweep retries a transient failure once; both attempts fail here.
+    outcomes = iter([(False, "fetch_failed"), (False, "fetch_failed"), (True, None)])
 
     def fetch(_, **kwargs):
         available, error = next(outcomes)
@@ -350,8 +352,8 @@ def test_publisher_followup_drains_only_inside_the_two_daily_sweep_windows():
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
     assert "github.event_name == 'workflow_dispatch'" in refresh_job
-    assert "- cron: '15 2,14 * * *'" in workflow
-    assert "github.event.schedule == '15 2,14 * * *'" in refresh_job
+    assert "- cron: '40 2,14 * * *'" in workflow
+    assert "github.event.schedule == '40 2,14 * * *'" in refresh_job
     assert "github.event.schedule == '2-57/5 * * * *'" not in refresh_job
     assert "--retry" not in refresh_job
 
@@ -429,3 +431,49 @@ def test_explicit_host_rate_limit_stops_queued_feeds_and_survives_a_new_runner(a
     evening = client.get(SWEEP, headers=JOB_HEADERS).json()
     assert evening["checked"] == 1 and evening["deferred"] == len(same_host)
     assert fetched[-1] == other.id
+
+
+def test_follow_up_cron_runs_inside_both_ist_sweep_windows():
+    from datetime import datetime, timedelta, timezone
+    from app.ingestion import SWEEP_WINDOW, latest_sweep
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    minute, hours = workflow.split("- cron: '", 2)[2].split("'", 1)[0].split()[:2]
+    for hour in map(int, hours.split(",")):
+        fired = datetime(2026, 11, 21, hour, int(minute), tzinfo=timezone.utc)
+        opened = latest_sweep(fired)
+        # The follow-up must start after Vercel's sweep opens and leave time before the window closes.
+        assert timedelta(minutes=5) <= fired - opened <= SWEEP_WINDOW - timedelta(minutes=20)
+
+
+def test_follow_up_waits_for_a_running_vercel_batch():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
+    assert '"$status" == "already_started"' in refresh_job and "sleep 30" in refresh_job
+
+
+def test_transient_failures_are_retried_once_within_the_sweep(archive, monkeypatch, daily_clock):
+    store, client = archive
+    flaky, gone, steady = BY_ID["bbc-tech"], BY_ID["naver-d2"], BY_ID["the-verge"]
+    gone = replace(gone, enabled=True)
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (flaky, gone, steady))
+    fetched = []
+
+    def read(source, **kwargs):
+        fetched.append(source.id)
+        if source.id == flaky.id and fetched.count(flaky.id) == 1:
+            return [], {"available": False, "error": "fetch_timeout"}
+        if source.id == gone.id:
+            return [], {"available": False, "error": "feed_not_found"}
+        return [], {"available": True}
+
+    monkeypatch.setattr(ingestion, "read_feed", read)
+    daily_clock(MORNING)
+    result = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert fetched.count(flaky.id) == 2  # The timeout is retried after the rest of the queue.
+    assert fetched.count(gone.id) == 1   # A missing feed is not retried within the sweep.
+    assert fetched.count(steady.id) == 1
+    state = store.source_state(include_archive=False)
+    assert state[flaky.id]["available"] is True and state[gone.id]["available"] is False
+    assert result["remaining"] == 0 and not result.get("unconfirmed")
