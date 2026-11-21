@@ -47,6 +47,7 @@ from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
 from app.curiosity import build_curiosity_cards, curiosity_article
+from app.search_suggest import suggest as suggest_scopes
 from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
@@ -87,6 +88,7 @@ _signals_cache = Cache("signals-v1")
 _trending_cache = Cache("trending-v7")
 _briefing_cache = Cache("briefing-v2")
 _curiosity_cache = Cache("curiosity-v1")
+_suggest_cache = Cache("suggest-authors-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
 FEED_FILTERS = ("source", "publisher", "kind", "region", "coverage", "language")
@@ -561,6 +563,36 @@ def author_catalog(response: Response, q: Annotated[str, Query(max_length=80)] =
     response.headers["Cache-Control"] = "public, max-age=60"
     return {"authors": sorted(authors.values(), key=lambda row: (-row["articles"], row["name"].casefold()))[:limit],
             "basis": "Authors observed in the recent discovery sample. RSS names are scoped to their source feed."}
+
+
+def recent_authors():
+    """Author names from the bounded recent sample, cached briefly for type-ahead use."""
+    cached, _ = _suggest_cache.get("authors")
+    if cached is not None:
+        return cached["authors"]
+    authors = {}
+    try:
+        for row in intelligence_candidates(get_store()):
+            article = public_article(row)
+            key = article.get("author_key")
+            if key and key not in authors and article.get("author"):
+                authors[key] = {"id": key, "name": article["author"], "publisher": article.get("publisher", "")}
+    except SQLAlchemyError:
+        logger.warning("search_suggest_authors_unavailable")
+        return []
+    rows = list(authors.values())
+    _suggest_cache.put("authors", {"authors": rows}, ttl=300)
+    return rows
+
+
+@app.get("/api/search/suggest")
+def search_suggest(response: Response, q: Annotated[str, Query(max_length=80)] = ""):
+    """Scope suggestions for the search box: topics, subjects, publisher feeds and authors."""
+    phrase = q.strip()
+    suggestions = suggest_scopes(phrase, topics=TOPICS, subjects=SUBJECTS, sources=BY_ID.values(),
+                                 authors=recent_authors() if len(phrase) >= 2 else ())
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return {"query": phrase, "suggestions": suggestions}
 
 
 @app.get("/api/articles/{article_id}")

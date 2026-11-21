@@ -65,6 +65,8 @@ Related results come from the last 30 days, using at most 200 archive candidates
 
 `GET /api/authors?q=writer&limit=80` returns bounded, observed author identities from the recent discovery sample. API profile URLs identify authors when supplied; RSS names without profiles are scoped to their source feed, preventing namesakes from being merged. The returned `id` can be used in recommendations. This is not an exhaustive directory of either external platform.
 
+`GET /api/search/suggest?q=secu` returns up to 12 scope suggestions for the Reading Room search box, grouped in the order topic, subject, publisher and author (at most 3, 3, 5 and 4). Each item has `kind`, `id`, `label` and, for publishers and authors, a `detail` (region or publication). Queries shorter than two characters return an empty list and queries longer than 80 characters return 422. Matching folds case and accents and ranks exact, prefix, word-prefix and substring matches in that order. Topics, subjects and enabled publisher feeds come from the reviewed catalog; authors come from the recent discovery sample and are cached for five minutes. The response is cacheable for 60 seconds and makes no model or publisher request.
+
 `POST /api/recommendations` accepts a JSON object:
 
 ```json

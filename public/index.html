@@ -47,7 +47,9 @@
     <link rel="stylesheet" href="/reader-tools.css" />
     <link rel="stylesheet" href="/visit-catchup.css" />
     <script type="module" src="/app.js"></script>
-  </head>
+    <link rel="stylesheet" href="/system.css" />
+  <script defer src="/system.js"></script>
+</head>
   <body>
     <a class="skip" href="#reading-room">Skip to stories</a>
     <header class="site-header">
@@ -258,7 +260,7 @@
                   <div class="reading-search-heading"><label for="search">Search technology news</label></div>
                   <div class="search-wrap">
                     <span class="reading-search-icon" aria-hidden="true"></span>
-                    <input id="search" type="search" maxlength="150" placeholder="Topics, authors, companies, or headlines" />
+                    <input id="search" type="search" maxlength="150" placeholder="Topics, authors, companies, or headlines" /><ul id="search-suggestions" class="search-suggestions" aria-label="Search suggestions" hidden></ul>
                     <button id="clear-search" type="button" class="text-button" aria-label="Clear search" hidden>Clear</button>
                   </div>
                   <nav class="search-destinations" aria-label="Search result type">

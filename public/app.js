@@ -19,6 +19,7 @@ import { createCoverageDialog } from "./coverage-dialog.js";
 import { createVisitCatchup } from "./visit-catchup.js";
 import { openVisit } from "./visit-history.js";
 import { renderCuriosityCards } from "./curiosity.js";
+import { createSearchSuggestions } from "./search-suggest.js";
 
 const $ = (id) => document.getElementById(id);
 const views = ["feed", "for-you", "saved", "briefing", "catchup"];
@@ -1709,6 +1710,34 @@ $("clear-search").addEventListener("click", () => {
   $("search").value = "";
   loadNews();
   $("search").focus();
+});
+const suggestionKinds = { topic: "topic", subject: "subject", publisher: "publisher feed", author: "author" };
+createSearchSuggestions({
+  input: $("search"),
+  list: $("search-suggestions"),
+  request,
+  onSelect(item) {
+    clearTimeout(searchTimer);
+    if (item.kind === "author") {
+      $("search").value = item.label;
+    } else {
+      $("search").value = "";
+      if (item.kind === "topic") state.topic = item.id;
+      if (item.kind === "subject") {
+        if (![...$("subject").options].some((option) => option.value === item.id)) $("subject").append(new Option(item.label, item.id));
+        $("subject").value = item.id;
+      }
+      if (item.kind === "publisher") {
+        if (![...$("publisher").options].some((option) => option.value === item.id)) $("publisher").append(new Option(item.label, item.id));
+        $("publisher").value = state.publisher = item.id;
+      }
+    }
+    // loadNews() moves the sort between relevance and latest as the query changes.
+    $("clear-search").hidden = !$("search").value;
+    reflectFilters();
+    loadNews();
+    status("story-action-status", `Showing stories for the ${suggestionKinds[item.kind] || item.kind} ${item.label}.`);
+  },
 });
 $("show-more").addEventListener("click", () => loadNews(true));
 $("archive-search").addEventListener("click", () => {

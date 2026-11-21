@@ -103,3 +103,10 @@ The deployed application adds a FastAPI entry point, responsive dashboard, bound
 The web summaries use RSS titles and excerpts rather than full articles/transcripts. Anthropic's RSS feeds are third-party maintained. The application runs on demand; no daily schedule or subscription list was created. Its caches, request limits, concurrency lock, and duplicate-send guard apply per warm function instance and are not a distributed quota. A successful send response proves SMTP acceptance, not delivery to the Inbox folder. No large-scale load test or separate production MySQL/CLI worker verification was performed.
 
 The initial OpenAI key was rejected as expired. The replacement key passed a real request before being synced to production. Credentials visible in the user's setup screenshot should be rotated and re-synced; no secret values are recorded in this report.
+
+## Design system layer and search scopes — November 21, 2026
+
+- A clean Linux checkout (Node 22, Python 3.12, locked `uv sync`) passed `npm run lint`, `npm run build`, `npm test` (70 of 70), Ruff, `compileall`, `pytest -q` (357 passed, 37 PostgreSQL-only cases skipped) and `scripts.check_reader_quality`.
+- The `reading.test.mjs` Saved-view case failed before these changes because start-up requests finished after the jsdom window closed; the test now lets them settle before teardown.
+- A Chromium harness served `public/` with mocked story data and the real FastAPI `/api/search/suggest`. It exercised the Reading Room at 1440 and 390 CSS pixels in light and dark, card hover, the empty state, the story drawer, the Brief builder and Research Desk, Sources, About and Inbox, with no page errors. Typing "secu", pressing Down and Enter applied the Cybersecurity topic, cleared the query, restored newest-first sorting, updated the URL and showed the confirmation toast.
+- Not covered: production data and deployment, live AI and email providers, Safari and Firefox, and screen-reader runs. On the Windows checkout `npm run build` needs Windows `node_modules`; run it there or in CI.

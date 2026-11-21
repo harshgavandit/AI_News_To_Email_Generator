@@ -306,6 +306,8 @@ test('opening the Saved view directly renders bookmarks from browser storage', a
     assert.equal(document.querySelector('#stories h3')?.textContent, 'A saved engineering story');
     assert.equal(document.getElementById('view-saved').getAttribute('aria-pressed'), 'true');
     assert(!requests.some(path => path.startsWith('/api/news')));
+    // Let start-up requests (headlines, curiosity, mail config) settle before the DOM is torn down.
+    await delay(50);
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
