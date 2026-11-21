@@ -19,7 +19,7 @@ from sqlalchemy.exc import DBAPIError
 from app.coverage import topic_for
 from app.discovery import catalog_filters, facet_counts, page_fingerprint, page_result, page_window, search_terms, search_text
 from app.sources import BY_ID
-from app.article_language import article_language, is_english_article
+from app.article_language import article_language, is_not_foreign_article
 from app.article_metadata import author_identity, metadata_for, restore_metadata
 from app.community import GENERAL_DEV_FEEDS, dev_article_in_scope
 from app.news_signals import MATERIAL_TERMS
@@ -349,7 +349,7 @@ class Store:
             items = [{**article, "detected_language": article_language(article)} for article in items]
             source = BY_ID.get(source_id)
             if source and source.require_english:
-                eligible = [article for article in items if is_english_article(article)]
+                eligible = [article for article in items if is_not_foreign_article(article)]
                 if diagnostics:
                     diagnostics = {**diagnostics, "rejected": diagnostics["rejected"] + len(items) - len(eligible)}
                 items = eligible

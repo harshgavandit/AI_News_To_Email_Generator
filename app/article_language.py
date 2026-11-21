@@ -62,3 +62,13 @@ def excerpt_language(excerpt):
 
 def is_english_article(article):
     return article_language(article) == "en" and excerpt_language(article.get("description")) in ("en", "und")
+
+
+def is_not_foreign_article(article):
+    """True unless the headline or excerpt is confidently in a language other than English.
+
+    Used to keep English-only feeds English without discarding short headlines that the
+    detector cannot classify ("und"), such as product names or version announcements.
+    """
+    return (article_language(article) in ("en", "und")
+            and excerpt_language(article.get("description")) in ("en", "und"))

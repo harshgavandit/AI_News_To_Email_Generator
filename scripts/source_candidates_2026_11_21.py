@@ -281,8 +281,11 @@ for ident, label, channel, topic, collection in (
 
 if __name__ == "__main__":
     from app.sources import DEFAULT_SOURCES
-    known = {source.id for source in DEFAULT_SOURCES} | {source.url.rstrip("/") for source in DEFAULT_SOURCES}
-    overlap = [row["id"] for row in rows if row["id"] in known or row["url"].rstrip("/") in known]
+    # Candidates promoted from this pack keep their id and URL; anything else that matches is a duplicate.
+    by_id = {source.id: source.url for source in DEFAULT_SOURCES}
+    known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
+    overlap = [row["id"] for row in rows if by_id.get(row["id"], row["url"]) != row["url"]
+               or (row["id"] not in by_id and row["url"].rstrip("/") in known_urls)]
     assert not overlap, f"already integrated: {overlap}"
     ids = [row["id"] for row in rows]
     assert len(ids) == len(set(ids)), "duplicate candidate id"

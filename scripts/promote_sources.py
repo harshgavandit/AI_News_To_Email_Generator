@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 from app.sources import load_source_pack
+from scripts.check_source_pack import requires_english
 
 CATALOG = Path(__file__).resolve().parents[1] / "app" / "source_catalog.json"
 
@@ -25,7 +26,8 @@ def promote(pack, ids, catalog=CATALOG, today=None):
         raise SystemExit(f"Not in the candidate pack: {', '.join(missing)}")
     current = json.loads(catalog.read_text(encoding="utf-8"))
     known = {row["id"] for row in current}
-    added = [{**candidates[ident], "reviewed_at": today, "require_english": True}
+    added = [{**candidates[ident], "reviewed_at": today,
+              **({"require_english": True} if requires_english(candidates[ident]) else {})}
              for ident in ids if ident not in known]
     merged = current + added
     pending = catalog.with_suffix(".json.pending")

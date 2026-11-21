@@ -15,12 +15,16 @@ def load_rows():
 
 def test_candidate_pack_is_valid_new_and_english():
     rows = load_rows()
-    known_ids = {source.id for source in DEFAULT_SOURCES}
+    by_id = {source.id: source.url for source in DEFAULT_SOURCES}
     known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
     assert len(rows) >= 150
     assert len({row["id"] for row in rows}) == len(rows) and len({row["url"] for row in rows}) == len(rows)
     for row in rows:
-        assert row["id"] not in known_ids and row["url"].rstrip("/") not in known_urls
+        # Either still a candidate, or promoted unchanged under the same id.
+        if row["id"] in by_id:
+            assert by_id[row["id"]] == row["url"]
+        else:
+            assert row["url"].rstrip("/") not in known_urls
         assert row["language"] == "en" and row["url"].startswith("https://")
         validate_source(Source(**{key: tuple(value) if key in {"hosts", "article_paths"} else value
                                   for key, value in row.items()}))
@@ -47,3 +51,40 @@ def test_promotion_adds_only_listed_candidates_and_validates(tmp_path):
     assert promote_sources.promote(PACK, [rows[0]["id"]], catalog=catalog) == []  # Idempotent.
     with pytest.raises(SystemExit):
         promote_sources.promote(PACK, ["not-a-candidate"], catalog=catalog)
+
+
+def test_language_policy_trusts_review_for_short_title_feeds_only():
+    from types import SimpleNamespace
+    from scripts.check_source_pack import english_enough, requires_english
+    release = SimpleNamespace(coverage="release", kind="engineering")
+    blog = SimpleNamespace(coverage="article", kind="engineering")
+    assert english_enough(release, 10, 1, 0) and not english_enough(release, 10, 0, 3)
+    assert english_enough(blog, 20, 13, 1) and not english_enough(blog, 20, 11, 0) and not english_enough(blog, 20, 18, 3)
+    assert not requires_english({"coverage": "release", "kind": "engineering"})
+    assert not requires_english({"coverage": "publisher", "kind": "video"})
+    assert requires_english({"coverage": "reporting", "kind": "news"})
+
+
+def test_english_only_feeds_keep_undetectable_headlines_but_drop_foreign_ones():
+    from app.article_language import is_not_foreign_article
+    assert is_not_foreign_article({"title": "Bun 1.3", "description": ""})
+    assert is_not_foreign_article({"title": "OpenAI releases a new reasoning model for developers", "description": ""})
+    assert not is_not_foreign_article({"title": "Le gouvernement français annonce un nouveau plan pour l'intelligence artificielle",
+                                       "description": ""})
+
+
+def test_recheck_pack_is_valid_and_not_yet_integrated():
+    with open("docs/research/source-candidates-2026-11-21-recheck.json", encoding="utf-8") as handle:
+        rows = json.load(handle)
+    known = {source.id for source in DEFAULT_SOURCES} | {source.url.rstrip("/") for source in DEFAULT_SOURCES}
+    assert len(rows) == 50 and len({row["id"] for row in rows}) == 50
+    for row in rows:
+        assert row["id"] not in known and row["url"].rstrip("/") not in known
+        validate_source(Source(**{key: tuple(value) if key in {"hosts", "article_paths"} else value
+                                  for key, value in row.items()}))
+
+
+def test_promoted_release_and_video_sources_do_not_filter_by_detected_language():
+    from app.sources import BY_ID
+    assert not BY_ID["release-oven-sh-bun"].require_english and not BY_ID["yt-openai"].require_english
+    assert BY_ID["engadget"].require_english and BY_ID["engadget"].reviewed_at

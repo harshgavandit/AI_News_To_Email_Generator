@@ -3959,7 +3959,10 @@
     "kind": "engineering",
     "collection": "Global technology",
     "article_paths": [],
-    "reviewed_at": "2026-11-17", "enabled": false, "pause_reason": "The Atom feed has returned feed_not_found since November 19, 2026. Paused until a current NAVER D2 feed URL is reviewed."},
+    "reviewed_at": "2026-11-17",
+    "enabled": false,
+    "pause_reason": "The Atom feed has returned feed_not_found since November 19, 2026. Paused until a current NAVER D2 feed URL is reviewed."
+  },
   {
     "id": "kakao-tech",
     "group": "kakao-tech",
@@ -5384,5 +5387,2016 @@
     ],
     "collection": "Systems and software",
     "reviewed_at": "2026-11-19"
+  },
+  {
+    "id": "etsy-code-as-craft",
+    "group": "etsy-code-as-craft",
+    "label": "Etsy Code as Craft",
+    "url": "https://www.etsy.com/codeascraft/rss",
+    "hosts": [
+      "etsy.com",
+      "www.etsy.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "instacart-tech",
+    "group": "instacart-tech",
+    "label": "Instacart Tech",
+    "url": "https://tech.instacart.com/feed",
+    "hosts": [
+      "tech.instacart.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "lobsters",
+    "group": "lobsters",
+    "label": "Lobsters",
+    "url": "https://lobste.rs/rss",
+    "hosts": [
+      "lobste.rs"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "discussion",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "typescript-blog",
+    "group": "typescript-blog",
+    "label": "TypeScript Blog",
+    "url": "https://devblogs.microsoft.com/typescript/feed/",
+    "hosts": [
+      "devblogs.microsoft.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "yt-mlst",
+    "group": "youtube",
+    "label": "Machine Learning Street Talk",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCMLtBahI5DMrt0NPvDSoIRQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "alignment-forum",
+    "group": "alignment-forum",
+    "label": "AI Alignment Forum",
+    "url": "https://www.alignmentforum.org/feed.xml",
+    "hosts": [
+      "alignmentforum.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "discussion",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "eetimes",
+    "group": "eetimes",
+    "label": "EE Times",
+    "url": "https://www.eetimes.com/feed/",
+    "hosts": [
+      "eetimes.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "github-engineering",
+    "group": "github-engineering",
+    "label": "GitHub Engineering",
+    "url": "https://github.blog/engineering/feed/",
+    "hosts": [
+      "github.blog"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "google-cloud-community",
+    "group": "medium",
+    "label": "Google Cloud Community on Medium",
+    "url": "https://medium.com/feed/google-cloud",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "help-net-security",
+    "group": "help-net-security",
+    "label": "Help Net Security",
+    "url": "https://www.helpnetsecurity.com/feed/",
+    "hosts": [
+      "helpnetsecurity.com"
+    ],
+    "kind": "news",
+    "topic": "security",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Security",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "hpcwire",
+    "group": "hpcwire",
+    "label": "HPCwire",
+    "url": "https://www.hpcwire.com/feed/",
+    "hosts": [
+      "hpcwire.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "itnext",
+    "group": "itnext",
+    "label": "ITNEXT",
+    "url": "https://itnext.io/feed",
+    "hosts": [
+      "itnext.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "javarevisited",
+    "group": "medium",
+    "label": "Javarevisited on Medium",
+    "url": "https://medium.com/feed/javarevisited",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "kdnuggets",
+    "group": "kdnuggets",
+    "label": "KDnuggets",
+    "url": "https://www.kdnuggets.com/feed",
+    "hosts": [
+      "kdnuggets.com"
+    ],
+    "kind": "news",
+    "topic": "ai",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "marktechpost",
+    "group": "marktechpost",
+    "label": "MarkTechPost",
+    "url": "https://www.marktechpost.com/feed/",
+    "hosts": [
+      "marktechpost.com"
+    ],
+    "kind": "news",
+    "topic": "ai",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "medium-tag-generative-ai",
+    "group": "medium",
+    "label": "Medium Generative AI",
+    "url": "https://medium.com/feed/tag/generative-ai",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "raspberry-pi-news",
+    "group": "raspberry-pi-news",
+    "label": "Raspberry Pi News",
+    "url": "https://www.raspberrypi.com/news/feed/",
+    "hosts": [
+      "raspberrypi.com"
+    ],
+    "kind": "engineering",
+    "topic": "chips",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-angular-angular",
+    "group": "github-releases",
+    "label": "angular/angular Releases",
+    "url": "https://github.com/angular/angular/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/angular/angular/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-anthropics-anthropic-sdk-typescript",
+    "group": "github-releases",
+    "label": "anthropics/anthropic-sdk-typescript Releases",
+    "url": "https://github.com/anthropics/anthropic-sdk-typescript/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/anthropics/anthropic-sdk-typescript/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-containerd-containerd",
+    "group": "github-releases",
+    "label": "containerd/containerd Releases",
+    "url": "https://github.com/containerd/containerd/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/containerd/containerd/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-deepspeedai-deepspeed",
+    "group": "github-releases",
+    "label": "deepspeedai/DeepSpeed Releases",
+    "url": "https://github.com/deepspeedai/DeepSpeed/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/deepspeedai/DeepSpeed/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-elastic-elasticsearch",
+    "group": "github-releases",
+    "label": "elastic/elasticsearch Releases",
+    "url": "https://github.com/elastic/elasticsearch/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/elastic/elasticsearch/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-grafana-loki",
+    "group": "github-releases",
+    "label": "grafana/loki Releases",
+    "url": "https://github.com/grafana/loki/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/grafana/loki/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-hashicorp-terraform",
+    "group": "github-releases",
+    "label": "hashicorp/terraform Releases",
+    "url": "https://github.com/hashicorp/terraform/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/hashicorp/terraform/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-home-assistant-core",
+    "group": "github-releases",
+    "label": "home-assistant/core Releases",
+    "url": "https://github.com/home-assistant/core/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/home-assistant/core/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-nestjs-nest",
+    "group": "github-releases",
+    "label": "nestjs/nest Releases",
+    "url": "https://github.com/nestjs/nest/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/nestjs/nest/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-nvidia-tensorrt-llm",
+    "group": "github-releases",
+    "label": "NVIDIA/TensorRT-LLM Releases",
+    "url": "https://github.com/NVIDIA/TensorRT-LLM/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/NVIDIA/TensorRT-LLM/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-open-webui-open-webui",
+    "group": "github-releases",
+    "label": "open-webui/open-webui Releases",
+    "url": "https://github.com/open-webui/open-webui/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/open-webui/open-webui/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-vuejs-core",
+    "group": "github-releases",
+    "label": "vuejs/core Releases",
+    "url": "https://github.com/vuejs/core/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/vuejs/core/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "road-to-vr",
+    "group": "road-to-vr",
+    "label": "Road to VR",
+    "url": "https://www.roadtovr.com/feed/",
+    "hosts": [
+      "roadtovr.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "uktn",
+    "group": "uktn",
+    "label": "UKTN",
+    "url": "https://www.uktech.news/feed",
+    "hosts": [
+      "uktech.news"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "yt-networkchuck",
+    "group": "youtube",
+    "label": "NetworkChuck",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9x0AN7BWHpCDHSm9NiJFJQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "dev-tag-ai",
+    "group": "dev",
+    "label": "DEV Community #ai",
+    "url": "https://dev.to/feed/tag/ai",
+    "hosts": [
+      "dev.to"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "dev-tag-rust",
+    "group": "dev",
+    "label": "DEV Community #rust",
+    "url": "https://dev.to/feed/tag/rust",
+    "hosts": [
+      "dev.to"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "jetbrains-blog",
+    "group": "jetbrains-blog",
+    "label": "JetBrains Blog",
+    "url": "https://blog.jetbrains.com/feed/",
+    "hosts": [
+      "blog.jetbrains.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "yt-google-cloud-tech",
+    "group": "youtube",
+    "label": "Google Cloud Tech",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJS9pqu9BzkAMNTmzNMNhvg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-openai",
+    "group": "youtube",
+    "label": "OpenAI on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCXZCJLdBC09xxGZ6gcdrc6A",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "dwarkesh",
+    "group": "dwarkesh",
+    "label": "Dwarkesh Podcast",
+    "url": "https://www.dwarkesh.com/feed",
+    "hosts": [
+      "dwarkesh.com",
+      "www.dwarkesh.com"
+    ],
+    "kind": "podcast",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "podcast",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-google-deepmind",
+    "group": "youtube",
+    "label": "Google DeepMind on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCP7jMXSY2xbc3KCAE0MHQ-A",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "404-media",
+    "group": "404-media",
+    "label": "404 Media",
+    "url": "https://www.404media.co/rss/",
+    "hosts": [
+      "404media.co"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "check-point-research",
+    "group": "check-point-research",
+    "label": "Check Point Research",
+    "url": "https://research.checkpoint.com/feed/",
+    "hosts": [
+      "research.checkpoint.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Security",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "robotics-automation-news",
+    "group": "robotics-automation-news",
+    "label": "Robotics & Automation News",
+    "url": "https://roboticsandautomationnews.com/feed/",
+    "hosts": [
+      "roboticsandautomationnews.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "techmeme",
+    "group": "techmeme",
+    "label": "Techmeme",
+    "url": "https://www.techmeme.com/feed.xml",
+    "hosts": [
+      "techmeme.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "the-stack",
+    "group": "the-stack",
+    "label": "The Stack",
+    "url": "https://www.thestack.technology/rss/",
+    "hosts": [
+      "thestack.technology"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "amazon-science",
+    "group": "amazon-science",
+    "label": "Amazon Science",
+    "url": "https://www.amazon.science/index.rss",
+    "hosts": [
+      "amazon.science"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "fast-company-tech",
+    "group": "fast-company-tech",
+    "label": "Fast Company Technology",
+    "url": "https://www.fastcompany.com/technology/rss",
+    "hosts": [
+      "fastcompany.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "medium-engineering",
+    "group": "medium-engineering",
+    "label": "Medium Engineering",
+    "url": "https://medium.engineering/feed",
+    "hosts": [
+      "medium.engineering"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-microsoft-graphrag",
+    "group": "github-releases",
+    "label": "microsoft/graphrag Releases",
+    "url": "https://github.com/microsoft/graphrag/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/microsoft/graphrag/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-rails-rails",
+    "group": "github-releases",
+    "label": "rails/rails Releases",
+    "url": "https://github.com/rails/rails/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/rails/rails/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-tailwindlabs-tailwindcss",
+    "group": "github-releases",
+    "label": "tailwindlabs/tailwindcss Releases",
+    "url": "https://github.com/tailwindlabs/tailwindcss/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/tailwindlabs/tailwindcss/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "tomasz-tunguz",
+    "group": "tomasz-tunguz",
+    "label": "Tomasz Tunguz",
+    "url": "https://tomtunguz.com/index.xml",
+    "hosts": [
+      "tomtunguz.com"
+    ],
+    "kind": "engineering",
+    "topic": "startups",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "aws-big-data",
+    "group": "aws-big-data",
+    "label": "AWS Big Data Blog",
+    "url": "https://aws.amazon.com/blogs/big-data/feed/",
+    "hosts": [
+      "aws.amazon.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "aws-compute",
+    "group": "aws-compute",
+    "label": "AWS Compute Blog",
+    "url": "https://aws.amazon.com/blogs/compute/feed/",
+    "hosts": [
+      "aws.amazon.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "computer-weekly",
+    "group": "computer-weekly",
+    "label": "Computer Weekly",
+    "url": "https://www.computerweekly.com/rss/All-Computer-Weekly-content.xml",
+    "hosts": [
+      "computerweekly.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "engadget",
+    "group": "engadget",
+    "label": "Engadget",
+    "url": "https://www.engadget.com/rss.xml",
+    "hosts": [
+      "engadget.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "google-cloud-blog",
+    "group": "google-cloud-blog",
+    "label": "Google Cloud Blog",
+    "url": "https://cloudblog.withgoogle.com/rss/",
+    "hosts": [
+      "cloud.google.com",
+      "cloudblog.withgoogle.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "malwarebytes-labs",
+    "group": "malwarebytes-labs",
+    "label": "Malwarebytes Labs",
+    "url": "https://www.malwarebytes.com/blog/feed/index.xml",
+    "hosts": [
+      "malwarebytes.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Security",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "not-boring",
+    "group": "not-boring",
+    "label": "Not Boring",
+    "url": "https://www.notboring.co/feed",
+    "hosts": [
+      "notboring.co",
+      "www.notboring.co"
+    ],
+    "kind": "engineering",
+    "topic": "startups",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "pandaily",
+    "group": "pandaily",
+    "label": "Pandaily",
+    "url": "https://pandaily.com/feed/",
+    "hosts": [
+      "pandaily.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "cnet-news",
+    "group": "cnet-news",
+    "label": "CNET News",
+    "url": "https://www.cnet.com/rss/news/",
+    "hosts": [
+      "cnet.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "zdnet",
+    "group": "zdnet",
+    "label": "ZDNET",
+    "url": "https://www.zdnet.com/news/rss.xml",
+    "hosts": [
+      "zdnet.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "ieee-spectrum-ai",
+    "group": "ieee-spectrum-ai",
+    "label": "IEEE Spectrum Artificial Intelligence",
+    "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
+    "hosts": [
+      "spectrum.ieee.org"
+    ],
+    "kind": "news",
+    "topic": "ai",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-ml-explore-mlx",
+    "group": "github-releases",
+    "label": "ml-explore/mlx Releases",
+    "url": "https://github.com/ml-explore/mlx/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/ml-explore/mlx/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "vicki-boykis",
+    "group": "vicki-boykis",
+    "label": "Vicki Boykis",
+    "url": "https://vickiboykis.com/index.xml",
+    "hosts": [
+      "vickiboykis.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "walmart-global-tech",
+    "group": "medium",
+    "label": "Walmart Global Tech",
+    "url": "https://medium.com/feed/walmartglobaltech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "dzone",
+    "group": "dzone",
+    "label": "DZone",
+    "url": "https://feeds.dzone.com/home",
+    "hosts": [
+      "dzone.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "geekwire",
+    "group": "geekwire",
+    "label": "GeekWire",
+    "url": "https://www.geekwire.com/feed/",
+    "hosts": [
+      "geekwire.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "mint-technology",
+    "group": "mint-technology",
+    "label": "Mint Technology",
+    "url": "https://www.livemint.com/rss/technology",
+    "hosts": [
+      "livemint.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "agoda-engineering",
+    "group": "medium",
+    "label": "Agoda Engineering",
+    "url": "https://medium.com/feed/agoda-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "react-status",
+    "group": "react-status",
+    "label": "React Status",
+    "url": "https://react.statuscode.com/rss",
+    "hosts": [
+      "react.statuscode.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-fluxcd-flux2",
+    "group": "github-releases",
+    "label": "fluxcd/flux2 Releases",
+    "url": "https://github.com/fluxcd/flux2/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/fluxcd/flux2/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "neowin",
+    "group": "neowin",
+    "label": "Neowin",
+    "url": "https://www.neowin.net/news/rss/",
+    "hosts": [
+      "neowin.net"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "nyt-technology",
+    "group": "nyt-technology",
+    "label": "The New York Times Technology",
+    "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+    "hosts": [
+      "nytimes.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "expedia-tech",
+    "group": "medium",
+    "label": "Expedia Group Technology",
+    "url": "https://medium.com/feed/expedia-group-tech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "lex-fridman",
+    "group": "lex-fridman",
+    "label": "Lex Fridman Podcast",
+    "url": "https://lexfridman.com/feed/podcast/",
+    "hosts": [
+      "lexfridman.com"
+    ],
+    "kind": "podcast",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "podcast",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-caddyserver-caddy",
+    "group": "github-releases",
+    "label": "caddyserver/caddy Releases",
+    "url": "https://github.com/caddyserver/caddy/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/caddyserver/caddy/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-oven-sh-bun",
+    "group": "github-releases",
+    "label": "oven-sh/bun Releases",
+    "url": "https://github.com/oven-sh/bun/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/oven-sh/bun/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "zalando-engineering",
+    "group": "zalando-engineering",
+    "label": "Zalando Engineering",
+    "url": "https://engineering.zalando.com/atom.xml",
+    "hosts": [
+      "engineering.zalando.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "et-tech",
+    "group": "et-tech",
+    "label": "ET Tech",
+    "url": "https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms",
+    "hosts": [
+      "economictimes.indiatimes.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "product-hunt",
+    "group": "product-hunt",
+    "label": "Product Hunt",
+    "url": "https://www.producthunt.com/feed",
+    "hosts": [
+      "producthunt.com",
+      "www.producthunt.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "discussion",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "swift-blog",
+    "group": "swift-blog",
+    "label": "Swift.org Blog",
+    "url": "https://www.swift.org/atom.xml",
+    "hosts": [
+      "swift.org",
+      "www.swift.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "yt-anthropic",
+    "group": "youtube",
+    "label": "Anthropic on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrDwWp7EBBv4NwvScIpBDOA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-lex-fridman",
+    "group": "youtube",
+    "label": "Lex Fridman on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "graham-cluley",
+    "group": "graham-cluley",
+    "label": "Graham Cluley",
+    "url": "https://grahamcluley.com/feed/",
+    "hosts": [
+      "grahamcluley.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Security",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-docker-compose",
+    "group": "github-releases",
+    "label": "docker/compose Releases",
+    "url": "https://github.com/docker/compose/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/docker/compose/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "aws-open-source",
+    "group": "aws-open-source",
+    "label": "AWS Open Source Blog",
+    "url": "https://aws.amazon.com/blogs/opensource/feed/",
+    "hosts": [
+      "aws.amazon.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "medium-tag-rust",
+    "group": "medium",
+    "label": "Medium Rust",
+    "url": "https://medium.com/feed/tag/rust",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-axolotl-ai-cloud-axolotl",
+    "group": "github-releases",
+    "label": "axolotl-ai-cloud/axolotl Releases",
+    "url": "https://github.com/axolotl-ai-cloud/axolotl/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/axolotl-ai-cloud/axolotl/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-hashicorp-vault",
+    "group": "github-releases",
+    "label": "hashicorp/vault Releases",
+    "url": "https://github.com/hashicorp/vault/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/hashicorp/vault/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-langgenius-dify",
+    "group": "github-releases",
+    "label": "langgenius/dify Releases",
+    "url": "https://github.com/langgenius/dify/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/langgenius/dify/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "medium-tag-ai-agents",
+    "group": "medium",
+    "label": "Medium AI Agents",
+    "url": "https://medium.com/feed/tag/ai-agents",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "medium-tag-llm",
+    "group": "medium",
+    "label": "Medium LLM",
+    "url": "https://medium.com/feed/tag/llm",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 120,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "release-argoproj-argo-workflows",
+    "group": "github-releases",
+    "label": "argoproj/argo-workflows Releases",
+    "url": "https://github.com/argoproj/argo-workflows/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/argoproj/argo-workflows/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "release-spring-projects-spring-boot",
+    "group": "github-releases",
+    "label": "spring-projects/spring-boot Releases",
+    "url": "https://github.com/spring-projects/spring-boot/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/spring-projects/spring-boot/releases/tag/"
+    ],
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-ai-explained",
+    "group": "youtube",
+    "label": "AI Explained",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNJ1Ymd5yFuUPtn21xtRbbw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-github",
+    "group": "youtube",
+    "label": "GitHub on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC7c3Kb6jYCRj4JOHHZTxKsQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "yt-nvidia",
+    "group": "youtube",
+    "label": "NVIDIA on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCHuiy8bXnmK5nisYHUd1J5g",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "kind": "video",
+    "topic": "chips",
+    "coverage": "publisher",
+    "format": "video",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-21"
+  },
+  {
+    "id": "arxiv-cs-ma",
+    "group": "arxiv-cs-ma",
+    "label": "arXiv Multiagent Systems",
+    "url": "https://rss.arxiv.org/rss/cs.MA",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "arxiv-cs-ir",
+    "group": "arxiv-cs-ir",
+    "label": "arXiv Information Retrieval",
+    "url": "https://rss.arxiv.org/rss/cs.IR",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "arxiv-cs-ne",
+    "group": "arxiv-cs-ne",
+    "label": "arXiv Neural and Evolutionary Computing",
+    "url": "https://rss.arxiv.org/rss/cs.NE",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "arxiv-cs-hc",
+    "group": "arxiv-cs-hc",
+    "label": "arXiv Human-Computer Interaction",
+    "url": "https://rss.arxiv.org/rss/cs.HC",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "arxiv-cs-ni",
+    "group": "arxiv-cs-ni",
+    "label": "arXiv Networking and Internet Architecture",
+    "url": "https://rss.arxiv.org/rss/cs.NI",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
+  },
+  {
+    "id": "arxiv-cs-os",
+    "group": "arxiv-cs-os",
+    "label": "arXiv Operating Systems",
+    "url": "https://rss.arxiv.org/rss/cs.OS",
+    "hosts": [
+      "arxiv.org"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "preprint",
+    "format": "paper",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Research",
+    "reviewed_at": "2026-11-21",
+    "require_english": true
   }
 ]

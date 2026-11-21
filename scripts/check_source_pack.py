@@ -18,6 +18,32 @@ from app.sources import DEFAULT_SOURCES, Source, load_source_pack, validate_sour
 from urllib.parse import urlsplit
 
 
+# Release titles ("v2.4.1"), video and podcast titles are often too short for language
+# detection, so those feeds rely on the reviewed language of the project or channel.
+LANGUAGE_FROM_REVIEW = {"release"}
+LANGUAGE_FROM_REVIEW_KINDS = {"video", "podcast"}
+
+
+def detection_is_reliable(source):
+    return source.coverage not in LANGUAGE_FROM_REVIEW and source.kind not in LANGUAGE_FROM_REVIEW_KINDS
+
+
+def english_enough(source, recent, english, other_languages):
+    """Accept a reviewed English feed when detection broadly agrees with the review.
+
+    Short headlines make a detector misfire occasionally, so one stray result no longer
+    rejects a feed. Promoted article feeds also set require_english, which drops any
+    non-English item at ingestion.
+    """
+    if not detection_is_reliable(source):
+        return other_languages * 5 <= recent  # At most 20% confidently non-English.
+    return english * 5 >= recent * 3 and other_languages * 10 <= recent
+
+
+def requires_english(row):
+    return row.get("coverage") not in LANGUAGE_FROM_REVIEW and row.get("kind") not in LANGUAGE_FROM_REVIEW_KINDS
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
@@ -54,7 +80,7 @@ def main():
             result.update(status="active" if recent and state["available"] else "dormant" if state["available"] else "unavailable",
                 parsed_entries=len(items), recent_entries=len(recent), error=state.get("error"),
                 english_entries=english, non_english_entries=other_languages,
-                english_verified=english_feed and bool(recent) and not other_languages and english * 5 >= len(recent) * 4,
+                english_verified=english_feed and bool(recent) and english_enough(source, len(recent), english, other_languages),
                 latest_published_at=max((item["published_at"] for item in items), default=None),
                 sample_urls=[item["url"] for item in recent[:2]],
                 seconds=round(time.monotonic() - started, 3))
@@ -69,7 +95,7 @@ def main():
     if args.promote:
         active = {row["id"] for row in results if row["status"] == "active" and row["english_verified"]}
         approved = [{**row, "reviewed_at": datetime.now(UTC).date().isoformat(),
-                     **({"require_english": True} if row["id"] not in existing_ids else {})}
+                     **({"require_english": True} if row["id"] not in existing_ids and requires_english(row) else {})}
                     for row in candidates if row["id"] in active]
         args.promote.parent.mkdir(parents=True, exist_ok=True)
         retained = json.loads(args.promote.read_text(encoding="utf-8")) if args.promote.exists() else []
