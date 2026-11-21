@@ -35,7 +35,7 @@ class DigestAgent:
                 f"Create a digest for this technology article.\nTitle: {title}\nContent:\n{content}",
                 system_prompt=PROMPT + "\nReturn a title, a concise summary and up to one distinct takeaway and grounded implication. Leave either optional insight as an empty string if the excerpt lacks evidence. Preserve uncertainty and attribute publisher claims. Do not include URLs, promotional copy or invented numbers.",
                 response_model=DigestOutput,
-                max_tokens=650,
+                max_tokens=650, task="digest",
             )
             return DigestOutput.model_validate_json(response)
         except Exception as error:

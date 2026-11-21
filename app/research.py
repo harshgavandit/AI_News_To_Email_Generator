@@ -13,8 +13,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, create_model
 
-from app.agent.openai_client import generate_response, get_client, get_openai_model
+from app.agent.openai_client import BudgetExceeded, embed_texts, generate_response, get_openai_model, route_model
 from app.briefing import build_briefing
+from app.cache import Cache
 from app.coverage import public_article
 from app.discovery import search_terms, search_text
 from app.intelligence import GENERIC_TERMS, story_identity
@@ -43,6 +44,45 @@ Return up to six short claims and a short note describing gaps in the evidence."
 OUTPUT_LANGUAGES = {"en": "English", "hi": "Hindi", "mr": "Marathi", "es": "Spanish", "fr": "French",
     "de": "German", "pt": "Portuguese", "ja": "Japanese", "ko": "Korean", "zh": "Chinese",
     "ar": "Arabic", "fa": "Persian", "vi": "Vietnamese", "tr": "Turkish", "pl": "Polish", "nl": "Dutch"}
+
+
+_provider_issue = {"value": None}
+# Issues that need an operator (credentials, billing, model access) rather than a retry.
+CONFIGURATION_ISSUES = {"authentication", "permission", "quota", "model_unavailable"}
+
+
+def classify_provider_error(error):
+    """Map an AI provider exception to a coarse, non-sensitive category."""
+    import openai
+    if isinstance(error, BudgetExceeded):
+        return "budget_limited"
+    if isinstance(error, openai.AuthenticationError):
+        return "authentication"
+    if isinstance(error, openai.PermissionDeniedError):
+        return "permission"
+    if isinstance(error, openai.NotFoundError):
+        return "model_unavailable"
+    if isinstance(error, openai.RateLimitError):
+        body = getattr(error, "body", None)
+        code = (body.get("code") or (body.get("error") or {}).get("code")) if isinstance(body, dict) else None
+        return "quota" if code == "insufficient_quota" else "rate_limited"
+    if isinstance(error, (openai.APITimeoutError, openai.APIConnectionError)):
+        return "unreachable"
+    if isinstance(error, openai.APIStatusError):
+        return "provider_error" if error.status_code >= 500 else "request_rejected"
+    return "invalid_output"
+
+
+def note_provider_error(error):
+    issue = classify_provider_error(error)
+    _provider_issue["value"] = issue
+    return issue
+
+
+def take_provider_issue():
+    """Return and clear the most recent provider issue seen by this worker."""
+    issue, _provider_issue["value"] = _provider_issue["value"], None
+    return issue
 
 
 def bounded_setting(key, default, ceiling):
@@ -74,8 +114,7 @@ def pack_vector(values):
 
 
 def embed(texts):
-    result = get_client().with_options(timeout=8, max_retries=0).embeddings.create(
-        model="text-embedding-3-small", input=texts, dimensions=DIMENSIONS, encoding_format="float")
+    result = embed_texts(texts, model="text-embedding-3-small", dimensions=DIMENSIONS)
     if sorted(row.index for row in result.data) != list(range(len(texts))):
         raise ValueError("Incomplete embedding response")
     return [pack_vector(row.embedding) for row in sorted(result.data, key=lambda row: row.index)]
@@ -105,7 +144,7 @@ def index_archive(store):
     try:
         vectors = embed(documents)
     except Exception as error:
-        logger.warning("research_index_provider_error type=%s", type(error).__name__)
+        logger.warning("research_index_provider_error type=%s issue=%s", type(error).__name__, note_provider_error(error))
         return {"index_status": "provider_unavailable", "indexed": 0}
     store.save_research_vectors(encoder(), list(zip(rows, vectors, strict=True)))
     return {"index_status": "updated", "indexed": len(rows)}
@@ -143,37 +182,84 @@ def lexical_results(store, question, hours, filters, *, strict=False):
     return [row for (matches, _), row in ranked if matches >= minimum]
 
 
-def vector_results(store, question, hours, filters, anchor=None):
-    if not vectors_enabled() or not store.research_schema_exists():
-        return [], "disabled" if not vectors_enabled() else "migration_required"
-    if anchor:
-        query_vector = store.research_vector(anchor, encoder())
-        if not query_vector:
-            return [], "index_warming"
-    else:
-        if not reserve(store, "queries", 1000, 5000):
-            return [], "budget_limited"
+QUERY_VECTOR_PREFIX = "query-vector:v1:"
+ANSWER_CACHE_SECONDS = 1800
+_answer_cache = Cache("research-answers-v1")
+_vector_cache = Cache("query-vectors-v1")
+WATCH_SIMILARITY = .6
+
+
+def query_vector(store, text, *, persist=False):
+    """Embed a question once and reuse it. Returns (vector or None, status).
+
+    Watch queries are already stored with the watch, so their vectors are persisted. Free-form
+    questions are only kept in the short-lived cache.
+    """
+    import base64
+    key = QUERY_VECTOR_PREFIX + hashlib.sha256(f"{encoder()}|{search_text(text)}".encode()).hexdigest()[:40]
+    cached = store.get_summary(key) if persist else _vector_cache.get(key)[0]
+    if isinstance(cached, dict) and isinstance(cached.get("v"), str):
         try:
-            query_vector, = embed([question])
-        except Exception as error:
-            logger.warning("research_query_provider_error type=%s", type(error).__name__)
-            return [], "provider_unavailable"
+            value = base64.b64decode(cached["v"], validate=True)
+            if len(value) == VECTOR_FORMAT.size:
+                return value, "cached"
+        except ValueError:
+            pass
+    if not reserve(store, "queries", 1000, 5000):
+        return None, "budget_limited"
+    try:
+        vector, = embed([text])
+    except Exception as error:
+        logger.warning("research_query_provider_error type=%s issue=%s", type(error).__name__, note_provider_error(error))
+        return None, "provider_unavailable"
+    encoded = {"v": base64.b64encode(vector).decode()}
+    if persist:
+        store.save_summary(key, encoded, replace=True)
+    else:
+        _vector_cache.put(key, encoded, ttl=ANSWER_CACHE_SECONDS)
+    return vector, "embedded"
+
+
+def nearest_rows(store, vector, hours, filters, threshold):
     from app import vector_search
-    indexed = vector_search.nearest(store, encoder(), query_vector, hours=min(hours, 720),
-        threshold=.53 if anchor else .42, **filters)
+    indexed = vector_search.nearest(store, encoder(), vector, hours=min(hours, 720), threshold=threshold, **filters)
     if indexed is not None:
         return indexed, "ready" if indexed else "index_warming"
     samples = store.research_index_samples(encoder(), hours=min(hours, 720), **filters)
     if not samples:
         return [], "index_warming"
-    query = VECTOR_FORMAT.unpack(query_vector)
+    query = VECTOR_FORMAT.unpack(vector)
     scored = [(sum(x * y for x, y in zip(query, VECTOR_FORMAT.unpack(row["embedding"]))), row["id"])
               for row in samples if len(row["embedding"]) == VECTOR_FORMAT.size]
-    ids = [ident for score, ident in sorted(scored, reverse=True)[:32]
-           if score >= (0.53 if anchor else 0.42)]
+    ids = [ident for score, ident in sorted(scored, reverse=True)[:32] if score >= threshold]
     by_id = {row["id"]: row for row in store.pinned_articles(ids)}
     # Eligibility is checked again when loading the records ranked above.
     return [by_id[ident] for ident in ids if ident in by_id], "ready"
+
+
+def vector_results(store, question, hours, filters, anchor=None):
+    if not vectors_enabled() or not store.research_schema_exists():
+        return [], "disabled" if not vectors_enabled() else "migration_required"
+    if anchor:
+        vector = store.research_vector(anchor, encoder())
+        if not vector:
+            return [], "index_warming"
+    else:
+        vector, status = query_vector(store, question)
+        if vector is None:
+            return [], status
+    return nearest_rows(store, vector, hours, filters, .53 if anchor else .42)
+
+
+def semantic_watch_rows(store, query, topic, hours=48):
+    """Paraphrase matches for a keyword watch, at a stricter similarity than interactive search."""
+    if not vectors_enabled() or not store.research_schema_exists():
+        return []
+    vector, _ = query_vector(store, query, persist=True)
+    if vector is None:
+        return []
+    rows, _ = nearest_rows(store, vector, hours, {"topic": topic} if topic != "all" else {}, WATCH_SIMILARITY)
+    return rows[:6]
 
 
 def select_evidence(lexical, semantic, *, anchor=None, limit=12, question=""):
@@ -263,43 +349,98 @@ def technology_title_evidence(row):
         "repository", "registered_source"}
 
 
+QUOTE_FOLD = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'", "\u2032": "'",
+                            "\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"', "\u2033": '"',
+                            "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": "-", "\u2212": "-"})
+QUOTE_EDGES = " \"'`.,;:!?-\u2026"
+
+
+def _folded(text):
+    """Fold typography, width, case and whitespace; keep a map back to the original characters."""
+    chars, origin = [], []
+    for index, char in enumerate(text):
+        for folded in unicodedata.normalize("NFKC", char).translate(QUOTE_FOLD).casefold():
+            if folded.isspace():
+                if chars and chars[-1] != " ":
+                    chars.append(" ")
+                    origin.append(index)
+            else:
+                chars.append(folded)
+                origin.append(index)
+    return "".join(chars), origin
+
+
+def locate_quote(quote, text, *, minimum=12, maximum=360):
+    """Return the exact source span a model quote refers to, or None if it is not verbatim.
+
+    Models often straighten curly quotes, swap dashes, change case or add an ellipsis or full
+    stop at the edges. Those differences are tolerated; changed words are not.
+    """
+    needle = _folded(quote.replace("...", " ").replace("\u2026", " "))[0].strip(QUOTE_EDGES)
+    if not minimum <= len(needle) <= maximum:
+        return None
+    haystack, origin = _folded(text)
+    position = haystack.find(needle)
+    if position < 0:
+        return None
+    return text[origin[position]:origin[position + len(needle) - 1] + 1].strip()
+
+
+def supported_claim(claim, by_id, allow_technology_titles):
+    """Validate one claim. Returns (claim with exact source quotes, None) or (None, rejection reason)."""
+    ids = claim.source_ids
+    if not safe_prose(claim.text, 540) or not 1 <= len(ids) <= 4 or len(set(ids)) != len(ids) or not set(ids) <= by_id.keys():
+        return None, "Unsupported claim or citation"
+    cited = " ".join(f'{by_id[ident]["title"]} {by_id[ident]["excerpt"]}' for ident in ids)
+    if not numeric_tokens(claim.text) <= numeric_tokens(cited):
+        return None, "New numerical claim"
+    exact = None
+    if hasattr(claim, "quotes"):
+        if len(claim.quotes) != len(ids):
+            return None, "Expected a quote per citation"
+        exact = []
+        for ident, quote in zip(ids, claim.quotes, strict=True):
+            source = by_id[ident]
+            found = locate_quote(quote, " ".join(source["excerpt"].split()))
+            if found is None and allow_technology_titles and claim.kind == "fact" and technology_title_evidence(source):
+                found = locate_quote(quote, " ".join(source["title"].split()), minimum=8)
+            if found is None:
+                return None, "Citation quote not found in eligible evidence"
+            exact.append(found)
+    if claim.kind in {"shared", "difference"}:
+        cited_rows = [by_id[ident] for ident in ids]
+        families = {row.get("publisher_family") or row["publisher"] for row in cited_rows}
+        distinct_excerpts = {search_text(row["excerpt"]) for row in cited_rows}
+        if len(families) < 2 or len(distinct_excerpts) < 2:
+            return None, "Comparison needs distinct evidence"
+    if claim.kind == "single_source" and len(ids) != 1:
+        return None, "Expected a single source"
+    return (claim.model_copy(update={"quotes": exact}) if exact is not None else claim), None
+
+
 def validate_answer(answer, evidence, *, allow_technology_titles=False):
     by_id = {source["id"]: source for source in evidence}
     if not safe_prose(answer.limitations, 420) or len(answer.claims) > 6:
         raise ValueError("Invalid research response")
     if (answer.status == "answered") != bool(answer.claims):
         raise ValueError("Inconsistent answer status")
+    # One unsupported claim no longer discards the others. It is dropped instead.
+    claims, reasons = [], []
     for claim in answer.claims:
-        ids = claim.source_ids
-        if not safe_prose(claim.text, 540) or not 1 <= len(ids) <= 4 or len(set(ids)) != len(ids) or not set(ids) <= by_id.keys():
-            raise ValueError("Unsupported claim or citation")
-        cited = " ".join(f'{by_id[ident]["title"]} {by_id[ident]["excerpt"]}' for ident in ids)
-        if not numeric_tokens(claim.text) <= numeric_tokens(cited):
-            raise ValueError("New numerical claim")
-        if hasattr(claim, "quotes"):
-            if len(claim.quotes) != len(ids):
-                raise ValueError("Expected a quote per citation")
-            for ident, quote in zip(ids, claim.quotes, strict=True):
-                normalized = " ".join(quote.split())
-                source = by_id[ident]
-                excerpt = " ".join(source["excerpt"].split())
-                title = " ".join(source["title"].split())
-                quotes_title = (allow_technology_titles and claim.kind == "fact" and technology_title_evidence(source)
-                                and 8 <= len(normalized) <= 360 and normalized in title)
-                if not quotes_title and not (12 <= len(normalized) <= 360 and normalized in excerpt):
-                    raise ValueError("Citation quote not found in eligible evidence")
-        if claim.kind in {"shared", "difference"}:
-            cited_rows = [by_id[ident] for ident in ids]
-            families = {row.get("publisher_family") or row["publisher"] for row in cited_rows}
-            distinct_excerpts = {search_text(row["excerpt"]) for row in cited_rows}
-            if len(families) < 2 or len(distinct_excerpts) < 2:
-                raise ValueError("Comparison needs distinct evidence")
-        if claim.kind == "single_source" and len(ids) != 1:
-            raise ValueError("Expected a single source")
-    return answer.model_dump()
+        kept, reason = supported_claim(claim, by_id, allow_technology_titles)
+        if kept is None:
+            reasons.append(reason)
+        else:
+            claims.append(kept)
+    if answer.claims and not claims:
+        raise ValueError(reasons[-1])
+    if reasons:
+        logger.info("research_claims_dropped kept=%d dropped=%d reason=%s", len(claims), len(reasons), reasons[-1])
+    return answer.model_copy(update={"claims": claims}).model_dump()
 
 
-def synthesize(store, mode, question, records, *, cacheable=False, language="en"):
+def synthesize(store, mode, question, records, *, cacheable=False, ephemeral=False, language="en"):
+    """cacheable persists the answer (fixed articles, public briefs); ephemeral reuses it briefly without storing it."""
     technology_mode = mode == "technology"
     evidence = [row for row in records if row["excerpt"] or (technology_mode and technology_title_evidence(row))][:8]
     empty = {"claims": [], "limitations": ""}
@@ -309,7 +450,7 @@ def synthesize(store, mode, question, records, *, cacheable=False, language="en"
         return dict(empty, status="unavailable", limitations="AI analysis is unavailable. Explore the source evidence below.")
     global_compare = mode == "global_compare"
     quoted = True
-    model = (os.getenv("NEWS_AI_ANALYSIS_MODEL") or get_openai_model()) if mode in {"compare", "global_compare"} else get_openai_model()
+    model = route_model(mode)
     system = INSTRUCTIONS + f"\nWrite the answer in {OUTPUT_LANGUAGES.get(language, 'English')}; preserve source names and uncertainty."
     fields = ("id", "title", "publisher", "excerpt", "published_at")
     if global_compare:
@@ -336,6 +477,8 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
         ensure_ascii=False)
     cache_key = hashlib.sha256(json.dumps(["research-v2", system, model, payload]).encode()).hexdigest()
     if cacheable and (cached := store.get_summary(cache_key)):
+        return cached
+    if ephemeral and (cached := _answer_cache.get(cache_key)[0]) is not None:
         return cached
     if not reserve(store, "answers", 180, 1500):
         return dict(empty, status="budget_limited", limitations="AI analysis reached its daily limit. Source evidence is still available.")
@@ -365,14 +508,17 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
         quote_options = list(dict.fromkeys(quote_options))
     schema = answer_schema(evidence, global_compare=global_compare, quoted=quoted, quote_options=quote_options)
     try:
-        response = generate_response(payload, system, schema, max_tokens=1300, model=model)
+        response = generate_response(payload, system, schema, max_tokens=1300, model=model, task=mode)
         answer = validate_answer(schema.model_validate_json(response), evidence, allow_technology_titles=technology_mode)
     except Exception as error:
         reason = str(error).splitlines()[0][:100]
-        logger.warning("research_answer_rejected type=%s reason=%s", type(error).__name__, reason)
+        logger.warning("research_answer_rejected type=%s issue=%s reason=%s", type(error).__name__,
+                       note_provider_error(error), reason)
         return dict(empty, status="unavailable", limitations="A cited answer could not be generated. Review the source evidence below.")
     if cacheable:
         store.save_summary(cache_key, answer)
+    elif ephemeral:
+        _answer_cache.put(cache_key, answer, ttl=ANSWER_CACHE_SECONDS)
     return answer
 
 
@@ -399,7 +545,9 @@ def research(store, *, question, mode, filters, anchor=None, language="en", retr
         rows = [*context_rows[:3], *(row for row in rows if row["id"] not in context_ids)]
         rows = rows[:12]
     records = [evidence_record(row) for row in rows]
-    answer = (synthesize(store, mode, question, records, cacheable=bool(anchor), language=language)
+    # The cache key covers the question, every evidence record and the routed model, so a reuse is exact.
+    # Free-form questions are only held in the short-lived cache; fixed article analyses are persisted.
+    answer = (synthesize(store, mode, question, records, cacheable=bool(anchor), ephemeral=not anchor, language=language)
               if mode != "search" else None)
     return {"evidence": records, "clusters": evidence_clusters(rows), "answer": answer,
             "retrieval": "source_context" if context_only else "hybrid" if semantic else "keyword", "semantic_index": vector_status,
@@ -444,7 +592,8 @@ def watch_matches(store, watches):
                 {"title": row["title"], "article_ids": [row["id"]], "coverage_count": 1} for row in records]})
             continue
         rows = lexical_results(store, watch.query, 48, {"topic": watch.topic}, strict=True)
-        unique = select_evidence(rows, [], limit=10)
+        # Semantic matches catch paraphrases ("battery recall" -> "lithium cell defects") that keywords miss.
+        unique = select_evidence(rows, semantic_watch_rows(store, watch.query, watch.topic), limit=10)
         records = [evidence_record(row) for row in unique]
         updates.append({"id": watch.id, "evidence": records,
                         "clusters": evidence_clusters(unique, include_single=True)})

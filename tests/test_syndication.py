@@ -43,7 +43,7 @@ def workspace(permission_database, monkeypatch):
     store = Store(permission_database)
     store.migrate()
     monkeypatch.setenv("MAIL_SESSION_SECRET", "test-permission-session-secret-with-at-least-32-characters")
-    monkeypatch.setenv("ADMIN_TOKEN", "test-permission-owner")
+    monkeypatch.setenv("ADMIN_TOKEN", "test-permission-owner-0123456789abcdef0123")
     monkeypatch.delenv("MAIL_PILOT_MODE", raising=False)
     monkeypatch.delenv("UPSTASH_REDIS_REST_URL", raising=False)
     for module in (server, syndication, public_mail):
@@ -57,7 +57,7 @@ def workspace(permission_database, monkeypatch):
     author, owner, stranger = TestClient(server.app), TestClient(server.app), TestClient(server.app)
     author.cookies.set(public_mail.SESSION, public_mail.seal("session", "writer@example.org", 600), path="/api/mail")
     stranger.cookies.set(public_mail.SESSION, public_mail.seal("session", "different@example.org", 600), path="/api/mail")
-    owner.headers["Authorization"] = "Bearer test-permission-owner"
+    owner.headers["Authorization"] = "Bearer test-permission-owner-0123456789abcdef0123"
     yield store, author, owner, stranger
     store.engine.dispose()
 

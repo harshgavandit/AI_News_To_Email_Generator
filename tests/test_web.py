@@ -16,7 +16,7 @@ from app.web_digest import safe_email_html
 @pytest.fixture(autouse=True)
 def isolate(monkeypatch):
     monkeypatch.setattr(server, "get_store", lambda: None)
-    monkeypatch.setenv("ADMIN_TOKEN", "test-owner-token")
+    monkeypatch.setenv("ADMIN_TOKEN", "test-owner-token-0123456789abcdef0123")
     monkeypatch.setenv("OPENAI_API_KEY", "test-provider-key")
     monkeypatch.setenv("MY_EMAIL", "owner@example.com")
     monkeypatch.setenv("APP_PASSWORD", "test-app-password")
@@ -159,10 +159,10 @@ def test_email_rejects_changed_or_expired_preview(client, digest, monkeypatch):
     monkeypatch.setattr(server, "send_email", send)
     body = signed(digest)
     body["digest"]["html"] = "tampered"
-    assert client.post("/api/email", json=body, headers={"Authorization": "Bearer test-owner-token"}).status_code == 400
+    assert client.post("/api/email", json=body, headers={"Authorization": "Bearer test-owner-token-0123456789abcdef0123"}).status_code == 400
     body = signed(digest)
     body["expires"] = 1
-    assert client.post("/api/email", json=body, headers={"Authorization": "Bearer test-owner-token"}).status_code == 400
+    assert client.post("/api/email", json=body, headers={"Authorization": "Bearer test-owner-token-0123456789abcdef0123"}).status_code == 400
     send.assert_not_called()
 
 
@@ -170,7 +170,7 @@ def test_email_only_sends_to_owner_and_blocks_repeat(client, digest, monkeypatch
     send = Mock()
     monkeypatch.setattr(server, "send_email", send)
     body = signed(digest)
-    headers = {"Authorization": "Bearer test-owner-token"}
+    headers = {"Authorization": "Bearer test-owner-token-0123456789abcdef0123"}
     assert client.post("/api/email", json=body, headers=headers).status_code == 200
     assert send.call_args.kwargs["recipients"] == ["owner@example.com"]
     assert client.post("/api/email", json=body, headers=headers).status_code == 409
@@ -179,12 +179,12 @@ def test_email_only_sends_to_owner_and_blocks_repeat(client, digest, monkeypatch
 
 def test_missing_gmail_is_reported(client, digest, monkeypatch):
     monkeypatch.delenv("APP_PASSWORD")
-    assert client.post("/api/email", json=signed(digest), headers={"Authorization": "Bearer test-owner-token"}).status_code == 503
+    assert client.post("/api/email", json=signed(digest), headers={"Authorization": "Bearer test-owner-token-0123456789abcdef0123"}).status_code == 503
 
 
 def test_email_failure_allows_retry(client, digest, monkeypatch):
     monkeypatch.setattr(server, "send_email", Mock(side_effect=OSError("private failure")))
-    response = client.post("/api/email", json=signed(digest), headers={"Authorization": "Bearer test-owner-token"})
+    response = client.post("/api/email", json=signed(digest), headers={"Authorization": "Bearer test-owner-token-0123456789abcdef0123"})
     assert response.status_code == 502
     assert "private failure" not in response.text
     assert not server._mail_history

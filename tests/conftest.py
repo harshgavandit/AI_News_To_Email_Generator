@@ -31,6 +31,18 @@ def block_live_http(monkeypatch):
     monkeypatch.setattr(requests.sessions.Session, "send", reject)
 
 
+@pytest.fixture(autouse=True)
+def reset_request_budgets():
+    from app import research, server
+    server._limits.clear()
+    server._auth_failures.clear()
+    research._answer_cache.clear()
+    research._vector_cache.clear()
+    yield
+    server._limits.clear()
+    server._auth_failures.clear()
+
+
 @pytest.fixture(params=["sqlite", "postgresql"])
 def research_database(request, tmp_path):
     if request.param == "sqlite":

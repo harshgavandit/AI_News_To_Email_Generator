@@ -64,7 +64,7 @@ class CuratorAgent:
         }, ensure_ascii=False)
 
         try:
-            raw_response = generate_response(user_prompt, system_prompt=CURATOR_PROMPT, response_model=source_ranking)
+            raw_response = generate_response(user_prompt, system_prompt=CURATOR_PROMPT, response_model=source_ranking, task="curate")
             ranked_list = RankedDigestList.model_validate_json(raw_response)
             expected = {d["id"] for d in digests}
             if {a.digest_id for a in ranked_list.articles} != expected or len(ranked_list.articles) != len(expected):

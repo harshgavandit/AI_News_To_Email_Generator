@@ -1712,12 +1712,38 @@ $("clear-search").addEventListener("click", () => {
   $("search").focus();
 });
 const suggestionKinds = { topic: "topic", subject: "subject", publisher: "publisher feed", author: "author" };
+function selectValue(id, value, label = value) {
+  if (!value) return;
+  if (![...$(id).options].some((option) => option.value === value)) $(id).append(new Option(label, value));
+  $(id).value = value;
+}
+// Applies a confirmed smart-search reading: the keywords stay in the box and each implied filter is set.
+function applyInterpretation(item) {
+  const filters = item.filters || {};
+  $("search").value = item.terms.slice(0, 150);
+  state.searching = Boolean(item.terms);
+  if (Object.hasOwn(state.topics, filters.topic)) state.topic = filters.topic;
+  if ([12, 24, 168, 720, 2160].includes(filters.hours)) state.hours = filters.hours;
+  if (filters.region) selectValue("region", filters.region);
+  if (filters.coverage) selectValue("coverage", filters.coverage);
+  if (filters.subject) selectValue("subject", filters.subject);
+  if (filters.publisher) { selectValue("publisher", filters.publisher); state.publisher = filters.publisher; }
+  if (filters.sort) selectValue("sort", filters.sort);
+  $("clear-search").hidden = !$("search").value;
+  reflectFilters();
+  loadNews();
+  status("story-action-status", `Smart search applied: ${item.labels.join(", ") || item.label}.`);
+}
 createSearchSuggestions({
   input: $("search"),
   list: $("search-suggestions"),
   request,
   onSelect(item) {
     clearTimeout(searchTimer);
+    if (item.kind === "interpretation") {
+      applyInterpretation(item);
+      return;
+    }
     if (item.kind === "author") {
       $("search").value = item.label;
     } else {

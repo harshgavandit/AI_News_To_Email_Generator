@@ -47,9 +47,9 @@ def activate(monkeypatch, *, vectors=False):
 
 def test_background_monitors_run_between_visits_and_keep_private_alerts(archive, monkeypatch):
     store, browser = archive
-    monkeypatch.setenv("ADMIN_TOKEN", "monitor-job-owner")
+    monkeypatch.setenv("ADMIN_TOKEN", "monitor-job-owner-0123456789abcdef0123")
     monkeypatch.setattr(monitoring, "INTERVAL", 0)
-    owner = {"Authorization": "Bearer monitor-job-owner"}
+    owner = {"Authorization": "Bearer monitor-job-owner-0123456789abcdef0123"}
     prefix = "/api/intelligence/inbox"
     watches = [{"id": "battery-watch", "query": "Northstar battery packs"}]
     body = {"watches": watches}
@@ -255,6 +255,55 @@ def test_job_indexes_archive_hybrid_search_honors_scope_and_changes(archive, mon
     assert not any(row["id"] == "unrelated" for row in client.post("/api/intelligence/research", json=body).json()["evidence"])
 
 
+def openai_error(cls, status, code=None):
+    import httpx
+    request = httpx.Request("POST", "https://api.openai.com/v1/embeddings")
+    body = {"error": {"code": code}} if code else None
+    return cls("provider said no", response=httpx.Response(status, request=request), body=body)
+
+
+def test_provider_errors_are_classified_without_messages():
+    import openai
+    assert research.classify_provider_error(openai_error(openai.AuthenticationError, 401)) == "authentication"
+    assert research.classify_provider_error(openai_error(openai.PermissionDeniedError, 403)) == "permission"
+    assert research.classify_provider_error(openai_error(openai.NotFoundError, 404)) == "model_unavailable"
+    assert research.classify_provider_error(openai_error(openai.RateLimitError, 429, "insufficient_quota")) == "quota"
+    assert research.classify_provider_error(openai_error(openai.RateLimitError, 429, "rate_limit_exceeded")) == "rate_limited"
+    assert research.classify_provider_error(openai_error(openai.InternalServerError, 500)) == "provider_error"
+    assert research.classify_provider_error(ValueError("schema")) == "invalid_output"
+    assert research.CONFIGURATION_ISSUES >= {"authentication", "quota"}
+
+
+def test_job_reports_an_invalid_ai_key_as_action_required(archive, monkeypatch):
+    import openai
+    store, client = archive
+    activate(monkeypatch, vectors=True)
+    monkeypatch.setenv("CRON_SECRET", "research-test-job-secret")
+
+    def rejected(*args, **kwargs):
+        raise openai_error(openai.AuthenticationError, 401)
+
+    monkeypatch.setattr(research, "embed", rejected)
+    monkeypatch.setattr(research, "generate_response", rejected)
+    response = client.get("/api/jobs/intelligence", headers={"Authorization": "Bearer research-test-job-secret"}).json()
+    assert response["index_status"] == "provider_unavailable" and response["brief_status"] == "unavailable"
+    assert response["ai_issue"] == "authentication" and response["ai_action_required"] is True
+    assert "provider said no" not in json.dumps(response)
+    assert research.take_provider_issue() is None
+
+
+def test_job_omits_ai_issue_when_provider_is_healthy(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch, vectors=True)
+    monkeypatch.setenv("CRON_SECRET", "research-test-job-secret")
+    monkeypatch.setattr(research, "embed", lambda texts: [mock_embedding(semantic=False) for _ in texts])
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: json.dumps({
+        "status": "insufficient", "claims": [], "limitations": "Fixture."}))
+    research._provider_issue["value"] = "unreachable"  # A stale issue from an earlier request is not reported.
+    response = client.get("/api/jobs/intelligence", headers={"Authorization": "Bearer research-test-job-secret"}).json()
+    assert response["status"] == "checked" and "ai_issue" not in response
+
+
 def test_scheduled_brief_validates_evidence_and_respects_source_pause(archive, monkeypatch):
     store, client = archive
     activate(monkeypatch)
@@ -314,3 +363,94 @@ def test_daily_budget_keeps_archive_search_working(archive, monkeypatch):
     result = client.post("/api/intelligence/research", json={"q": "Northstar recall", "mode": "compare"}).json()
     assert result["answer"]["status"] == "budget_limited"
     assert result["evidence"]
+
+
+def test_locate_quote_tolerates_typography_but_not_changed_words():
+    excerpt = "The company’s new chip — built on a 3nm process — ships in “early 2027”, executives said."
+    assert research.locate_quote("the company's new chip - built on a 3nm process", excerpt) == \
+        "The company’s new chip — built on a 3nm process"
+    assert research.locate_quote('...ships in "early 2027", executives said.', excerpt) == \
+        "ships in “early 2027”, executives said"
+    assert research.locate_quote("The company's new chip ships in late 2027", excerpt) is None
+    assert research.locate_quote("chip", excerpt) is None
+
+
+def test_one_unverifiable_quote_drops_only_that_claim():
+    evidence = [{"id": "a", "title": "Chip news", "excerpt": "The firm’s chip ships in 2027 after delays.",
+                 "publisher": "Example"},
+                {"id": "b", "title": "Other", "excerpt": "Regulators opened a review of the export rules.",
+                 "publisher": "Other"}]
+    schema = research.answer_schema(evidence, quoted=True)
+    answer = schema(status="answered", limitations="Excerpts only.", claims=[
+        {"text": "The chip ships in 2027.", "kind": "fact", "source_ids": ["a"], "quotes": ["The firm's chip ships in 2027."]},
+        {"text": "Regulators approved the rules.", "kind": "fact", "source_ids": ["b"], "quotes": ["Regulators approved the rules"]},
+    ])
+    result = research.validate_answer(answer, evidence)
+    assert [claim["source_ids"] for claim in result["claims"]] == [["a"]]
+    assert result["claims"][0]["quotes"] == ["The firm’s chip ships in 2027"]
+    only_bad = schema(status="answered", limitations="Excerpts only.", claims=[answer.claims[1]])
+    with pytest.raises(ValueError, match="Citation quote not found"):
+        research.validate_answer(only_bad, evidence)
+
+
+def index_with(store, monkeypatch, semantic_ids):
+    """Index the archive with deterministic vectors: semantic_ids share one direction, the rest another."""
+    monkeypatch.setattr(research, "embed", lambda texts: [mock_embedding(semantic=False) for _ in texts])
+    rows = store.pinned_articles(["lead", "second", "unrelated", "headline", *semantic_ids])
+    store.save_research_vectors(research.encoder(), [
+        (row, mock_embedding(semantic=row["id"] in semantic_ids)) for row in rows])
+
+
+def test_query_vectors_are_embedded_once_and_reused(archive, monkeypatch):
+    store, _ = archive
+    activate(monkeypatch, vectors=True)
+    calls = []
+    monkeypatch.setattr(research, "embed", lambda texts: calls.append(texts) or [mock_embedding(semantic=True)])
+    first, status = research.query_vector(store, "Wearable compilers")
+    again, cached = research.query_vector(store, "  wearable   COMPILERS ")
+    assert first == again and (status, cached) == ("embedded", "cached") and len(calls) == 1
+
+
+def test_keyword_watch_also_alerts_on_paraphrased_coverage(archive, monkeypatch):
+    store, _ = archive
+    activate(monkeypatch, vectors=True)
+    index_with(store, monkeypatch, {"unrelated"})
+    monkeypatch.setattr(research, "embed", lambda texts: [mock_embedding(semantic=True)])
+    watch = monitoring.Watch(id="w", query="smartwatch software toolchains")
+    update, = research.watch_matches(store, [watch])
+    assert [(row["id"], row["match"]) for row in update["evidence"]] == [("unrelated", "semantic")]
+    monkeypatch.setenv("NEWS_AI_VECTORS", "0")
+    assert research.watch_matches(store, [watch])[0]["evidence"] == []
+
+
+def test_article_details_add_semantically_similar_reading(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch, vectors=True)
+    index_with(store, monkeypatch, {"unrelated", "headline"})
+    related = client.get("/api/articles/unrelated").json()["related"]
+    assert [(row["id"], row["related_reason"]) for row in related] == [("headline", "Similar in meaning")]
+    monkeypatch.setenv("NEWS_AI_VECTORS", "0")
+    assert all(row.get("related_reason") != "Similar in meaning" for row in client.get("/api/articles/unrelated").json()["related"])
+
+
+def test_free_questions_reuse_answers_briefly_without_persisting_them(archive, monkeypatch):
+    store, client = archive
+    activate(monkeypatch)
+    calls = []
+
+    def generate(prompt, _, schema, **kwargs):
+        calls.append(kwargs.get("task"))
+        evidence = json.loads(prompt)["evidence"]
+        source = next(row for row in evidence if "200" in row["excerpt"])
+        return schema(status="answered", limitations="Published excerpts only.", claims=[
+            {"text": "A recall affected 200 battery packs.", "kind": "fact", "source_ids": [source["id"]],
+             "quotes": [source["excerpt"][:60]]}]).model_dump_json()
+
+    monkeypatch.setattr(research, "generate_response", generate)
+    body = {"q": "Northstar battery recall", "mode": "analyze"}
+    first = client.post("/api/intelligence/research", json=body).json()["answer"]
+    second = client.post("/api/intelligence/research", json=body).json()["answer"]
+    assert first == second and first["status"] == "answered" and calls == ["analyze"]
+    with store.engine.connect() as conn:
+        from app.launch_store import summaries
+        assert conn.scalar(select(summaries.c.id).limit(1)) is None

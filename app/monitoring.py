@@ -403,7 +403,7 @@ def persist_matches(store, watch, matches, now):
 
 
 def run_monitoring(store, *, now=None):
-    """Process due watches with a bounded batch and no network or model calls."""
+    """Process due watches in a bounded batch. Keyword watches embed their query at most once (cached)."""
     if not schema_ready(store):
         return {"monitoring_status": "migration_required", "watches_checked": 0, "alerts_created": 0}
     now = time.time() if now is None else now

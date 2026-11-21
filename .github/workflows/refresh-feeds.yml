@@ -118,8 +118,23 @@ jobs:
           result=$(curl --silent --show-error --fail --max-time 80 \
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/intelligence' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-          jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status}' <<< "$result"
-          jq -e '(.status == "already_started") or (.status == "checked"
-            and (.index_status | IN("updated", "current", "disabled", "budget_limited"))
-            and (.brief_status | IN("answered", "current", "disabled", "insufficient", "budget_limited")))' \
+          jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status, ai_issue}' <<< "$result"
+          issue=$(jq -r '.ai_issue // empty' <<< "$result")
+          case "$issue" in
+            authentication) echo '::error::OpenAI rejected OPENAI_API_KEY (401). Create a new key and update OPENAI_API_KEY in Vercel production, then redeploy. See docs/LAUNCH.md.' ;;
+            permission) echo '::error::The OpenAI key lacks permission for the configured models. Allow chat completions and embeddings for the key or project.' ;;
+            quota) echo '::error::The OpenAI account has no remaining quota or credit. Check billing on platform.openai.com.' ;;
+            model_unavailable) echo '::error::The configured OpenAI model is unavailable to this key. Check OPENAI_MODEL and NEWS_AI_ANALYSIS_MODEL.' ;;
+            "") ;;
+            *) echo "::warning::AI provider issue ($issue). Monitoring ran; AI indexing or the briefing will retry on the next run." ;;
+          esac
+          if [[ $(jq -r '.ai_action_required // false' <<< "$result") == true ]]; then
+            exit 1
+          fi
+          # Transient provider issues degrade AI output without failing the scheduled check.
+          jq -e '(.ai_issue != null) as $transient | (.status == "already_started") or (.status == "checked"
+            and (.index_status | IN("updated", "current", "disabled", "budget_limited")
+                 or ($transient and . == "provider_unavailable"))
+            and (.brief_status | IN("answered", "current", "disabled", "insufficient", "budget_limited")
+                 or ($transient and . == "unavailable")))' \
             <<< "$result" > /dev/null

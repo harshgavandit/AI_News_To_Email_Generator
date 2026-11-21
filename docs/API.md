@@ -1,6 +1,6 @@
 # Informa AI HTTP API
 
-The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`. JSON errors include a `detail` field. API responses include an `X-Request-ID` for log correlation. A `429` may include `Retry-After`.
+The running app exposes OpenAPI at `/openapi.json`. Swagger UI at `/api/docs` is available in local and preview deployments; production serves it only when `API_DOCS_ENABLED=1`, because the UI loads third-party scripts with inline code. Public read routes that reach the database have per-client request budgets. IPv6 clients share one budget per /64 prefix. JSON errors include a `detail` field. API responses include an `X-Request-ID` for log correlation. A `429` may include `Retry-After`.
 
 ## Research and intelligence
 
@@ -30,11 +30,11 @@ The running app exposes OpenAPI at `/openapi.json` and Swagger UI at `/api/docs`
 
 The hourly Vercel slots run the intelligence check with a shared lease. This provides a fallback when GitHub delays scheduled jobs.
 
-Use the existing owner setup endpoint, `POST /api/admin/setup`, for the additive vector and monitoring tables. Analysis uses the app's existing OpenAI configuration. Set `NEWS_AI_RESEARCH=0` to disable inference for these endpoints. Set `NEWS_AI_VECTORS=1` on the app to enable embeddings. The scheduled GitHub refresh workflow calls the protected intelligence job separately from feed and mail processing. Dispatch it with `intelligence_only=true` to run the intelligence job. The always-on feed and mail worker can also call it every five minutes with `NEWS_AI_WORKER=1`. Background watches and the source briefing use the archive without provider calls.
+Use the existing owner setup endpoint, `POST /api/admin/setup`, for the additive vector and monitoring tables. Analysis uses the app's existing OpenAI configuration. Set `NEWS_AI_RESEARCH=0` to disable inference for these endpoints. Set `NEWS_AI_VECTORS=1` on the app to enable embeddings. The scheduled GitHub refresh workflow calls the protected intelligence job separately from feed and mail processing. Dispatch it with `intelligence_only=true` to run the intelligence job. The always-on feed and mail worker can also call it every five minutes with `NEWS_AI_WORKER=1`. The source briefing uses the archive without provider calls. Background keyword watches embed their query once, when vectors are enabled, and reuse it.
 
 The semantic index covers the recent 30-day window. Each query scores at most 1,200 recent, eligible vectors after filtering, using the same binary representation on PostgreSQL and SQLite. Older records remain searchable by keyword up to existing archive retention. A cold index warms gradually from diverse sources. A generated answer is never required to show search results.
 
-Set `NEWS_AI_ANALYSIS_MODEL` to route coverage comparisons to a different configured model. `NEWS_AI_ANSWERS_DAILY`, `NEWS_AI_QUERIES_DAILY`, and `NEWS_AI_INDEX_BATCHES_DAILY` cap generation, query embeddings, and archive batches separately. Fixed article analyses and public briefings can be reused. Arbitrary questions and answers are not persisted by the application. The research service uses archived titles and publisher excerpts.
+All model calls go through one gateway (`app/agent/openai_client.py`). Each task is routed to a cost tier: `fast` (explanations, technical briefs, watch drafts, digest curation), `standard` (research answers, briefings, catch-up, project briefs) and `deep` (coverage comparisons). Set `NEWS_AI_MODEL_FAST`, `NEWS_AI_MODEL_STANDARD` and `NEWS_AI_MODEL_DEEP`; unset tiers use `OPENAI_MODEL`, and `NEWS_AI_ANALYSIS_MODEL` still sets the deep tier. If a model is unavailable, rate-limited or failing, the call is retried once on `NEWS_AI_FALLBACK_MODEL` (default `gpt-4o-mini`). Invalid keys and exhausted quota are not retried. Token usage per day, task and model is recorded in the quota table, retained for seven days and reported to owners at `GET /api/admin/ai-usage` with estimated cost. Prices are list-price estimates and can be overridden with `NEWS_AI_PRICES` as JSON (`{"model": [input_usd_per_million, output_usd_per_million]}`). `NEWS_AI_DAILY_BUDGET_USD` stops new model calls for the rest of the UTC day once estimated spend reaches it; features then show their source-only fallbacks. `NEWS_AI_ANSWERS_DAILY`, `NEWS_AI_QUERIES_DAILY`, and `NEWS_AI_INDEX_BATCHES_DAILY` cap generation, query embeddings, and archive batches separately. Fixed article analyses and public briefings are cached in the database. Answers to free-form questions, and question embeddings, are reused for up to 30 minutes from the in-memory or shared Redis cache, keyed by a hash of the question, the exact evidence and the model; they are not written to the database. Watch queries, which are already stored with the watch, keep their embedding so scheduled checks do not re-embed them. The research service uses archived titles and publisher excerpts.
 
 ## Discover stories
 
@@ -131,3 +131,10 @@ sweep. Responses include `checked`, `healthy`, `remaining` and per-source failur
 The database lease prevents overlapping batches and each enabled source can be
 claimed once per sweep. Sources on backoff are deferred. The owner refresh uses
 those same rules and continues to return `sources` along with the sweep status.
+
+
+## AI-native discovery
+
+- **Smart search.** `GET /api/search/suggest` returns an `interpretation` when a typed query implies filters, for example "ransomware advisories from European publishers this week" → keywords `ransomware`, source type `advisory`, publisher region `EU`, window 168 hours. Parsing is deterministic and uses only the reviewed catalog, so it adds no model cost. A region is applied only when the query names publishers ("from Indian media"), not story geography ("AI regulation in Europe"); a topic is applied only as a scope ("security news"). The Reading Room shows the interpretation as the first suggestion and applies nothing until the reader picks it.
+- **Similar in meaning.** With `NEWS_AI_VECTORS=1`, `GET /api/articles/{id}` appends up to eight related stories found by the article's stored embedding, labelled `related_reason: "Similar in meaning"`. No model call is made.
+- **Semantic alerts.** Keyword watches also match paraphrased coverage above a strict similarity (0.6) in the last 48 hours. Matches are labelled `match: "semantic"` in alert evidence.

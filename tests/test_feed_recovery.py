@@ -32,10 +32,10 @@ def test_configured_pause_overrides_preexisting_enabled_state(tmp_path, monkeypa
 def test_owner_cannot_enable_a_connector_paused_in_the_registry(monkeypatch):
     source = BY_ID["tech-in-asia"]
     monkeypatch.setattr(server, "BY_ID", {source.id: replace(source, enabled=False)})
-    monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests")
+    monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests-0123456789abcdef0123")
     monkeypatch.setattr(server, "source_store", lambda: pytest.fail("Paused source was changed"))
     with pytest.raises(HTTPException) as caught:
-        server.update_source(source.id, server.SourceUpdate(enabled=True), "Bearer owner-key-for-tests")
+        server.update_source(source.id, server.SourceUpdate(enabled=True), "Bearer owner-key-for-tests-0123456789abcdef0123")
     assert caught.value.status_code == 409
 
 

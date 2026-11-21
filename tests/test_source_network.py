@@ -202,14 +202,14 @@ def test_coverage_distinguishes_failed_checks_quiet_publishers_and_missing_stori
 
 def test_owner_refresh_batches_require_auth_and_only_accept_reviewed_ids(tmp_path, monkeypatch):
     store = Store(f"sqlite:///{tmp_path / 'owner.db'}")
-    monkeypatch.setenv("ADMIN_TOKEN", "source-owner-test-key")
+    monkeypatch.setenv("ADMIN_TOKEN", "source-owner-test-key-0123456789abcdef0123")
     monkeypatch.setattr(server, "get_store", lambda: store)
     calls = []
     monkeypatch.setattr(server, "run_sweep", lambda **kwargs: calls.append(kwargs) or {"status": "complete"})
     client = TestClient(server.app)
     body = {"source_ids": ["practicalai"]}
     assert client.post("/api/admin/refresh", json=body).status_code == 401
-    headers = {"Authorization": "Bearer source-owner-test-key"}
+    headers = {"Authorization": "Bearer source-owner-test-key-0123456789abcdef0123"}
     assert client.post("/api/admin/refresh", json={"source_ids": ["https://internal.example"]}, headers=headers).status_code == 422
     assert not calls
     assert client.post("/api/admin/refresh", json=body, headers=headers).status_code == 200

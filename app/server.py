@@ -27,6 +27,7 @@ from starlette.requests import ClientDisconnect
 load_dotenv()
 
 from app.cache import Cache
+from app.client_identity import client_address
 from app.mail_schedule import run_due_subscriptions
 from app.mail_capacity import batch_sender, mail_capacity
 from app.mail_events import router as mail_events_router
@@ -48,13 +49,14 @@ from app.briefing import build_briefing
 from app.article_summary import article_summary
 from app.curiosity import build_curiosity_cards, curiosity_article
 from app.search_suggest import suggest as suggest_scopes
+from app.query_understanding import understand as understand_query
 from app.story_coverage import compare_coverage
 from app.trending import extract_trending
 from app.launch_store import get_store
 from app.public_mail import router as mail_router
 from app.selection import select_candidates
 from app.sources import BY_ID, GROUPS, KINDS, LANGUAGES
-from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, subjects_for
+from app.intelligence import SUBJECTS, recommend, related_articles, related_terms, story_identity, subjects_for
 from app.reader_signals import ReaderFeedback
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
@@ -64,7 +66,7 @@ from app import research_projects
 from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
-app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url="/api/docs", redoc_url=None)
+app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url=None, redoc_url=None)
 app.include_router(mail_router)
 app.include_router(mail_events_router)
 app.include_router(workspace_router)
@@ -218,10 +220,8 @@ async def validation_error(request, exc):
 
 
 def client_key(request: Request):
-    address = request.client.host if request.client else "unknown"
-    if os.getenv("VERCEL"):
-        address = request.headers.get("x-vercel-forwarded-for", address).split(",")[0].strip()
-    return hashlib.sha256(address.encode()).hexdigest()
+    # IPv6 clients are keyed by /64 so address rotation cannot multiply a quota.
+    return hashlib.sha256(client_address(request).encode()).hexdigest()
 
 
 def admit_expensive(store, request: Request, action: str, maximum: int, window: int):
@@ -255,18 +255,81 @@ def rate_limit(request: Request, action: str, limit: int, window: int = 600):
             _limits.popitem(last=False)
 
 
-def signature(digest: dict, expires: int) -> str:
+MIN_OWNER_TOKEN = 32
+PRIVILEGED_PREFIXES = ("/api/admin", "/api/email", "/api/jobs/")
+AUTH_FAILURE_LIMIT = 10
+AUTH_FAILURE_WINDOW = 900
+_auth_failures = OrderedDict()
+# Per-client budgets for public reads that reach the database and bypass the CDN cache.
+READ_LIMITS = (
+    ("/api/articles/", "read-article", 120),
+    ("/api/authors", "read-authors", 30),
+    ("/api/briefing", "read-briefing", 120),
+    ("/api/discovery/coverage", "read-coverage", 30),
+    ("/api/discovery/sources/", "read-source-health", 60),
+    ("/api/intelligence/events", "read-developments", 60),
+    ("/api/intelligence/technologies/", "read-technology", 60),
+    ("/api/news", "read-news", 120),
+    ("/api/search/suggest", "read-suggest", 240),
+)
+
+
+def owner_secret() -> str:
+    """Return ADMIN_TOKEN only when it is long enough to resist guessing."""
     secret = os.getenv("ADMIN_TOKEN", "")
+    if secret and len(secret) < MIN_OWNER_TOKEN:
+        logger.warning("owner_token_too_short minimum=%d", MIN_OWNER_TOKEN)
+        return ""
+    return secret
+
+
+def signature(digest: dict, expires: int) -> str:
+    secret = owner_secret()
     if not secret:
         return ""
+    # Previews are signed with a derived key. The owner bearer token is never used as a public MAC key.
+    key = hmac.new(secret.encode(), b"informa:preview-signature:v1", hashlib.sha256).digest()
     message = json.dumps({"digest": digest, "expires": expires}, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return hmac.new(key, message.encode(), hashlib.sha256).hexdigest()
 
 
 def require_owner(authorization: str | None, *, detail="Enter the owner access key to send to the configured Gmail inbox."):
-    secret = os.getenv("ADMIN_TOKEN", "")
+    secret = owner_secret()
     if not secret or not authorization or not hmac.compare_digest(authorization.encode(), f"Bearer {secret}".encode()):
         raise HTTPException(401, detail)
+
+
+def read_budget(request: Request):
+    path = request.url.path
+    for prefix, action, limit in READ_LIMITS:
+        if path == prefix.rstrip("/") or path.startswith(prefix):
+            try:
+                rate_limit(request, action, limit, 60)
+            except HTTPException as error:
+                return JSONResponse({"detail": error.detail}, status_code=error.status_code, headers=error.headers)
+            return None
+    return None
+
+
+def privileged_path(path: str) -> bool:
+    return path.startswith(PRIVILEGED_PREFIXES)
+
+
+def auth_failures(request: Request, *, record=False):
+    """Count failed owner or scheduler authorizations per client within this instance."""
+    key = client_key(request)
+    now = time.monotonic()
+    with _limit_lock:
+        history = _auth_failures.setdefault(key, deque())
+        while history and history[0] <= now - AUTH_FAILURE_WINDOW:
+            history.popleft()
+        if record:
+            history.append(now)
+        _auth_failures.move_to_end(key)
+        while len(_auth_failures) > 2000:
+            _auth_failures.popitem(last=False)
+        retry = int(history[0] + AUTH_FAILURE_WINDOW - now) + 1 if history else 0
+        return len(history), max(1, retry)
 
 
 def allowed_write_origin(request: Request):
@@ -283,11 +346,21 @@ def allowed_write_origin(request: Request):
 async def response_headers(request: Request, call_next):
     request_id = secrets.token_hex(8)
     started = time.monotonic()
+    privileged = privileged_path(request.url.path)
     try:
-        if request.method in WRITE_METHODS and not allowed_write_origin(request):
+        failures, retry = auth_failures(request) if privileged else (0, 0)
+        if failures >= AUTH_FAILURE_LIMIT:
+            response = JSONResponse({"detail": "Too many failed authorization attempts. Try again later."},
+                                    status_code=429, headers={"Retry-After": str(retry)})
+        elif request.method in WRITE_METHODS and not allowed_write_origin(request):
             response = JSONResponse({"detail": "Cross-site requests are not allowed."}, status_code=403)
+        elif request.method == "GET" and (limited := read_budget(request)) is not None:
+            response = limited
         else:
             response = await call_next(request)
+            if privileged and response.status_code == 401:
+                auth_failures(request, record=True)
+                logger.warning("privileged_auth_failed request_id=%s path=%s", request_id, request.url.path)
     except SQLAlchemyError as error:
         logger.warning("database_unavailable request_id=%s error_type=%s", request_id, type(error).__name__)
         response = JSONResponse({"detail": "The news database is temporarily unavailable."}, status_code=503)
@@ -299,6 +372,7 @@ async def response_headers(request: Request, call_next):
     if request.url.path.startswith("/api/") or request.url.path == "/openapi.json":
         response.headers["X-Robots-Tag"] = "noindex"
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     if request.url.scheme == "https" or os.getenv("VERCEL"):
@@ -319,6 +393,22 @@ async def response_headers(request: Request, call_next):
                     request.method, getattr(route, "path", "unmatched"), response.status_code,
                     (time.monotonic() - started) * 1000)
     return response
+
+
+def api_docs_enabled() -> bool:
+    """Swagger UI loads third-party scripts with inline code, so production serves it only on request."""
+    configured = os.getenv("API_DOCS_ENABLED")
+    if configured is not None:
+        return configured == "1"
+    return os.getenv("VERCEL_ENV") != "production"
+
+
+@app.get("/api/docs", include_in_schema=False)
+def api_docs():
+    if not api_docs_enabled():
+        raise HTTPException(404, "Not Found")
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(openapi_url=app.openapi_url, title=f"{NAME} API")
 
 
 @app.get("/api/health")
@@ -591,8 +681,10 @@ def search_suggest(response: Response, q: Annotated[str, Query(max_length=80)] =
     phrase = q.strip()
     suggestions = suggest_scopes(phrase, topics=TOPICS, subjects=SUBJECTS, sources=BY_ID.values(),
                                  authors=recent_authors() if len(phrase) >= 2 else ())
+    interpretation = understand_query(phrase, topics=TOPICS, regions=REGION_LABELS, coverage_types=COVERAGE_TYPES,
+                                      subjects=SUBJECTS, sources=BY_ID.values())
     response.headers["Cache-Control"] = "public, max-age=60"
-    return {"query": phrase, "suggestions": suggestions}
+    return {"query": phrase, "suggestions": suggestions, "interpretation": interpretation}
 
 
 @app.get("/api/articles/{article_id}")
@@ -611,6 +703,8 @@ def article_details(article_id: str, response: Response):
     coverage = compare_coverage(article, eligible)
     related = related_articles(article, candidates)
     if store:
+        related = [*related, *semantic_related(store, raw, exclude={article_id, *(row["id"] for row in related),
+                                                                    *(row["id"] for row in coverage)}, limit=max(0, 8 - len(related)))]
         related = store.with_reading_access(related)
         coverage = store.with_reading_access(coverage)
     reading = raw.get("_reading_content")
@@ -626,6 +720,30 @@ def article_details(article_id: str, response: Response):
                 if reading else "Publisher-supplied excerpt. Read the original for the complete article, images and any subscriber content."
                 if article["has_excerpt"] else "Headline and source link only. The article body has not been retrieved or summarized."),
             "summary": article_summary(article, reading), "also_indexed_by": indexed_by}
+
+
+def semantic_related(store, raw, *, exclude, limit=4):
+    """Stories close in meaning to an article, using its stored embedding. No model call is made."""
+    if limit <= 0 or not research_service.vectors_enabled():
+        return []
+    try:
+        rows, status = research_service.vector_results(store, raw["title"], 720, {}, anchor=raw)
+    except SQLAlchemyError as error:
+        logger.warning("semantic_related_unavailable error_type=%s", type(error).__name__)
+        return []
+    if status != "ready":
+        return []
+    seen = {story_identity(raw)}
+    selected = []
+    for row in rows:
+        identity = story_identity(row)
+        if row["id"] in exclude or identity in seen:
+            continue
+        seen.add(identity)
+        selected.append(dict(row, related_reason="Similar in meaning"))
+        if len(selected) >= limit:
+            break
+    return selected
 
 
 @app.get("/api/headlines")
@@ -727,6 +845,30 @@ def initialize_news(authorization: str | None = Header(default=None)):
     return {"database": store.engine.dialect.name, "schema_ready": True, "search_index": search_index}
 
 
+@app.get("/api/admin/ai-usage")
+def ai_usage_report(authorization: str | None = Header(default=None)):
+    """Owner view of AI routing, recorded usage and estimated spend for the retained seven days."""
+    require_owner(authorization, detail="Enter a valid owner access key to view AI usage.")
+    from app import ai_usage
+    from app.agent import openai_client
+    store = source_store()
+    rows = ai_usage.summary(store)
+    days = {}
+    for row in rows:
+        total = days.setdefault(row["day"], {"day": row["day"], "calls": 0, "failures": 0, "prompt": 0,
+                                             "completion": 0, "estimated_usd": 0.0})
+        for key in ("calls", "failures", "prompt", "completion"):
+            total[key] += row[key]
+        total["estimated_usd"] = round(total["estimated_usd"] + (row["estimated_usd"] or 0), 6)
+    tiers = sorted(set(openai_client.TASK_TIERS.values()))
+    return {"routing": {tier: openai_client.route_model(next(task for task, value in openai_client.TASK_TIERS.items()
+                                                             if value == tier)) for tier in tiers},
+            "fallback_model": openai_client.fallback_model(""), "tasks": openai_client.TASK_TIERS,
+            "daily_budget_usd": ai_usage.daily_budget() or None, "spend_today_usd": ai_usage.spend_today(store),
+            "days": sorted(days.values(), key=lambda row: row["day"], reverse=True), "breakdown": rows,
+            "basis": "Estimated from recorded token counts and list prices. Check the provider dashboard for billing."}
+
+
 @app.patch("/api/admin/sources/{source_id}")
 def update_source(source_id: str, body: SourceUpdate, authorization: str | None = Header(default=None)):
     require_owner(authorization)
@@ -758,6 +900,7 @@ def run_intelligence_check(store):
     if lease is None:
         return {"status": "already_started"}
     try:
+        research_service.take_provider_issue()
         watch_progress = run_monitoring_check(store, scheduled=True)
         progress = research_service.index_archive(store)
         event_progress = event_intelligence.sync(store)
@@ -766,7 +909,15 @@ def run_intelligence_check(store):
             ai_insights.prepare_recent_changes(store)
         except SQLAlchemyError as error:
             logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
-        return {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief}
+        result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief}
+        if issue := research_service.take_provider_issue():
+            # A coarse category only; provider messages can echo request details.
+            result["ai_issue"] = issue
+            result["ai_action_required"] = issue in research_service.CONFIGURATION_ISSUES
+            log = logger.error if result["ai_action_required"] else logger.warning
+            log("intelligence_ai_issue issue=%s index_status=%s brief_status=%s", issue,
+                progress.get("index_status"), brief)
+        return result
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
 

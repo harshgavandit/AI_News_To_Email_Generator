@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from app.agent.curator_agent import CuratorAgent
 from app.agent.digest_agent import DigestAgent
 from app.agent.email_agent import EmailDigestResponse, EmailIntroduction, RankedArticleDetail
-from app.agent.openai_client import get_openai_model
+from app.agent.openai_client import get_openai_model, route_model
 from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, PILLARS, PUBLIC_SITE, TAGLINE
 from app.coverage import public_article
 from app.news import canonical_url
@@ -167,7 +167,7 @@ def build_digest(articles: list[dict], name: str, focus: str, *, store=None,
             return fallback
         status = source.get("research_status")
         prompt_version = "summary-preprint-v1" if status == "preprint" else "summary-v5"
-        key = hashlib.sha256(json.dumps([prompt_version, get_openai_model(), article["id"], article["title"],
+        key = hashlib.sha256(json.dumps([prompt_version, route_model("digest"), article["id"], article["title"],
                                          article["description"][:2500], style, persona], ensure_ascii=False).encode()).hexdigest()
         if store and (cached := store.get_summary(key)):
             return dict(article, **cached)

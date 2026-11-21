@@ -2,7 +2,16 @@
 // Picking a suggestion narrows the feed by topic, subject, publisher feed or author
 // instead of leaving the reader to find the matching filter by hand.
 
-const KIND_LABELS = { topic: "Topic", subject: "Subject", publisher: "Publisher", author: "Author" };
+const KIND_LABELS = { interpretation: "Smart search", topic: "Topic", subject: "Subject", publisher: "Publisher", author: "Author" };
+
+// The server's reading of a natural-language query becomes the first option, so one choice applies every filter.
+export function withInterpretation(data) {
+  const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+  const reading = data?.interpretation;
+  if (!reading || typeof reading !== "object" || !reading.filters || typeof reading.summary !== "string") return suggestions;
+  return [{ kind: "interpretation", label: reading.summary, detail: "Apply these filters", terms: String(reading.terms || ""),
+    filters: reading.filters, labels: Array.isArray(reading.labels) ? reading.labels : [] }, ...suggestions];
+}
 
 export function createSearchSuggestions({ input, list, request, onSelect, delay = 140 }) {
   let items = [];
@@ -57,7 +66,7 @@ export function createSearchSuggestions({ input, list, request, onSelect, delay 
         const heading = document.createElement("li");
         heading.className = "suggest-group";
         heading.setAttribute("role", "presentation");
-        heading.textContent = `${KIND_LABELS[item.kind] || item.kind}s`;
+        heading.textContent = item.kind === "interpretation" ? "Smart search" : `${KIND_LABELS[item.kind] || item.kind}s`;
         list.append(heading);
         lastKind = item.kind;
       }
@@ -72,7 +81,8 @@ export function createSearchSuggestions({ input, list, request, onSelect, delay 
       label.textContent = item.label;
       const meta = document.createElement("span");
       meta.className = "suggest-meta";
-      meta.textContent = [KIND_LABELS[item.kind], item.detail].filter(Boolean).join(" · ");
+      meta.textContent = item.kind === "interpretation" ? item.detail
+        : [KIND_LABELS[item.kind], item.detail].filter(Boolean).join(" · ");
       option.append(label, meta);
       // mousedown keeps focus in the input so the list does not close before the click lands.
       option.addEventListener("mousedown", (event) => event.preventDefault());
@@ -90,7 +100,7 @@ export function createSearchSuggestions({ input, list, request, onSelect, delay 
     try {
       if (!cache.has(key)) {
         const data = await request(`/api/search/suggest?q=${encodeURIComponent(query)}`);
-        cache.set(key, Array.isArray(data?.suggestions) ? data.suggestions : []);
+        cache.set(key, withInterpretation(data));
         if (cache.size > 60) cache.delete(cache.keys().next().value);
       }
     } catch {

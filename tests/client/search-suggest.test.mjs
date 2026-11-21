@@ -82,3 +82,30 @@ test('short queries, failed requests and stale responses never show suggestions'
     assert.equal(env.picked.length, 0);
   } finally { env.close(); }
 });
+
+test('a smart-search interpretation is offered first and carries its filters', async () => {
+  const interpretation = { terms: 'ransomware', summary: '“ransomware” · Security advisories · Past 7 days',
+    labels: ['Security advisories', 'Past 7 days'], filters: { coverage: 'advisory', hours: 168, sort: 'relevance' } };
+  const env = await setup(async () => ({ suggestions: SUGGESTIONS, interpretation }));
+  try {
+    await env.type('ransomware advisories this week');
+    const groups = [...env.list.querySelectorAll('.suggest-group')].map(node => node.textContent);
+    assert.equal(groups[0], 'Smart search');
+    const first = env.list.querySelector('[role="option"]');
+    assert.equal(first.dataset.kind, 'interpretation');
+    assert.equal(first.querySelector('.suggest-label').textContent, interpretation.summary);
+    env.key('ArrowDown');
+    env.key('Enter');
+    assert.equal(env.picked[0].kind, 'interpretation');
+    assert.deepEqual(env.picked[0].filters, interpretation.filters);
+    assert.equal(env.picked[0].terms, 'ransomware');
+  } finally {
+    env.close();
+  }
+});
+
+test('malformed interpretations are ignored', async () => {
+  const { withInterpretation } = await import(`../../public/search-suggest.js?t=${Date.now()}`);
+  assert.deepEqual(withInterpretation({ suggestions: SUGGESTIONS, interpretation: { summary: 5 } }), SUGGESTIONS);
+  assert.deepEqual(withInterpretation({ interpretation: null }), []);
+});

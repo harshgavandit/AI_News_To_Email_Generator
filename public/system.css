@@ -258,6 +258,9 @@ dialog[open]:not(.dossier-drawer) { border-radius: 18px; box-shadow: var(--sys-e
 .suggest-option[aria-selected="true"] { background: var(--sage); color: var(--green); }
 .suggest-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .suggest-meta { flex: none; color: var(--muted); font-size: 12px; }
+.suggest-option[data-kind="interpretation"] { border-left: 2px solid var(--sys-signal); }
+.suggest-option[data-kind="interpretation"] .suggest-label { white-space: normal; }
+.suggest-option[data-kind="interpretation"] .suggest-label::before { content: "\2726"; margin-right: 6px; color: var(--sys-signal); }
 .suggest-option[data-kind="topic"] .suggest-label::before, .suggest-option[data-kind="subject"] .suggest-label::before { content: "#"; margin-right: 4px; color: var(--sys-signal); }
 
 /* ---------- Checkboxes and radios never stretch to full width ---------- */

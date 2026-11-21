@@ -188,7 +188,7 @@ def test_technical_brief_uses_typed_sections_and_publisher_quotes(tmp_path, monk
     evidence = [{"id": "release", "title": "New release", "excerpt": "The release removes the old cache adapter and documents a replacement."}]
     monkeypatch.setattr(research, "ai_enabled", lambda: True)
 
-    def model(payload, system, schema, *, max_tokens):
+    def model(payload, system, schema, *, max_tokens, **_):
         assert "Do not infer a breaking change" in system
         return json.dumps({"status": "answered", "limitations": "The excerpt does not list the migration steps.", "claims": [
             {"kind": "breaking", "source_id": "release", "quote": "removes the old cache adapter", "text": "The release removes the old cache adapter."}]})

@@ -14,7 +14,7 @@ from app.sources import BY_ID
 
 SWEEP = "/api/jobs/refresh?run=scheduled"
 JOB_HEADERS = {"Authorization": "Bearer scoped-refresh-for-tests"}
-OWNER_HEADERS = {"Authorization": "Bearer owner-key-for-tests"}
+OWNER_HEADERS = {"Authorization": "Bearer owner-key-for-tests-0123456789abcdef0123"}
 VERCEL_HEADERS = {"Authorization": "Bearer cron-secret-for-tests"}
 VERCEL_SWEEP = "/api/jobs/feed-sweep"
 MORNING = datetime(2026, 11, 17, 2, 30, tzinfo=UTC)
@@ -53,7 +53,7 @@ def archive(tmp_path, monkeypatch):
     monkeypatch.setattr(discovery_health, "get_store", lambda: store)
     monkeypatch.setenv("FEED_REFRESH_SECRET", "scoped-refresh-for-tests")
     monkeypatch.setenv("CRON_SECRET", "cron-secret-for-tests")
-    monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests")
+    monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests-0123456789abcdef0123")
     return store, TestClient(server.app)
 
 
@@ -90,7 +90,7 @@ def test_manual_and_scheduled_runs_share_one_expiring_lease(archive, monkeypatch
     lease, = (value for value in leases if value is not None)
     monkeypatch.setattr(server, "refresh_sources", lambda *_: pytest.fail("An active refresh already holds the lease"))
     assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "already_started"
-    assert client.post("/api/admin/refresh", headers={"Authorization": "Bearer owner-key-for-tests"}).status_code == 429
+    assert client.post("/api/admin/refresh", headers={"Authorization": "Bearer owner-key-for-tests-0123456789abcdef0123"}).status_code == 429
 
     monkeypatch.setattr(launch_store.time, "time", lambda: lease + 1)
     new_lease = second_worker.claim_refresh()
@@ -240,7 +240,7 @@ def test_region_reload_reads_archive_and_only_owner_can_refresh_a_source(archive
     assert previous["freshness"]["counts"] == {"enabled": 1, "fresh": 0, "stale": 0, "failed": 1, "pending": 0}
     assert not refreshed
     assert client.post("/api/admin/refresh?source=sifted").status_code == 401
-    owner = {"Authorization": "Bearer owner-key-for-tests"}
+    owner = {"Authorization": "Bearer owner-key-for-tests-0123456789abcdef0123"}
     assert client.post("/api/admin/refresh?source=sifted", headers=owner).status_code == 200
     result = client.get("/api/news?region=EU&force=true").json()
     assert result["freshness"]["status"] == "fresh"
@@ -290,7 +290,7 @@ def test_twelve_hour_archive_updates_after_an_owner_refresh(archive, monkeypatch
     initial = client.get("/api/news?hours=12").json()
     assert [row["id"] for row in initial["articles"]] == ["recent"]
     assert not fetched
-    owner = {"Authorization": "Bearer owner-key-for-tests"}
+    owner = {"Authorization": "Bearer owner-key-for-tests-0123456789abcdef0123"}
     assert client.post("/api/admin/refresh?source=bbc-tech", headers=owner).status_code == 200
     updated = client.get("/api/news?hours=12&force=true").json()
     assert [row["id"] for row in updated["articles"]] == ["newest", "recent"]

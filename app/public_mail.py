@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from email_validator import EmailNotValidError, validate_email
 
+from app.client_identity import client_address
 from app.brand import BRIEF_SUBJECT, NAME, PUBLIC_SITE, VERIFICATION_SUBJECT
 from app.launch_store import get_store
 from app.mail_capacity import mail_capacity
@@ -95,10 +96,8 @@ def is_pilot_address(email):
 
 
 def address_key(request):
-    client = request.client.host if request.client else "unknown"
-    if os.getenv("VERCEL"):
-        client = request.headers.get("x-vercel-forwarded-for", client).split(",")[0].strip()
-    return digest_key("ip:" + client)
+    # IPv6 clients share one quota per /64 so address rotation cannot bypass it.
+    return digest_key("ip:" + client_address(request))
 
 
 def session_email(token):

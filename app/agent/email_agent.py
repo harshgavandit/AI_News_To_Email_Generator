@@ -93,7 +93,7 @@ Editorial angle: {self.user_profile.get('preferences', {}).get('Editorial angle'
 Generate a greeting and introduction that previews these articles."""
 
         try:
-            raw_response = generate_response(user_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction)
+            raw_response = generate_response(user_prompt, system_prompt=EMAIL_PROMPT, response_model=EmailIntroduction, task="email_intro")
             overview = sanitize_text(EmailIntroduction.model_validate_json(raw_response).introduction, 600)
             if overview:
                 return EmailIntroduction(greeting=greeting, introduction=overview)

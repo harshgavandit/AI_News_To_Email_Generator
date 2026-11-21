@@ -9,7 +9,7 @@ import unicodedata
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 
 from app import event_intelligence, research, stack_intelligence, technology
-from app.agent.openai_client import generate_response, get_openai_model
+from app.agent.openai_client import generate_response, get_openai_model, route_model
 from app.coverage import TOPICS
 from app.discovery import search_terms, search_text
 from app.intelligence import subjects_for
@@ -122,7 +122,7 @@ class CatchupRequest(BaseModel):
 
 
 def explanation_key(evidence, depth, language, prompt=PROMPT):
-    payload = ["explain-v1", get_openai_model(), prompt, depth, language, evidence]
+    payload = ["explain-v1", route_model("explain"), prompt, depth, language, evidence]
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -145,16 +145,23 @@ def validate_explanation(answer, evidence):
         raise ValueError("Inconsistent explanation")
     if not research.safe_prose(answer.limitations, 500):
         raise ValueError("Missing evidence limits")
+    claims, reason = [], ""
     for claim in answer.claims:
         source = by_id.get(claim.source_id)
-        if not source or not research.safe_prose(claim.text, 700) or not 12 <= len(claim.quote) <= 650:
-            raise ValueError("Invalid explanation claim")
-        document = normalized_quote(source["title"] + " " + source["excerpt"])
-        if normalized_quote(claim.quote) not in document:
-            raise ValueError("Citation quote not found")
-        if not research.numeric_tokens(claim.text) <= research.numeric_tokens(claim.quote):
-            raise ValueError("Unsupported number in explanation")
-    return answer.model_dump()
+        if not source or not research.safe_prose(claim.text, 700):
+            reason = "Invalid explanation claim"
+            continue
+        quote = research.locate_quote(claim.quote, source["title"] + " " + source["excerpt"], maximum=650)
+        if quote is None:
+            reason = "Citation quote not found"
+            continue
+        if not research.numeric_tokens(claim.text) <= research.numeric_tokens(quote):
+            reason = "Unsupported number in explanation"
+            continue
+        claims.append(claim.model_copy(update={"quote": quote}))
+    if answer.claims and not claims:
+        raise ValueError(reason)
+    return answer.model_copy(update={"claims": claims}).model_dump()
 
 
 def explain(store, evidence, *, depth="simple", language="en", allow_generate=True, prompt=PROMPT, sections=None,
@@ -185,7 +192,8 @@ def explain(store, evidence, *, depth="simple", language="en", allow_generate=Tr
         payload = json.dumps({"depth": DEPTHS[depth], "output_language": OUTPUT_LANGUAGES[language],
                               "evidence": material, "earlier_evidence": previous}, ensure_ascii=False)
         try:
-            raw = generate_response(payload, prompt, output_schema, max_tokens=1500)
+            raw = generate_response(payload, prompt, output_schema, max_tokens=1500,
+                                    task="technical_brief" if sections else "explain")
             result = validate_explanation(output_schema.model_validate_json(raw), material)
         except Exception:
             return dict(fallback, status="unavailable", limitations="A supported explanation could not be generated. Original publisher evidence remains available.")
