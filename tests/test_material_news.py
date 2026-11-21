@@ -184,3 +184,18 @@ def test_public_monitor_distinguishes_stalled_ingestion_and_sampled_coverage(tmp
     acquisition = next(signal for signal in coverage["signals"] if signal["id"] == "acquisition")
     assert acquisition["sampled_articles"] == 1 and acquisition["publisher_groups"] == 1
     assert next(signal for signal in coverage["signals"] if signal["id"] == "ipo")["gap"] == "no_matching_headlines_in_sample"
+
+
+def test_coverage_reports_weekly_subject_counts_and_thin_subjects(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'subjects.db'}")
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (BY_ID["bbc-tech"],))
+    monkeypatch.setattr(discovery_health, "get_store", lambda: store)
+    store.ingest("bbc-tech", [item("deal", "MongoDB acquires Firebolt in an all-stock acquisition")], True)
+    counts = store.subject_counts(("acquisitions", "quantum"))
+    assert counts == {"acquisitions": 1, "quantum": 0}
+    assert store.subject_counts(()) == {}
+    coverage = TestClient(app).get("/api/discovery/coverage").json()
+    subjects = {row["id"]: row for row in coverage["subjects"]}
+    assert subjects["acquisitions"]["articles_7d"] == 1 and subjects["acquisitions"]["gap"] == "thin"
+    assert subjects["quantum"]["gap"] == "no_recent_stories"
+    assert {row["id"] for row in coverage["attention"]["subjects"]} >= {"acquisitions", "quantum"}

@@ -381,6 +381,13 @@ async function loadCoverage() {
       }[topic.gap] || "Coverage needs review"));
       return card;
     }));
+    element("coverage-subjects").replaceChildren(...(data.subjects || []).map((subject) => {
+      const chip = node("a", subject.gap ? "topic-chip coverage-subject has-gap" : "topic-chip coverage-subject",
+        `${subject.label} · ${number.format(subject.articles_7d)} this week`);
+      chip.href = `/?${new URLSearchParams({subject: subject.id, window: "7d"})}#reading-room`;
+      if (subject.gap) chip.title = subject.gap === "thin" ? "Few stories this week: a candidate for new sources" : "No stories this week";
+      return chip;
+    }));
     renderCoverageStatus(data);
     status.textContent = data.notice || "";
     coverageLoaded = true;

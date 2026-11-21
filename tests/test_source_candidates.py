@@ -102,3 +102,28 @@ def test_a_working_feed_without_recent_posts_is_quiet_and_promotable():
     assert feed_status({"available": True}, recent=[{}]) == "active"
     assert feed_status({"available": False, "error": "feed_not_found"}, recent=[]) == "unavailable"
     assert {"active", "quiet"} == PROMOTABLE
+
+
+def test_second_wave_pack_is_new_valid_and_never_reproposes():
+    with open("docs/research/source-candidates-2026-11-21b.json", encoding="utf-8") as handle:
+        wave = json.load(handle)
+    earlier = load_rows()
+    with open("docs/research/source-candidates-2026-11-21-recheck.json", encoding="utf-8") as handle:
+        earlier += json.load(handle)
+    tried = {row["id"] for row in earlier} | {row["url"].rstrip("/") for row in earlier}
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
+    assert len(wave) >= 150
+    assert len({row["id"] for row in wave}) == len(wave) and len({row["url"] for row in wave}) == len(wave)
+    for row in wave:
+        assert row["id"] not in tried and row["url"].rstrip("/") not in tried
+        # Once promoted, a candidate keeps its id and URL; anything else must be new.
+        assert promoted.get(row["id"], row["url"]) == row["url"]
+        if row["id"] not in promoted:
+            assert row["url"].rstrip("/") not in known_urls
+        assert row["language"] == "en" and row["url"].startswith("https://")
+        validate_source(Source(**{key: tuple(value) if key in {"hosts", "article_paths"} else value
+                                  for key, value in row.items()}))
+    coverage = {row["coverage"] for row in wave}
+    assert {"release", "status", "advisory", "reporting", "publisher"} <= coverage
+    assert {"ai", "software", "security", "chips", "startups", "outages"} <= {row["topic"] for row in wave}

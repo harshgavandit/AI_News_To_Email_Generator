@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from app.coverage import TOPICS, public_article
+from app.intelligence import SUBJECTS
 from app.ingestion import feed_freshness, source_catalog, ingestion_health
 from app.news_signals import SIGNALS, story_signals
 from app.launch_store import get_store
@@ -13,6 +14,7 @@ from app.news import canonical_url
 from app.sources import BY_ID
 
 router = APIRouter(prefix="/api/discovery")
+THIN_SUBJECT = 5  # Fewer stories than this in a week marks a subject for source review.
 FORMATS = {"news": "News", "blog": "Technical blogs", "newsletter": "Newsletters", "paper": "Research papers",
            "release": "Project releases", "video": "Video channels", "podcast": "Podcasts"}
 
@@ -62,6 +64,10 @@ def coverage(response: Response):
             "latest_published_at": max((row["published_at"] for row in matches), default=None),
             "gap": "no_matching_headlines_in_sample" if not matches else None})
     response.headers["Cache-Control"] = "public, max-age=30"
+    weekly = store.subject_counts(tuple(SUBJECTS))
+    subjects = [{"id": key, "label": label, "articles_7d": weekly.get(key, 0),
+                 "gap": "no_recent_stories" if not weekly.get(key) else "thin" if weekly[key] < THIN_SUBJECT else None}
+                for key, label in SUBJECTS.items()]
     topics = []
     for key, label in TOPICS.items():
         feeds = [feed for feed in catalog if BY_ID[feed["id"]].topic == key and feed["enabled"]]
@@ -74,7 +80,9 @@ def coverage(response: Response):
             "fresh_feeds": fresh, "articles_24h": recent, "gap": gap})
     return {"freshness": feed_freshness(catalog), "topics": topics, "signals": signals,
         "signal_sample_size": len(sample), "signal_window_hours": 48, "ingestion": ingestion_health(store, catalog),
+        "subjects": subjects, "subject_window_days": 7,
         "attention": {"topics": [topic for topic in topics if topic["gap"]],
+            "subjects": [subject for subject in subjects if subject["gap"]],
             "failed_sources": sum(feed["enabled"] and feed["freshness"] == "failed" for feed in catalog),
             "overdue_sources": sum(feed["enabled"] and feed["freshness"] == "stale" for feed in catalog),
             "quiet_sources": sum(feed["enabled"] and feed["content_status"] == "quiet" for feed in catalog)},

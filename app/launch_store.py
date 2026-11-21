@@ -630,6 +630,17 @@ class Store:
         with self.engine.connect() as conn:
             return dict(conn.execute(select(stmt.c.topic, func.count()).group_by(stmt.c.topic)).all())
 
+    def subject_counts(self, keys, hours=168):
+        """Stories per subject over a window in one scan; subject keys are stored as |key| tokens."""
+        if not keys:
+            return {}
+        stmt = self.query(hours).subquery()
+        columns = [func.coalesce(func.sum(case((stmt.c.subject_keys.contains(f"|{key}|", autoescape=True), 1), else_=0)), 0)
+                   for key in keys]
+        with self.engine.connect() as conn:
+            row = conn.execute(select(*columns)).one()
+        return {key: int(value or 0) for key, value in zip(keys, row)}
+
     def lookup_url(self, url):
         from app.news import canonical_url
         canonical = canonical_url(url)
