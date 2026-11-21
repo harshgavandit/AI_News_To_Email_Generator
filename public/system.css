@@ -421,3 +421,9 @@ label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display:
 }
 .workspace-sidebar .sidebar-section > a.sidebar-secondary { margin-bottom: 2px; min-height: 38px; font-weight: 600; }
 .workspace-sidebar .sidebar-section > a.sidebar-secondary + h2 { margin-top: 18px; }
+/* The technology chooser reuses the section tabs; its ID rule set green-on-green for the active item. */
+#technology-directory a[aria-current], :is(.information-nav, .research-section-nav) a[aria-current]:hover {
+  color: var(--action-text, #fff); background: var(--green); text-decoration: none;
+  box-shadow: 0 6px 14px -8px rgb(var(--sys-green-glow) / .9);
+}
+:is(.information-nav, .research-section-nav) { border-radius: 22px; }
