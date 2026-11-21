@@ -62,3 +62,47 @@ test('workspace pages share one navigation that includes the Inbox', () => {
     assert.match(html, /id="site-theme"/, `${page} offers the theme control`);
   }
 });
+
+function depthWindow({ top = 0, reduce = false } = {}) {
+  const dom = new JSDOM(`<body><section class="desk-masthead"><div><h1>Desk</h1></div></section>
+    <div id="stories"></div><section class="research-panel" id="below">Panel</section></body>`,
+  { url: 'https://informa.test/', runScripts: 'outside-only', pretendToBeVisual: true });
+  const { window } = dom;
+  window.matchMedia = query => ({ matches: query.includes('reduce') ? reduce : true, media: query, addEventListener() {}, removeEventListener() {} });
+  window.scrollTo = () => {};
+  const observed = [];
+  window.IntersectionObserver = class { constructor(callback) { this.callback = callback; } observe(element) { observed.push([this, element]); } unobserve() {} };
+  window.document.getElementById('below').getBoundingClientRect = () => ({ top, bottom: top + 100, left: 0, right: 100, width: 100, height: 100 });
+  window.eval(readFileSync(new URL('system.js', root), 'utf8'));
+  return { window, observed };
+}
+
+test('only content that starts below the fold waits for a scroll reveal', async () => {
+  const visible = depthWindow({ top: 10 });
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(visible.window.document.getElementById('below').dataset.sysReveal, undefined);
+  visible.window.close();
+
+  const below = depthWindow({ top: 5000 });
+  await new Promise(resolve => setTimeout(resolve, 40));
+  const panel = below.window.document.getElementById('below');
+  assert.equal(panel.dataset.sysReveal, 'pending');
+  const [[observer, element]] = below.observed;
+  observer.callback([{ isIntersecting: true, target: element }]);
+  assert.equal(panel.dataset.sysReveal, 'shown');
+  below.window.close();
+});
+
+test('reduced motion never hides content for a reveal', async () => {
+  const { window } = depthWindow({ top: 5000, reduce: true });
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(window.document.getElementById('below').dataset.sysReveal, undefined);
+  window.close();
+});
+
+test('the depth layer removes its motion under reduced motion and forced colours', () => {
+  const css = readFileSync(new URL('system.css', root), 'utf8');
+  const reduced = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/g)].map(match => match[1]).join('\n');
+  for (const selector of ['body::before', '.desk-masthead::before', '.research-header::before', '[data-sys-reveal]', '.dossier-drawer[open]'])
+    assert.ok(reduced.includes(selector), `${selector} must be disabled under reduced motion`);
+});
