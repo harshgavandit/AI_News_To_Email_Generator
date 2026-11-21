@@ -77,3 +77,9 @@ export async function requestJSON(path, { method = "GET", body, signal } = {}) {
   if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "The request could not be completed. Check your inputs and try again.");
   return data;
 }
+
+// Server errors carry a reader-facing detail; programming and network errors do not.
+export function readableError(error, fallback = "This information is temporarily unavailable. Try again in a moment.") {
+  if (!error?.message || error instanceof TypeError || error instanceof ReferenceError || error instanceof SyntaxError || error instanceof RangeError) return fallback;
+  return error.message;
+}

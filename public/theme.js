@@ -31,7 +31,10 @@
         try {
           localStorage.setItem(key, preference);
         } catch {}
-        apply();
+        // Cross-fade the change where supported; reduced motion switches instantly.
+        const animate = document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (animate) document.startViewTransition(apply);
+        else apply();
       });
     }
     window.addEventListener("storage", (event) => {

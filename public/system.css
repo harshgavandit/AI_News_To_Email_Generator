@@ -301,3 +301,123 @@ label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display:
 .reading .story-actions :is(.pin-button, .save-button, .card-dossier-btn):hover { background: var(--paper); border-color: var(--line); }
 .reading .story-actions a { padding: 4px 8px; font-size: 12px; }
 .reading .stories.story-list .story-actions { background: transparent; }
+
+/* =====================================================================
+ * Signal v2 — cross-page consistency, depth and navigation feedback
+ * ===================================================================== */
+
+/* ---------- Primary navigation: a single growing indicator ---------- */
+.site-header :is(.site-nav, .research-nav) a {
+  position: relative; text-decoration: none; border-bottom-color: transparent;
+  transition: color 160ms;
+}
+.site-header :is(.site-nav, .research-nav) a::after {
+  content: ""; position: absolute; left: 50%; right: 50%; bottom: -6px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--green), var(--sys-signal));
+  transition: left 260ms var(--sys-curve), right 260ms var(--sys-curve), opacity 200ms; opacity: 0;
+}
+.site-header :is(.site-nav, .research-nav) a:hover { color: var(--ink); text-decoration: none; }
+.site-header :is(.site-nav, .research-nav) a:hover::after { left: 20%; right: 20%; opacity: .55; }
+.site-header :is(.site-nav, .research-nav) a[aria-current="page"] { color: var(--green); text-decoration: none; }
+.site-header :is(.site-nav, .research-nav) a[aria-current="page"]::after { left: 0; right: 0; opacity: 1; }
+.site-header .site-nav > a[aria-current="page"] { border-bottom-color: transparent; }
+
+/* ---------- Section tabs on information and research pages ---------- */
+:is(.information-nav, .research-section-nav) {
+  display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 70%, transparent); box-shadow: var(--sys-e1);
+}
+:is(.information-nav, .research-section-nav) a {
+  padding: 7px 14px; border: 0; border-radius: 999px; color: var(--muted); font-size: 13px; font-weight: 600; text-decoration: none;
+  transition: background-color 160ms, color 160ms;
+}
+:is(.information-nav, .research-section-nav) a:hover { background: var(--sage); color: var(--green); }
+:is(.information-nav, .research-section-nav) a[aria-current] { background: var(--green); color: var(--action-text, #fff); box-shadow: 0 6px 14px -8px rgb(var(--sys-green-glow) / .9); }
+
+/* ---------- Page heroes share one treatment ---------- */
+:is(.information-hero, .directory-intro, .contribution-intro, .research-header) { position: relative; isolation: isolate; }
+:is(.information-hero, .directory-intro, .contribution-intro) {
+  overflow: hidden; border-radius: 20px; box-shadow: var(--sys-e2), inset 0 1px 0 var(--edge-highlight);
+  background: radial-gradient(640px 260px at 100% 0, color-mix(in srgb, var(--sys-signal) 12%, transparent), transparent 70%),
+              radial-gradient(520px 240px at 0 100%, color-mix(in srgb, var(--green) 9%, transparent), transparent 72%), var(--paper);
+}
+:is(.information-hero, .directory-intro, .contribution-intro, .research-header) h1 { letter-spacing: -.03em; text-wrap: balance; }
+.research-header { padding-bottom: 22px; }
+.research-header::after {
+  content: ""; display: block; width: 72px; height: 2px; margin-top: 18px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--green), var(--sys-signal));
+}
+.research-label, :is(.information-hero, .directory-intro, .contribution-intro) .eyebrow { display: inline-flex; align-items: center; gap: 8px; }
+.research-label::before, :is(.information-hero, .directory-intro, .contribution-intro) .eyebrow::before {
+  content: ""; width: 18px; height: 1px; background: var(--sys-signal);
+}
+/* Inbox and Development used a plain sans title; match the workspace serif. */
+.research-main > h1 { font: 400 clamp(40px, 5vw, 64px)/1 var(--serif); letter-spacing: -.03em; margin: 0 0 8px; }
+.research-main > h1 + [role="status"] { color: var(--muted); }
+
+/* ---------- Panels and cards: one surface, three depths ---------- */
+:is(.research-panel, .information-card, .creator-panel, .about-note, .contribution-panel, .directory-results-panel, .source-row) {
+  border-radius: var(--sys-radius); border-color: var(--line);
+  background: var(--sys-card); box-shadow: var(--sys-e1), inset 0 1px 0 var(--edge-highlight);
+}
+:is(.research-panel, .contribution-panel) { transition: box-shadow 220ms var(--sys-curve), border-color 220ms; }
+:is(.research-panel, .contribution-panel):focus-within { border-color: color-mix(in srgb, var(--green) 35%, var(--line)); box-shadow: var(--sys-e2), inset 0 1px 0 var(--edge-highlight); }
+.information-card { position: relative; overflow: hidden; transition: transform 260ms var(--sys-curve), box-shadow 260ms var(--sys-curve), border-color 200ms; }
+.information-card::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 2px; opacity: 0; transition: opacity 220ms;
+  background: linear-gradient(90deg, var(--green), var(--sys-signal));
+}
+@media (hover: hover) and (pointer: fine) {
+  .information-card:hover { transform: translateY(-3px); box-shadow: var(--sys-e2); border-color: color-mix(in srgb, var(--green) 30%, var(--line)); }
+  .information-card:hover::before { opacity: 1; }
+}
+.about-note { box-shadow: var(--sys-e3); }
+
+/* ---------- Subtle 3D tilt for feature cards (system.js sets --tx/--ty) ---------- */
+[data-sys-tilt] {
+  transform: perspective(900px) rotateX(var(--ty, 0deg)) rotateY(var(--tx, 0deg));
+  transition: transform 420ms var(--sys-curve), box-shadow 300ms; will-change: transform;
+}
+[data-sys-tilt][data-tilting] { transition: transform 90ms linear, box-shadow 300ms; }
+
+/* ---------- Reading Room side rail ---------- */
+.priority-signals { border-top-width: 1px; position: relative; overflow: hidden; }
+.priority-signals::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--green), var(--sys-signal)); }
+.priority-signal { transition: background-color 160ms; border-radius: 10px; }
+.priority-signal:hover { background: color-mix(in srgb, var(--sage) 45%, transparent); }
+.priority-signal button { transition: color 160ms; }
+.signal-type { font-weight: 650; letter-spacing: .02em; }
+
+/* Workspace shortcut links read as quiet list rows instead of boxed buttons. */
+.sidebar-section .sidebar-secondary {
+  border-color: transparent; background: transparent; box-shadow: none; border-radius: 10px;
+  transition: background-color 160ms, color 160ms, transform 160ms var(--sys-curve);
+}
+.sidebar-section .sidebar-secondary:hover { background: color-mix(in srgb, var(--sage) 70%, transparent); transform: translateX(2px); }
+
+/* ---------- Numbers line up ---------- */
+:is(time, .coverage-count, .meta-pill, .dossier-counter, .results-line, .health-pill, .suggest-meta, .edition-date) { font-variant-numeric: tabular-nums; }
+
+/* ---------- Footer ---------- */
+.site-footer { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--sage) 35%, transparent)); }
+.site-footer .footer-nav a, .site-footer nav a { text-decoration: none; transition: color 160ms; }
+.site-footer .footer-nav a:hover, .site-footer nav a:hover { color: var(--green); }
+
+/* ---------- Theme changes cross-fade (system.js uses View Transitions when available) ---------- */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 280ms; animation-timing-function: var(--sys-curve); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sys-tilt] { transform: none !important; transition: none !important; }
+  .information-card, .sidebar-section .sidebar-secondary, .site-header :is(.site-nav, .research-nav) a::after { transition: none !important; }
+  .information-card:hover { transform: none !important; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+}
+.workspace-sidebar .sidebar-section .sidebar-secondary { border-color: transparent; background: transparent; box-shadow: none; }
+.workspace-sidebar .sidebar-section .sidebar-secondary:hover { background: color-mix(in srgb, var(--sage) 70%, transparent); }
+@media (max-width: 760px) {
+  .site-header .research-nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px; mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .site-header .research-nav::-webkit-scrollbar { display: none; }
+  .site-header .research-nav a { flex: none; }
+}
+.workspace-sidebar .sidebar-section > a.sidebar-secondary { margin-bottom: 2px; min-height: 38px; font-weight: 600; }
+.workspace-sidebar .sidebar-section > a.sidebar-secondary + h2 { margin-top: 18px; }

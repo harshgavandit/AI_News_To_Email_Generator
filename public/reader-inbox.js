@@ -1,4 +1,5 @@
 import { monitorInbox } from "./monitor-inbox.js";
+import { readableError } from "./evidence-ui.js";
 import { developmentLink } from "./development-link.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
 import { markDevelopmentsSeen, seenDevelopments } from "./development-seen.js";
@@ -21,7 +22,7 @@ function action(label, run) {
     try {
       await run();
       if (!button.isConnected) feedback.focus({ preventScroll: true });
-    } catch (error) { feedback.textContent = error.message; }
+    } catch (error) { feedback.textContent = readableError(error); }
     finally { button.disabled = false; }
   });
   return button;
@@ -115,5 +116,5 @@ async function renderFollows() {
     "Your followed developments are outside the retained archive.";
 }
 
-monitorInbox().then(renderWatches).catch(error => { byId("inbox-watch-status").textContent = error.message; });
-renderFollows().catch(error => { byId("inbox-follow-status").textContent = error.message; });
+monitorInbox().then(renderWatches).catch(error => { byId("inbox-watch-status").textContent = readableError(error); });
+renderFollows().catch(error => { byId("inbox-follow-status").textContent = readableError(error); });

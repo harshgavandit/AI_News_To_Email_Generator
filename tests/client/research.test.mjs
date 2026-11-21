@@ -16,7 +16,7 @@ function mountResearch(window) {
   window.eval(`(() => { ${feedbackScript}\nwindow.readFeedback = readFeedback; })()`);
   for (const [file, bindings] of [
     ['technology-follow.js', ['followedTechnologies', 'followedStories']],
-    ['evidence-ui.js', ['node', 'requestJSON', 'answerBlock', 'sourceLink', 'sourceList']],
+    ['evidence-ui.js', ['node', 'requestJSON', 'answerBlock', 'sourceLink', 'sourceList', 'readableError']],
     ['source-history.js', ['historyControl']],
     ['watch-rule-ui.js', ['initRuleBuilder']],
     ['claim-evidence.js', ['appendClaimEvidence']],

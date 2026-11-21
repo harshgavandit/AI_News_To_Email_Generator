@@ -1,5 +1,6 @@
 import { readingGroups } from "/privacy-data.js";
 import { monitorInbox } from "./monitor-inbox.js";
+import { readableError } from "./evidence-ui.js";
 import { readFeedback } from "./reader-feedback.js";
 import { followedTechnologies, followedStories } from "./technology-follow.js";
 import { historyControl } from "./source-history.js";
@@ -231,7 +232,7 @@ function render(data, titles) {
           output.append(note);
         }
         output.append(element("p", answer.answer.limitations, "research-note"));
-      } catch (error) { output.textContent = error.message; }
+      } catch (error) { output.textContent = readableError(error); }
       finally { explain.disabled = false; }
     });
     const tools = element("div", "", "research-evidence-actions");
@@ -357,7 +358,7 @@ async function search(body) {
       context: body.q || data.evidence[0]?.title });
     if (body.article_id && data.evidence.length) question.value = data.evidence[0].title.slice(0, 320);
   } catch (error) {
-    if (controller === currentRequest && !controller.signal.aborted) status.textContent = error.message;
+    if (controller === currentRequest && !controller.signal.aborted) status.textContent = readableError(error);
   } finally {
     if (controller === currentRequest) {
       results.setAttribute("aria-busy", "false");
@@ -412,7 +413,7 @@ conversationForm.addEventListener("submit", async (event) => {
     conversationIds = [...new Set([...conversationIds, ...(data.evidence || []).map((entry) => entry.id)])].slice(0, 8);
     input.value = "";
     conversationStatus.textContent = `${data.evidence?.length || 0} linked sources used for this follow-up.`;
-  } catch (error) { if (!controller.signal.aborted) conversationStatus.textContent = error.message; }
+  } catch (error) { if (!controller.signal.aborted) conversationStatus.textContent = readableError(error); }
   finally {
     if (conversationRequest === controller) {
       conversationRequest = undefined;
@@ -532,7 +533,7 @@ async function catchMeUp(event) {
         timeline.dataset.loaded = "true";
         try {
           await showTimeline(event.id, timeline);
-        } catch (error) { timeline.append(element("p", error.message, "research-note")); }
+        } catch (error) { timeline.append(element("p", readableError(error), "research-note")); }
       });
       row.append(timeline);
       if (event.explanation?.claims?.length) {
@@ -556,7 +557,7 @@ async function catchMeUp(event) {
       });
       list.append(handoff);
     }
-  } catch (error) { feedback.textContent = error.message; }
+  } catch (error) { feedback.textContent = readableError(error); }
   finally { button.disabled = false; }
 }
 
@@ -580,7 +581,7 @@ byId("package-check-form").addEventListener("submit", async (event) => {
       if (source) output.append(element("p", claim.text), link(source.id, source.url));
     }
     if (data.evidence.length) output.append(timelineList(data.evidence));
-  } catch (error) { feedback.textContent = error.message; }
+  } catch (error) { feedback.textContent = readableError(error); }
   finally { button.disabled = false; }
 });
 byId("radar-save").addEventListener("click", async () => {
@@ -593,7 +594,7 @@ byId("radar-save").addEventListener("click", async () => {
   } catch (error) {
     byId("radar-status").textContent = error.status === 401
       ? "Verify your email from the home page first. Radar preferences stay in this browser until you save them to a verified inbox."
-      : error.message;
+      : readableError(error);
   } finally { button.disabled = false; }
 });
 
@@ -637,7 +638,7 @@ function developmentItem(event, feedback, compare = false) {
       open.disabled = true;
       await showTimeline(event.id, item);
       open.remove();
-    } catch (error) { feedback.textContent = error.message; open.disabled = false; }
+    } catch (error) { feedback.textContent = readableError(error); open.disabled = false; }
   });
   item.append(open, followButton(event.id));
   if (developmentLink(event.id)) item.append(link("Open development ↗", developmentLink(event.id)));
@@ -760,7 +761,7 @@ async function checkWatches() {
     saveWatches();
     renderWatches();
   } catch (error) {
-    watchStatus.textContent = error.message;
+    watchStatus.textContent = readableError(error);
   } finally {
     checking = false;
     if (generation !== watchGeneration) checkWatches();
@@ -836,7 +837,7 @@ async function refreshInbox() {
     if (JSON.stringify(data) !== JSON.stringify(inbox)) syncInbox(data);
     if (newlyUnread) watchStatus.textContent = `${newlyUnread} new intelligence alert${newlyUnread === 1 ? "" : "s"}.`;
   } catch (error) {
-    if (inbox?.active) watchStatus.textContent = error.message;
+    if (inbox?.active) watchStatus.textContent = readableError(error);
   } finally { inboxBusy = false; }
 }
 
@@ -857,7 +858,7 @@ async function writeInbox(path, options, feedback) {
     if (error.status === 409) {
       try { syncInbox(await monitorInbox()); } catch { /* Leave the prior view available until another check. */ }
     }
-    watchStatus.textContent = error.message;
+    watchStatus.textContent = readableError(error);
     return false;
   } finally { inboxBusy = false; }
 }

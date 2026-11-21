@@ -86,6 +86,30 @@
     }
   }
 
+  // Feature cards lean a few degrees toward the pointer.
+  const TILT = ".about-note, .edition-coverage";
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches && !reduceMotion.matches) {
+    for (const card of document.querySelectorAll(TILT)) card.dataset.sysTilt = "";
+    const tilt = frame((event) => {
+      const card = event.target.closest?.("[data-sys-tilt]");
+      if (!card) return;
+      const box = card.getBoundingClientRect();
+      const x = (event.clientX - box.left) / box.width - .5;
+      const y = (event.clientY - box.top) / box.height - .5;
+      card.dataset.tilting = "";
+      card.style.setProperty("--tx", `${(x * 5).toFixed(2)}deg`);
+      card.style.setProperty("--ty", `${(-y * 5).toFixed(2)}deg`);
+    });
+    document.addEventListener("pointermove", tilt, { passive: true });
+    document.addEventListener("pointerout", (event) => {
+      const card = event.target.closest?.("[data-sys-tilt]");
+      if (!card || card.contains(event.relatedTarget)) return;
+      delete card.dataset.tilting;
+      card.style.setProperty("--tx", "0deg");
+      card.style.setProperty("--ty", "0deg");
+    }, { passive: true });
+  }
+
   // "/" focuses story search, matching the convention of other reading tools.
   addEventListener("keydown", (event) => {
     if (event.key !== "/" || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;

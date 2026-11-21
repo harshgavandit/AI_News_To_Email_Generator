@@ -41,3 +41,24 @@ test('story cards get stagger indexes and action toasts mirror the status region
   window.document.body.dispatchEvent(press);
   window.close();
 });
+
+test('reader-facing errors hide programming and network failures but keep server details', async () => {
+  const { readableError } = await import('../../public/evidence-ui.js');
+  const fallback = 'This information is temporarily unavailable. Try again in a moment.';
+  assert.equal(readableError(new TypeError("Cannot read properties of undefined (reading 'find')")), fallback);
+  assert.equal(readableError(new TypeError('Failed to fetch')), fallback);
+  assert.equal(readableError(new ReferenceError('x is not defined')), fallback);
+  assert.equal(readableError(new Error('Verify your inbox to continue.')), 'Verify your inbox to continue.');
+  assert.equal(readableError(undefined, 'Try later.'), 'Try later.');
+});
+
+test('workspace pages share one navigation that includes the Inbox', () => {
+  for (const page of ['research.html', 'technology.html', 'projects.html', 'inbox.html', 'development.html']) {
+    const html = readFileSync(new URL(page, root), 'utf8');
+    const nav = html.match(/<nav class="site-nav research-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1] || '';
+    for (const href of ['/#reading-room', '/research.html', '/technology.html', '/projects.html', '/inbox.html']) {
+      assert.match(nav, new RegExp(`href="${href.replace(/[.#/]/g, '\\$&')}"`), `${page} links ${href}`);
+    }
+    assert.match(html, /id="site-theme"/, `${page} offers the theme control`);
+  }
+});

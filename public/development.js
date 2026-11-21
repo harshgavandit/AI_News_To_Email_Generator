@@ -1,4 +1,4 @@
-import { node, requestJSON, sourceList } from "./evidence-ui.js";
+import { node, readableError, requestJSON, sourceList } from "./evidence-ui.js";
 import { developmentLink } from "./development-link.js";
 import { impactPanel } from "./personal-impact.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
@@ -39,7 +39,7 @@ function render(data) {
       saveStoryFollow(id, !followedStories().includes(id));
       reflectFollow();
       status.textContent = "Follow updated in this browser. Save your Tech Radar to sync it to your verified inbox.";
-    } catch (error) { status.textContent = error.message; }
+    } catch (error) { status.textContent = readableError(error); }
   });
   share.addEventListener("click", async () => {
     try {
@@ -85,7 +85,7 @@ async function load() {
     render(data);
     status.textContent = "";
   } catch (error) {
-    status.textContent = error.message;
+    status.textContent = readableError(error);
     const retry = node("button", "Try again", "button secondary");
     retry.type = "button";
     retry.addEventListener("click", () => { status.textContent = "Loading the timeline…"; load(); });

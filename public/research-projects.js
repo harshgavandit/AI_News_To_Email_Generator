@@ -1,4 +1,4 @@
-import { answerBlock, node, requestJSON, sourceLink, sourceList } from "./evidence-ui.js";
+import { answerBlock, node, requestJSON, readableError, sourceLink, sourceList } from "./evidence-ui.js";
 import { historyControl } from "./source-history.js";
 import { monitorInbox } from "./monitor-inbox.js";
 import { readingGroups } from "./privacy-data.js";
@@ -27,7 +27,7 @@ async function perform(button, run, feedback = status) {
   button.disabled = true;
   feedback.textContent = "Working…";
   try { feedback.textContent = await run() || ""; }
-  catch (error) { feedback.textContent = error.message; }
+  catch (error) { feedback.textContent = readableError(error); }
   finally { button.disabled = false; }
 }
 
@@ -366,4 +366,4 @@ async function initialize() {
   }
   await Promise.all([technologies, initWorkspace()]);
 }
-initialize().catch((error) => { status.textContent = error.message; });
+initialize().catch((error) => { status.textContent = readableError(error); });

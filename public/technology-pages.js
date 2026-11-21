@@ -1,4 +1,4 @@
-import { node, requestJSON, sourceList, answerBlock } from "./evidence-ui.js";
+import { node, requestJSON, sourceList, answerBlock, readableError } from "./evidence-ui.js";
 import { historyControl } from "./source-history.js";
 import { followedTechnologies, saveTechnologyFollow } from "./technology-follow.js";
 
@@ -100,7 +100,7 @@ async function loadRecords() {
     renderTimeline();
   } catch (error) {
     if (!controller.signal.aborted) {
-      recordStatus.textContent = error.message;
+      recordStatus.textContent = readableError(error);
       retry.hidden = false;
     }
   }
@@ -143,7 +143,7 @@ byId("technology-ask").addEventListener("submit", async (event) => {
       result.append(sources);
     }
     feedback.textContent = "";
-  } catch (error) { if (!controller.signal.aborted) feedback.textContent = error.message; }
+  } catch (error) { if (!controller.signal.aborted) feedback.textContent = readableError(error); }
   finally { if (askRequest === controller) button.disabled = false; }
 });
 
@@ -167,4 +167,4 @@ requestJSON("/api/intelligence/technologies").then(({ technologies }) => {
   setFollowLabel();
   updateLocation();
   loadRecords();
-}).catch((error) => { status.textContent = error.message; });
+}).catch((error) => { status.textContent = readableError(error); });

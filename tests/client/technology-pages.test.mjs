@@ -17,7 +17,7 @@ function mount(html, destination, entry, fetch) {
   window.fetch = fetch;
   window.readingGroups = readingGroups;
   for (const [file, bindings] of [
-    ['evidence-ui.js', 'node, requestJSON, sourceList, sourceLink, answerBlock'],
+    ['evidence-ui.js', 'node, requestJSON, sourceList, sourceLink, answerBlock, readableError'],
     ['source-history.js', 'historyControl'],
     ['technology-follow.js', 'followedTechnologies, saveTechnologyFollow'],
     ['monitor-inbox.js', 'monitorInbox'],
