@@ -1,0 +1,56 @@
+name: Validate candidate sources
+on:
+  workflow_dispatch:
+    inputs:
+      pack:
+        description: Candidate pack to check (JSON list in the repository)
+        type: string
+        default: docs/research/source-candidates-2026-11-21.json
+permissions:
+  contents: read
+concurrency:
+  group: source-candidates
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv
+          uv sync --frozen
+      - name: Check every candidate feed
+        env:
+          PACK: ${{ inputs.pack }}
+        run: |
+          set -euo pipefail
+          case "$PACK" in docs/research/*.json) ;; *) echo '::error::The pack must be a JSON file under docs/research/.'; exit 1 ;; esac
+          uv run python -m scripts.check_source_pack "$PACK" --report reports/candidates.json --promote reports/promoted.json
+      - name: Summarize results
+        if: always()
+        run: |
+          set -euo pipefail
+          test -f reports/candidates.json || exit 0
+          # One line per candidate so reviewers can read results straight from the log.
+          jq -r '.results[] | [.status, (.english_verified // false | tostring), (.recent_entries // 0 | tostring), .id, (.error // "")] | @tsv' \
+            reports/candidates.json | sort | tee reports/summary.tsv
+          echo "PROMOTE_IDS=$(jq -r '[.[].id] | join(",")' reports/promoted.json 2>/dev/null || echo '')"
+          {
+            echo '| Status | English verified | Recent | Source | Error |'
+            echo '| --- | --- | --- | --- | --- |'
+            awk -F'\t' '{printf "| %s | %s | %s | %s | %s |\n", $1, $2, $3, $4, $5}' reports/summary.tsv
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the review evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: source-candidates
+          path: reports/*
+          retention-days: 30

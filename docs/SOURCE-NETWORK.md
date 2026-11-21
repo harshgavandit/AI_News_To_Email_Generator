@@ -181,3 +181,15 @@ three host-bounded batches. VnExpress had a transport failure after its earlier
 successful check and remains visible for retry. This exercise made no changes
 to the production archive or subscriber mailboxes. Full regression verification
 passed 244 backend tests (34 environment-gated tests skipped) and 34 client tests.
+
+## Adding sources: candidate packs
+
+New sources arrive as a reviewed candidate pack under `docs/research/`, never straight into the catalog. `scripts/source_candidates_2026_11_21.py` builds the November 21, 2026 pack (190 English candidates: AI labs and research, independent AI writing, arXiv categories, 54 GitHub release feeds for agent frameworks, LLM tooling, runtimes and infrastructure, company engineering blogs, documentation changelogs, Medium and DEV topic feeds, security research and news, DevOps, hardware, robotics, quantum, XR, startups, regional English outlets, podcasts and YouTube channels). The builder refuses any id or URL already in the catalog.
+
+Run **Validate candidate sources** from the Actions tab (it needs no secrets and makes read-only feed requests from GitHub's runners). It runs `scripts.check_source_pack` with `--promote`, prints one line per candidate (status, English verification, recent entries, error) and a `PROMOTE_IDS=` line, writes a table to the job summary, and keeps the report as an artifact. Then add the approved sources locally:
+
+```sh
+uv run python -m scripts.promote_sources docs/research/source-candidates-2026-11-21.json --ids <PROMOTE_IDS>
+```
+
+Promotion appends only the listed candidates with `reviewed_at` and `require_english`, never changes existing entries, and validates the merged catalog with the application's loader. Dormant, unavailable, non-English or misconfigured candidates stay out until they are fixed and rechecked. Sweeps pick up promoted sources at the next 08:00 or 20:00 IST run; the follow-up job finishes any sources the Vercel batch does not reach.
