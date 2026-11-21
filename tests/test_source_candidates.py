@@ -17,12 +17,14 @@ def test_candidate_pack_is_valid_new_and_english():
     rows = load_rows()
     by_id = {source.id: source.url for source in DEFAULT_SOURCES}
     known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
+    with open("docs/research/source-candidates-2026-11-21-recheck.json", encoding="utf-8") as handle:
+        rechecked = {row["id"]: row["url"] for row in json.load(handle)}
     assert len(rows) >= 150
     assert len({row["id"] for row in rows}) == len(rows) and len({row["url"] for row in rows}) == len(rows)
     for row in rows:
-        # Either still a candidate, or promoted unchanged under the same id.
+        # Either still a candidate, or promoted under the same id (unchanged, or corrected in the recheck pack).
         if row["id"] in by_id:
-            assert by_id[row["id"]] == row["url"]
+            assert by_id[row["id"]] in (row["url"], rechecked.get(row["id"]))
         else:
             assert row["url"].rstrip("/") not in known_urls
         assert row["language"] == "en" and row["url"].startswith("https://")
@@ -73,13 +75,17 @@ def test_english_only_feeds_keep_undetectable_headlines_but_drop_foreign_ones():
                                        "description": ""})
 
 
-def test_recheck_pack_is_valid_and_not_yet_integrated():
+def test_recheck_pack_is_valid_and_promoted_unchanged():
     with open("docs/research/source-candidates-2026-11-21-recheck.json", encoding="utf-8") as handle:
         rows = json.load(handle)
-    known = {source.id for source in DEFAULT_SOURCES} | {source.url.rstrip("/") for source in DEFAULT_SOURCES}
+    by_id = {source.id: source.url for source in DEFAULT_SOURCES}
+    known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
     assert len(rows) == 50 and len({row["id"] for row in rows}) == 50
     for row in rows:
-        assert row["id"] not in known and row["url"].rstrip("/") not in known
+        if row["id"] in by_id:
+            assert by_id[row["id"]] == row["url"]  # Promoted unchanged.
+        else:
+            assert row["url"].rstrip("/") not in known_urls
         validate_source(Source(**{key: tuple(value) if key in {"hosts", "article_paths"} else value
                                   for key, value in row.items()}))
 

@@ -284,7 +284,9 @@ if __name__ == "__main__":
     # Candidates promoted from this pack keep their id and URL; anything else that matches is a duplicate.
     by_id = {source.id: source.url for source in DEFAULT_SOURCES}
     known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
-    overlap = [row["id"] for row in rows if by_id.get(row["id"], row["url"]) != row["url"]
+    recheck = OUT.with_name("source-candidates-2026-11-21-recheck.json")
+    corrected = {row["id"]: row["url"] for row in json.loads(recheck.read_text(encoding="utf-8"))} if recheck.exists() else {}
+    overlap = [row["id"] for row in rows if by_id.get(row["id"], row["url"]) not in (row["url"], corrected.get(row["id"]))
                or (row["id"] not in by_id and row["url"].rstrip("/") in known_urls)]
     assert not overlap, f"already integrated: {overlap}"
     ids = [row["id"] for row in rows]
