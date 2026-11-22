@@ -40,6 +40,12 @@ let catalog = null;
 let matchingSources = [];
 let shown = 0;
 
+const refreshSchedules = {
+  four_times_daily: "Checked 4× daily · 2:00, 8:00, 14:00, 20:00 IST",
+  twice_daily: "Checked twice daily · 8:00 and 20:00 IST",
+  daily: "Checked daily · 8:00 IST",
+};
+
 function node(tag, className, label) {
   const result = document.createElement(tag);
   result.className = className;
@@ -101,8 +107,7 @@ function sourceRow(source) {
   if (source.focus) coverage.append(node("strong", "", source.focus));
   if (source.type) coverage.append(node("span", "", source.type));
   if (source.format) {
-    const schedule = source.refresh_policy === "daily" ? "Daily refresh from 8:00 a.m. IST" :
-      source.refresh_minutes ? `Refresh target: ${source.refresh_minutes} min` : "Scheduled refresh";
+    const schedule = refreshSchedules[source.refresh_policy] || "Checked on a schedule";
     coverage.append(node("span", "", schedule));
   }
 

@@ -7,6 +7,9 @@ on:
     # GitHub schedule cron is UTC: 02:40 and 14:40 UTC are 08:10 and 20:10 IST,
     # inside the 45-minute window and after Vercel's first batch has started.
     - cron: '40 2,14 * * *'
+    # Light checks of the busiest newsrooms, advisories and status pages between full
+    # sweeps: 20:32 and 08:32 UTC are 02:02 and 14:02 IST (each window is two hours).
+    - cron: '32 8,20 * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
@@ -148,3 +151,47 @@ jobs:
             and (.brief_status | IN("answered", "current", "disabled", "insufficient", "budget_limited")
                  or ($transient and . == "unavailable")))' \
             <<< "$result" > /dev/null
+  priority:
+    if: github.event.schedule == '32 8,20 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    steps:
+      - name: Check the busiest sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
+            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
+            exit 1
+          fi
+          deadline=$((SECONDS + 900))
+          for batch in {1..10}; do
+            result=$(curl --silent --show-error --fail --max-time 125 \
+              --header @- 'https://getinformdaily.com/api/jobs/refresh?run=priority' \
+              <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+            jq '{status, checked, healthy, remaining, deferred, scheduled_at}' <<< "$result"
+            jq -r '.failures[]? | "::warning::\(.label) (\(.id)): \(.reason)"' <<< "$result"
+            status=$(jq -r '.status' <<< "$result")
+            if [[ "$status" == "closed" ]]; then
+              # GitHub started this run after the two-hour window; the next full sweep covers it.
+              echo '::warning::Priority window closed before this run started.'
+              exit 0
+            fi
+            if [[ "$status" == "already_started" ]]; then
+              if (( SECONDS >= deadline )); then break; fi
+              sleep 20
+              continue
+            fi
+            if jq -e '.remaining == 0' <<< "$result" > /dev/null; then
+              exit 0
+            fi
+            if ! jq -e '.status == "refreshed" and .checked > 0' <<< "$result" > /dev/null; then
+              echo '::error::Priority check did not advance. See the batch status above.'
+              exit 1
+            fi
+            if (( SECONDS >= deadline )); then break; fi
+          done
+          # Unchecked sources are still covered by the next full sweep.
+          echo '::warning::Priority check reached its time limit with sources remaining.'

@@ -43,7 +43,8 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness, latest_sweep, refresh_sources, source_catalog, sweep_plan
+from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness,
+                           latest_priority_check, latest_sweep, refresh_sources, source_catalog, sweep_plan)
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
@@ -974,6 +975,8 @@ def mail_job_health(authorization: str | None = Header(default=None)):
 @app.get("/api/jobs/refresh")
 def refresh_job(run: str | None = None, authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
+    if run == "priority":
+        return run_sweep(priority=True)
     if run != "scheduled":
         return {"status": "inactive"}  # Legacy workers and fallback crons cannot fetch.
     return run_sweep()
@@ -1007,10 +1010,14 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
     return result
 
 
-def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None):
+def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, priority=False):
+    """Check publishers once per slot: every source at 08:00/20:00 IST, the busiest also at 02:00/14:00 IST."""
     now = datetime.now(timezone.utc)
-    scheduled = latest_sweep(now)
-    closes = scheduled + SWEEP_WINDOW
+    scheduled = latest_priority_check(now) if priority else latest_sweep(now)
+    window = PRIORITY_WINDOW if priority else SWEEP_WINDOW
+    if priority:
+        source_ids = PRIORITY_SOURCE_IDS
+    closes = scheduled + window
     next_sweep = (scheduled + SWEEP_INTERVAL).isoformat()
     if now >= closes or (expected_slot is not None and expected_slot != scheduled):
         return {"status": "closed", "scheduled_at": next_sweep}
@@ -1033,7 +1040,7 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None):
         if pending:
             refresh_sources(store, source, source_ids=pending, scheduled=scheduled,
                             maximum=None if expected_slot is not None else 64,
-                            deadline=time.monotonic() + 230 if expected_slot is not None else None)
+                            deadline=time.monotonic() + 230 if expected_slot is not None else None, window=window)
             after = store.source_state(include_archive=False)
             attempts = store.feed_attempts(slot)
             now = datetime.now(timezone.utc)
@@ -1041,7 +1048,7 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None):
                                              host_backoffs=store.feed_host_backoffs(now.timestamp()))
 
         checked = {ident for ident in pending if (after.get(ident, {}).get("checked") or 0) >= scheduled.timestamp()}
-        if checked and not remaining and not owner:
+        if checked and not remaining and not owner and not priority:
             store.prune()
         if pending and not checked and now < closes:
             raise HTTPException(503, "The feed refresh batch made no progress.")

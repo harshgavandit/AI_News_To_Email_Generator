@@ -15,6 +15,12 @@ INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
 SWEEP_INTERVAL = timedelta(hours=12)
 SWEEP_WINDOW = timedelta(minutes=45)
 HOST_WORKERS = 2
+# Light checks at 02:00 and 14:00 IST cover the busiest newsrooms, advisories and status
+# pages between full sweeps. GitHub starts them, and its schedule can run late, so the
+# window is longer than a full sweep's while still closing well before the next sweep.
+PRIORITY_WINDOW = timedelta(hours=2)
+PRIORITY_COVERAGE = frozenset({"reporting", "advisory", "status"})
+PRIORITY_POLL_MINUTES = 15
 # Hosts that serve many reviewed feeds from robust infrastructure. GitHub release
 # Atom feeds (~80 sources) would otherwise drain two at a time and miss the sweep.
 HOST_LIMITS = {"github.com": 6}
@@ -44,6 +50,21 @@ def latest_sweep(now):
     local = now.astimezone(INDIA_TIME)
     scheduled = local.replace(hour=20 if local.hour >= 20 else 8, minute=0, second=0, microsecond=0).astimezone(UTC)
     return scheduled if now >= scheduled else scheduled - SWEEP_INTERVAL
+
+
+def latest_priority_check(now):
+    local = now.astimezone(INDIA_TIME)
+    scheduled = local.replace(hour=14 if local.hour >= 14 else 2, minute=0, second=0, microsecond=0).astimezone(UTC)
+    return scheduled if now >= scheduled else scheduled - SWEEP_INTERVAL
+
+
+def priority_source(source):
+    """High-volume newsrooms, security advisories and status pages that publish around the clock."""
+    return (source.coverage in PRIORITY_COVERAGE and source.kind != "video"
+            and source.poll_minutes <= PRIORITY_POLL_MINUTES)
+
+
+PRIORITY_SOURCE_IDS = frozenset(source.id for source in DEFAULT_SOURCES if priority_source(source))
 
 
 def source_enabled(source, state):
@@ -131,7 +152,8 @@ def next_source(pending, running, limit=host_limit):
     return best
 
 
-def refresh_sources(store, only=None, *, source_ids=None, maximum=None, scheduled=None, deadline=None):
+def refresh_sources(store, only=None, *, source_ids=None, maximum=None, scheduled=None, deadline=None,
+                    window=SWEEP_WINDOW):
     state = store.source_state(include_archive=False)
     now = datetime.now(UTC).timestamp()
     active = refresh_plan(state, only=only, source_ids=source_ids, maximum=maximum, now=now)
@@ -140,7 +162,7 @@ def refresh_sources(store, only=None, *, source_ids=None, maximum=None, schedule
 
     def claim(source_id, retry=False):
         slot = scheduled.isoformat(timespec="minutes") + (":retry" if retry else "")
-        return (scheduled <= datetime.now(UTC) < scheduled + SWEEP_WINDOW
+        return (scheduled <= datetime.now(UTC) < scheduled + window
                 and (deadline is None or time.monotonic() < deadline)
                 and store.claim_feed_check(source_id, slot))
 
@@ -231,7 +253,9 @@ def source_catalog(store=None, *, include_archive=True):
                 "checked_at": timestamp(state.get("checked")), "count": state.get("count", 0)}
         feed["latest_published_at"] = state.get("latest_published_at")
         feed["retained_count"] = state.get("retained_count", 0)
-        feed.update(refresh_policy="twice_daily", refresh_minutes=720)
+        priority = s.id in PRIORITY_SOURCE_IDS
+        feed.update(refresh_policy="four_times_daily" if priority else "twice_daily",
+                    refresh_minutes=360 if priority else 720)
         retry = max(state.get("retry_at") or 0, host_backoffs.get(feed_host(s), 0))
         next_check = scheduled
         if (now >= scheduled + SWEEP_WINDOW or s.id in attempts
@@ -242,6 +266,12 @@ def source_catalog(store=None, *, include_archive=True):
             next_check = latest_sweep(retry_time)
             if next_check < retry_time:
                 next_check += SWEEP_INTERVAL
+        if priority:
+            light = latest_priority_check(now)
+            if now >= light + PRIORITY_WINDOW or (state.get("checked") or 0) >= light.timestamp():
+                light += SWEEP_INTERVAL
+            if retry <= light.timestamp() < next_check.timestamp():
+                next_check = light
         feed["next_check_at"] = next_check.isoformat() if feed["enabled"] else None
         latest = feed["latest_published_at"]
         feed["content_status"] = ("no_retained_content" if not latest else
@@ -321,4 +351,5 @@ def ingestion_health(store, catalog=None):
             "pending_sources": sum(not state.get(feed["id"], {}).get("checked") for feed in active),
             "priority_sources": len(critical), "priority_sources_overdue": len(overdue_critical),
             "p95_overdue_seconds": round(lag[min(len(lag) - 1, int(len(lag) * .95))]) if lag else 0,
-            "notice": "Publisher checks are scheduled at 08:00 and 20:00 IST. Each sweep has a 45-minute window."}
+            "notice": ("Every publisher is checked at 08:00 and 20:00 IST, each sweep in a 45-minute window. "
+                       "The busiest newsrooms, advisories and status pages are also checked at 02:00 and 14:00 IST.")}

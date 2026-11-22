@@ -78,7 +78,9 @@ duplicate IDs/endpoints, non-public URLs, unsupported formats/types and invalid
 polling configuration. Pack entries do not create arbitrary public URL fetching.
 
 Vercel Schedules runs publisher sweeps at 08:00 and 20:00 IST, with a
-45-minute window. The worker checks up to two feeds concurrently per host
+45-minute window. Between them, GitHub Actions starts light checks at 02:00 and
+14:00 IST that cover only the busiest newsrooms, advisories and status pages
+(`run=priority`, two-hour window), so breaking news waits at most about six hours. The worker checks up to two feeds concurrently per host
 and fourteen overall. Manual recovery batches check up to 64 sources and twelve
 feeds per host. A shared lease prevents overlaps and each source can be claimed once
 in each sweep. Conditional RSS requests and publisher backoff reduce traffic.

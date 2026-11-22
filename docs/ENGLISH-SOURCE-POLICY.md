@@ -22,7 +22,7 @@ The product is a discovery layer for daily global technology and AI news: reader
 
 ## Synchronization and verification
 
-- Refresh eligible feeds twice daily, at 8:00 a.m. and 8:00 p.m. India time. Run a targeted check only when necessary. Ordinary builds, tests, and interface or ranking changes should use fixtures or archived data.
+- Refresh eligible feeds twice daily, at 8:00 a.m. and 8:00 p.m. India time. The busiest newsrooms, advisories and status pages are also checked at 2:00 a.m. and 2:00 p.m. Run a targeted check only when necessary. Ordinary builds, tests, and interface or ranking changes should use fixtures or archived data.
 - Distinguish feed health from publication activity. A reachable, parseable feed that returns no new eligible articles is valid and quiet, not failed. Mark a feed failed only when checks confirm an integration problem, such as repeated transport errors, invalid feed data, or a missing endpoint; retain reliable sources through quiet periods.
 - Respect rate limits and backoff, preserve archived content during outages, and record feed availability, last check time, and latest publication time separately. Freshness describes when a feed was checked; it does not require the publisher to have posted recently.
 - Evaluate additions by the distinct, relevant stories they contribute after deduplication. Record the region, subject, publisher, feed endpoint, and review date for each approved addition.

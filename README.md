@@ -28,7 +28,7 @@
 ## How sources work
 
 - Every source is reviewed for English content, a reputable publisher and permission to use its feed. Each one is listed in the **[source directory](https://getinformdaily.com/sources.html)**.
-- Feeds are refreshed twice a day, at **08:00 and 20:00 IST**. A source that hasn't posted lately is marked *quiet*, not *failed*.
+- Every feed is refreshed twice a day, at **08:00 and 20:00 IST**. The busiest newsrooms, security advisories and status pages are also checked at **02:00 and 14:00 IST**. A source that hasn't posted lately is marked *quiet*, not *failed*.
 - Authors can submit their full text with permission in the **[author workspace](https://getinformdaily.com/contribute.html)**. The owner approves it, and the author can withdraw permission at any time.
 
 More: [About](https://getinformdaily.com/about.html) · [Source standards](https://getinformdaily.com/trust.html) · [Privacy & controls](https://getinformdaily.com/privacy.html)

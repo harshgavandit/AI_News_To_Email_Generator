@@ -142,6 +142,13 @@ The database lease prevents overlapping batches and each enabled source can be
 claimed once per sweep. Sources on backoff are deferred. The owner refresh uses
 those same rules and continues to return `sources` along with the sweep status.
 
+`GET /api/jobs/refresh?run=priority` (same `FEED_REFRESH_SECRET`) runs the light
+02:00 and 14:00 IST checks. It covers only the busiest sources: newsrooms,
+security advisories and status pages with a poll target of 15 minutes or less,
+excluding video channels. Each call checks up to 64 of them, each source once
+per slot, inside a two-hour window. It returns the same fields as a sweep batch
+and `closed` outside the window.
+
 
 ## AI-native discovery
 
