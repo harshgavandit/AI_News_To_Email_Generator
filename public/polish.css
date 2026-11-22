@@ -51,6 +51,8 @@ body { text-rendering: optimizeLegibility; }
 .curiosity-format, .curiosity-theme { padding: 2px 8px; border-radius: 999px; font: 650 9px/1.5 var(--font-ui); letter-spacing: .05em; text-transform: uppercase; }
 .curiosity-format { border: 1px solid color-mix(in srgb, var(--green) 40%, var(--line)); color: var(--green); background: var(--paper); }
 .curiosity-theme { border: 1px solid var(--line); color: var(--muted); background: var(--wash); }
+.curiosity-level { padding: 2px 8px; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); font: 650 9px/1.5 var(--font-ui); letter-spacing: .05em; text-transform: uppercase; }
+.curiosity-level-advanced { border-style: solid; border-color: color-mix(in srgb, var(--sys-signal, var(--green)) 45%, var(--line)); color: var(--ink); }
 .curiosity-card[data-curiosity-theme="game-engineering"] .curiosity-theme { border-color: color-mix(in srgb, var(--sys-signal, var(--green)) 45%, var(--line)); color: var(--sys-signal, var(--green)); }
 .curiosity-tag.curiosity-tech { border-color: color-mix(in srgb, var(--green) 35%, var(--line)); color: var(--ink); }
 .curiosity-why { margin: 9px 0 0; padding: 8px 10px; border-left: 2px solid var(--sys-signal, var(--green)); border-radius: 0 8px 8px 0; background: var(--wash); color: var(--ink); font-size: 11px; line-height: 1.6; }

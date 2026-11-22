@@ -11777,5 +11777,243 @@
     ],
     "reviewed_at": "2026-11-22",
     "require_english": true
+  },
+  {
+    "id": "game-developer",
+    "group": "game-developer",
+    "label": "Game Developer",
+    "url": "https://www.gamedeveloper.com/rss.xml",
+    "hosts": [
+      "gamedeveloper.com",
+      "www.gamedeveloper.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "gamesindustry-biz",
+    "group": "gamesindustry-biz",
+    "label": "GamesIndustry.biz",
+    "url": "https://www.gamesindustry.biz/feed",
+    "hosts": [
+      "gamesindustry.biz",
+      "www.gamesindustry.biz"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "eighty-level",
+    "group": "eighty-level",
+    "label": "80 Level",
+    "url": "https://80.lv/feed",
+    "hosts": [
+      "80.lv"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "graphics-programming-weekly",
+    "group": "graphics-programming-weekly",
+    "label": "Graphics Programming Weekly",
+    "url": "https://www.jendrikillner.com/post/index.xml",
+    "hosts": [
+      "jendrikillner.com",
+      "www.jendrikillner.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/post/"
+    ],
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "josh-comeau",
+    "group": "josh-comeau",
+    "label": "Josh W. Comeau",
+    "url": "https://www.joshwcomeau.com/rss.xml",
+    "hosts": [
+      "joshwcomeau.com",
+      "www.joshwcomeau.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "overreacted",
+    "group": "overreacted",
+    "label": "Overreacted (Dan Abramov)",
+    "url": "https://overreacted.io/rss.xml",
+    "hosts": [
+      "overreacted.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "tkdodo",
+    "group": "tkdodo",
+    "label": "TkDodo's blog",
+    "url": "https://tkdodo.eu/blog/rss.xml",
+    "hosts": [
+      "tkdodo.eu"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blog/"
+    ],
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "addy-osmani",
+    "group": "addy-osmani",
+    "label": "Addy Osmani",
+    "url": "https://addyosmani.com/rss.xml",
+    "hosts": [
+      "addyosmani.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "css-tricks",
+    "group": "css-tricks",
+    "label": "CSS-Tricks",
+    "url": "https://css-tricks.com/feed/",
+    "hosts": [
+      "css-tricks.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "posthog-blog",
+    "group": "posthog-blog",
+    "label": "PostHog Engineering",
+    "url": "https://posthog.com/rss.xml",
+    "hosts": [
+      "posthog.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "vespa-blog",
+    "group": "vespa-blog",
+    "label": "Vespa Blog",
+    "url": "https://blog.vespa.ai/feed.xml",
+    "hosts": [
+      "blog.vespa.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "doordash-blog",
+    "group": "doordash-blog",
+    "label": "DoorDash Blog",
+    "url": "https://careersatdoordash.com/blog/feed/",
+    "hosts": [
+      "careersatdoordash.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
   }
 ]

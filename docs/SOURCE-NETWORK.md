@@ -231,3 +231,17 @@ Release feeds publish stable versions only. Alpha, beta, release-candidate, nigh
 ## Game engineering sources (2026-11-22)
 
 Six feeds were checked in a browser and added for Curiosity Cards discovery, in the collection `Game engineering`: Unreal Engine Blog (`unreal-engine-blog`), Godot Engine Blog (`godot-engine-blog`, articles only), AMD GPUOpen (`amd-gpuopen`), Factorio Friday Facts (`factorio-blog`), Aras Pranckevičius (`aras-p`) and the Box2D Blog (`box2d-blog`). The candidate pack is `docs/research/source-candidates-2026-11-22-game-engineering.json`; run **Validate candidate sources** on it to recheck from GitHub's runners. Riot Games, Rockstar, Roblox, GDC Vault and SIGGRAPH course pages publish no usable feed, so their best engineering pieces are reviewed Curiosity classics with checked links instead. Rockstar publishes little engineering detail; its card is a first-party SIGGRAPH talk, and the GTA V graphics study is labelled as independent analysis.
+
+## Global expansion and feed health (2026-11-22)
+
+Twelve feeds were opened in a browser and promoted, from `docs/research/source-candidates-2026-11-22-global.json`: Game Developer, GamesIndustry.biz, 80 Level, Graphics Programming Weekly, Josh W. Comeau, Overreacted, TkDodo, Addy Osmani, CSS-Tricks, PostHog, the Vespa blog and the DoorDash blog. The same pack holds 24 more candidates that have not been opened yet. They come from mid-sized companies and independent publishers worldwide: Klarna, trivago, JioHotstar, Dream11, PhonePe, Cookpad, Airtable, Snowflake, MotherDuck, Dagster, TigerBeetle, Turso, Railway, Replit, Plausible, High Scalability, LanceDB, Anyscale, Tailwind, Vite, Next.js, SemiWiki, Unity and Digital Foundry. To validate them, run **Validate candidate sources** on the pack, then promote the `PROMOTE_IDS` it prints. Candidates that an earlier pack had already tried and rejected were left out. `app/discovery_seeds.json` has 66 publisher pages, so **Review publisher discovery and source health** can find more publisher-declared feeds. It reads only each page's `<link rel="alternate">` tags and never adds a source on its own.
+
+Every source now carries a `health` value, set in `source_health` in `app/ingestion.py`:
+
+- `active`: the feed works and has new stories.
+- `quiet`: the feed works but has nothing new for 30 days, or nothing retained at all. Silence is never a failure.
+- `temporarily_unavailable`: the feed failed, but succeeded within the last 14 days, or failed with a transient error.
+- `broken`: there has been no success for 30 days, or the feed failed with a lasting error (missing feed, access denied, DNS, TLS or unreadable response) and has not worked for 14 days.
+- `pending` or `paused`.
+
+The Sources page has a Feed health filter and badge. Source monitoring counts the temporarily unavailable and broken feeds.

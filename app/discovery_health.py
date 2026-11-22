@@ -85,7 +85,9 @@ def coverage(response: Response):
             "subjects": [subject for subject in subjects if subject["gap"]],
             "failed_sources": sum(feed["enabled"] and feed["freshness"] == "failed" for feed in catalog),
             "overdue_sources": sum(feed["enabled"] and feed["freshness"] == "stale" for feed in catalog),
-            "quiet_sources": sum(feed["enabled"] and feed["content_status"] == "quiet" for feed in catalog)},
+            "quiet_sources": sum(feed["enabled"] and feed["content_status"] == "quiet" for feed in catalog),
+            "temporarily_unavailable_sources": sum(feed.get("health") == "temporarily_unavailable" for feed in catalog),
+            "broken_sources": sum(feed.get("health") == "broken" for feed in catalog)},
         "regions": [{"id": key, "sources": len(feeds),
             "fresh": sum(feed["freshness"] == "fresh" for feed in feeds),
             "publisher_groups": len({feed["publisher_family"] for feed in feeds})}

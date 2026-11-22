@@ -285,8 +285,32 @@ def source_catalog(store=None, *, include_archive=True):
         if feed["enabled"] and retry > now.timestamp():
             feed["retry_at"] = timestamp(retry)
         feed["freshness"] = (source_freshness(feed, now) if feed["enabled"] else "paused")
+        feed["health"] = source_health(feed, now)
         result.append(feed)
     return result
+
+
+# Errors that mean the feed address itself no longer works, as opposed to a busy or slow server.
+LASTING_ERRORS = frozenset({"feed_not_found", "access_denied", "dns_failed", "tls_failed", "parser_failed"})
+TEMPORARY_GRACE = timedelta(days=14)
+BROKEN_AFTER = timedelta(days=30)
+
+
+def source_health(feed, now):
+    """Publishing, quiet, temporarily unavailable or broken. Silence alone is never a failure."""
+    if not feed["enabled"]:
+        return "paused"
+    if feed["available"] is None and not feed.get("last_success"):
+        return "pending"
+    if feed["available"] is False:
+        last = datetime.fromisoformat(feed["last_success"]) if feed.get("last_success") else None
+        if last and now - last < TEMPORARY_GRACE:
+            return "temporarily_unavailable"
+        if (last and now - last >= BROKEN_AFTER) or (feed.get("error") in LASTING_ERRORS
+                                                     and (last is None or now - last >= TEMPORARY_GRACE)):
+            return "broken"
+        return "temporarily_unavailable"
+    return "active" if feed["content_status"] == "recent" else "quiet"
 
 
 def timestamp(value):

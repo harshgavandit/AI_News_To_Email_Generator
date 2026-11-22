@@ -8,6 +8,15 @@ const statusLabels = {
   pending: "Awaiting first check",
   paused: "Paused",
 };
+// Feed health separates a working feed with nothing new from one that cannot be reached.
+const healthLabels = {
+  active: "Publishing",
+  quiet: "Working · no recent posts",
+  temporarily_unavailable: "Temporarily unavailable",
+  broken: "Broken or discontinued",
+  pending: "Awaiting first check",
+  paused: "Paused",
+};
 const integrationLabels = {
   "news-sitemap": "Publisher news sitemap",
   "publisher-metadata": "Publisher metadata",
@@ -28,6 +37,7 @@ const filters = [
   ["topic", "source-topic", "All topics"],
   ["coverage", "source-coverage", "All source types"],
   ["freshness", "source-filter", "Any status"],
+  ["health", "source-health", "Any health"],
   ["language", "source-language", "All languages"],
 ];
 const normalize = (value) => value.normalize("NFKD").replace(/(\p{Script=Latin})\p{Mark}+/gu, "$1").toLowerCase();
@@ -60,12 +70,14 @@ function prepareCatalog(data) {
     topic: topicOptions(data.topics),
     coverage: { ...(data.coverage_types || coverageLabels), creator: "Creator videos" },
     freshness: statusLabels,
+    health: healthLabels,
     language: data.languages || languageOptions,
   };
   const sources = data.sources.map((source) => {
     const region = regionId(source);
     const coverage = source.kind === "video" && source.topic === "video" ? "creator" : source.coverage;
     const freshness = Object.hasOwn(statusLabels, source.freshness) ? source.freshness : "pending";
+    const health = Object.hasOwn(healthLabels, source.health) ? source.health : freshness === "paused" ? "paused" : "pending";
     const regionLabel = region === "Global" ? "Global" :
       source.region && source.region !== region ? source.region : labels.region[region];
     const location = [regionLabel, labels.language[source.language]].filter(Boolean).join(" · ");
@@ -73,8 +85,8 @@ function prepareCatalog(data) {
     const type = [labels.coverage[coverage], integrationLabels[integration] || "Official API"].filter(Boolean).join(" · ");
     const focus = labels.topic[source.topic];
     const format = source.format || (source.kind === "video" ? "video" : source.kind === "podcast" ? "podcast" : "blog");
-    const keywords = normalize([source.label, location, labels.region[region], type, focus, labels.format[format], source.collection, statusLabels[freshness]].join(" "));
-    return { ...source, format, freshness, region, coverage, location, type, focus, keywords };
+    const keywords = normalize([source.label, location, labels.region[region], type, focus, labels.format[format], source.collection, statusLabels[freshness], healthLabels[health]].join(" "));
+    return { ...source, format, freshness, health, region, coverage, location, type, focus, keywords };
   }).sort((a, b) => a.label.localeCompare(b.label));
   return { labels, sources };
 }
@@ -113,6 +125,8 @@ function sourceRow(source) {
 
   const health = node("div", "directory-health");
   health.append(node("span", `directory-state directory-state-${source.freshness}`, statusLabels[source.freshness]));
+  if (source.health && source.health !== "pending" && source.health !== "paused")
+    health.append(node("span", `directory-health-state directory-health-${source.health}`, healthLabels[source.health]));
   if (source.error && errorLabels[source.error]) health.append(node("span", "directory-timestamp", errorLabels[source.error]));
   const checked = timestamp(source.checked_at, "Checked");
   if (checked) health.append(checked);
@@ -125,7 +139,7 @@ function sourceRow(source) {
   const published = timestamp(source.latest_published_at, "Latest story");
   if (published) health.append(published);
   else if (source.checked_at && source.available) health.append(node("span", "directory-timestamp", "No retained stories"));
-  if (source.content_status === "quiet") health.append(node("span", "directory-timestamp", "No new retained stories in 30 days"));
+  if (source.content_status === "quiet" && source.health === "quiet") health.append(node("span", "directory-timestamp", "No new retained stories in 30 days"));
   const history = node("details", "source-history");
   const historyLabel = node("summary", "", "Check history");
   historyLabel.setAttribute("aria-label", `Check history for ${source.label}`);
@@ -417,12 +431,15 @@ function renderCoverageStatus(data) {
   panel.append(node("strong", "", "Source monitoring"));
   if (attention) {
     const metrics = node("div", "directory-health-metrics");
-    for (const [label, count, filter] of [["Failed checks", attention.failed_sources, "failed"],
-      ["Overdue checks", attention.overdue_sources, "stale"], ["Sources quiet for 30 days", attention.quiet_sources]]) {
+    for (const [label, count, filter, key = "freshness"] of [["Failed checks", attention.failed_sources, "failed"],
+      ["Overdue checks", attention.overdue_sources, "stale"], ["Sources quiet for 30 days", attention.quiet_sources, "quiet", "health"],
+      ["Temporarily unavailable", attention.temporarily_unavailable_sources, "temporarily_unavailable", "health"],
+      ["Broken or discontinued", attention.broken_sources, "broken", "health"]]) {
+      if (count === undefined) continue;
       const metric = node(filter && count ? "button" : "span", "directory-health-metric", `${label}: ${number.format(count)}`);
       if (metric.tagName === "BUTTON") {
         metric.type = "button";
-        metric.addEventListener("click", () => browseFilter("freshness", filter));
+        metric.addEventListener("click", () => browseFilter(key, filter));
       }
       metrics.append(metric);
     }

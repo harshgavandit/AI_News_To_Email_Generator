@@ -102,7 +102,7 @@ test('filters narrow cards by origin and company and report the selection', asyn
     { ...article, id: 'seed-stripe', company: 'Stripe', publisher: 'Stripe', seed: true },
     { ...article, id: 'fresh-stripe', company: 'Stripe', publisher: 'Stripe', seed: false },
   ];
-  assert.equal(MAX_CURIOSITY_CARDS, 120);
+  assert.equal(MAX_CURIOSITY_CARDS, 160);
   assert.deepEqual(curiosityCompanies(cards), ['Google', 'Stripe']);
   assert.deepEqual(filterCuriosityCards(cards, { origin: 'fresh' }).map((c) => c.id), ['fresh-stripe']);
   assert.deepEqual(filterCuriosityCards(cards, { origin: 'classic', company: 'Stripe' }).map((c) => c.id), ['seed-stripe']);
@@ -126,12 +126,12 @@ test('filters narrow cards by origin and company and report the selection', asyn
   assert.ok(container.querySelector('[data-curiosity-origin]'), 'filters stay available on an empty result');
 });
 
-test('collection renders up to 120 cards with show-more paging', () => {
+test('collection renders up to 160 cards with show-more paging', () => {
   const document = new JSDOM('<section id="cards"></section>').window.document;
   const container = document.querySelector('#cards');
-  const cards = Array.from({ length: 130 }, (_, i) => ({ ...article, id: `card-${i}`, seed: true }));
+  const cards = Array.from({ length: 170 }, (_, i) => ({ ...article, id: `card-${i}`, seed: true }));
   renderCuriosityCards(container, cards, { visibleCount: 200 });
-  assert.equal(container.querySelectorAll('article').length, 120);
+  assert.equal(container.querySelectorAll('article').length, 160);
   renderCuriosityCards(container, cards, { visibleCount: 4 });
   assert.match(container.querySelector('[data-curiosity-show-more]').textContent, /Show 4 more/);
 });
@@ -140,7 +140,7 @@ const rich = {
   id: 'riot-valorant-netcode', title: "Peeking into VALORANT's Netcode", company: 'Riot Games', publisher: 'Riot Games Tech Blog',
   published_at: '2020-07-28', year: 2020, summary: 'How the team approached peeker’s advantage.', summary_basis: 'editorial_source_summary',
   why_read: 'A first-party look at netcode trade-offs.', themes: ['game-engineering', 'distributed-systems'], theme: 'game-engineering',
-  format: 'deep-dive', technologies: ['Netcode'], tags: ['Netcode', 'Multiplayer'], read_minutes: 15, seed: true,
+  format: 'deep-dive', level: 'intermediate', technologies: ['Netcode'], tags: ['Netcode', 'Multiplayer'], read_minutes: 15, seed: true,
   url: 'https://www.riotgames.com/en/news/peeking-valorants-netcode',
 };
 
@@ -154,6 +154,7 @@ test('cards show date, format, theme, technologies and a labelled reason to read
   assert.equal(card.querySelector('time').textContent, 'Jul 28, 2020');
   assert.equal(card.querySelector('.curiosity-format').textContent, 'Deep dive');
   assert.equal(card.querySelector('.curiosity-theme').textContent, 'Game engineering');
+  assert.equal(card.querySelector('.curiosity-level').textContent, 'Intermediate');
   assert.match(card.querySelector('.curiosity-why').textContent, /^Why read it A first-party look/);
   assert.deepEqual([...card.querySelectorAll('.curiosity-tag')].map((node) => node.textContent), ['Netcode', 'Multiplayer']);
   assert.equal(card.querySelectorAll('.curiosity-tech').length, 1);
@@ -177,6 +178,8 @@ test('filters combine theme, format, company, search and newest-first sort', asy
   assert.deepEqual(ids({ query: 'reliability' }), ['roblox'], 'theme labels are searchable');
   assert.deepEqual(ids({ sort: 'newest' }), ['rag', 'roblox', 'riot-valorant-netcode', 'old']);
   assert.deepEqual(ids({ company: 'Google', theme: 'databases' }), ['old']);
+  assert.deepEqual(ids({ level: 'intermediate' }), ['riot-valorant-netcode', 'roblox', 'rag', 'old']);
+  assert.deepEqual(ids({ level: 'advanced' }), []);
 });
 
 test('homepage filters offer a theme select that reports the change', () => {
@@ -199,7 +202,8 @@ test('collection page keeps filters in the URL and renders the API payload', asy
   for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
   const page = await import('../../public/curiosity-page.js');
   assert.deepEqual(page.readCuriosityState('?theme=bogus&format=talk&sort=newest&q=gpu'),
-    { theme: 'all', format: 'talk', company: 'all', sort: 'newest', query: 'gpu' });
+    { theme: 'all', format: 'talk', level: 'all', company: 'all', sort: 'newest', query: 'gpu' });
+  assert.equal(page.readCuriosityState('?level=advanced').level, 'advanced');
   assert.equal(page.writeCuriosityState({ theme: 'ai', format: 'all', company: 'all', sort: 'featured', query: '' }), '?theme=ai');
   const urls = [];
   const replaced = [];
@@ -208,7 +212,7 @@ test('collection page keeps filters in the URL and renders the API payload', asy
     history: { replaceState: (_, __, url) => replaced.push(url) },
     location: window.location,
   });
-  assert.deepEqual(urls, ['/api/curiosity?limit=120']);
+  assert.deepEqual(urls, ['/api/curiosity?limit=160']);
   const articles = [...window.document.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId);
   assert.deepEqual(articles, ['riot-valorant-netcode']);
   assert.equal(window.document.querySelector('[data-theme="game-engineering"]').getAttribute('aria-pressed'), 'true');

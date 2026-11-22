@@ -413,7 +413,7 @@ async function loadCuriosity() {
   const container = $("curiosity-cards");
   container.setAttribute("aria-busy", "true");
   const [collection, mailbox] = await Promise.allSettled([
-    request("/api/curiosity?limit=120"),
+    request("/api/curiosity?limit=160"),
     request("/api/mail/config"),
   ]);
   if (collection.status === "fulfilled") state.curiosityCards = collection.value.cards || [];

@@ -48,7 +48,7 @@ from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, 
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
-from app.curiosity import FORMATS as CURIOSITY_FORMATS, MAX_CURIOSITY_CARDS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article
+from app.curiosity import FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
 from app.search_suggest import suggest as suggest_scopes
 from app.query_understanding import understand as understand_query
 from app.story_coverage import compare_coverage
@@ -461,7 +461,8 @@ def curiosity(limit: int = Query(default=24, ge=1, le=MAX_CURIOSITY_CARDS)):
                 _curiosity_cache.put(key, cards, ttl=1800)
     return {"cards": cards, "updated_at": datetime.now(timezone.utc).isoformat(), "selection_limit": 5,
             "themes": [{"id": ident, "label": label} for ident, label in CURIOSITY_THEMES.items()],
-            "formats": [{"id": ident, "label": label} for ident, label in CURIOSITY_FORMATS.items()]}
+            "formats": [{"id": ident, "label": label} for ident, label in CURIOSITY_FORMATS.items()],
+            "levels": [{"id": ident, "label": label} for ident, label in CURIOSITY_LEVELS.items()]}
 
 
 class RecommendationScope(BaseModel):
@@ -1311,7 +1312,7 @@ def prepare_digest(body, store, name, focus, world, progress):
         pins = store.pinned_articles(body.pinned_ids)
         found = {article["id"] for article in pins}
         pins.extend(article for ident in body.pinned_ids if ident not in found
-                    and (article := curiosity_article(ident)) is not None)
+                    and (article := curiosity_article(ident) or saved_curiosity_article(store, ident)) is not None)
     else:
         archive = collect_news()["articles"]
         now = datetime.now(timezone.utc)

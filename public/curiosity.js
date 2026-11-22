@@ -14,7 +14,7 @@ function sourceHref(value) {
   }
 }
 
-export const MAX_CURIOSITY_CARDS = 120;
+export const MAX_CURIOSITY_CARDS = 160;
 const ORIGINS = [["all", "All"], ["fresh", "Fresh"], ["classic", "Classics"]];
 
 // Labels mirror app/curiosity.py; the API also returns them so new themes appear without a client change.
@@ -37,6 +37,12 @@ export const CURIOSITY_FORMATS = {
   "deep-dive": "Deep dive",
 };
 
+export const CURIOSITY_LEVELS = {
+  introductory: "Introductory",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
 function companyOf(card) {
   return card?.company || card?.publisher || "";
 }
@@ -56,7 +62,7 @@ export function cardThemes(card) {
 }
 
 function searchable(card) {
-  return [card.title, companyOf(card), card.publisher, card.publisher_detail, card.author, card.summary, card.why_read,
+  return [card.title, companyOf(card), card.publisher, CURIOSITY_LEVELS[card.level], card.publisher_detail, card.author, card.summary, card.why_read,
     ...(Array.isArray(card.technologies) ? card.technologies : []), ...(Array.isArray(card.tags) ? card.tags : []),
     ...cardThemes(card).map((theme) => CURIOSITY_THEMES[theme] || theme)]
     .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
@@ -84,6 +90,7 @@ export function filterCuriosityCards(cards, filter = {}) {
   const company = filter.company || "all";
   const theme = filter.theme || "all";
   const format = filter.format || "all";
+  const level = filter.level || "all";
   const terms = String(filter.query || "").toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const result = (Array.isArray(cards) ? cards : []).filter((card) => {
     if (!card) return false;
@@ -92,6 +99,7 @@ export function filterCuriosityCards(cards, filter = {}) {
     if (company !== "all" && companyOf(card) !== company) return false;
     if (theme !== "all" && !cardThemes(card).includes(theme)) return false;
     if (format !== "all" && card.format !== format) return false;
+    if (level !== "all" && card.level !== level) return false;
     if (terms.length) {
       const text = searchable(card);
       if (!terms.every((term) => text.includes(term))) return false;
@@ -173,6 +181,7 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
   const meta = element(document, "div", "curiosity-card-meta");
   if (CURIOSITY_FORMATS[card.format]) meta.append(element(document, "span", "curiosity-format", CURIOSITY_FORMATS[card.format]));
   if (CURIOSITY_THEMES[themes[0]]) meta.append(element(document, "span", "curiosity-theme", CURIOSITY_THEMES[themes[0]]));
+  if (CURIOSITY_LEVELS[card.level]) meta.append(element(document, "span", `curiosity-level curiosity-level-${card.level}`, CURIOSITY_LEVELS[card.level]));
   if (meta.childElementCount) article.append(meta);
 
   article.append(element(document, "h3", "curiosity-card-title", card.title));

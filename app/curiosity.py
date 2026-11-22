@@ -685,6 +685,19 @@ _quantitative = re.compile(
     r"nodes|servers|machines|gpus|cores|users|requests|connections|ticks?|fps|percent)\b|\d+\s?%", re.I)
 CURIOSITY_COMPANY_FRESH_CAP = 3
 
+LEVELS = {"introductory": "Introductory", "intermediate": "Intermediate", "advanced": "Advanced"}
+_introductory = re.compile(
+    r"\b(?:an introduction|introduction to|intro to|beginners?|getting started|eli5|explained|basics|primer|101|"
+    r"what every (?:programmer|developer|engineer)|guide to|a gentle|for everyone|step[- ]by[- ]step)\b", re.I)
+_advanced = re.compile(
+    r"\b(?:consensus|paxos|raft|linearizab\w*|lock[- ]free|kernel|compilers?|jit|exploits?|zero[- ]click|"
+    r"virtuali[sz]ed geometry|global illumination|volumetric\w*|formal verification|ebpf|simd|"
+    r"garbage collect\w*|memory safety|tail latency|fibers?|job systems?|distributed transactions?|"
+    r"replication protocol|cache coherence|gpu clusters?)\b", re.I)
+# Fresh cards at or above this depth score are saved so they outlive the 90-day archive.
+KEEP_SCORE = 10
+MAX_LIBRARY_CARDS = 40
+
 
 def _text(article):
     tags = " ".join(str(tag) for tag in article.get("tags") or ())
@@ -731,6 +744,16 @@ def card_technologies(article, limit=6):
     if {"Redis", "Memcached"} & set(found):
         found = [label for label in found if label != "Caching"]
     return found[:limit]
+
+
+def card_level(article):
+    """Reading level from what the source says about itself: talks, papers and internals read as advanced."""
+    text = f"{_text(article)} {article.get('publisher_detail', '')}"
+    if _introductory.search(str(article.get("title", ""))) or (_introductory.search(text) and not _advanced.search(text)):
+        return "introductory"
+    if card_format(article) in {"paper", "talk"} or len(_advanced.findall(text)) >= 1:
+        return "advanced"
+    return "intermediate"
 
 
 def quality_score(article):
@@ -875,6 +898,7 @@ def _card(article, summaries):
         "themes": themes,
         "theme": themes[0],
         "format": card_format(article),
+        "level": card_level(article),
         "technologies": card_technologies(article),
         "why_read": sanitize_text(article.get("why_read") or summary.get("whyItMatters"), 300),
         "read_minutes": read_minutes,
@@ -887,7 +911,7 @@ def _card(article, summaries):
     }
 
 
-MAX_CURIOSITY_CARDS = 120
+MAX_CURIOSITY_CARDS = 160
 # Fresh archive discoveries get a reserved share so evergreen seeds never crowd them out.
 FRESH_SLOT_SHARE = 3
 MAX_FRESH_CARDS = 40
@@ -971,7 +995,50 @@ def build_curiosity_cards(store, *, limit=24):
             # Preserve the source excerpt if model routing or response validation fails.
             import logging
             logging.getLogger(__name__).warning("curiosity_summary_unavailable error_type=%s", type(error).__name__)
-    return [_card(article, summaries) for article in selected]
+    cards = [_card(article, summaries) for article in selected]
+    return cards + _evergreen_library(store, cards, selected, limit - len(cards))
+
+
+def _evergreen_library(store, cards, selected, room):
+    """Save the strongest fresh cards, then add saved cards whose articles have left the archive."""
+    if not store:
+        return []
+    import logging
+    keep = [(card, quality_score(article)) for card, article in zip(cards, selected)
+            if not card["seed"] and quality_score(article) >= KEEP_SCORE]
+    try:
+        if keep:
+            store.keep_curiosity_cards(keep)
+        saved = store.curiosity_library(MAX_LIBRARY_CARDS) if room > 0 else []
+    except Exception as error:
+        logging.getLogger(__name__).warning("curiosity_library_unavailable error_type=%s", type(error).__name__)
+        return []
+    shown = list(cards)
+    extra = []
+    for card in saved:
+        if len(extra) >= min(room, MAX_LIBRARY_CARDS) or _is_duplicate(card, shown):
+            continue
+        card = {**card, "seed": True, "archived": True}
+        shown.append(card)
+        extra.append(card)
+    return extra
+
+
+def saved_curiosity_article(store, ident):
+    """A saved evergreen card as a brief-ready article (attribution and link preserved)."""
+    if not store or not isinstance(ident, str):
+        return None
+    try:
+        card = store.curiosity_saved_card(ident)
+    except Exception:
+        return None
+    if not card or not card.get("url") or not card.get("title"):
+        return None
+    source = BY_ID.get(card.get("source_id"))
+    summary = sanitize_text(card.get("summary") or card.get("description"), 900)
+    return {**card, "description": summary, "summary": summary, "curiosity_seed": True, "archived": True,
+            "source": source.group if source else "curiosity", "category": "Engineering",
+            "published_at": card.get("published_at") or ""}
 
 
 def resolve_curiosity_cards(store, ids):
@@ -992,6 +1059,8 @@ def resolve_curiosity_cards(store, ids):
             article = by_id.get(ident)
             if article and is_curiosity_candidate(restore_metadata(article)):
                 selected.append(_card(restore_metadata(article), {}))
+            elif saved := saved_curiosity_article(store, ident):
+                selected.append(saved)
     by_id = {card["id"]: card for card in selected}
     return [by_id[ident] for ident in requested if ident in by_id]
 

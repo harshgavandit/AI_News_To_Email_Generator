@@ -127,3 +127,20 @@ def test_second_wave_pack_is_new_valid_and_never_reproposes():
     coverage = {row["coverage"] for row in wave}
     assert {"release", "status", "advisory", "reporting", "publisher"} <= coverage
     assert {"ai", "software", "security", "chips", "startups", "outages"} <= {row["topic"] for row in wave}
+
+
+def test_global_pack_2026_11_22_is_valid_and_its_browser_checked_feeds_are_promoted():
+    with open("docs/research/source-candidates-2026-11-22-global.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    assert len({row["id"] for row in pack}) == len(pack) and len({row["url"] for row in pack}) == len(pack)
+    for row in pack:
+        assert row["language"] == "en" and row["url"].startswith("https://")
+        validate_source(Source(**{key: tuple(value) if key in {"hosts", "article_paths"} else value
+                                  for key, value in row.items()}))
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    checked = {"game-developer", "gamesindustry-biz", "eighty-level", "graphics-programming-weekly", "josh-comeau",
+               "overreacted", "tkdodo", "addy-osmani", "css-tricks", "posthog-blog", "vespa-blog", "doordash-blog"}
+    for row in pack:
+        assert (row["id"] in checked) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]

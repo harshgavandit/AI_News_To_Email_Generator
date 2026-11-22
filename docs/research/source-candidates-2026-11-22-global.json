@@ -1,0 +1,632 @@
+[
+  {
+    "id": "game-developer",
+    "group": "game-developer",
+    "label": "Game Developer",
+    "url": "https://www.gamedeveloper.com/rss.xml",
+    "hosts": [
+      "gamedeveloper.com",
+      "www.gamedeveloper.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "gamesindustry-biz",
+    "group": "gamesindustry-biz",
+    "label": "GamesIndustry.biz",
+    "url": "https://www.gamesindustry.biz/feed",
+    "hosts": [
+      "gamesindustry.biz",
+      "www.gamesindustry.biz"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "eighty-level",
+    "group": "eighty-level",
+    "label": "80 Level",
+    "url": "https://80.lv/feed",
+    "hosts": [
+      "80.lv"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "graphics-programming-weekly",
+    "group": "graphics-programming-weekly",
+    "label": "Graphics Programming Weekly",
+    "url": "https://www.jendrikillner.com/post/index.xml",
+    "hosts": [
+      "jendrikillner.com",
+      "www.jendrikillner.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/post/"
+    ]
+  },
+  {
+    "id": "josh-comeau",
+    "group": "josh-comeau",
+    "label": "Josh W. Comeau",
+    "url": "https://www.joshwcomeau.com/rss.xml",
+    "hosts": [
+      "joshwcomeau.com",
+      "www.joshwcomeau.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "overreacted",
+    "group": "overreacted",
+    "label": "Overreacted (Dan Abramov)",
+    "url": "https://overreacted.io/rss.xml",
+    "hosts": [
+      "overreacted.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tkdodo",
+    "group": "tkdodo",
+    "label": "TkDodo's blog",
+    "url": "https://tkdodo.eu/blog/rss.xml",
+    "hosts": [
+      "tkdodo.eu"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blog/"
+    ]
+  },
+  {
+    "id": "addy-osmani",
+    "group": "addy-osmani",
+    "label": "Addy Osmani",
+    "url": "https://addyosmani.com/rss.xml",
+    "hosts": [
+      "addyosmani.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "css-tricks",
+    "group": "css-tricks",
+    "label": "CSS-Tricks",
+    "url": "https://css-tricks.com/feed/",
+    "hosts": [
+      "css-tricks.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "posthog-blog",
+    "group": "posthog-blog",
+    "label": "PostHog Engineering",
+    "url": "https://posthog.com/rss.xml",
+    "hosts": [
+      "posthog.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "vespa-blog",
+    "group": "vespa-blog",
+    "label": "Vespa Blog",
+    "url": "https://blog.vespa.ai/feed.xml",
+    "hosts": [
+      "blog.vespa.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "doordash-blog",
+    "group": "doordash-blog",
+    "label": "DoorDash Blog",
+    "url": "https://careersatdoordash.com/blog/feed/",
+    "hosts": [
+      "careersatdoordash.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "hotstar-tech",
+    "group": "hotstar-tech",
+    "label": "JioHotstar Tech",
+    "url": "https://blog.hotstar.com/feed",
+    "hosts": [
+      "blog.hotstar.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "klarna-engineering",
+    "group": "klarna-engineering",
+    "label": "Klarna Engineering",
+    "url": "https://engineering.klarna.com/feed",
+    "hosts": [
+      "engineering.klarna.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "trivago-tech",
+    "group": "trivago-tech",
+    "label": "trivago tech",
+    "url": "https://tech.trivago.com/rss.xml",
+    "hosts": [
+      "tech.trivago.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "airtable-engineering",
+    "group": "airtable-engineering",
+    "label": "Airtable Engineering",
+    "url": "https://medium.com/feed/airtable-eng",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/airtable-eng/"
+    ]
+  },
+  {
+    "id": "cookpad-sourcediving",
+    "group": "cookpad-sourcediving",
+    "label": "Cookpad Source Diving",
+    "url": "https://sourcediving.com/feed",
+    "hosts": [
+      "sourcediving.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "snowflake-engineering",
+    "group": "snowflake-engineering",
+    "label": "Snowflake Engineering",
+    "url": "https://medium.com/feed/snowflake",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/snowflake/"
+    ]
+  },
+  {
+    "id": "motherduck-blog",
+    "group": "motherduck-blog",
+    "label": "MotherDuck Blog",
+    "url": "https://motherduck.com/rss.xml",
+    "hosts": [
+      "motherduck.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "dagster-blog",
+    "group": "dagster-blog",
+    "label": "Dagster Blog",
+    "url": "https://dagster.io/rss.xml",
+    "hosts": [
+      "dagster.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tigerbeetle-blog",
+    "group": "tigerbeetle-blog",
+    "label": "TigerBeetle Blog",
+    "url": "https://tigerbeetle.com/blog/atom.xml",
+    "hosts": [
+      "tigerbeetle.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "turso-blog",
+    "group": "turso-blog",
+    "label": "Turso Blog",
+    "url": "https://turso.tech/rss.xml",
+    "hosts": [
+      "turso.tech"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "railway-blog",
+    "group": "railway-blog",
+    "label": "Railway Blog",
+    "url": "https://blog.railway.com/rss.xml",
+    "hosts": [
+      "blog.railway.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "replit-blog",
+    "group": "replit-blog",
+    "label": "Replit Blog",
+    "url": "https://blog.replit.com/feed.xml",
+    "hosts": [
+      "blog.replit.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "plausible-blog",
+    "group": "plausible-blog",
+    "label": "Plausible Blog",
+    "url": "https://plausible.io/blog/feed.xml",
+    "hosts": [
+      "plausible.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "high-scalability",
+    "group": "high-scalability",
+    "label": "High Scalability",
+    "url": "https://highscalability.com/rss/",
+    "hosts": [
+      "highscalability.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "lancedb-blog",
+    "group": "lancedb-blog",
+    "label": "LanceDB Blog",
+    "url": "https://blog.lancedb.com/rss/",
+    "hosts": [
+      "blog.lancedb.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "anyscale-blog",
+    "group": "anyscale-blog",
+    "label": "Anyscale Blog",
+    "url": "https://www.anyscale.com/blog/rss.xml",
+    "hosts": [
+      "anyscale.com",
+      "www.anyscale.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "tailwind-blog",
+    "group": "tailwind-blog",
+    "label": "Tailwind CSS Blog",
+    "url": "https://tailwindcss.com/feeds/feed.xml",
+    "hosts": [
+      "tailwindcss.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "vite-blog",
+    "group": "vite-blog",
+    "label": "Vite Blog",
+    "url": "https://vite.dev/blog.rss",
+    "hosts": [
+      "vite.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "nextjs-blog",
+    "group": "nextjs-blog",
+    "label": "Next.js Blog",
+    "url": "https://nextjs.org/feed.xml",
+    "hosts": [
+      "nextjs.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "semiwiki",
+    "group": "semiwiki",
+    "label": "SemiWiki",
+    "url": "https://semiwiki.com/feed/",
+    "hosts": [
+      "semiwiki.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "unity-blog",
+    "group": "unity-blog",
+    "label": "Unity Blog",
+    "url": "https://unity.com/blog/rss",
+    "hosts": [
+      "unity.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "eurogamer-digital-foundry",
+    "group": "eurogamer-digital-foundry",
+    "label": "Digital Foundry",
+    "url": "https://www.eurogamer.net/digitalfoundry/feed",
+    "hosts": [
+      "eurogamer.net",
+      "www.eurogamer.net"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "dream11-engineering",
+    "group": "dream11-engineering",
+    "label": "Dream11 Engineering",
+    "url": "https://blog.dream11engineering.com/feed",
+    "hosts": [
+      "blog.dream11engineering.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "phonepe-tech",
+    "group": "phonepe-tech",
+    "label": "PhonePe Tech",
+    "url": "https://tech.phonepe.com/feed/",
+    "hosts": [
+      "tech.phonepe.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  }
+]

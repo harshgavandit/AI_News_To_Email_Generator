@@ -125,6 +125,10 @@ subscriptions = Table("brief_subscriptions", schema,
 mail_curiosity = Table("brief_mail_curiosity", schema,
     Column("mailbox", String(64), primary_key=True), Column("payload", Text, nullable=False),
     Column("updated", Float, nullable=False))
+# Fresh Curiosity Cards worth keeping after their articles leave the 90-day archive.
+curiosity_library = Table("brief_curiosity_library", schema,
+    Column("id", String(64), primary_key=True), Column("payload", Text, nullable=False),
+    Column("score", Integer, nullable=False), Column("saved", Float, nullable=False))
 mail_batches = Table("brief_mail_batches", schema,
     Column("id", String(64), primary_key=True),
     Column("created", Float, nullable=False), Column("retry_at", Float, nullable=False),
@@ -691,12 +695,54 @@ class Store:
         if self._curiosity_schema_ready:
             return
         with self._schema_lock, self.engine.begin() as conn:
-            if not inspect(conn).has_table(mail_curiosity.name):
+            missing = [table for table in (mail_curiosity, curiosity_library) if not inspect(conn).has_table(table.name)]
+            if missing:
                 if self.engine.dialect.name == "postgresql":
                     conn.exec_driver_sql("SET LOCAL lock_timeout = '5s'")
                     conn.exec_driver_sql("SELECT pg_advisory_xact_lock(441108836)")
-                mail_curiosity.create(conn, checkfirst=True)
+                for table in missing:
+                    table.create(conn, checkfirst=True)
         self._curiosity_schema_ready = True
+
+    def keep_curiosity_cards(self, cards, *, limit=300):
+        """Save public card snapshots (title, link, summary, labels) and keep the best ``limit``."""
+        if not cards:
+            return
+        self.ensure_curiosity_schema()
+        now = time.time()
+        with self.engine.begin() as conn:
+            for card, score in cards:
+                stmt = self.insert(curiosity_library).values(id=card["id"][:64], payload=json.dumps(card), score=int(score), saved=now)
+                conn.execute(stmt.on_conflict_do_update(index_elements=[curiosity_library.c.id], set_={
+                    "payload": stmt.excluded.payload, "score": stmt.excluded.score}))
+            keep = select(curiosity_library.c.id).order_by(curiosity_library.c.score.desc(),
+                                                           curiosity_library.c.saved.desc()).limit(limit)
+            conn.execute(delete(curiosity_library).where(curiosity_library.c.id.not_in(keep.scalar_subquery())))
+
+    def curiosity_library(self, limit=60):
+        self.ensure_curiosity_schema()
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(curiosity_library.c.payload).order_by(
+                curiosity_library.c.score.desc(), curiosity_library.c.saved.desc()).limit(max(1, min(limit, 300)))).scalars()
+            cards = []
+            for payload in rows:
+                try:
+                    card = json.loads(payload)
+                except ValueError:
+                    continue
+                if isinstance(card, dict) and isinstance(card.get("id"), str):
+                    cards.append(card)
+            return cards
+
+    def curiosity_saved_card(self, ident):
+        self.ensure_curiosity_schema()
+        with self.engine.connect() as conn:
+            payload = conn.scalar(select(curiosity_library.c.payload).where(curiosity_library.c.id == str(ident)[:64]))
+        try:
+            card = json.loads(payload) if payload else None
+        except ValueError:
+            return None
+        return card if isinstance(card, dict) else None
 
     def curiosity_selection(self, mailbox):
         self.ensure_curiosity_schema()
