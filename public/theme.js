@@ -14,7 +14,7 @@
     const dark = preference === "dark" || (preference === "system" && systemTheme.matches);
     root.dataset.theme = dark ? "dark" : "light";
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = dark ? "#131b17" : "#f6f7f4";
+    if (meta) meta.content = dark ? "#040b19" : "#f3f7fc";
   };
 
   // Apply before the stylesheets load to avoid flashing the other theme.

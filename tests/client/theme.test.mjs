@@ -28,12 +28,12 @@ for (const page of ['index.html', 'sources.html', 'contribute.html', 'about.html
       const select = document.getElementById('site-theme');
       assert.equal(select.disabled, false);
       assert.equal(select.value, 'dark');
-      assert.equal(document.querySelector('meta[name="theme-color"]').content, '#131b17');
+      assert.equal(document.querySelector('meta[name="theme-color"]').content, '#040b19');
       select.value = 'light';
       select.dispatchEvent(new Event('change'));
       assert.equal(document.documentElement.dataset.theme, 'light');
       assert.equal(localStorage.getItem('informa-theme'), 'light');
-      assert.equal(document.querySelector('meta[name="theme-color"]').content, '#f6f7f4');
+      assert.equal(document.querySelector('meta[name="theme-color"]').content, '#f3f7fc');
       system(true);
       assert.equal(document.documentElement.dataset.theme, 'light');
       select.value = 'system';

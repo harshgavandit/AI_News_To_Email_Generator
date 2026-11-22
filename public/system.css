@@ -613,3 +613,172 @@ body::after {
 .coverage-subjects-title { margin: 18px 0 8px; font: 650 12px/1.4 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .coverage-subject { text-decoration: none; }
 .coverage-subject.has-gap { border-style: dashed; border-color: color-mix(in srgb, var(--sys-signal) 60%, var(--line)); color: var(--sys-signal); }
+
+/* ==========================================================================
+   Signal Atlas — navy, cyan and ice-white identity with the live Signal Globe.
+   Tokens remap the existing palette so every page follows; the globe itself is
+   drawn by globe.js (WebGL) and mirrored by real region buttons.
+   ========================================================================== */
+:root {
+  --light-background: #f3f7fc; --light-paper: #ffffff; --light-ink: #0a1a33; --light-muted: #4a5c77;
+  --light-line: #d7e3f0; --light-green: #0b3a78; --light-sage: #e2f1fd;
+  --bg: var(--light-background); --paper: var(--light-paper); --ink: var(--light-ink); --muted: var(--light-muted);
+  --line: var(--light-line); --green: var(--light-green); --sage: var(--light-sage);
+  --action-text: #ffffff; --action-hover: #0e4a96; --action-bottom: #072956; --focus: #0891b2; --placeholder: #6c7c93;
+  --subtle: #edf3fa; --lead: #eaf3fc; --pinned: #f5faff; --accent-line: #b9d6f2; --summary: #3a4b64;
+  --wash: #e8f3fd; --canvas: #eaf1f8; --surface-top: #ffffff; --surface-bottom: #f7fbff; --control-surface: #ffffff;
+  --edition-accent: #0891b2; --editorial-rule: #38bdf8;
+  --sys-signal: #0891b2; --sys-signal-soft: #d8f4fb; --sys-green-glow: 8 145 178;
+  --sys-aurora-a: #d9ecfd; --sys-aurora-b: #d4f4fb;
+  --sys-card: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  --sys-card-hover: linear-gradient(180deg, #ffffff 0%, #f1f8ff 100%);
+  --sys-e1: 0 1px 1px #0a1a330a, 0 2px 6px -2px #0a1a3314;
+  --sys-e2: 0 1px 2px #0a1a330c, 0 10px 22px -10px #0a2a5c33, 0 26px 44px -30px #0a2a5c2e;
+  --sys-e3: 0 2px 4px #0a1a3310, 0 20px 40px -14px #0a2a5c45, 0 44px 80px -40px #0a2a5c45;
+  --sys-edge-low: rgb(10 26 51 / .10);
+  --globe-land: #d4f8ff; --globe-sea: #4f86d6; --globe-hub: #5fe3ff; --globe-active: #ffffff; --globe-arc: #7dd3fc;
+  --atlas-navy: #061632; --atlas-navy-2: #0b2a5c; --atlas-cyan: #22d3ee; --atlas-ice: #e0f7ff;
+}
+:root[data-theme="dark"] {
+  --bg: #040b19; --paper: #0a1630; --ink: #e7f1fc; --muted: #9bb0cc; --line: #1b3152; --green: #5fd4f4;
+  --sage: #0f2a4c; --action-text: #04122a; --action-hover: #8be4f9; --action-bottom: #31b6dc; --focus: #5fd4f4;
+  --placeholder: #7d93b1; --subtle: #0c1f3d; --lead: #0e2444; --pinned: #0f2648; --accent-line: #24507a;
+  --summary: #c2d2e7; --wash: #0e2446; --canvas: #071329; --surface-top: #0f2140; --surface-bottom: #0a1630;
+  --control-surface: #081428; --edition-accent: #67e8f9; --editorial-rule: #22d3ee;
+  --sys-signal: #38bdf8; --sys-signal-soft: #0b3550; --sys-green-glow: 56 189 248;
+  --sys-aurora-a: #0b2850; --sys-aurora-b: #062e3d;
+  --sys-card: linear-gradient(180deg, #0f2140 0%, #0a1830 100%);
+  --sys-card-hover: linear-gradient(180deg, #132a50 0%, #0c1d3a 100%);
+}
+
+/* ---------- The command-centre masthead ---------- */
+.desk-masthead {
+  min-height: clamp(320px, 34vw, 430px); align-items: center; overflow: hidden;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .9fr);
+  border: 1px solid #1e4a86; color: #f2f8ff;
+  background:
+    radial-gradient(520px 340px at 78% 46%, #1fb6e033, transparent 70%),
+    radial-gradient(640px 360px at 8% 110%, #2563eb40, transparent 70%),
+    linear-gradient(160deg, var(--atlas-navy) 0%, #08214a 55%, var(--atlas-navy-2) 100%) !important;
+  box-shadow: var(--sys-e3), inset 0 1px 0 #9fdcff33;
+}
+/* A perspective grid recedes under the globe like a control-room floor. */
+.desk-masthead::after {
+  content: ""; position: absolute; inset: 52% -10% -40% -10%; z-index: -1; pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, #7dd3fc22 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(0deg, #7dd3fc1c 0 1px, transparent 1px 64px);
+  transform: perspective(520px) rotateX(64deg); transform-origin: 50% 0;
+  mask-image: linear-gradient(180deg, #000 10%, transparent 85%);
+  animation: atlas-grid 16s linear infinite;
+}
+@keyframes atlas-grid { from { background-position: 0 0, 0 0; } to { background-position: 0 0, 0 64px; } }
+.desk-masthead::before {
+  background:
+    radial-gradient(260px 200px at 22% 30%, #38bdf833, transparent 70%),
+    radial-gradient(320px 220px at 78% 70%, #22d3ee2e, transparent 70%);
+}
+.desk-masthead .edition-date { color: #7dd3fc; }
+.desk-masthead .edition-date::before { background: linear-gradient(90deg, #22d3ee, transparent); }
+.desk-masthead p { color: #c7dcf3; }
+.desk-masthead h1 {
+  background: linear-gradient(180deg, #ffffff 30%, #bfe9ff 100%); -webkit-background-clip: text; background-clip: text;
+  color: transparent; text-shadow: none; filter: drop-shadow(0 14px 30px #00000066);
+}
+.desk-masthead > div:first-child { position: relative; z-index: 2; }
+.desk-masthead .edition-coverage {
+  position: relative; z-index: 3; grid-column: 2; align-self: end; justify-self: end; max-width: 360px;
+  background: color-mix(in srgb, #061632 62%, transparent); border: 1px solid #7dd3fc55; border-top-color: #a5f3fc99;
+  backdrop-filter: blur(12px) saturate(1.3); box-shadow: 0 20px 40px -18px #000c, inset 0 1px 0 #ffffff26;
+}
+.desk-masthead .edition-coverage-label { color: #67e8f9; }
+.desk-masthead .edition-coverage-button { color: #e0f7ff; }
+
+/* ---------- The Signal Globe ---------- */
+.signal-globe {
+  --globe-size: clamp(280px, 34vw, 470px);
+  position: absolute; z-index: 1; right: clamp(-60px, -2vw, 0px); top: 50%; translate: 0 -50%;
+  width: var(--globe-size); aspect-ratio: 1; pointer-events: none;
+}
+.signal-globe::before {
+  content: ""; position: absolute; inset: 7%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, #0b2a5c00 56%, #22d3ee30 64%, #22d3ee10 72%, transparent 76%),
+              radial-gradient(circle at 38% 32%, #1e3a8a66, #061632 70%);
+  box-shadow: 0 0 80px 10px #0ea5e933, inset -30px -40px 80px #00000080;
+}
+.signal-globe-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: auto; cursor: grab; touch-action: pan-y; }
+.signal-globe-canvas:active { cursor: grabbing; }
+.signal-globe:not(.is-live) .signal-globe-canvas { display: none; }
+.signal-globe:not(.is-live)::after {
+  content: ""; position: absolute; inset: 12%; border-radius: 50%;
+  background: repeating-radial-gradient(circle at 40% 35%, #7dd3fc22 0 2px, transparent 2px 9px);
+  mask-image: radial-gradient(circle, #000 60%, transparent 72%);
+}
+.signal-globe-tip {
+  position: absolute; left: var(--x, 50%); top: var(--y, 50%); translate: -50% calc(-100% - 14px); z-index: 4;
+  padding: 6px 10px; border: 1px solid #7dd3fc66; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  background: #061632e6; color: #e0f7ff; font: 600 12px/1.3 var(--font-ui); box-shadow: 0 10px 24px -10px #000;
+}
+.signal-globe-regions {
+  display: flex; flex-wrap: wrap; gap: 6px; max-width: 560px; margin: 22px 0 0; padding: 0; list-style: none;
+}
+.signal-region {
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px; border: 1px solid #7dd3fc44;
+  border-radius: 999px; background: #061632b3; color: #d6ecff; font: 600 11px/1 var(--font-ui); cursor: pointer;
+  backdrop-filter: blur(8px); transition: background-color 160ms, border-color 160ms, color 160ms, transform 200ms var(--sys-curve);
+}
+.signal-region:hover { border-color: #67e8f9; color: #ffffff; transform: translateY(-1px); }
+.signal-region[aria-pressed="true"] { background: linear-gradient(180deg, #22d3ee, #0891b2); border-color: #a5f3fc; color: #04122a; }
+.signal-region-count { color: #67e8f9; font-variant-numeric: tabular-nums; }
+.signal-region-count:empty { display: none; }
+.signal-region[aria-pressed="true"] .signal-region-count { color: #04122a; }
+.signal-region:focus-visible { outline: 2px solid #a5f3fc; outline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  .desk-masthead { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .desk-masthead .edition-coverage { grid-column: 1; justify-self: stretch; max-width: none; }
+  .signal-globe { --globe-size: 300px; right: -70px; top: 0; translate: 0 0; opacity: .75; }
+}
+@media (max-width: 760px) {
+  .desk-masthead { padding-bottom: 14px; }
+  .signal-globe { --globe-size: 220px; right: -80px; top: -30px; translate: none; opacity: .55; }
+  .signal-globe-canvas { pointer-events: none; }
+  .signal-globe-regions { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none;
+    padding: 12px 0 2px; mask-image: linear-gradient(90deg, #000 88%, transparent); }
+  .signal-region { flex: none; }
+}
+
+/* ---------- Atlas accents across the product ---------- */
+.reading .story::before { background: linear-gradient(180deg, var(--sys-signal), transparent 85%); }
+.reading .source-mark { color: var(--green); }
+.button.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--green) 80%, #3b82f6), var(--green) 60%, var(--action-bottom)); }
+:root[data-theme="dark"] .button.primary { background: linear-gradient(180deg, #8be4f9, #22d3ee 55%, #0891b2); color: #04122a; }
+.sys-progress { background: linear-gradient(90deg, #0b3a78, #22d3ee); }
+.research-header::after, .site-header :is(.site-nav, .research-nav) a::after { background: linear-gradient(90deg, var(--green), var(--atlas-cyan)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-masthead::after { animation: none !important; }
+  .signal-region { transition: none !important; }
+}
+@media (forced-colors: active) {
+  .desk-masthead::after, .signal-globe::before { display: none; }
+  .desk-masthead h1 { color: CanvasText; background: none; }
+  .signal-region[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
+@media print { .signal-globe, .desk-masthead::after { display: none !important; } }
+
+/* ---------- The globe on the Source directory ---------- */
+.directory-intro { position: relative; overflow: hidden; }
+.directory-intro > div:first-child { position: relative; z-index: 2; max-width: 640px; }
+.directory-intro .signal-globe { --globe-size: clamp(220px, 24vw, 330px); right: clamp(8px, 3vw, 48px); z-index: 1; }
+.directory-intro .signal-globe-regions { margin-top: 18px; }
+.directory-intro .signal-region { background: var(--paper); border-color: var(--line); color: var(--ink); backdrop-filter: none; }
+.directory-intro .signal-region:hover { border-color: var(--sys-signal); color: var(--green); }
+.directory-intro .signal-region-count { color: var(--sys-signal); }
+.directory-intro .signal-region[aria-pressed="true"] { background: linear-gradient(180deg, #22d3ee, #0891b2); border-color: #0891b2; color: #04122a; }
+@media (max-width: 900px) { .directory-intro .signal-globe { display: none; } }
+.directory-intro .directory-overview {
+  position: relative; z-index: 2; background: color-mix(in srgb, var(--paper) 72%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2); box-shadow: var(--sys-e2), inset 0 1px 0 var(--edge-highlight);
+}
+.directory-intro .signal-globe { top: 46%; right: clamp(40px, 7vw, 120px); }

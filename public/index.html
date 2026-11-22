@@ -7,7 +7,7 @@
       name="description"
       content="Explore global technology news, research, developer articles, security advisories, and software releases. Build a source-linked brief with Informa AI."
     />
-    <meta name="theme-color" content="#f6f7f4" />
+    <meta name="theme-color" content="#f3f7fc" />
     <meta name="google-site-verification" content="Jws4GlM5qkCYc6x_MCXN_e96mXAoMGD43YrYiY-g28U" />
     <title>Informa AI — Global Technology News &amp; Intelligence</title>
     <link rel="canonical" href="https://getinformdaily.com/" />
@@ -47,6 +47,7 @@
     <link rel="stylesheet" href="/reader-tools.css" />
     <link rel="stylesheet" href="/visit-catchup.css" />
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/globe-home.js"></script>
     <link rel="stylesheet" href="/system.css" />
   <script defer src="/system.js"></script>
 </head>
@@ -112,8 +113,13 @@
           <div><time id="edition-date" class="edition-date"></time>
             <h1 id="hero-title">The technology desk.</h1>
             <p>Global technology news, research, and releases, with the sources behind each story.</p>
+            <ul id="signal-regions" class="signal-globe-regions" aria-label="Browse stories by publisher region"></ul>
           </div>
 
+          <div id="signal-globe" class="signal-globe">
+            <canvas class="signal-globe-canvas" aria-hidden="true"></canvas>
+            <p class="signal-globe-tip" aria-hidden="true" hidden></p>
+          </div>
           <div id="edition-coverage" class="edition-coverage" hidden></div>
         </section>
       <div class="desk-layout">

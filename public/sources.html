@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#f6f7f4" />
+    <meta name="theme-color" content="#f3f7fc" />
     <meta name="description" content="Browse the publishers, research feeds, and security advisories behind Informa AI. Filter by coverage, region, and language, and see each feed's latest check." />
     <title>Source Directory | Informa AI</title>
     <link rel="canonical" href="https://getinformdaily.com/sources.html" />
@@ -25,7 +25,8 @@
     <link rel="stylesheet" href="/directory.css" />
     <link rel="stylesheet" href="/polish.css" />
     <script type="module" src="/sources.js"></script>
-    <link rel="stylesheet" href="/system.css" />
+    <script type="module" src="/globe-home.js"></script>
+  <link rel="stylesheet" href="/system.css" />
   <script defer src="/system.js"></script>
 </head>
   <body>
@@ -63,6 +64,11 @@
             <a class="text-button" href="#story-check">Check an article link</a>
             <a class="text-button" href="/trust.html">Source standards <span aria-hidden="true">↗</span></a>
           </nav>
+          <ul id="source-signal-regions" class="signal-globe-regions" aria-label="Browse sources by publisher region"></ul>
+        </div>
+        <div id="signal-globe" class="signal-globe" data-select="source-region" data-regions="source-signal-regions" data-results="source-search" data-noun="sources">
+          <canvas class="signal-globe-canvas" aria-hidden="true"></canvas>
+          <p class="signal-globe-tip" aria-hidden="true" hidden></p>
         </div>
         <dl id="directory-overview" class="directory-overview" hidden>
           <div><dt>Fresh enabled feeds</dt><dd id="source-fresh-count"></dd></div>
