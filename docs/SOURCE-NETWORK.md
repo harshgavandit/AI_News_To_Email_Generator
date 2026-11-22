@@ -227,3 +227,7 @@ Two engineering blogs were added for Curiosity Cards discovery after their feeds
 ## Release feed filtering
 
 Release feeds publish stable versions only. Alpha, beta, release-candidate, nightly, canary and dev builds are skipped at ingestion so they do not crowd out real releases. A feed that only posted prereleases still counts as working, not broken. CMS footers such as "The post … appeared first on …" and "Continue reading" links are stripped from excerpts when stored and when displayed.
+
+## Game engineering sources (2026-11-22)
+
+Six feeds were checked in a browser and added for Curiosity Cards discovery, in the collection `Game engineering`: Unreal Engine Blog (`unreal-engine-blog`), Godot Engine Blog (`godot-engine-blog`, articles only), AMD GPUOpen (`amd-gpuopen`), Factorio Friday Facts (`factorio-blog`), Aras Pranckevičius (`aras-p`) and the Box2D Blog (`box2d-blog`). The candidate pack is `docs/research/source-candidates-2026-11-22-game-engineering.json`; run **Validate candidate sources** on it to recheck from GitHub's runners. Riot Games, Rockstar, Roblox, GDC Vault and SIGGRAPH course pages publish no usable feed, so their best engineering pieces are reviewed Curiosity classics with checked links instead. Rockstar publishes little engineering detail; its card is a first-party SIGGRAPH talk, and the GTA V graphics study is labelled as independent analysis.

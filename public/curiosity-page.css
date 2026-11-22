@@ -1,0 +1,74 @@
+/* Curiosity Cards collection page. Card styles live in polish.css so the homepage shelf matches. */
+.curiosity-page { display: grid; gap: 22px; padding-block: 22px 56px; }
+
+.curiosity-hero {
+  position: relative; overflow: hidden; display: grid; gap: 10px; padding: clamp(24px, 4vw, 44px);
+  border-radius: 20px; color: #e7f1fc;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgb(34 211 238 / 22%), transparent 55%),
+    radial-gradient(80% 70% at 0% 100%, rgb(56 189 248 / 14%), transparent 60%),
+    linear-gradient(160deg, var(--atlas-navy, #061632) 0%, #08214a 55%, var(--atlas-navy-2, #0b2a5c) 100%);
+  box-shadow: var(--sys-e3, 0 20px 40px -14px #0a2a5c45);
+}
+.curiosity-hero::after {
+  content: ""; position: absolute; inset: auto -10% -60% 30%; height: 120%; pointer-events: none; opacity: .35;
+  background-image: linear-gradient(rgb(103 232 249 / 18%) 1px, transparent 1px), linear-gradient(90deg, rgb(103 232 249 / 18%) 1px, transparent 1px);
+  background-size: 34px 34px; transform: perspective(520px) rotateX(58deg); transform-origin: top;
+  mask-image: linear-gradient(to top, transparent, #000 70%);
+}
+.curiosity-hero > * { position: relative; z-index: 1; }
+.curiosity-hero .eyebrow { margin: 0; color: #67e8f9; font: 700 11px/1.4 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; }
+.curiosity-hero h1 { margin: 0; font: 500 clamp(34px, 5.4vw, 58px)/1.04 var(--serif); letter-spacing: -.01em; color: #ffffff; }
+.curiosity-hero-lede { max-width: 64ch; margin: 4px 0 0; color: #c2d2e7; font-size: clamp(14px, 1.6vw, 16px); line-height: 1.65; }
+.curiosity-stats { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 14px 0 0; }
+.curiosity-stats div { display: grid; gap: 2px; }
+.curiosity-stats dt { color: #9bb0cc; font: 650 10px/1.4 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.curiosity-stats dd { margin: 0; color: #ffffff; font: 500 26px/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+
+.curiosity-browser { display: grid; gap: 14px; }
+.curiosity-browser:focus { outline: none; }
+.curiosity-theme-nav { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+@media (min-width: 900px) { .curiosity-theme-nav { flex-wrap: wrap; overflow: visible; padding-bottom: 0; } }
+.curiosity-theme-tab {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 7px 14px; scroll-snap-align: start;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink);
+  font: 600 13px/1.2 var(--font-ui); cursor: pointer; box-shadow: inset 0 1px 0 var(--edge-highlight, transparent);
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.curiosity-theme-tab:hover { border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+.curiosity-theme-tab[aria-pressed="true"] { border-color: var(--green); background: var(--sage); color: var(--green); }
+.curiosity-theme-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--wash); color: var(--muted); font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.curiosity-theme-tab[aria-pressed="true"] .curiosity-theme-count { background: var(--paper); color: var(--green); }
+
+.curiosity-controls { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 190px)); gap: 10px; align-items: end; }
+.curiosity-search input, .curiosity-control select {
+  width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--control-surface, var(--paper)); color: var(--ink); font: 500 14px/1.3 var(--font-ui);
+}
+.curiosity-search input::placeholder { color: var(--placeholder, var(--muted)); }
+.curiosity-control { display: grid; gap: 4px; color: var(--muted); font: 650 10px/1.4 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.curiosity-control select { text-transform: none; letter-spacing: 0; }
+.curiosity-result-status { margin: 0; color: var(--muted); font-size: 13px; }
+
+.curiosity-page .curiosity-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.curiosity-page .curiosity-card { display: flex; flex-direction: column; padding: 18px; }
+.curiosity-page .curiosity-card-title { font-size: 20px; }
+.curiosity-page .curiosity-card .curiosity-summary { font-size: 13px; -webkit-line-clamp: 6; }
+.curiosity-page .curiosity-card .curiosity-byline { font-size: 11px; }
+.curiosity-page .curiosity-why { font-size: 12.5px; }
+.curiosity-page .curiosity-tag { font-size: 10.5px; }
+.curiosity-page .curiosity-card-footer { margin-top: auto; }
+.curiosity-page .curiosity-reading-time, .curiosity-page .curiosity-link { font-size: 12px; }
+.curiosity-page .curiosity-show-more { justify-self: center; font-size: 13px; }
+
+.curiosity-standards { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+.curiosity-standards h2 { margin: 0 0 8px; font: 500 20px/1.25 var(--serif); color: var(--ink); }
+.curiosity-standards ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.curiosity-standards strong { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .curiosity-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .curiosity-search { grid-column: 1 / -1; }
+  .curiosity-stats dd { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .curiosity-theme-tab { transition: none; } }

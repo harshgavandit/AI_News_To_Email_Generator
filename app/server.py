@@ -48,7 +48,7 @@ from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_INTERVAL,
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
-from app.curiosity import build_curiosity_cards, curiosity_article
+from app.curiosity import FORMATS as CURIOSITY_FORMATS, MAX_CURIOSITY_CARDS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article
 from app.search_suggest import suggest as suggest_scopes
 from app.query_understanding import understand as understand_query
 from app.story_coverage import compare_coverage
@@ -90,7 +90,7 @@ _headline_cache = Cache("headlines-v8")
 _signals_cache = Cache("signals-v1")
 _trending_cache = Cache("trending-v7")
 _briefing_cache = Cache("briefing-v2")
-_curiosity_cache = Cache("curiosity-v1")
+_curiosity_cache = Cache("curiosity-v2")
 _suggest_cache = Cache("suggest-authors-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
@@ -445,11 +445,11 @@ def discovery_options():
 
 
 @app.get("/api/curiosity")
-def curiosity(limit: int = Query(default=24, ge=1, le=72)):
+def curiosity(limit: int = Query(default=24, ge=1, le=MAX_CURIOSITY_CARDS)):
     """Return reviewed evergreen engineering insights plus quality-ranked archive cards.
 
-    This endpoint reads the local archive only. Publisher synchronization remains on the
-    existing scheduled 08:00/20:00 IST feed sweeps.
+    This endpoint reads the local archive only and never fetches a publisher; feeds are collected
+    by the scheduled sweeps. Results are cached for 30 minutes per ``limit``.
     """
     key = str(limit)
     cards, _ = _curiosity_cache.get(key)
@@ -459,7 +459,9 @@ def curiosity(limit: int = Query(default=24, ge=1, le=72)):
             if cards is None:
                 cards = build_curiosity_cards(get_store(), limit=limit)
                 _curiosity_cache.put(key, cards, ttl=1800)
-    return {"cards": cards, "updated_at": datetime.now(timezone.utc).isoformat(), "selection_limit": 5}
+    return {"cards": cards, "updated_at": datetime.now(timezone.utc).isoformat(), "selection_limit": 5,
+            "themes": [{"id": ident, "label": label} for ident, label in CURIOSITY_THEMES.items()],
+            "formats": [{"id": ident, "label": label} for ident, label in CURIOSITY_FORMATS.items()]}
 
 
 class RecommendationScope(BaseModel):

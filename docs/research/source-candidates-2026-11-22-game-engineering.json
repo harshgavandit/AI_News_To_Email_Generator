@@ -1,0 +1,118 @@
+[
+  {
+    "id": "unreal-engine-blog",
+    "group": "unreal-engine-blog",
+    "label": "Unreal Engine Blog",
+    "url": "https://www.unrealengine.com/rss?lang=en-US",
+    "hosts": [
+      "unrealengine.com",
+      "www.unrealengine.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "godot-engine-blog",
+    "group": "godot-engine-blog",
+    "label": "Godot Engine Blog",
+    "url": "https://godotengine.org/rss.xml",
+    "hosts": [
+      "godotengine.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/article/"
+    ]
+  },
+  {
+    "id": "amd-gpuopen",
+    "group": "amd-gpuopen",
+    "label": "AMD GPUOpen",
+    "url": "https://gpuopen.com/feed.xml",
+    "hosts": [
+      "gpuopen.com"
+    ],
+    "kind": "engineering",
+    "topic": "chips",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "factorio-blog",
+    "group": "factorio-blog",
+    "label": "Factorio Friday Facts",
+    "url": "https://www.factorio.com/blog/rss",
+    "hosts": [
+      "factorio.com",
+      "www.factorio.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/blog/post/"
+    ]
+  },
+  {
+    "id": "aras-p",
+    "group": "aras-p",
+    "label": "Aras Pranckevičius",
+    "url": "https://aras-p.info/atom.xml",
+    "hosts": [
+      "aras-p.info"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/blog/"
+    ]
+  },
+  {
+    "id": "box2d-blog",
+    "group": "box2d-blog",
+    "label": "Box2D Blog",
+    "url": "https://box2d.org/posts/index.xml",
+    "hosts": [
+      "box2d.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering",
+    "article_paths": [
+      "/posts/"
+    ]
+  }
+]

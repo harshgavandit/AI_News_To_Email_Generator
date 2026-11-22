@@ -14,27 +14,96 @@ function sourceHref(value) {
   }
 }
 
-export const MAX_CURIOSITY_CARDS = 72;
+export const MAX_CURIOSITY_CARDS = 120;
 const ORIGINS = [["all", "All"], ["fresh", "Fresh"], ["classic", "Classics"]];
+
+// Labels mirror app/curiosity.py; the API also returns them so new themes appear without a client change.
+export const CURIOSITY_THEMES = {
+  "game-engineering": "Game engineering",
+  ai: "AI & LLMs",
+  "distributed-systems": "Distributed systems",
+  databases: "Databases & storage",
+  cloud: "Cloud & infrastructure",
+  security: "Security",
+  performance: "Performance",
+  reliability: "Reliability & postmortems",
+  "engineering-practice": "Engineering practice",
+};
+export const CURIOSITY_FORMATS = {
+  postmortem: "Postmortem",
+  "case-study": "Case study",
+  paper: "Research paper",
+  talk: "Conference talk",
+  "deep-dive": "Deep dive",
+};
+
+function companyOf(card) {
+  return card?.company || card?.publisher || "";
+}
 
 export function curiosityCompanies(cards) {
   const counts = new Map();
   for (const card of Array.isArray(cards) ? cards : []) {
-    const name = card?.company || card?.publisher;
+    const name = companyOf(card);
     if (typeof name === "string" && name) counts.set(name, (counts.get(name) || 0) + 1);
   }
   return [...counts.keys()].sort((a, b) => a.localeCompare(b));
 }
 
+export function cardThemes(card) {
+  if (Array.isArray(card?.themes) && card.themes.length) return card.themes;
+  return card?.theme ? [card.theme] : [];
+}
+
+function searchable(card) {
+  return [card.title, companyOf(card), card.publisher, card.publisher_detail, card.author, card.summary, card.why_read,
+    ...(Array.isArray(card.technologies) ? card.technologies : []), ...(Array.isArray(card.tags) ? card.tags : []),
+    ...cardThemes(card).map((theme) => CURIOSITY_THEMES[theme] || theme)]
+    .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
+}
+
+export function curiosityDate(card) {
+  const value = String(card?.published_at || "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+    if (!Number.isNaN(date.getTime())) {
+      return { iso: value.slice(0, 10), label: date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" }) };
+    }
+  }
+  const year = Number(card?.year) || Number(value.slice(0, 4));
+  return year ? { iso: String(year), label: String(year) } : null;
+}
+
+function sortKey(card) {
+  const date = curiosityDate(card);
+  return date ? date.iso : "";
+}
+
 export function filterCuriosityCards(cards, filter = {}) {
   const origin = filter.origin || "all";
   const company = filter.company || "all";
-  return (Array.isArray(cards) ? cards : []).filter((card) => {
+  const theme = filter.theme || "all";
+  const format = filter.format || "all";
+  const terms = String(filter.query || "").toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const result = (Array.isArray(cards) ? cards : []).filter((card) => {
     if (!card) return false;
     if (origin === "fresh" && card.seed) return false;
     if (origin === "classic" && !card.seed) return false;
-    return company === "all" || (card.company || card.publisher) === company;
+    if (company !== "all" && companyOf(card) !== company) return false;
+    if (theme !== "all" && !cardThemes(card).includes(theme)) return false;
+    if (format !== "all" && card.format !== format) return false;
+    if (terms.length) {
+      const text = searchable(card);
+      if (!terms.every((term) => text.includes(term))) return false;
+    }
+    return true;
   });
+  if (filter.sort === "newest") {
+    return result.map((card, index) => [card, index])
+      .sort(([a, ai], [b, bi]) => sortKey(b).localeCompare(sortKey(a)) || ai - bi)
+      .map(([card]) => card);
+  }
+  return result;
 }
 
 function renderFilters(document, all, filter, onFilter) {
@@ -53,6 +122,20 @@ function renderFilters(document, all, filter, onFilter) {
     origins.append(chip);
   }
   bar.append(origins);
+  const selects = element(document, "div", "curiosity-filter-selects");
+  const themes = Object.keys(CURIOSITY_THEMES).filter((theme) => all.some((card) => cardThemes(card).includes(theme)));
+  if (themes.length > 1) {
+    const label = element(document, "label", "curiosity-company-filter");
+    label.append(element(document, "span", "", "Theme"));
+    const select = element(document, "select", "curiosity-company-select");
+    select.dataset.curiosityTheme = "";
+    select.append(new document.defaultView.Option("All themes", "all"));
+    for (const theme of themes) select.append(new document.defaultView.Option(CURIOSITY_THEMES[theme], theme));
+    select.value = themes.includes(filter.theme) ? filter.theme : "all";
+    select.addEventListener("change", () => onFilter?.({ ...filter, theme: select.value }));
+    label.append(select);
+    selects.append(label);
+  }
   const companies = curiosityCompanies(all);
   if (companies.length > 1) {
     const label = element(document, "label", "curiosity-company-filter");
@@ -64,9 +147,98 @@ function renderFilters(document, all, filter, onFilter) {
     select.value = companies.includes(filter.company) ? filter.company : "all";
     select.addEventListener("change", () => onFilter?.({ ...filter, company: select.value }));
     label.append(select);
-    bar.append(label);
+    selects.append(label);
   }
+  if (selects.childElementCount) bar.append(selects);
   return bar;
+}
+
+function renderCard(document, card, options, pinnedIds, scheduledIds) {
+  const article = element(document, "article", "curiosity-card");
+  article.dataset.curiosityId = card.id;
+  const themes = cardThemes(card);
+  if (themes[0]) article.dataset.curiosityTheme = themes[0];
+
+  const top = element(document, "div", "curiosity-card-top");
+  top.append(element(document, "span", "curiosity-company", companyOf(card) || "Technology"));
+  if (!card.seed) top.append(element(document, "span", "curiosity-fresh", "Fresh"));
+  const date = curiosityDate(card);
+  if (date) {
+    const time = element(document, "time", "curiosity-year", date.label);
+    time.dateTime = date.iso;
+    top.append(time);
+  }
+  article.append(top);
+
+  const meta = element(document, "div", "curiosity-card-meta");
+  if (CURIOSITY_FORMATS[card.format]) meta.append(element(document, "span", "curiosity-format", CURIOSITY_FORMATS[card.format]));
+  if (CURIOSITY_THEMES[themes[0]]) meta.append(element(document, "span", "curiosity-theme", CURIOSITY_THEMES[themes[0]]));
+  if (meta.childElementCount) article.append(meta);
+
+  article.append(element(document, "h3", "curiosity-card-title", card.title));
+  const byline = [card.author, card.publisher_detail || card.publisher].filter(Boolean).join(" · ");
+  if (byline) article.append(element(document, "p", "curiosity-byline", byline));
+  const basis = card.summary_basis === "ai_feed_summary" ? "AI summary from the publisher excerpt" :
+    card.summary_basis === "editorial_source_summary" ? "Curated source summary" :
+    card.summary_basis === "publisher_excerpt" ? "Publisher excerpt summary" : "Source summary";
+  article.append(element(document, "span", "curiosity-summary-basis", basis));
+  article.append(element(document, "p", "curiosity-summary", card.summary || card.description ||
+    "Open the original source for the publisher’s technical context."));
+  if (typeof card.why_read === "string" && card.why_read.trim()) {
+    const why = element(document, "p", "curiosity-why");
+    why.append(element(document, "strong", "", "Why read it "), document.createTextNode(card.why_read.trim()));
+    article.append(why);
+  }
+
+  // Named technologies first, then the reviewed topic tags, without repeating a label.
+  const seen = new Set();
+  const labels = [...(Array.isArray(card.technologies) ? card.technologies : []), ...(Array.isArray(card.tags) ? card.tags : [])]
+    .map(String).filter((label) => label && !seen.has(label.toLowerCase()) && seen.add(label.toLowerCase()));
+  const tags = element(document, "ul", "curiosity-tags");
+  tags.setAttribute("aria-label", "Technologies and topics");
+  for (const [index, tag] of labels.slice(0, 6).entries()) {
+    const item = element(document, "li", "curiosity-tag", tag);
+    if (index < (card.technologies?.length || 0)) item.classList.add("curiosity-tech");
+    tags.append(item);
+  }
+  if (tags.childElementCount) article.append(tags);
+
+  const footer = element(document, "div", "curiosity-card-footer");
+  const minutes = Number.isInteger(card.read_minutes) && card.read_minutes > 0 ? card.read_minutes : 8;
+  footer.append(element(document, "span", "curiosity-reading-time", `${minutes} min read`));
+  const link = element(document, "a", "curiosity-link", `Read at ${card.publisher || "original source"} ↗`);
+  const href = sourceHref(card.url);
+  if (href) link.href = href;
+  else link.setAttribute("aria-disabled", "true");
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  footer.append(link);
+  article.append(footer);
+
+  if (options.actions === false) return article;
+  const actions = element(document, "div", "curiosity-card-actions");
+  const pinned = pinnedIds.has(card.id);
+  const pin = element(document, "button", "button secondary curiosity-action",
+    pinned ? "Remove from Brief Builder" : "Add to Brief Builder");
+  pin.type = "button";
+  pin.dataset.curiosityPin = "";
+  pin.setAttribute("aria-pressed", String(pinned));
+  pin.addEventListener("click", () => options.onPin?.(card));
+  actions.append(pin);
+
+  const scheduled = scheduledIds.has(card.id);
+  const schedule = element(document, "button", "text-button curiosity-schedule",
+    options.verified ? (scheduled ? "Remove from scheduled brief" : "Add to scheduled brief") : "Verify to schedule");
+  schedule.type = "button";
+  schedule.dataset.curiosityScheduled = "";
+  schedule.setAttribute("aria-pressed", String(scheduled));
+  schedule.setAttribute("aria-label", options.verified
+    ? `${scheduled ? "Remove" : "Add"} ${card.title} ${scheduled ? "from" : "to"} scheduled brief`
+    : `Verify your inbox to schedule ${card.title}`);
+  schedule.addEventListener("click", () => options.onToggleScheduled?.(card, scheduled));
+  actions.append(schedule);
+  article.append(actions);
+  return article;
 }
 
 export function renderCuriosityCards(container, cards, options = {}) {
@@ -78,7 +250,7 @@ export function renderCuriosityCards(container, cards, options = {}) {
   const filter = options.filter || {};
   const eligible = filterCuriosityCards(all, filter);
   const visibleCount = Math.max(1, Math.min(eligible.length, Number(options.visibleCount) || eligible.length));
-  const filters = all.length > 1 ? [renderFilters(document, all, filter, options.onFilter)] : [];
+  const filters = all.length > 1 && options.filters !== false ? [renderFilters(document, all, filter, options.onFilter)] : [];
 
   if (!all.length) {
     const empty = element(document, "p", "curiosity-empty", options.message ||
@@ -88,73 +260,13 @@ export function renderCuriosityCards(container, cards, options = {}) {
   }
   if (!eligible.length) {
     container.replaceChildren(...filters,
-      element(document, "p", "curiosity-empty", "No Curiosity Cards match this filter."));
+      element(document, "p", "curiosity-empty", options.emptyMessage || "No Curiosity Cards match this filter."));
     return;
   }
 
   for (const card of eligible.slice(0, visibleCount)) {
     if (!card || typeof card.id !== "string" || typeof card.title !== "string") continue;
-    const article = element(document, "article", "curiosity-card");
-    article.dataset.curiosityId = card.id;
-
-    const top = element(document, "div", "curiosity-card-top");
-    top.append(element(document, "span", "curiosity-company", card.company || card.publisher || "Technology"));
-    if (!card.seed) top.append(element(document, "span", "curiosity-fresh", "Fresh"));
-    const year = card.year || (card.published_at && String(card.published_at).slice(0, 4));
-    if (year) top.append(element(document, "time", "curiosity-year", String(year)));
-    article.append(top);
-
-    article.append(element(document, "h3", "curiosity-card-title", card.title));
-    const byline = [card.author, card.publisher_detail || card.publisher].filter(Boolean).join(" · ");
-    if (byline) article.append(element(document, "p", "curiosity-byline", byline));
-    const basis = card.summary_basis === "ai_feed_summary" ? "AI summary from the publisher excerpt" :
-      card.summary_basis === "editorial_source_summary" ? "Curated source summary" :
-      card.summary_basis === "publisher_excerpt" ? "Publisher excerpt summary" : "Source summary";
-    article.append(element(document, "span", "curiosity-summary-basis", basis));
-    article.append(element(document, "p", "curiosity-summary", card.summary || card.description ||
-      "Open the original source for the publisher’s technical context."));
-
-    const tags = element(document, "ul", "curiosity-tags");
-    tags.setAttribute("aria-label", "Topics");
-    for (const tag of (Array.isArray(card.tags) ? card.tags : []).slice(0, 5))
-      tags.append(element(document, "li", "curiosity-tag", String(tag)));
-    if (tags.childElementCount) article.append(tags);
-
-    const footer = element(document, "div", "curiosity-card-footer");
-    const minutes = Number.isInteger(card.read_minutes) && card.read_minutes > 0 ? card.read_minutes : 8;
-    footer.append(element(document, "span", "curiosity-reading-time", `${minutes} min read`));
-    const link = element(document, "a", "curiosity-link", `Read at ${card.publisher || "original source"}`);
-    const href = sourceHref(card.url);
-    if (href) link.href = href;
-    else link.setAttribute("aria-disabled", "true");
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    footer.append(link);
-    article.append(footer);
-
-    const actions = element(document, "div", "curiosity-card-actions");
-    const pinned = pinnedIds.has(card.id);
-    const pin = element(document, "button", "button secondary curiosity-action",
-      pinned ? "Remove from Brief Builder" : "Add to Brief Builder");
-    pin.type = "button";
-    pin.dataset.curiosityPin = "";
-    pin.setAttribute("aria-pressed", String(pinned));
-    pin.addEventListener("click", () => options.onPin?.(card));
-    actions.append(pin);
-
-    const scheduled = scheduledIds.has(card.id);
-    const schedule = element(document, "button", "text-button curiosity-schedule",
-      options.verified ? (scheduled ? "Remove from scheduled brief" : "Add to scheduled brief") : "Verify to schedule");
-    schedule.type = "button";
-    schedule.dataset.curiosityScheduled = "";
-    schedule.setAttribute("aria-pressed", String(scheduled));
-    schedule.setAttribute("aria-label", options.verified
-      ? `${scheduled ? "Remove" : "Add"} ${card.title} ${scheduled ? "from" : "to"} scheduled brief`
-      : `Verify your inbox to schedule ${card.title}`);
-    schedule.addEventListener("click", () => options.onToggleScheduled?.(card, scheduled));
-    actions.append(schedule);
-    article.append(actions);
-    list.append(article);
+    list.append(renderCard(document, card, options, pinnedIds, scheduledIds));
   }
 
   if (!list.childElementCount) {
@@ -164,8 +276,9 @@ export function renderCuriosityCards(container, cards, options = {}) {
   }
   const content = [...filters, list];
   if (visibleCount < eligible.length) {
+    const step = Math.max(1, Number(options.step) || 4);
     const more = element(document, "button", "text-button curiosity-show-more",
-      `Show ${Math.min(4, eligible.length - visibleCount)} more Curiosity Cards`);
+      `Show ${Math.min(step, eligible.length - visibleCount)} more Curiosity Cards`);
     more.type = "button";
     more.dataset.curiosityShowMore = "";
     more.addEventListener("click", () => options.onShowMore?.());

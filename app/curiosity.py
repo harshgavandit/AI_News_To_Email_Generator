@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 import re
+from urllib.parse import urlsplit
 
 from app.article_language import is_english_article
 from app.article_metadata import restore_metadata
@@ -13,27 +14,33 @@ from app.sources import BY_ID, DEFAULT_SOURCES
 
 
 def _seed(ident, title, url, publisher, company, year, description, tags, read_minutes, source_id, *,
-          authors="", publisher_detail="", read_time_basis="estimate"):
+          authors="", publisher_detail="", read_time_basis="estimate", published="", why="", themes=(),
+          kind="engineering"):
+    """A manually reviewed card. ``source_id`` is None for talks and posts outside the feed catalog."""
+    source = BY_ID[source_id] if source_id else None
+    kind = source.kind if source else kind
     return {
         "id": ident,
         "title": title,
         "url": url,
         "publisher": publisher,
         "company": company,
-        "published_at": "",
+        "published_at": published,
         "year": int(year),
         "description": description,
         "summary": description,
         "summary_basis": "editorial_source_summary",
+        "why_read": why,
+        "themes": list(themes),
         "tags": list(tags),
         "read_minutes": read_minutes,
         "read_time_basis": read_time_basis,
         "estimated_reading_minutes": read_minutes,
         "reading_time_basis": read_time_basis,
         "source_id": source_id,
-        "source": BY_ID[source_id].group,
-        "kind": BY_ID[source_id].kind,
-        "category": "Research" if BY_ID[source_id].kind == "research" else "Engineering",
+        "source": source.group if source else "curiosity",
+        "kind": kind,
+        "category": "Research" if kind == "research" else "Engineering",
         "author": authors,
         "publisher_detail": publisher_detail,
         "curiosity_seed": True,
@@ -340,7 +347,215 @@ CURATED_CURIOSITY = (
           "The GitHub Blog", "GitHub", 2024,
           "How GitHub moved its monolith deployments to a merge queue that groups and tests pull requests together, reducing deploy wait times for hundreds of daily changes.",
           ("CI/CD", "Monorepo", "Developer productivity"), 8, "github-engineering", publisher_detail="GitHub engineering blog"),
+    # --- Game engineering: netcode, rendering, engines, NPC AI, physics (each link checked 2026-11-22) -----
+    _seed("riot-valorant-netcode", "Peeking into VALORANT's Netcode",
+          "https://www.riotgames.com/en/news/peeking-valorants-netcode", "Riot Games Tech Blog", "Riot Games", 2020,
+          "VALORANT's gameplay and project tech leads explain how the team approached peeker's advantage, hit registration and simulation divergence in a competitive shooter, and the netcode trade-offs behind those decisions.",
+          ("Netcode", "Multiplayer", "Game servers", "FPS"), 15, None, published="2020-07-28",
+          authors="Matt deWet · David Straily", publisher_detail="Riot Games Tech Blog",
+          why="A rare first-party look at why online shooters feel unfair and what a studio can actually change.",
+          themes=("game-engineering", "distributed-systems")),
+    _seed("riot-valorant-128-tick", "VALORANT's 128-Tick Servers",
+          "https://www.riotgames.com/en/news/valorants-128-tick-servers", "Riot Games Tech Blog", "Riot Games", 2020,
+          "A VALORANT engineer walks through cutting server frame time from about 50 ms to under 2 ms so game servers could run at 128 ticks per second, using code optimization, hardware tweaks and operating-system tuning.",
+          ("Game servers", "Performance", "Profiling", "Linux"), 20, None, published="2020-08-31",
+          authors="Brent Randall", publisher_detail="Riot Games Tech Blog",
+          why="A concrete performance budget story: every millisecond per frame was found and removed on real servers.",
+          themes=("game-engineering", "performance")),
+    _seed("riot-fixing-the-internet", "Fixing the Internet for Real Time Applications: Part I",
+          "https://www.riotgames.com/en/news/fixing-internet-real-time-applications-part-i", "Riot Games Tech Blog",
+          "Riot Games", 2015,
+          "The first part of Riot's series on why the public internet struggles with real-time games such as League of Legends, where milliseconds matter, and the networking problems Riot set out to solve for its players.",
+          ("Networking", "Latency", "Multiplayer"), 12, None, published="2015-11-06", publisher_detail="Riot Games Tech Blog",
+          why="Explains latency from the network's point of view, not just the game client's.",
+          themes=("game-engineering", "cloud")),
+    _seed("rockstar-rdr2-atmosphere", "Creating the Atmospheric World of Red Dead Redemption 2",
+          "https://advances.realtimerendering.com/s2019/index.htm", "SIGGRAPH Advances in Real-Time Rendering",
+          "Rockstar Games", 2019,
+          "Rockstar North's Fabian Bauer presents the sky, cloud, fog and volumetric lighting techniques behind Red Dead Redemption 2's open world, designed to follow the physics of light transport while staying art-directable.",
+          ("Rendering", "Volumetrics", "Open world", "Lighting"), 40, None, published="2019-07-29",
+          authors="Fabian Bauer", publisher_detail="SIGGRAPH 2019 course talk · slides on the course page",
+          why="One of the few detailed public talks from Rockstar's own graphics engineers.",
+          themes=("game-engineering", "performance")),
+    _seed("gta-v-graphics-study", "GTA V - Graphics Study",
+          "https://www.adriancourreges.com/blog/2015/11/02/gta-v-graphics-study/", "Adrian Courrèges",
+          "Adrian Courrèges", 2015,
+          "An independent study that walks through the rendering passes GTA V uses to build a single frame, reconstructed by capturing and inspecting the game's draw calls. It is an outside analysis, not a Rockstar publication.",
+          ("Rendering", "GTA V", "Rockstar", "Open world"), 25, None, published="2015-11-02",
+          publisher_detail="Independent graphics analysis",
+          why="The clearest public breakdown of how an open-world Rockstar frame comes together.",
+          themes=("game-engineering", "performance")),
+    _seed("epic-nanite", "A Deep Dive into Nanite Virtualized Geometry",
+          "https://advances.realtimerendering.com/s2021/index.html", "SIGGRAPH Advances in Real-Time Rendering",
+          "Epic Games", 2021,
+          "Epic's engineers explain Nanite, the virtualized geometry system in Unreal Engine 5 that renders film-quality meshes with enormous triangle counts in real time.",
+          ("Unreal Engine", "Rendering", "GPU", "Geometry"), 45, "unreal-engine-blog",
+          authors="Brian Karis · Rune Stubbe · Graham Wihlidal", publisher_detail="SIGGRAPH 2021 course talk",
+          why="The architecture behind one of the biggest shifts in real-time rendering in a decade.",
+          themes=("game-engineering", "performance")),
+    _seed("epic-lumen", "Lumen: Real-time Global Illumination in Unreal Engine 5",
+          "https://advances.realtimerendering.com/s2022/index.html", "SIGGRAPH Advances in Real-Time Rendering",
+          "Epic Games", 2022,
+          "Epic's engineers present Lumen, Unreal Engine 5's real-time global illumination system, and the techniques it combines to deliver dynamic indirect lighting in shipping games.",
+          ("Unreal Engine", "Global illumination", "Rendering", "Ray tracing"), 45, "unreal-engine-blog",
+          authors="Daniel Wright · Krzysztof Narkowicz · Patrick Kelly", publisher_detail="SIGGRAPH 2022 course talk",
+          why="Shows how a production engine fits dynamic lighting into a fixed frame budget.",
+          themes=("game-engineering", "performance")),
+    _seed("roblox-return-to-service", "Roblox Return to Service",
+          "https://about.roblox.com/newsroom/2022/01/roblox-return-to-service-10-28-10-31-2021", "Roblox Newsroom",
+          "Roblox", 2022,
+          "Roblox's account, written with HashiCorp, of the 73-hour outage that took its platform down in October 2021: how a Consul cluster at the heart of its infrastructure failed, including streaming and BoltDB problems, and the slow road back.",
+          ("Postmortem", "Consul", "Reliability", "Game infrastructure"), 25, None, published="2022-01-20",
+          authors="Daniel Sturman with Roblox and HashiCorp engineers", publisher_detail="Roblox engineering postmortem",
+          why="A candid postmortem of a multi-day outage at a platform serving tens of millions of players.",
+          themes=("reliability", "game-engineering", "distributed-systems")),
+    _seed("overwatch-ecs-netcode", "Overwatch Gameplay Architecture and Netcode",
+          "https://www.gdcvault.com/play/1024001/-Overwatch-Gameplay-Architecture-and", "GDC Vault",
+          "Blizzard Entertainment", 2017,
+          "Blizzard's GDC talk on how Overwatch uses an Entity Component System architecture to keep gameplay code manageable as heroes and abilities grow, and how that architecture shapes the game's netcode.",
+          ("Entity Component System", "Netcode", "Game architecture"), 40, None,
+          publisher_detail="GDC 2017 talk", why="A widely cited case for ECS from a shipped, fast-paced multiplayer game.",
+          themes=("game-engineering", "distributed-systems")),
+    _seed("naughty-dog-fibers", "Parallelizing the Naughty Dog Engine Using Fibers",
+          "https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine", "GDC Vault", "Naughty Dog", 2015,
+          "A walkthrough of the engine changes needed to run The Last of Us Remastered at 60 fps on PlayStation 4, including the fiber-based job system and frame-centric engine design Naughty Dog adopted.",
+          ("Job systems", "Multithreading", "Game engines", "Console"), 45, None,
+          publisher_detail="GDC 2015 talk", why="A classic on spreading a game frame across every CPU core.",
+          themes=("game-engineering", "performance")),
+    _seed("bungie-halo-reach-networking", "I Shot You First: Networking the Gameplay of Halo: Reach",
+          "https://www.gdcvault.com/play/1014345/I-Shot-You-First-Networking", "GDC Vault", "Bungie", 2011,
+          "Bungie's David Aldridge on networking the gameplay of Halo: Reach, a fast-paced multiplayer shooter, and the techniques used to keep play feeling responsive over real-world connections.",
+          ("Netcode", "Multiplayer", "Game networking"), 45, None, authors="David Aldridge", publisher_detail="GDC 2011 talk",
+          why="A foundational talk on multiplayer networking that engineers still reference.",
+          themes=("game-engineering", "distributed-systems")),
+    _seed("fear-goap-ai", "Building the AI of F.E.A.R. with Goal Oriented Action Planning",
+          "https://www.gamedeveloper.com/design/building-the-ai-of-f-e-a-r-with-goal-oriented-action-planning",
+          "Game Developer", "Game Developer", 2020,
+          "How Jeff Orkin at Monolith Productions used Goal-Oriented Action Planning to give F.E.A.R.'s enemies adaptive, believable behaviour, an approach to NPC AI that many later games built on.",
+          ("NPC AI", "Planning", "Game AI"), 12, None, published="2020-05-07", publisher_detail="Game Developer featured blog",
+          why="Explains a planning technique behind some of the most praised enemy AI in games.",
+          themes=("game-engineering", "ai")),
+    _seed("box2d-solver2d", "Solver2D",
+          "https://box2d.org/posts/2024/02/solver2d/", "Box2D Blog", "Box2D", 2024,
+          "Box2D's creator builds a test bed to compare rigid-body physics solvers side by side while working on Box2D v3.0, after a stability problem prompted a closer look at the engine's growing complexity.",
+          ("Physics engines", "Rigid bodies", "Simulation"), 20, "box2d-blog", published="2024-02-05",
+          authors="Erin Catto", publisher_detail="Box2D Blog",
+          why="An unusually honest comparison of physics solver trade-offs from the author of Box2D.",
+          themes=("game-engineering", "performance")),
+    _seed("gaffer-game-networking", "What Every Programmer Needs To Know About Game Networking",
+          "https://gafferongames.com/post/what_every_programmer_needs_to_know_about_game_networking/", "Gaffer On Games",
+          "Gaffer On Games", 2010,
+          "Glenn Fiedler's introduction to how multiplayer games work over the network, from early peer-to-peer lockstep models to client-server architectures with client-side prediction.",
+          ("Netcode", "Multiplayer", "Client-side prediction"), 11, None, published="2010-02-24",
+          authors="Glenn Fiedler", publisher_detail="Gaffer On Games",
+          why="The standard starting point for understanding multiplayer netcode.",
+          themes=("game-engineering", "distributed-systems")),
+    _seed("discord-webrtc-voice", "How Discord Handles Two and Half Million Concurrent Voice Users using WebRTC",
+          "https://discord.com/blog/how-discord-handles-two-and-half-million-concurrent-voice-users-using-webrtc",
+          "Discord Blog", "Discord", 2018,
+          "Discord explains the voice architecture it built on WebRTC for gamers, and how the system scaled to handle two and a half million concurrent voice users.",
+          ("WebRTC", "Voice", "Real-time systems", "Scaling"), 10, "engineering-discord", published="2018-09-10",
+          authors="Jozsef Vass", publisher_detail="Discord Engineering",
+          why="Real-time media at gaming scale, explained by the team that runs it.",
+          themes=("distributed-systems", "game-engineering")),
+    _seed("discord-go-to-rust", "Why Discord is switching from Go to Rust",
+          "https://discord.com/blog/why-discord-is-switching-from-go-to-rust", "Discord Blog", "Discord", 2020,
+          "Why Discord rewrote a latency-sensitive service from Go to Rust after garbage-collection pauses caused regular latency spikes, and what the rewrite did to its performance.",
+          ("Rust", "Go", "Garbage collection", "Latency"), 10, "engineering-discord", published="2020-02-04",
+          authors="Jesse Howarth", publisher_detail="Discord Engineering",
+          why="A measured language-migration story driven by profiles, not fashion.",
+          themes=("performance",)),
+
+    # --- Scale, infrastructure, AI and security (each link checked 2026-11-22) -------------------------
+    _seed("cloudflare-cloudbleed", "Incident report on memory leak caused by Cloudflare parser bug",
+          "https://blog.cloudflare.com/incident-report-on-memory-leak-caused-by-cloudflare-parser-bug/",
+          "Cloudflare Blog", "Cloudflare", 2017,
+          "Cloudflare's incident report on a bug in its HTML parser that leaked server memory into responses, reported by Google Project Zero, and how the team found, fixed and cleaned up after it.",
+          ("Postmortem", "Memory safety", "Parsers"), 16, "cloudflare-blog", published="2017-02-23",
+          authors="John Graham-Cumming", publisher_detail="Cloudflare Blog",
+          why="A detailed security postmortem showing how one parser bug reached across a global network.",
+          themes=("security", "reliability")),
+    _seed("meta-threads-infrastructure", "How Meta built the infrastructure for Threads",
+          "https://engineering.fb.com/2023/12/19/core-infra/how-meta-built-the-infrastructure-for-threads/",
+          "Engineering at Meta", "Meta", 2023,
+          "Meta explains the infrastructure that let Threads launch to an unprecedented wave of sign-ups in July 2023, and how reusing existing large-scale systems let the product scale quickly.",
+          ("Launch scaling", "Infrastructure", "Social graph"), 12, "meta-engineering", published="2023-12-19",
+          authors="Laine Campbell · Chunqiang (CQ) Tang", publisher_detail="Engineering at Meta",
+          why="How a brand-new app absorbed a launch-day surge by building on proven infrastructure.",
+          themes=("distributed-systems", "cloud")),
+    _seed("whatsapp-2-million-connections", "1 million is so 2011",
+          "https://blog.whatsapp.com/1-million-is-so-2011", "WhatsApp Blog", "WhatsApp", 2012,
+          "A short post on how WhatsApp pushed a single server past two million concurrent TCP connections, with CPU and memory to spare, and the hardware and tuning behind it.",
+          ("TCP", "Connection scaling", "FreeBSD"), 4, None, published="2012-01-06", publisher_detail="WhatsApp Blog",
+          why="A famous data point on how far one well-tuned machine can go.",
+          themes=("performance", "distributed-systems")),
+    _seed("netflix-video-pipeline-microservices", "Rebuilding Netflix Video Processing Pipeline with Microservices",
+          "https://netflixtechblog.com/rebuilding-netflix-video-processing-pipeline-with-microservices-4e5e6310e359",
+          "Netflix Technology Blog", "Netflix", 2024,
+          "Netflix describes rebuilding the pipeline that encodes its video for streaming as a set of microservices, and what the new architecture changed for the teams that run it.",
+          ("Microservices", "Video encoding", "Streaming"), 9, "netflix-techblog", published="2024-01-10",
+          publisher_detail="Netflix TechBlog · Medium publisher estimate", read_time_basis="publisher",
+          why="A real migration from a monolithic media pipeline, with the reasons spelled out.",
+          themes=("distributed-systems", "cloud")),
+    _seed("uber-docstore-cache", "How Uber Serves Over 40 Million Reads Per Second from Online Storage Using an Integrated Cache",
+          "https://www.uber.com/blog/how-uber-serves-over-40-million-reads-per-second-using-an-integrated-cache/",
+          "Uber Engineering", "Uber", 2024,
+          "How Uber's Docstore, an in-house distributed database built on MySQL, serves more than 40 million reads per second by building a cache into the storage layer.",
+          ("Caching", "MySQL", "Distributed databases"), 15, "uber-engineering", published="2024-02-15",
+          authors="Preetham Narayanareddy · Eli Pozniansky · Zurab Kutsia", publisher_detail="Uber Engineering",
+          why="Cache consistency at a scale most teams never reach, explained in detail.",
+          themes=("databases", "performance")),
+    _seed("project-zero-forcedentry", "A deep dive into an NSO zero-click iMessage exploit: Remote Code Execution",
+          "https://projectzero.google/2021/12/a-deep-dive-into-nso-zero-click.html", "Google Project Zero",
+          "Google", 2021,
+          "Google Project Zero dissects FORCEDENTRY, NSO Group's zero-click iMessage exploit, showing how a crafted image file led to remote code execution on iPhones without any user interaction.",
+          ("Exploits", "iOS", "Zero-click"), 25, "project-zero", published="2021-12-15",
+          authors="Ian Beer · Samuel Groß", publisher_detail="Project Zero",
+          why="One of the most technically remarkable exploit analyses ever published.",
+          themes=("security",)),
+    _seed("meta-genai-infrastructure", "Building Meta's GenAI Infrastructure",
+          "https://engineering.fb.com/2024/03/12/data-center-engineering/building-metas-genai-infrastructure/",
+          "Engineering at Meta", "Meta", 2024,
+          "Meta details two 24,000-GPU clusters built for generative AI training, covering their hardware, network, storage and software design.",
+          ("GPU clusters", "AI training", "Networking", "Storage"), 10, "meta-engineering", published="2024-03-12",
+          authors="Kevin Lee · Adi Gangidi · Mathew Oldham", publisher_detail="Engineering at Meta",
+          why="What it takes, physically and in software, to train large models.",
+          themes=("ai", "cloud")),
+    _seed("anthropic-contextual-retrieval", "Introducing Contextual Retrieval",
+          "https://www.anthropic.com/news/contextual-retrieval", "Anthropic", "Anthropic", 2024,
+          "Anthropic explains Contextual Retrieval, a technique that adds chunk-specific context before embedding and keyword indexing to reduce retrieval failures in RAG systems.",
+          ("RAG", "Embeddings", "BM25", "Retrieval"), 12, "anthropic-engineering", published="2024-09-19",
+          publisher_detail="Anthropic engineering",
+          why="A practical, measurable improvement for anyone building retrieval-augmented generation.",
+          themes=("ai",)),
+    _seed("microsoft-graphrag", "GraphRAG: Unlocking LLM discovery on narrative private data",
+          "https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/",
+          "Microsoft Research", "Microsoft", 2024,
+          "Microsoft Research introduces GraphRAG, which uses an LLM to build a knowledge graph from private text and uses that graph to answer questions that plain vector retrieval handles poorly.",
+          ("RAG", "Knowledge graphs", "LLMs"), 10, "microsoft-research", published="2024-02-13",
+          authors="Jonathan Larson · Steven Truitt", publisher_detail="Microsoft Research Blog",
+          why="A different shape of retrieval for questions that span a whole document collection.",
+          themes=("ai",)),
+    _seed("amazon-dynamodb-paper", "Amazon DynamoDB: A Scalable, Predictably Performant, and Fully Managed NoSQL Database Service",
+          "https://www.usenix.org/conference/atc22/presentation/elhemali", "USENIX", "Amazon", 2022,
+          "The USENIX ATC 2022 paper on how Amazon DynamoDB delivers consistent performance at any scale as a fully managed NoSQL service, and what AWS learned from operating it.",
+          ("DynamoDB", "NoSQL", "Distributed databases"), 30, "amazon-science", kind="research",
+          authors="Mostafa Elhemali and co-authors", publisher_detail="USENIX ATC 2022 research paper",
+          why="Rare detail on how a hyperscale managed database is actually run.",
+          themes=("databases", "distributed-systems")),
 )
+# Reviewed themes where keyword evidence alone would mislabel a classic.
+for _ident, _themes in {
+    "google-mapreduce": ("distributed-systems", "cloud"),
+    "google-borg": ("cloud", "distributed-systems"),
+    "paloalto-unified-data-platform": ("databases", "distributed-systems", "cloud"),
+    "uber-big-data-platform": ("databases", "distributed-systems"),
+    "anthropic-teams-claude-code": ("ai", "engineering-practice"),
+    "anthropic-opus-4-6": ("ai",),
+    "cloudflare-pingora": ("performance", "cloud"),
+}.items():
+    next(article for article in CURATED_CURIOSITY if article["id"] == _ident)["themes"] = list(_themes)
+
 SEEDS_BY_ID = {article["id"]: article for article in CURATED_CURIOSITY}
 
 _technical_signals = {
@@ -351,7 +566,11 @@ _technical_signals = {
     "reliability": re.compile(r"\breliab\w*\b|\bfault[- ]tolerant\b|\bavailability\b|\bpostmortem\b", re.I),
     "software design": re.compile(r"\bdesign(?:ed|ing)?\b|\bbuild system\b|\bmonorepo\b|\bcodebase\b", re.I),
     "data systems": re.compile(r"\bdatabase\w*\b|\bstorage\b|\bpipeline\b|\bdata movement\b", re.I),
-    "performance": re.compile(r"\blatency\b|\bmemory\b|\bkernel\b|\bperformance\b|\bgpu\b", re.I),
+    "performance": re.compile(r"\blatency\b|\bmemory\b|\bkernel\b|\bperformance\b|\bgpu\b|\bframe time\b|"
+                             r"\boptimi[sz](?:e|ed|ing|ation)\b|\bprofil(?:e|ed|ing)\b", re.I),
+    "game engineering": re.compile(r"\bnetcode\b|\brender(?:ing|er)\b|\bshaders?\b|\bgame engines?\b|"
+                                   r"\bsimulation\b|\bphysics\b|\bmultiplayer\b|\bray tracing\b|"
+                                   r"\bglobal illumination\b|\bgame servers?\b", re.I),
     "engineering practice": re.compile(r"\bhow we (?:built|designed|scaled|migrated|operate|test)\b|\bincident report\b", re.I),
 }
 _promotional = re.compile(
@@ -362,6 +581,172 @@ _company_names = {"google": "Google", "microsoft": "Microsoft", "amazon": "Amazo
                   "stripe": "Stripe", "uber": "Uber", "netflix": "Netflix", "airbnb": "Airbnb",
                   "spotify": "Spotify", "openai": "OpenAI", "anthropic": "Anthropic", "razorpay": "Razorpay"}
 _technical_news_sources = {"openai-news", "anthropic-news"}
+
+
+# --- Curation taxonomy -------------------------------------------------------------------------------
+# Themes, formats and technologies are read only from the title, publisher excerpt and reviewed tags.
+# Nothing here infers details an article does not state.
+THEMES = (
+    ("game-engineering", "Game engineering", re.compile(
+        r"\b(?:game|games|gaming|gameplay|netcode|multiplayer|tick ?rate|game engines?|unreal|unity|godot|"
+        r"rendering|renderer|shaders?|ray tracing|global illumination|graphics|open[- ]world|npcs?|"
+        r"physics engines?|rigid[- ]body|animation|frame rate|fps|consoles?|playstation|xbox|esports|"
+        r"valorant|fortnite|roblox|overwatch|halo|league of legends|gta|rockstar|factorio|simulation|"
+        r"frame time)\b", re.I)),
+    ("ai", "AI & LLMs", re.compile(
+        r"\b(?:llms?|large language models?|language models?|transformers?|rag|retrieval|embeddings?|agents?|"
+        r"agentic|inference|fine[- ]tun\w*|training runs?|model serving|prompt\w*|claude|gpt[\w.-]*|"
+        r"machine learning|deep learning|neural|ml|ai|attention|tokens?|vector search)\b", re.I)),
+    ("distributed-systems", "Distributed systems", re.compile(
+        r"\b(?:distributed|consensus|replication|raft|paxos|microservices?|kafka|event[- ]driven|queues?|"
+        r"sharding|shards?|partition\w*|service mesh|load balanc\w*|rpc|grpc|asynchronous|concurren\w*|"
+        r"real[- ]time systems?|websockets?|webrtc|pub/?sub|stream processing)\b", re.I)),
+    ("databases", "Databases & storage", re.compile(
+        r"\b(?:databases?|postgres\w*|mysql|sqlite|sql|nosql|key[- ]value|dynamodb|cassandra|scylla\w*|"
+        r"redis|memcache\w*|cach(?:e|es|ing)|storage|indexes|indexing|b-?trees?|lsm|olap|oltp|data warehouse|"
+        r"clickhouse|bigtable|spanner|file systems?)\b", re.I)),
+    ("cloud", "Cloud & infrastructure", re.compile(
+        r"\b(?:kubernetes|k8s|containers?|cloud|data ?centers?|clusters?|serverless|cdn|edge network|"
+        r"networking|network|bgp|dns|infrastructure|terraform|virtual machines?|vms?|gpu clusters?|"
+        r"deploy\w*|aws|gcp|azure)\b", re.I)),
+    ("security", "Security", re.compile(
+        r"\b(?:security|vulnerabilit\w*|exploits?|attacks?|attackers?|malware|ransomware|zero[- ]day|"
+        r"zero[- ]click|cves?|encryption|cryptograph\w*|authentication|sandbox\w*|memory safety|threat\w*|"
+        r"phishing|supply chain)\b", re.I)),
+    ("performance", "Performance", re.compile(
+        r"\b(?:latency|performance|optimi[sz]\w*|throughput|profil\w*|benchmarks?|faster|speed ?up|"
+        r"cpu|gpu|memory|simd|jit|compil\w*|garbage collection|frame time|p99|tail latency|efficien\w*)\b", re.I)),
+    ("reliability", "Reliability & postmortems", re.compile(
+        r"\b(?:postmortem|post-mortem|outages?|incidents?|incident report|reliab\w*|resilien\w*|sre|"
+        r"availability|failover|on-?call|disaster recovery|chaos engineering|return to service|downtime)\b", re.I)),
+    ("engineering-practice", "Engineering practice", re.compile(
+        r"\b(?:monorepos?|build systems?|code review|developer productivity|ci/cd|merge queue|testing|"
+        r"migrations?|rewrit\w*|refactor\w*|monolith|engineering culture|source control|version control|"
+        r"git)\b", re.I)),
+)
+THEME_LABELS = {ident: label for ident, label, _ in THEMES}
+
+FORMATS = {
+    "postmortem": "Postmortem",
+    "case-study": "Case study",
+    "paper": "Research paper",
+    "talk": "Conference talk",
+    "deep-dive": "Deep dive",
+}
+_postmortem = re.compile(r"\b(?:postmortem|post-mortem|outage|incident report|return to service|root cause)\b", re.I)
+_case_study = re.compile(
+    r"\bhow (?:we|[\w.&'’-]+(?: [\w.&'’-]+)?) (?:built|build|scaled|scale|migrated|rebuilt|rewrote|redesigned|"
+    r"serves?|handles?|stores?|runs?|ships?|deploy\w*|moderni[sz]ed|keeps?|uses?|optimi[sz]ed|cut|reduced|"
+    r"made|sped up|improved|designed|tackled|fixed)\b|\bat scale\b|\bcase study\b|"
+    r"\bbehind\b|\bjourney\b|\blessons\b", re.I)
+_talk_hosts = ("gdcvault.com", "advances.realtimerendering.com", "youtube.com", "youtu.be", "infoq.com")
+_paper_hosts = ("usenix.org", "research.google", "arxiv.org", "dl.acm.org", "static.googleusercontent.com",
+                "pdos.csail.mit.edu", "allthingsdistributed.com", "vldb.org")
+
+TECHNOLOGIES = tuple((label, re.compile(pattern, re.I)) for label, pattern in (
+    ("Kubernetes", r"\bkubernetes\b|\bk8s\b"), ("Kafka", r"\bkafka\b"), ("PostgreSQL", r"\bpostgres(?:ql)?\b"),
+    ("MySQL", r"\bmysql\b"), ("Redis", r"\bredis\b"), ("Memcached", r"\bmemcache[d]?\b"),
+    ("DynamoDB", r"\bdynamodb\b"), ("Cassandra", r"\bcassandra\b"), ("ScyllaDB", r"\bscylla(?:db)?\b"),
+    ("ClickHouse", r"\bclickhouse\b"), ("SQLite", r"\bsqlite\b"), ("Spanner", r"\bspanner\b"),
+    ("Bigtable", r"\bbigtable\b"), ("Elasticsearch", r"\belasticsearch\b"), ("Consul", r"\bconsul\b"),
+    ("BoltDB", r"\bboltdb\b"), ("etcd", r"\betcd\b"), ("gRPC", r"\bgrpc\b"), ("GraphQL", r"\bgraphql\b"),
+    ("WebRTC", r"\bwebrtc\b"), ("WebAssembly", r"\bwebassembly\b|\bwasm\b"), ("eBPF", r"\bebpf\b"),
+    ("Rust", r"\brust\b"), ("Go", r"\bgolang\b|\bgo\b(?= (?:service|code|runtime|to rust|version|program))|(?<=from )go\b"),
+    ("C++", r"\bc\+\+"), ("Python", r"\bpython\b"), ("Java", r"\bjava\b(?!script)"), ("Erlang", r"\berlang\b"),
+    ("Elixir", r"\belixir\b"), ("TypeScript", r"\btypescript\b"), ("Swift", r"\bswift\b"), ("Kotlin", r"\bkotlin\b"),
+    ("Linux", r"\blinux\b"), ("FreeBSD", r"\bfreebsd\b"), ("TCP", r"\btcp\b"), ("UDP", r"\budp\b"),
+    ("QUIC", r"\bquic\b"), ("HTTP/3", r"\bhttp/3\b"), ("BGP", r"\bbgp\b"), ("DNS", r"\bdns\b"),
+    ("NGINX", r"\bnginx\b"), ("Envoy", r"\benvoy\b"), ("Terraform", r"\bterraform\b"), ("Docker", r"\bdocker\b"),
+    ("AWS", r"\baws\b|amazon web services"), ("Google Cloud", r"\bgoogle cloud\b|\bgcp\b"), ("Azure", r"\bazure\b"),
+    ("CUDA", r"\bcuda\b"), ("GPU", r"\bgpus?\b"), ("TPU", r"\btpus?\b"), ("PyTorch", r"\bpytorch\b"),
+    ("LLM", r"\bllms?\b|large language models?"), ("RAG", r"\brag\b|retrieval[- ]augmented"),
+    ("Embeddings", r"\bembeddings?\b"), ("Vector search", r"\bvector (?:search|database)s?\b"),
+    ("AI agents", r"\b(?:ai |llm )?agents?\b(?= |$|[.,;:])"), ("MCP", r"\bmcp\b|model context protocol"),
+    ("Transformers", r"\btransformers?\b"), ("Knowledge graphs", r"\bknowledge graphs?\b"), ("BM25", r"\bbm25\b"),
+    ("Unreal Engine", r"\bunreal(?: engine)?\b|\bue5\b"), ("Unity", r"\bunity\b(?! of)"), ("Godot", r"\bgodot\b"),
+    ("Vulkan", r"\bvulkan\b"), ("DirectX", r"\bdirectx\b|\bdx12\b|\bdxr\b"), ("Ray tracing", r"\bray[- ]tracing\b"),
+    ("Global illumination", r"\bglobal illumination\b"), ("Entity Component System", r"\bentity component system\b|\becs\b"),
+    ("Netcode", r"\bnetcode\b|\bnetworking the gameplay\b|\bclient-side prediction\b"),
+    ("Job systems", r"\bjob systems?\b|\bfibers?\b"), ("Physics engines", r"\bphysics (?:engines?|solvers?)\b|\brigid[- ]body\b"),
+    ("Game AI", r"\bnpc\b|\bgoal[- ]oriented action planning\b|\bgame ai\b"),
+    ("Microservices", r"\bmicroservices?\b"), ("Service mesh", r"\bservice mesh\b"), ("Load balancing", r"\bload balanc\w*\b"),
+    ("Caching", r"\bcach(?:e|es|ing)\b"), ("Sharding", r"\bshard(?:s|ing|ed)?\b"), ("Consensus", r"\bconsensus\b|\braft\b|\bpaxos\b"),
+    ("Observability", r"\bobservability\b|\btracing\b(?! ray)|\bopentelemetry\b"),
+    ("Monorepo", r"\bmonorepos?\b|single repository"), ("Git", r"\bgit\b"),
+))
+# Releases, product announcements and event recaps are not deep dives, even on engineering blogs.
+_announcement = re.compile(
+    r"\b(?:release notes|released|is (?:now )?(?:available|here|live)|announc\w*|launch(?:es|ing)? (?:of|our)|"
+    r"dev snapshot|beta \d|alpha \d|release candidate|v?\d+\.\d+(?:\.\d+)? (?:is out|released)|showreel|"
+    r"sponsor\w*|we'?re hiring|join us|meetup|recap|roundup|weekly|newsletter|this week in|webinar|"
+    r"livestream|giveaway|coupon|discount)\b", re.I)
+_quantitative = re.compile(
+    r"\b\d[\d,.]*\s?(?:ms|µs|us|ns|million|billion|trillion|petabytes?|terabytes?|pb|tb|gb|x|qps|rps|"
+    r"nodes|servers|machines|gpus|cores|users|requests|connections|ticks?|fps|percent)\b|\d+\s?%", re.I)
+CURIOSITY_COMPANY_FRESH_CAP = 3
+
+
+def _text(article):
+    tags = " ".join(str(tag) for tag in article.get("tags") or ())
+    return (f"{article.get('title', '')} {article.get('description') or article.get('cleanSummary') or ''} "
+            f"{tags}")
+
+
+def card_themes(article):
+    """Themes ranked by evidence: a title match counts three times as much as the excerpt or tags."""
+    reviewed = [theme for theme in article.get("themes") or () if theme in THEME_LABELS]
+    if reviewed:
+        return reviewed[:3]
+    title = str(article.get("title", ""))
+    body = f"{article.get('description') or article.get('cleanSummary') or ''} " \
+           f"{' '.join(str(tag) for tag in article.get('tags') or ())}"
+    scored = []
+    for order, (ident, _, matcher) in enumerate(THEMES):
+        score = 3 * len(matcher.findall(title)) + len(matcher.findall(body))
+        if score:
+            scored.append((-score, order, ident))
+    return [ident for _, _, ident in sorted(scored)[:3]] or ["engineering-practice"]
+
+
+def card_format(article):
+    text = _text(article)
+    host = urlsplit(str(article.get("url", ""))).hostname or ""
+    detail = str(article.get("publisher_detail", ""))
+    if _postmortem.search(text):
+        return "postmortem"
+    if any(host == item or host.endswith("." + item) for item in _talk_hosts) or re.search(r"\btalk\b", detail, re.I):
+        return "talk"
+    if (article.get("kind") == "research" or any(host == item or host.endswith("." + item) for item in _paper_hosts)
+            or re.search(r"\bpaper\b", detail, re.I)):
+        return "paper"
+    if _case_study.search(str(article.get("title", ""))):
+        return "case-study"
+    return "deep-dive"
+
+
+def card_technologies(article, limit=6):
+    text = _text(article)
+    found = [label for label, matcher in TECHNOLOGIES if matcher.search(text)]
+    # "Caching" adds nothing next to a named cache, and "GPU" adds nothing next to CUDA.
+    if {"Redis", "Memcached"} & set(found):
+        found = [label for label in found if label != "Caching"]
+    return found[:limit]
+
+
+def quality_score(article):
+    """Technical depth signal for ranking archive discoveries; never used to rewrite content."""
+    title = str(article.get("title", ""))
+    description = str(article.get("description") or article.get("cleanSummary") or "")
+    score = curiosity_score(article)
+    if card_format(article) in {"postmortem", "case-study", "paper", "talk"}:
+        score += 2
+    score += min(2, len(_quantitative.findall(f"{title} {description}")))
+    score += min(2, len(card_technologies(article)) // 2)
+    if THEMES[0][2].search(title):
+        score += 1  # Game engineering is rare in feeds; give it a little room.
+    if _announcement.search(title):
+        score -= 4
+    return score
 
 
 def curiosity_article(ident):
@@ -388,6 +773,8 @@ def is_curiosity_candidate(article):
     title = sanitize_text(article.get("title"), 500)
     description = sanitize_text(article.get("description") or article.get("cleanSummary"), 700)
     if len(title) < 16 or len(description) < 80 or _promotional.search(f"{title} {description}"):
+        return False
+    if _announcement.search(title):
         return False
     if not is_english_article({**article, "title": title, "description": description}):
         return False
@@ -447,7 +834,7 @@ def _company(article):
         return article.get("publisher") or "Technology"
     if name := _company_names.get(source.publisher_family):
         return name
-    label = source.label
+    label = source.label.removeprefix("The ")
     for suffix in (" on Medium", " TechBlog", " Engineering Blog", " Engineering", " Blog"):
         label = label.removesuffix(suffix)
     return label or source.label
@@ -472,6 +859,7 @@ def _card(article, summaries):
     published = str(article.get("published_at") or "")
     year_match = re.match(r"\d{4}", published)
     authors = sanitize_text(article.get("author"), 200)
+    themes = card_themes(article)
     return {
         "id": article["id"],
         "title": public["title"],
@@ -484,6 +872,11 @@ def _card(article, summaries):
         "summary": sanitize_text(summary.get("summary") or public["cleanSummary"], 900),
         "summary_basis": summary.get("summary_basis") or public["summary_basis"],
         "tags": list(article.get("tags") or _tags(article))[:5],
+        "themes": themes,
+        "theme": themes[0],
+        "format": card_format(article),
+        "technologies": card_technologies(article),
+        "why_read": sanitize_text(article.get("why_read") or summary.get("whyItMatters"), 300),
         "read_minutes": read_minutes,
         "read_time_basis": read_basis,
         "url": public["url"],
@@ -494,10 +887,10 @@ def _card(article, summaries):
     }
 
 
-MAX_CURIOSITY_CARDS = 72
+MAX_CURIOSITY_CARDS = 120
 # Fresh archive discoveries get a reserved share so evergreen seeds never crowd them out.
 FRESH_SLOT_SHARE = 3
-MAX_FRESH_CARDS = 24
+MAX_FRESH_CARDS = 40
 
 
 def _fresh_discoveries(store, limit):
@@ -508,18 +901,40 @@ def _fresh_discoveries(store, limit):
     # Stable tie-breaks: higher technical signal, then newer publication, then ID.
     eligible.sort(key=lambda item: str(item.get("id", "")))
     eligible.sort(key=lambda item: str(item.get("published_at", "")), reverse=True)
-    eligible.sort(key=curiosity_score, reverse=True)
+    eligible.sort(key=quality_score, reverse=True)
     # Compare against every reviewed seed, not just the ones shown, so a seed never reappears as "fresh".
     seen = list(CURATED_CURIOSITY)
-    fresh = []
+    unique = []
     for article in eligible:
         if _is_duplicate(article, seen):
             continue
         seen.append(article)
-        fresh.append(article)
-        if len(fresh) == limit:
-            break
-    return fresh
+        unique.append(article)
+    # Keep any one company from filling the fresh shelf; its extra stories fill leftover space in rank order.
+    per_company, fresh, overflow = {}, [], []
+    for article in unique:
+        company = _company(article)
+        if per_company.get(company, 0) < CURIOSITY_COMPANY_FRESH_CAP:
+            per_company[company] = per_company.get(company, 0) + 1
+            fresh.append(article)
+        else:
+            overflow.append(article)
+    return (fresh + overflow)[:limit]
+
+
+def featured_seeds():
+    """Reviewed seeds in a theme-balanced order: one from each primary theme in turn."""
+    queues = {}
+    # Within a theme, the deepest pieces (postmortems, talks, papers, case studies with numbers) lead.
+    for article in sorted(CURATED_CURIOSITY, key=quality_score, reverse=True):
+        queues.setdefault(card_themes(article)[0], []).append(article)
+    order = [ident for ident, _, _ in THEMES if ident in queues]
+    ordered = []
+    while any(queues[ident] for ident in order):
+        for ident in order:
+            if queues[ident]:
+                ordered.append(queues[ident].pop(0))
+    return ordered
 
 
 def _interleave(seeds, fresh):
@@ -541,7 +956,7 @@ def build_curiosity_cards(store, *, limit=24):
     fresh = _fresh_discoveries(store, max(reserve, limit - len(CURATED_CURIOSITY)))
     seed_count = min(len(CURATED_CURIOSITY), limit - min(len(fresh), reserve))
     fresh = fresh[:limit - seed_count]
-    selected = _interleave([deepcopy(article) for article in CURATED_CURIOSITY[:seed_count]], fresh)
+    selected = _interleave([deepcopy(article) for article in featured_seeds()[:seed_count]], fresh)
 
     summaries = {}
     summary_targets = [article for article in selected if not article.get("curiosity_seed")]

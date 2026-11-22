@@ -122,12 +122,12 @@ def test_archive_discovery_ranks_and_deduplicates_against_evergreen_seeds(monkey
     # Fresh discoveries are interleaved after every two evergreen seeds, in rank order.
     assert ids[2] == "unique-systems-story" and ids[5] == "lower-signal-story"
     seeds = [ident for ident in ids if ident not in {"unique-systems-story", "lower-signal-story"}]
-    assert seeds == [card["id"] for card in curiosity.CURATED_CURIOSITY[:22]]
+    assert seeds == [card["id"] for card in curiosity.featured_seeds()[:22]]
     fresh = {card["id"]: card for card in cards if not card["seed"]}
     assert set(fresh) == {"unique-systems-story", "lower-signal-story"}
     assert fresh["lower-signal-story"]["summary_basis"] == "publisher_excerpt"
 
-    everything = curiosity.build_curiosity_cards(store, limit=72)
+    everything = curiosity.build_curiosity_cards(store, limit=curiosity.MAX_CURIOSITY_CARDS)
     assert len(everything) == len(curiosity.CURATED_CURIOSITY) + 2
     assert {card["id"] for card in everything} >= set(curiosity.SEEDS_BY_ID)
 
@@ -158,9 +158,14 @@ def test_fresh_discoveries_keep_reserved_slots_when_archive_is_large(monkeypatch
     cards = curiosity.build_curiosity_cards(store, limit=72)
     fresh = [card for card in cards if not card["seed"]]
     assert len(cards) == 72
-    assert len(fresh) == curiosity.MAX_FRESH_CARDS
+    # A third of the shelf is reserved for fresh discoveries, even with many evergreen seeds.
+    assert len(fresh) == 72 // curiosity.FRESH_SLOT_SHARE
     assert len({card["url"] for card in cards}) == 72
-    assert curiosity.build_curiosity_cards(None, limit=500)[0]["id"] == curiosity.CURATED_CURIOSITY[0]["id"]
+    full = curiosity.build_curiosity_cards(store, limit=curiosity.MAX_CURIOSITY_CARDS)
+    expected = len(curiosity._fresh_discoveries(store, curiosity.MAX_FRESH_CARDS))
+    assert expected > 72 // curiosity.FRESH_SLOT_SHARE
+    assert len([card for card in full if not card["seed"]]) == expected
+    assert curiosity.build_curiosity_cards(None, limit=500)[0]["id"] == curiosity.featured_seeds()[0]["id"]
     assert len(curiosity.build_curiosity_cards(None, limit=500)) == len(curiosity.CURATED_CURIOSITY)
 
 
@@ -177,10 +182,12 @@ def test_expanded_seed_collection_is_unique_secure_and_covers_requested_companie
     for seed in seeds:
         parts = urlsplit(seed["url"])
         assert parts.scheme == "https" and parts.netloc and not parts.query, seed["id"]
-        assert seed["source_id"] in BY_ID, seed["id"]
+        # Talks and posts outside the feed catalog carry no source_id; everything else maps to a reviewed feed.
+        assert seed["source_id"] is None or seed["source_id"] in BY_ID, seed["id"]
         assert 60 <= len(seed["description"]) <= 400, seed["id"]
         assert 1 <= len(seed["tags"]) <= 5 and 1 <= seed["read_minutes"] <= 45, seed["id"]
         assert 1990 <= seed["year"] <= 2026, seed["id"]
+        assert not seed["published_at"] or seed["published_at"].startswith(str(seed["year"])), seed["id"]
         assert not curiosity._promotional.search(f"{seed['title']} {seed['description']}"), seed["id"]
         # Seeds must not collide with each other under the same near-duplicate test used for the archive.
         others = [other for other in seeds if other["id"] != seed["id"]]
@@ -355,3 +362,111 @@ def test_scheduled_email_includes_new_curiosity_seed_cards(tmp_path):
         assert safe_href(card["url"]) in html and safe_href(card["url"]) in brief["markdown"]
         assert escape(card["title"], quote=False) in html
         assert escape(card["summary"][:60], quote=False) in html
+
+
+def test_curiosity_covers_game_engineering_and_every_theme_with_verified_sources():
+    from app import curiosity
+
+    seeds = curiosity.CURATED_CURIOSITY
+    companies = {seed["company"] for seed in seeds}
+    assert {"Riot Games", "Rockstar Games", "Epic Games", "Roblox", "Naughty Dog", "Bungie", "Blizzard Entertainment",
+            "Discord", "Amazon", "Microsoft"} <= companies
+    primary = {curiosity.card_themes(seed)[0] for seed in seeds}
+    assert primary == {ident for ident, _, _ in curiosity.THEMES}
+    # Rockstar publishes little; its card is a first-party SIGGRAPH talk, and the GTA V study is labelled independent.
+    rdr2 = curiosity.curiosity_article("rockstar-rdr2-atmosphere")
+    assert rdr2["company"] == "Rockstar Games" and "SIGGRAPH" in rdr2["publisher_detail"]
+    gta = curiosity.curiosity_article("gta-v-graphics-study")
+    assert gta["company"] != "Rockstar Games" and "not a Rockstar publication" in gta["description"]
+    for seed in seeds:
+        if seed.get("why_read"):
+            assert 20 <= len(seed["why_read"]) <= 160, seed["id"]
+
+
+def test_cards_carry_theme_format_technologies_and_dates():
+    from app import curiosity
+
+    cards = {card["id"]: card for card in curiosity.build_curiosity_cards(None, limit=curiosity.MAX_CURIOSITY_CARDS)}
+    netcode = cards["riot-valorant-netcode"]
+    assert netcode["theme"] == "game-engineering" and netcode["themes"][0] == "game-engineering"
+    assert netcode["published_at"] == "2020-07-28" and netcode["why_read"]
+    assert cards["roblox-return-to-service"]["format"] == "postmortem"
+    assert cards["naughty-dog-fibers"]["format"] == "talk"
+    assert cards["amazon-dynamodb-paper"]["format"] == "paper"
+    assert {"Consul", "BoltDB"} <= set(cards["roblox-return-to-service"]["technologies"])
+    assert "WebRTC" in cards["discord-webrtc-voice"]["technologies"]
+    assert {"RAG", "BM25", "Embeddings"} <= set(cards["anthropic-contextual-retrieval"]["technologies"])
+    # Technologies only come from words that appear in the title, excerpt or reviewed tags.
+    for card in cards.values():
+        text = f"{card['title']} {card['description']} {' '.join(card['tags'])}".casefold()
+        assert len(card["technologies"]) <= 6
+        assert all(tech for tech in card["technologies"])
+        assert card["format"] in curiosity.FORMATS and card["theme"] in curiosity.THEME_LABELS, card["id"]
+        assert text
+    first_nine = [card["theme"] for card in curiosity.build_curiosity_cards(None, limit=9)]
+    assert len(set(first_nine)) == 9  # The featured shelf opens with one card from each theme.
+
+
+def test_archive_discoveries_drop_announcements_rank_depth_and_cap_each_company(monkeypatch, tmp_path):
+    from app import curiosity, web_digest
+
+    store = Store(f"sqlite:///{(tmp_path / 'curiosity-quality.sqlite').as_posix()}")
+    recent = (datetime.now(UTC) - timedelta(days=3)).isoformat()
+    body = ("Engineers describe the architecture, latency budget and distributed database replication behind the "
+            "service, with Kubernetes deployment details and reliability lessons from production. ")
+
+    def row(ident, source_id, title, description=body * 2):
+        return {"id": ident, "source_id": source_id, "source": source_id, "publisher": source_id, "title": title,
+                "url": f"https://example.test/{ident}", "description": description, "published_at": recent,
+                "kind": "engineering", "category": "software"}
+
+    subjects = ("merge queue", "code search", "Actions runners", "Git storage", "notification fanout")
+    rows = [row(f"github-{index}", "github-engineering", f"How GitHub rebuilt {subject} for scale and latency")
+            for index, subject in enumerate(subjects)]
+    rows += [row("unreal-release", "unreal-engine-blog", "Unreal Engine 5.8 is now available with new tools"),
+             row("godot-snapshot", "godot-engine-blog", "Dev snapshot: Godot 4.8 beta 4 with new renderer"),
+             row("factorio-belts", "factorio-blog",
+                 "How we optimized belt simulation to cut frame time by 40% in large factories",
+                 "The Factorio team explains the game engine's belt simulation, memory layout and CPU performance "
+                 "work that cut update time by 40 percent on large maps, with profiling data and trade-offs. " * 2),
+             row("discord-cache", "engineering-discord", "How Discord serves 10 million requests per second with a cache")]
+    monkeypatch.setattr(store, "curiosity_candidates", lambda source_ids, **kwargs: rows)
+    monkeypatch.setattr(web_digest, "build_digest", lambda articles, *args, **kwargs: {"articles": [
+        {"digest_id": item["id"], "summary": item["description"], "summary_basis": "ai_feed_summary",
+         "whyItMatters": "Shows the measured trade-offs behind the change."} for item in articles]})
+
+    fresh = curiosity._fresh_discoveries(store, 40)
+    ids = [item["id"] for item in fresh]
+    assert "unreal-release" not in ids and "godot-snapshot" not in ids
+    assert "factorio-belts" in ids[:4]
+    # Three GitHub stories lead; the other two wait until every company has had a turn.
+    github_positions = [index for index, ident in enumerate(ids) if ident.startswith("github-")]
+    assert ids.index("discord-cache") < github_positions[3]
+
+    cards = {card["id"]: card for card in curiosity.build_curiosity_cards(store, limit=120) if not card["seed"]}
+    assert "game-engineering" in cards["factorio-belts"]["themes"]
+    assert cards["factorio-belts"]["why_read"] == "Shows the measured trade-offs behind the change."
+    assert cards["factorio-belts"]["format"] == "case-study"
+
+
+def test_curated_card_outside_the_feed_catalog_reaches_brief_and_email(monkeypatch, tmp_path):
+    from html import escape
+    from app import server
+    from app.web_digest import safe_email_html, safe_href
+
+    store = Store(f"sqlite:///{(tmp_path / 'curiosity-offcatalog.sqlite').as_posix()}")
+    seed = curiosity_article("riot-valorant-128-tick")
+    assert seed["source_id"] is None
+
+    def capture(articles, name, focus, **kwargs):
+        return {"title": "Reader brief", "articles": [
+            {"digest_id": item["id"], "title": item["title"], "summary": item["description"], "url": item["url"],
+             "publisher": item["publisher"], "source": item["source"]} for item in articles]}
+
+    monkeypatch.setattr(server, "select_candidates", lambda pool, focus, count, sources: [])
+    monkeypatch.setattr(server, "build_digest", capture)
+    digest = server.prepare_digest(server.DigestRequest(pinned_ids=[seed["id"]]), store, "Reader", "", False, None)
+    html = safe_email_html(digest)
+    assert escape(safe_href(seed["url"]), quote=True) in html and escape(seed["title"], quote=True) in html
+    from app.curiosity import resolve_curiosity_cards
+    assert resolve_curiosity_cards(store, [seed["id"]])[0]["url"] == seed["url"]

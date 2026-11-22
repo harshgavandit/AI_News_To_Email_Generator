@@ -20,7 +20,7 @@
 | 📰 **Reading Room** | Search 90 days of stories by topic, publisher, region, language or source type. Save stories, hide ones you've read and compare coverage. |
 | ⚡ **Catch up** | See what's new since your last visit, including confirmations, corrections and scope changes. Each development has its own timeline page. |
 | ✉️ **Briefs** | Get the Global Top 5 or build your own brief. Pin stories, export as Markdown, HTML or email, or send it to a verified inbox. |
-| 💡 **Curiosity Cards** | Behind-the-scenes engineering stories from Google, Anthropic, OpenAI, Stripe, Netflix, Uber, Cloudflare and others. New posts appear automatically, and you can add any card to a brief. |
+| 💡 **Curiosity Cards** | A collection page (`/curiosity.html`) of engineering deep dives, postmortems, papers and conference talks: netcode and rendering from Riot, Rockstar, Epic and Naughty Dog, plus infrastructure from Google, Meta, Netflix, Uber, Cloudflare, Discord and others. Browse by theme, format, company or technology. New posts are curated automatically, and you can add any card to a brief. |
 | 🔎 **[Research Desk](https://getinformdaily.com/research.html)** | Search publisher evidence, ask for analysis with citations and download notes. Watch up to six topics and get alerts in your Inbox. |
 | 🎯 **Personal impact** | Save your package versions and cloud regions to check whether a vulnerability or outage affects you. If there isn't enough evidence, it says **Unknown** instead of guessing. |
 | ⭐ **For You** | Follow publications, topics and authors to get a ranked feed built around your interests. |
