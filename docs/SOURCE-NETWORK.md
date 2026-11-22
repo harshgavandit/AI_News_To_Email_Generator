@@ -245,3 +245,5 @@ Every source now carries a `health` value, set in `source_health` in `app/ingest
 - `pending` or `paused`.
 
 The Sources page has a Feed health filter and badge. Source monitoring counts the temporarily unavailable and broken feeds.
+
+Validation run #5 (22 November) rechecked `source-candidates-2026-11-21b.json`. Five feeds passed with English confirmed and were promoted: Electronics Weekly, Gizmodo, Don't Worry About the Vase (Zvi), The Chip Letter and THE BRIDGE (English edition). HKCERT and Toss Tech work but did not pass the English check. The Gradient Dissent podcast is quiet and also did not pass the English check, so it was not promoted. The workflow now checks `source-candidates-2026-11-22-global.json` by default.

@@ -12015,5 +12015,100 @@
     "collection": "Systems and software",
     "reviewed_at": "2026-11-22",
     "require_english": true
+  },
+  {
+    "id": "electronics-weekly",
+    "group": "electronics-weekly",
+    "label": "Electronics Weekly",
+    "url": "https://www.electronicsweekly.com/feed/",
+    "hosts": [
+      "electronicsweekly.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "gizmodo-tech",
+    "group": "gizmodo-tech",
+    "label": "Gizmodo",
+    "url": "https://gizmodo.com/feed",
+    "hosts": [
+      "gizmodo.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "thezvi",
+    "group": "thezvi",
+    "label": "Don't Worry About the Vase (Zvi Mowshowitz)",
+    "url": "https://thezvi.substack.com/feed",
+    "hosts": [
+      "thezvi.substack.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 180,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "the-chip-letter",
+    "group": "the-chip-letter",
+    "label": "The Chip Letter",
+    "url": "https://thechipletter.substack.com/feed",
+    "hosts": [
+      "thechipletter.substack.com"
+    ],
+    "kind": "engineering",
+    "topic": "chips",
+    "coverage": "article",
+    "format": "newsletter",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 180,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
+  },
+  {
+    "id": "the-bridge-jp",
+    "group": "the-bridge-jp",
+    "label": "The Bridge",
+    "url": "https://thebridge.jp/en/feed",
+    "hosts": [
+      "thebridge.jp"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 0,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-22",
+    "require_english": true
   }
 ]
