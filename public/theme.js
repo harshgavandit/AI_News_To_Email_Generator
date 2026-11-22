@@ -4,17 +4,23 @@
   const key = "informa-theme";
   const root = document.documentElement;
   const systemTheme = matchMedia("(prefers-color-scheme: dark)");
-  const valid = (value) => ["system", "light", "dark"].includes(value) ? value : "system";
-  let preference = "system";
+  // Readers choose light or dark. Until they choose (or if an older "system" choice is saved),
+  // the first look matches the device so the page never opens in the opposite theme.
+  const valid = (value) => ["light", "dark"].includes(value) ? value : null;
+  let preference = null;
   try {
     preference = valid(localStorage.getItem(key));
   } catch {}
 
+  const current = () => preference || (systemTheme.matches ? "dark" : "light");
+  let select = null;
+
   const apply = () => {
-    const dark = preference === "dark" || (preference === "system" && systemTheme.matches);
-    root.dataset.theme = dark ? "dark" : "light";
+    const theme = current();
+    root.dataset.theme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = dark ? "#040b19" : "#f3f7fc";
+    if (meta) meta.content = theme === "dark" ? "#040b19" : "#f3f7fc";
+    if (select) select.value = theme;
   };
 
   // Apply before the stylesheets load to avoid flashing the other theme.
@@ -22,12 +28,13 @@
   systemTheme.addEventListener("change", apply);
 
   document.addEventListener("DOMContentLoaded", () => {
-    const select = document.getElementById("site-theme");
+    select = document.getElementById("site-theme");
     if (select) {
-      select.value = preference;
+      for (const option of [...select.options]) if (!valid(option.value)) option.remove();
+      select.value = current();
       select.disabled = false;
       select.addEventListener("change", () => {
-        preference = valid(select.value);
+        preference = valid(select.value) || current();
         try {
           localStorage.setItem(key, preference);
         } catch {}
@@ -40,7 +47,6 @@
     window.addEventListener("storage", (event) => {
       if (event.key !== key && event.key !== null) return;
       preference = valid(event.newValue);
-      if (select) select.value = preference;
       apply();
     });
   });
