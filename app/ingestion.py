@@ -14,11 +14,15 @@ from app.sources import DEFAULT_SOURCES
 INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
 SWEEP_INTERVAL = timedelta(hours=12)
 SWEEP_WINDOW = timedelta(minutes=45)
+# Vercel starts each sweep inside SWEEP_WINDOW. GitHub's follow-up finishes whatever that left,
+# and GitHub can start scheduled jobs hours late, so the follow-up may still complete the same
+# sweep (one check per source) until an hour before the next one begins.
+SWEEP_CATCHUP = timedelta(hours=11)
 HOST_WORKERS = 2
 # Light checks at 02:00 and 14:00 IST cover the busiest newsrooms, advisories and status
-# pages between full sweeps. GitHub starts them, and its schedule can run late, so the
-# window is longer than a full sweep's while still closing well before the next sweep.
-PRIORITY_WINDOW = timedelta(hours=2)
+# pages between full sweeps. GitHub starts them, and its schedule can run hours late, so the
+# window stays open until 30 minutes before the next full sweep.
+PRIORITY_WINDOW = timedelta(hours=5, minutes=30)
 PRIORITY_COVERAGE = frozenset({"reporting", "advisory", "status"})
 PRIORITY_POLL_MINUTES = 15
 # Hosts that serve many reviewed feeds from robust infrastructure. GitHub release
@@ -351,5 +355,6 @@ def ingestion_health(store, catalog=None):
             "pending_sources": sum(not state.get(feed["id"], {}).get("checked") for feed in active),
             "priority_sources": len(critical), "priority_sources_overdue": len(overdue_critical),
             "p95_overdue_seconds": round(lag[min(len(lag) - 1, int(len(lag) * .95))]) if lag else 0,
-            "notice": ("Every publisher is checked at 08:00 and 20:00 IST, each sweep in a 45-minute window. "
-                       "The busiest newsrooms, advisories and status pages are also checked at 02:00 and 14:00 IST.")}
+            "notice": ("Every publisher is checked at 08:00 and 20:00 IST. A sweep starts in a 45-minute window and "
+                       "any feeds it could not reach are finished later in the same cycle. The busiest newsrooms, "
+                       "advisories and status pages are also checked at 02:00 and 14:00 IST.")}

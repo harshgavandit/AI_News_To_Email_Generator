@@ -41,7 +41,6 @@ def test_priority_run_checks_only_busy_sources_once_and_full_sweep_still_covers_
 
     daily_clock(NIGHT - timedelta(minutes=1))
     assert client.get(PRIORITY, headers=JOB_HEADERS).json()["status"] == "closed"
-    assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "closed"
     assert client.get(PRIORITY).status_code == 401
     assert not attempts
 

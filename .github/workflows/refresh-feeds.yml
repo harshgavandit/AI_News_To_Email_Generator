@@ -5,11 +5,15 @@ on:
     - cron: '2-57/5 * * * *'
     # Finish any sources left due by Vercel's bounded 08:00/20:00 IST sweep.
     # GitHub schedule cron is UTC: 02:40 and 14:40 UTC are 08:10 and 20:10 IST,
-    # inside the 45-minute window and after Vercel's first batch has started.
+    # after Vercel's first batch has started.
     - cron: '40 2,14 * * *'
     # Light checks of the busiest newsrooms, advisories and status pages between full
     # sweeps: 20:32 and 08:32 UTC are 02:02 and 14:02 IST (each window is two hours).
     - cron: '32 8,20 * * *'
+    # GitHub often starts scheduled jobs hours late or skips them, so a second follow-up
+    # (05:17 and 17:17 UTC = 10:47 and 22:47 IST) finishes the same sweep if the first did not.
+    # Each source is still checked once per sweep; with nothing left, this run takes seconds.
+    - cron: '17 5,17 * * *'
   workflow_dispatch:
     inputs:
       feeds_only:
@@ -28,7 +32,7 @@ concurrency:
 
 jobs:
   refresh:
-    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && github.event.schedule == '40 2,14 * * *')
+    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && (github.event.schedule == '40 2,14 * * *' || github.event.schedule == '17 5,17 * * *'))
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -61,7 +65,7 @@ jobs:
               continue
             fi
             if [[ "$status" == "closed" ]]; then
-              echo 'Publisher checks are only allowed in the 45-minute windows from 08:00 and 20:00 IST.'
+              echo 'This sweep is closed; the next one starts at 08:00 or 20:00 IST.'
               exit 0
             fi
             if jq -e '(.status == "complete" or .status == "refreshed") and .remaining == 0' <<< "$result" > /dev/null; then

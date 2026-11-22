@@ -43,7 +43,7 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness,
+from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness,
                            latest_priority_check, latest_sweep, refresh_sources, source_catalog, sweep_plan)
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
@@ -1016,7 +1016,9 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, 
     """Check publishers once per slot: every source at 08:00/20:00 IST, the busiest also at 02:00/14:00 IST."""
     now = datetime.now(timezone.utc)
     scheduled = latest_priority_check(now) if priority else latest_sweep(now)
-    window = PRIORITY_WINDOW if priority else SWEEP_WINDOW
+    # Vercel's scheduled delivery must arrive inside the sweep window; the follow-up and owner
+    # recovery may finish the same sweep later, before the next one starts.
+    window = PRIORITY_WINDOW if priority else SWEEP_WINDOW if expected_slot is not None else SWEEP_CATCHUP
     if priority:
         source_ids = PRIORITY_SOURCE_IDS
     closes = scheduled + window

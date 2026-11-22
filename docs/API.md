@@ -138,8 +138,8 @@ See [coverage investigation](COVERAGE-REPAIR.md) for discovery boundaries and ve
 
 `POST /api/jobs/feed-sweep` requires the Vercel cron credential and scheduled
 time. It checks eligible feeds at 08:00 and 20:00 IST. Manual recovery through
-`GET /api/jobs/refresh?run=scheduled` processes a bounded batch during the open
-sweep. Responses include `checked`, `healthy`, `remaining` and per-source failure reasons.
+`GET /api/jobs/refresh?run=scheduled` processes a bounded batch of the current
+sweep, up to 11 hours after it opens (GitHub's follow-up can start late). Responses include `checked`, `healthy`, `remaining` and per-source failure reasons.
 The database lease prevents overlapping batches and each enabled source can be
 claimed once per sweep. Sources on backoff are deferred. The owner refresh uses
 those same rules and continues to return `sources` along with the sweep status.
@@ -148,7 +148,7 @@ those same rules and continues to return `sources` along with the sweep status.
 02:00 and 14:00 IST checks. It covers only the busiest sources: newsrooms,
 security advisories and status pages with a poll target of 15 minutes or less,
 excluding video channels. Each call checks up to 64 of them, each source once
-per slot, inside a two-hour window. It returns the same fields as a sweep batch
+per slot, inside a window that closes 30 minutes before the next full sweep. It returns the same fields as a sweep batch
 and `closed` outside the window.
 
 

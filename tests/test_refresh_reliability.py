@@ -336,7 +336,10 @@ def test_sweeps_check_the_full_catalog_once_each_and_respect_boundaries(archive,
         assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
         assert len(attempts) == len(sources) and set(attempts) == sources
         daily_clock(scheduled + timedelta(minutes=45))
-        assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "closed"
+        # Vercel's delivery is refused after its window; the follow-up may still finish the sweep.
+        assert client.post(VERCEL_SWEEP, headers=headers).status_code == 503
+        assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
+        assert len(attempts) == len(sources)
         assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == len(sources)
         assert client.get("/api/discovery/ingestion").json()["status"] == "running"
 
@@ -477,3 +480,38 @@ def test_transient_failures_are_retried_once_within_the_sweep(archive, monkeypat
     state = store.source_state(include_archive=False)
     assert state[flaky.id]["available"] is True and state[gone.id]["available"] is False
     assert result["remaining"] == 0 and not result.get("unconfirmed")
+
+
+def test_late_follow_up_finishes_the_same_sweep_once_and_closes_before_the_next(archive, monkeypatch, daily_clock):
+    """GitHub can start the follow-up hours late; it still completes the sweep Vercel began."""
+    store, client = archive
+    sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:6]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
+    fetched = []
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: (fetched.append(feed.id) or [], {"available": True}))
+    # Vercel's batch reached only the first two sources before its window ended.
+    daily_clock(MORNING + timedelta(minutes=5))
+    ingestion.refresh_sources(store, source_ids={source.id for source in sources[:2]}, scheduled=MORNING)
+    assert len(fetched) == 2
+    daily_clock(MORNING + timedelta(hours=7, minutes=47))  # The follow-up ran 7 hours late.
+    result = client.get(SWEEP, headers=JOB_HEADERS).json()
+    assert result["status"] == "refreshed" and result["checked"] == 4 and result["remaining"] == 0
+    assert sorted(fetched) == sorted(source.id for source in sources)
+    assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
+    assert len(fetched) == 6, "each source is checked once per sweep"
+    assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 6
+    daily_clock(MORNING + ingestion.SWEEP_CATCHUP)
+    assert client.get(SWEEP, headers=JOB_HEADERS).json() == {"status": "closed", "scheduled_at": EVENING.isoformat()}
+    assert ingestion.SWEEP_CATCHUP <= ingestion.SWEEP_INTERVAL - timedelta(hours=1)
+
+
+def test_second_follow_up_cron_covers_skipped_github_runs():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
+    assert "- cron: '17 5,17 * * *'" in workflow
+    assert "github.event.schedule == '17 5,17 * * *'" in refresh_job
+    from app.ingestion import SWEEP_CATCHUP, latest_sweep
+    for hour in (5, 17):
+        fired = datetime(2026, 11, 21, hour, 17, tzinfo=UTC)
+        assert fired - latest_sweep(fired) < SWEEP_CATCHUP - timedelta(hours=1)
