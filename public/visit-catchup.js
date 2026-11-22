@@ -6,7 +6,7 @@ const publicationDate = new Intl.DateTimeFormat(undefined, { dateStyle: "medium"
 const dayPrecision = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" });
 const changeLabels = {
   published: "New publication",
-  newly_observed: "Recently indexed",
+  newly_observed: "New on Informa",
   event_update: "Developing story",
 };
 const updateLabels = {
@@ -97,7 +97,7 @@ export function createVisitCatchup({ region, request, openArticle }) {
     description.textContent = !input.persistent ? "This browser could not save visit history. Showing the latest 24 hours." :
       period?.window === "clamped" ? "Your last visit was outside the seven-day limit. Showing the most recent seven days." :
       period?.window === "first_visit" || (!period && !input.since) ? "Start with developments from the past 24 hours." :
-        "Developments surfaced by the archive between your visits.";
+        "New and updated stories since your last visit.";
   }
 
   function readerLink(row, readerStatus) {
@@ -138,7 +138,7 @@ export function createVisitCatchup({ region, request, openArticle }) {
       if (change) entry.append(element("span", "visit-catchup-change", change));
       entry.append(title, sourceAttribution(row));
       if (row.change_type !== "published") {
-        const observed = timestamp(row.observed_at, rangeDate, "Observed by the index ");
+        const observed = timestamp(row.observed_at, rangeDate, "Added to Informa ");
         if (observed) {
           observed.className = "visit-catchup-observed";
           entry.append(observed);

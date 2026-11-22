@@ -21,8 +21,7 @@ CANDIDATE_LIMIT = 160
 ELIGIBLE_SOURCES = tuple(source.id for source in BY_ID.values() if source.coverage in {
     "advisory", "journal", "preprint", "publisher", "release", "reporting", "status",
 })
-NOTICE = ("This selection uses publisher publication times and, where available, event index observations. "
-          "Observations show when Informa grouped a report or detected a change. Sources can be incomplete.")
+NOTICE = "Stories are ordered by publication time. Some publishers may not have posted their latest updates yet."
 
 
 class VisitCatchupRequest(BaseModel):

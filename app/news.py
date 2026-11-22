@@ -53,6 +53,8 @@ class FeedResponse:
     last_modified: str | None = None
 
 
+PRERELEASE = re.compile(r"(?:(?<=[\d.\-_+])|(?<=\d )|(?<![\w-])(?=nightly|canary))(?:alpha|beta|rc|nightly|canary|dev|pre(?:view|release)?)(?:[.\-_]?\d+)?(?![a-z])", re.I)
+
 def feed_validator_headers(etag, last_modified):
     headers = {}
     if isinstance(etag, str) and ETAG.fullmatch(etag):
@@ -293,6 +295,9 @@ def read_feed(task, *, validators=None, known_urls=()):
                 if not title:
                     continue
                 has_valid_entry = True
+                # Daily alpha, beta, nightly and release-candidate builds crowd out real releases.
+                if s.coverage == "release" and PRERELEASE.search(title):
+                    continue
                 tags = [plain_text(tag.get("term")) for tag in entry.get("tags", ())[:12]]
                 if not article_in_scope(s, parts.path, title, tags):
                     continue

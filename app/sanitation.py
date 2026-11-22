@@ -41,6 +41,12 @@ PROMO_PATTERNS = [
 ]
 
 PROMO_RE = re.compile(r"(?:" + "|".join(PROMO_PATTERNS) + r")", re.I)
+# Feed footers that CMSs append to every excerpt. They repeat the headline and publisher
+# and add nothing for readers, so everything from the footer to the end is dropped.
+FEED_FOOTER = re.compile(
+    r"\s*(?:The post\b.{0,400}?\bappeared first on\b|\bThe post\b.{0,400}?\bfirst appeared on\b"
+    r"|\[(?:…|\.\.\.)\]|\bContinue reading\b|\bRead more\s*(?:»|›|→)|\bRead the full (?:story|article)\b).*$",
+    re.I | re.S)
 SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[^\W_])|(?<=[。！？])\s*(?=\w)")
 DIRECTIONAL = "👇👉🔗✅👆➡️⬇️🏼🏻🏽🏾🏿 \t"
 
@@ -56,6 +62,7 @@ def sanitize_text(value, limit=4000, *, strip_timestamps=False):
             tag.insert_before("\n")
         text = soup.get_text(" ")
 
+    text = FEED_FOOTER.sub("", text)
     kept = []
     # Split text into lines or sentences
     for line in re.split(r"[\r\n]+", text):

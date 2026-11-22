@@ -10,7 +10,7 @@ export function coverageWarning(snapshot) {
   if (counts.stale) notes.push(`${counts.stale} overdue`);
   if (counts.failed) notes.push(`${counts.failed} with failed checks`);
   if (counts.pending) notes.push(`${counts.pending} awaiting a successful check`);
-  return notes.length ? `Source coverage may be incomplete · ${notes.join(" · ")}.` : "";
+  return notes.length ? `Some sources are catching up · ${notes.join(" · ")}.` : "";
 }
 
 export function freshnessNotice(snapshot, doc = document, { compact = false } = {}) {
@@ -25,7 +25,7 @@ export function freshnessNotice(snapshot, doc = document, { compact = false } = 
   if (compact) {
     const detail = doc.createElement("details");
     const heading = doc.createElement("summary");
-    heading.textContent = coverageWarning(snapshot) ? "Source coverage may be incomplete" : "Source check details";
+    heading.textContent = coverageWarning(snapshot) ? "Some sources are catching up" : "Source check details";
     detail.append(heading, scope, summary);
     section.append(detail);
   } else section.append(scope, summary);

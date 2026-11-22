@@ -221,3 +221,7 @@ Validation run 44932653878 checked all 184 second-wave candidates from GitHub's 
 ## Curiosity engineering feeds (2026-11-21)
 
 Two engineering blogs were added for Curiosity Cards discovery after their feeds were checked in a browser: Engineering@Microsoft (`engineering-at-microsoft`, `https://devblogs.microsoft.com/engineering-at-microsoft/feed/`) and Palo Alto Networks Engineering Blogs (`paloalto-engineering`, the community board RSS on `live.paloaltonetworks.com`). Both are English, kind `engineering`, coverage `publisher`, and are fetched in the existing 08:00 and 20:00 IST sweeps. That brings the catalog to 834 enabled sources. Uber Engineering stays disabled as a feed; its articles appear only as reviewed Curiosity seeds.
+
+## Release feed filtering
+
+Release feeds publish stable versions only. Alpha, beta, release-candidate, nightly, canary and dev builds are skipped at ingestion so they do not crowd out real releases. A feed that only posted prereleases still counts as working, not broken. CMS footers such as "The post … appeared first on …" and "Continue reading" links are stripped from excerpts when stored and when displayed.

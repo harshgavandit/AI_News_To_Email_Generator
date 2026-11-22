@@ -520,8 +520,8 @@ async function catchMeUp(event) {
       const story = event.articles?.[0];
       if (story) heading.append(link(event.title, story.url));
       else heading.textContent = event.title;
-      row.append(heading, element("p", `${event.change === "updated" ? "Updated" : "New development"} · ${event.source_count} publishers`, "research-meta"));
-      if (developmentLink(event.id)) row.append(link("Open development ↗", developmentLink(event.id)));
+      row.append(heading, element("p", `${event.change === "updated" ? "Updated" : "New story"} · ${event.source_count} ${event.source_count === 1 ? "publisher" : "publishers"}`, "research-meta"));
+      if (developmentLink(event.id)) row.append(link("View story timeline ↗", developmentLink(event.id)));
       if (event.reasons?.length) row.append(element("p", event.reasons.join(" · ")));
       row.append(followButton(event.id));
       if (event.change_sources?.length) row.append(element("h4", "New since your last brief"), timelineList(event.change_sources));
@@ -630,7 +630,7 @@ window.addEventListener("storage", event => {
 let developmentsRequest = 0;
 function developmentItem(event, feedback, compare = false) {
   const item = element("li", "", "development-item");
-  item.append(element("strong", event.title), element("span", `${event.source_count} publishers · updated ${dateLabel(event.updated_at)}`, "research-meta"));
+  item.append(element("strong", event.title), element("span", `${event.source_count} ${event.source_count === 1 ? "publisher" : "publishers"} · updated ${dateLabel(event.updated_at)}`, "research-meta"));
   const open = element("button", "Open timeline", "text-button");
   open.type = "button";
   open.addEventListener("click", async () => {
@@ -641,7 +641,7 @@ function developmentItem(event, feedback, compare = false) {
     } catch (error) { feedback.textContent = readableError(error); open.disabled = false; }
   });
   item.append(open, followButton(event.id));
-  if (developmentLink(event.id)) item.append(link("Open development ↗", developmentLink(event.id)));
+  if (developmentLink(event.id)) item.append(link("View story timeline ↗", developmentLink(event.id)));
   if (compare) {
     const action = element("button", "Compare coverage", "text-button");
     action.type = "button";

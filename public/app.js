@@ -904,7 +904,7 @@ function renderStories() {
     );
     top.append(badges, date);
     if (article.coverage_count > 1) {
-      const coverage = node("button", "coverage-count", `${article.coverage_count} publishers`);
+      const coverage = node("button", "coverage-count", `${article.coverage_count} ${article.coverage_count === 1 ? "publisher" : "publishers"}`);
       coverage.type = "button";
       coverage.title = (article.coverage_publishers || []).join(" · ");
       coverage.addEventListener("click", () => openDossier(article, coverage));
@@ -1483,7 +1483,7 @@ async function loadHomeCatchup() {
       const title = node("h3");
       title.append(open);
       const copy = node("div");
-      copy.append(node("p", "small", `${event.source_count} publishers · ${readableTime(event.updated_at)}`), title);
+      copy.append(node("p", "small", `${event.source_count} ${event.source_count === 1 ? "publisher" : "publishers"} · ${readableTime(event.updated_at)}`), title);
       if (event.change_sources?.length) {
         for (const change of event.change_sources) {
           copy.append(node("p", "small", change.change_label), node("p", "", change.excerpt),
@@ -1508,7 +1508,7 @@ async function loadHomeCatchup() {
       card.append(copy);
       const timelineHref = developmentLink(event.id);
       if (timelineHref) {
-        const timeline = node("a", "text-button", "Open development ↗");
+        const timeline = node("a", "text-button", "View story timeline ↗");
         timeline.href = timelineHref;
         copy.append(timeline);
       }
@@ -2058,7 +2058,7 @@ function renderDigest() {
     sourceRow.append(externalLink(a.sourceUrl || a.url, "Read source ↗"));
     const development = developmentLink(a.development_id);
     if (development) {
-      const link = node("a", "", "Open development ↗");
+      const link = node("a", "", "View story timeline ↗");
       link.href = development;
       sourceRow.append(link);
     }
