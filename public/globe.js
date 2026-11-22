@@ -82,6 +82,50 @@ export function arcPoints(a, b, steps = 48) {
   return points;
 }
 
+// Signed smallest turn from one angle to another, in (-PI, PI].
+export function shortestAngle(from, to) {
+  let delta = (to - from) % TAU;
+  if (delta > Math.PI) delta -= TAU;
+  if (delta <= -Math.PI) delta += TAU;
+  return delta;
+}
+
+// Points on a small circle around a surface vector: the expanding "transmission" ripple.
+export function ringAround(vector, radius, count = 36) {
+  const [x, y, z] = vector;
+  // Any vector not parallel to the normal gives a tangent basis.
+  const helper = Math.abs(y) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  let u = [helper[1] * z - helper[2] * y, helper[2] * x - helper[0] * z, helper[0] * y - helper[1] * x];
+  const ul = Math.hypot(...u) || 1;
+  u = u.map((value) => value / ul);
+  const v = [y * u[2] - z * u[1], z * u[0] - x * u[2], x * u[1] - y * u[0]];
+  const c = Math.cos(radius), s = Math.sin(radius), points = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * TAU, ca = Math.cos(a), sa = Math.sin(a);
+    points.push([x * c + (u[0] * ca + v[0] * sa) * s, y * c + (u[1] * ca + v[1] * sa) * s, z * c + (u[2] * ca + v[2] * sa) * s]);
+  }
+  return points;
+}
+
+// Deterministic orbital "satellites": each has an inclined circular orbit around the globe.
+export function orbitals(count, seed = 7) {
+  let state = seed;
+  const random = () => ((state = (state * 16807) % 2147483647) - 1) / 2147483646;
+  return Array.from({ length: count }, () => ({
+    radius: 1.16 + random() * 0.36, tilt: (random() - 0.5) * 2.2, node: random() * TAU,
+    phase: random() * TAU, speed: (0.05 + random() * 0.16) * (random() < 0.2 ? -1 : 1), size: 1.6 + random() * 2.4,
+  }));
+}
+
+export function orbitalPosition(orbit, time) {
+  const a = orbit.phase + time * orbit.speed;
+  const px = Math.cos(a) * orbit.radius, pz = Math.sin(a) * orbit.radius;
+  // Incline the orbit plane, then spin it around the pole to its ascending node.
+  const y = pz * Math.sin(orbit.tilt), z1 = pz * Math.cos(orbit.tilt);
+  const cn = Math.cos(orbit.node), sn = Math.sin(orbit.node);
+  return [px * cn + z1 * sn, y, -px * sn + z1 * cn];
+}
+
 function sphereDots(count) {
   const dots = [], golden = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < count; i++) {
@@ -167,7 +211,7 @@ function readPalette(element) {
  * Mount the globe on a canvas. Returns null when WebGL is unavailable so callers can keep
  * their accessible fallback. Options: onHover(hub|null, x, y), onSelect(hub).
  */
-export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, reduceMotion = false } = {}) {
+export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, onFrame = () => {}, reduceMotion = false } = {}) {
   let gl;
   try {
     gl = canvas.getContext("webgl", { antialias: true, alpha: true, premultipliedAlpha: false });
@@ -212,7 +256,11 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, r
   gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineData), gl.STATIC_DRAW);
   const dynamicBuffer = gl.createBuffer();
-  const dynamic = new Float32Array((hubs.length * 2 + arcs.length * 3) * 9);
+  const satellites = orbitals(window.matchMedia?.("(max-width: 760px)").matches ? 60 : 150);
+  const ripples = [];
+  const RIPPLE_POINTS = 40, MAX_RIPPLES = 6, TRAIL = 6;
+  const dynamic = new Float32Array((hubs.length * 2 + arcs.length * TRAIL + satellites.length +
+    MAX_RIPPLES * RIPPLE_POINTS) * 9);
 
   const state = { yaw: -0.35, pitch: 0.32, velocity: reduceMotion ? 0 : 0.0016, dragging: false, active: null,
     hover: null, lastX: 0, lastY: 0, tiltX: 0, tiltY: 0, visible: true, frame: 0, start: performance.now() };
@@ -253,9 +301,14 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, r
 
   function draw(now) {
     const time = (now - state.start) / 1000;
-    if (!state.dragging) {
+    if (state.target && !state.dragging) {
+      // Critically damped glide toward a focused hub; the spin resumes once it arrives.
+      const dy = shortestAngle(state.yaw, state.target.yaw), dp = state.target.pitch - state.pitch;
+      state.yaw += dy * 0.075; state.pitch += dp * 0.075; state.velocity = 0;
+      if (Math.abs(dy) < 0.002 && Math.abs(dp) < 0.002) state.target = null;
+    } else if (!state.dragging) {
       state.yaw += state.velocity;
-      if (!reduceMotion) state.velocity += (0.0016 - state.velocity) * 0.02;
+      if (!reduceMotion) state.velocity += ((state.hold ? 0 : 0.0016) - state.velocity) * 0.02;
     }
     const yaw = state.yaw + state.tiltX, pitch = state.pitch + state.tiltY;
     gl.clearColor(0, 0, 0, 0);
@@ -287,24 +340,36 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, r
     }
     if (!reduceMotion) {
       for (const arc of arcs) {
-        for (let k = 0; k < 3; k++) {
-          const t = (((time * arc.speed + arc.offset - k * 0.025) % 1) + 1) % 1;
+        for (let k = 0; k < TRAIL; k++) {
+          const t = (((time * arc.speed + arc.offset - k * 0.018) % 1) + 1) % 1;
           const p = arc.path[Math.min(arc.path.length - 1, Math.floor(t * (arc.path.length - 1)))];
-          put(p, 13 - k * 3.5, palette.active, 0.95 - k * 0.28, 1);
+          put(p, 13 - k * 1.8, k ? palette.arc : palette.active, 0.95 - k * 0.15, 1);
         }
+      }
+      for (const orbit of satellites) {
+        put(orbitalPosition(orbit, time), orbit.size, palette.arc, 0.55, 0);
+      }
+    }
+    for (let r = ripples.length - 1; r >= 0; r--) {
+      const age = (now - ripples[r].start) / 1600;
+      if (age >= 1) { ripples.splice(r, 1); continue; }
+      const fade = 1 - age;
+      for (const point of ringAround(ripples[r].hub.vector, 0.02 + age * 0.32, RIPPLE_POINTS)) {
+        put(point, 5 * fade + 2, palette.active, 0.9 * fade, 1);
       }
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, dynamicBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, dynamic.subarray(0, n * 9), gl.DYNAMIC_DRAW);
     attrib(points, "aPos", 3, 9, 0); attrib(points, "aSize", 1, 9, 3); attrib(points, "aColor", 4, 9, 4); attrib(points, "aGlow", 1, 9, 8);
     gl.drawArrays(gl.POINTS, 0, n);
+    onFrame();
   }
 
   function loop(now) {
     state.frame = 0;
     if (!state.visible) return;
     draw(now);
-    if (!reduceMotion || state.dragging) state.frame = requestAnimationFrame(loop);
+    if (!reduceMotion || state.dragging || state.target || ripples.length) state.frame = requestAnimationFrame(loop);
   }
   const kick = () => { if (!state.frame && state.visible) state.frame = requestAnimationFrame(loop); };
 
@@ -380,16 +445,35 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, r
       kick();
     },
     setActive(id) { state.active = id || null; kick(); },
-    focus(id) {
+    focus(id, { glide = !reduceMotion } = {}) {
       const hub = hubs.find((h) => h.id === id);
       if (!hub) return;
       // Turn the hub toward the viewer, taking the short way round.
-      const target = -hub.lon * Math.PI / 180;
-      let delta = (target - state.yaw) % TAU;
-      if (delta > Math.PI) delta -= TAU;
-      if (delta < -Math.PI) delta += TAU;
-      state.yaw += delta;
-      state.pitch = Math.max(-0.8, Math.min(0.8, hub.lat * Math.PI / 180 * 0.6));
+      const yaw = state.yaw + shortestAngle(state.yaw, -hub.lon * Math.PI / 180);
+      const pitch = Math.max(-0.8, Math.min(0.8, hub.lat * Math.PI / 180 * 0.6));
+      if (glide) state.target = { yaw, pitch };
+      else { state.yaw = yaw; state.pitch = pitch; state.target = null; }
+      kick();
+    },
+    // An expanding ring at a hub marks a story arriving from that region.
+    pulse(id) {
+      const hub = hubs.find((h) => h.id === id);
+      if (!hub || reduceMotion) return;
+      if (ripples.length >= MAX_RIPPLES) ripples.shift();
+      ripples.push({ hub, start: performance.now() });
+      kick();
+    },
+    // Screen position of a hub in CSS pixels relative to the canvas; z > 0 faces the reader.
+    project(id) {
+      const hub = hubs.find((h) => h.id === id);
+      return hub ? project(hub.vector, state.yaw + state.tiltX, state.pitch + state.tiltY) : null;
+    },
+    // Slow the idle spin while a reader is reading something anchored to the globe.
+    hold(value) { state.hold = Boolean(value); },
+    setMotion(allowed) {
+      reduceMotion = !allowed;
+      state.velocity = reduceMotion ? 0 : 0.0016;
+      if (reduceMotion) { ripples.length = 0; state.tiltX = 0; state.tiltY = 0; }
       kick();
     },
     destroy() {

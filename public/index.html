@@ -48,8 +48,11 @@
     <link rel="stylesheet" href="/visit-catchup.css" />
     <script type="module" src="/app.js"></script>
     <script type="module" src="/globe-home.js"></script>
+    <script type="module" src="/command-center.js"></script>
     <link rel="stylesheet" href="/system.css" />
+    <link rel="stylesheet" href="/command.css" />
   <script defer src="/system.js"></script>
+  <script defer src="/ambient.js"></script>
 </head>
   <body>
     <a class="skip" href="#reading-room">Skip to stories</a>
@@ -109,18 +112,35 @@
         </div>
       </aside>
       <div class="workspace-content">
-        <section class="desk-masthead" aria-labelledby="hero-title">
-          <div><time id="edition-date" class="edition-date"></time>
+        <section id="command-deck" class="desk-masthead command-deck" aria-labelledby="hero-title">
+          <div class="deck-copy"><time id="edition-date" class="edition-date"></time>
             <h1 id="hero-title">The technology desk.</h1>
             <p>Global technology news, research, and releases, with the sources behind each story.</p>
             <ul id="signal-regions" class="signal-globe-regions" aria-label="Browse stories by publisher region"></ul>
+            <dl id="deck-telemetry" class="deck-telemetry" hidden>
+              <div class="deck-stat" hidden><dt>Stories · 24 h</dt><dd data-stat="stories">0</dd></div>
+              <div class="deck-stat" hidden><dt>Publishers</dt><dd data-stat="publishers">0</dd></div>
+              <div class="deck-stat" hidden><dt>Regions reporting</dt><dd data-stat="regions">0</dd></div>
+              <div class="deck-stat" hidden><dt>Feeds up to date</dt><dd data-stat="feeds">0</dd></div>
+            </dl>
           </div>
 
           <div id="signal-globe" class="signal-globe">
             <canvas class="signal-globe-canvas" aria-hidden="true"></canvas>
             <p class="signal-globe-tip" aria-hidden="true" hidden></p>
+            <span id="deck-beam" class="deck-beam" aria-hidden="true" hidden></span>
+            <div id="deck-transmission" class="deck-transmission" role="group" aria-label="Featured headline" hidden>
+              <span class="deck-transmission-region"></span>
+              <a class="deck-transmission-link" href="/" target="_blank" rel="noopener noreferrer"></a>
+              <span class="deck-transmission-meta"></span>
+            </div>
           </div>
           <div id="edition-coverage" class="edition-coverage" hidden></div>
+          <div id="deck-wire" class="deck-wire" data-paused="false" hidden>
+            <span class="deck-wire-label"><span class="deck-wire-dot" aria-hidden="true"></span>Live wire</span>
+            <div class="deck-wire-track"></div>
+            <button id="deck-wire-toggle" class="deck-wire-toggle" type="button" aria-pressed="false" aria-label="Pause live wire"><span class="deck-wire-toggle-text">Pause</span></button>
+          </div>
         </section>
       <div class="desk-layout">
         <section
@@ -393,7 +413,7 @@
                 rel="noopener noreferrer"
                 >GitHub ↗</a
               >
-            </aside>
+            </div>
             <div id="failed-alert" class="failed-alert" hidden>
               <span id="failed-message"></span
               ><button id="retry-sources" class="text-button" type="button">

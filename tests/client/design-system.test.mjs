@@ -11,16 +11,22 @@ test('every page loads the design-system layer after the legacy stylesheets', ()
   for (const page of pages) {
     const html = readFileSync(new URL(page, root), 'utf8');
     const sheets = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
-    assert.equal(sheets.at(-1), '/system.css', `${page} must load system.css last`);
+    assert.deepEqual(sheets.slice(-2), ['/system.css', '/command.css'], `${page} must load system.css then command.css last`);
     assert.match(html, /<script defer src="\/system\.js"><\/script>/, `${page} must load system.js`);
+    assert.match(html, /<script defer src="\/ambient\.js"><\/script>/, `${page} must load ambient.js`);
   }
 });
 
-test('the design-system stylesheet gates motion and avoids external resources', () => {
-  const css = readFileSync(new URL('system.css', root), 'utf8');
-  assert.match(css, /prefers-reduced-motion: reduce/);
-  assert.match(css, /forced-colors: active/);
-  for (const match of css.matchAll(/url\(["']?(https?:)/g)) assert.fail(`External resource ${match[1]}`);
+test('the design-system stylesheets gate motion and avoid external resources', () => {
+  for (const sheet of ['system.css', 'command.css']) {
+    const css = readFileSync(new URL(sheet, root), 'utf8');
+    assert.match(css, /prefers-reduced-motion: reduce/);
+    assert.match(css, /forced-colors: active/);
+    for (const match of css.matchAll(/url\(["']?(https?:)/g)) assert.fail(`External resource ${match[1]}`);
+  }
+  const command = readFileSync(new URL('command.css', root), 'utf8');
+  assert.match(command, /:root\[data-motion="off"\]/, 'the motion switch must stop decorative animation');
+  assert.match(command, /@media print/);
 });
 
 test('story cards get stagger indexes and action toasts mirror the status region', async () => {
