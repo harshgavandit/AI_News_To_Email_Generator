@@ -331,3 +331,12 @@ Publisher discovery run #8 scanned 135 regional technology desks and engineering
 - **Not reachable from GitHub:** Baby Steps (Niko Matsakis), Korea Tech Desk and Punch Technology.
 
 Yield across the six rounds fell from 130 per round to 17, and most well-known English technology publishers are now covered. Further growth should come from feeds that readers or reviewers notice are missing, not from broad sweeps.
+
+## Language review for short-title feeds (2026-11-24)
+
+Thirty working feeds had been held back only because language detection could not read their titles. The validator now handles these two cases:
+
+- **Release feeds** (`coverage: release`) take their language from the review of the project. Titles such as "v2.4.1" or "1.18.0-rc.2" no longer count as foreign.
+- **Reviewed English publications** are listed in `docs/research/english-reviewed.json`, with a note and date for each id. They pass the English check even when short titles fool detection. Promoted article feeds still set `require_english`, so a confidently non-English entry is dropped at ingestion (for example, Sakana AI's Japanese posts).
+
+`source-candidates-2026-11-24-round7.json` rechecks those 30 feeds with their original ids and URLs. The tests for earlier rounds skip ids that appear in round three or round seven.

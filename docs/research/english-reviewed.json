@@ -1,0 +1,92 @@
+[
+  {
+    "id": "maarten-grootendorst",
+    "note": "Maarten Grootendorst writes in English about LLMs and topic modelling; short titles.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "capital-one-tech",
+    "note": "Capital One Tech is an English engineering blog.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "mitchell-hashimoto",
+    "note": "Mitchell Hashimoto (HashiCorp, Ghostty) writes in English; titles are often a single word.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "scattered-thoughts",
+    "note": "Jamie Brandon writes in English on databases and language design.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "zig-news",
+    "note": "The Zig project's news page is in English; titles are release names.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "system-design-one",
+    "note": "System Design One is an English newsletter on system design.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "aphyr",
+    "note": "Kyle Kingsbury (Jepsen) writes in English; titles are short.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "modular-blog",
+    "note": "Modular (Mojo, MAX) publishes in English.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "delivery-hero-tech-hub",
+    "note": "Delivery Hero's engineering blog is in English.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "nikita-prokopov-tonsky",
+    "note": "Nikita Prokopov (tonsky.me) writes in English on software and UI.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "armin-ronacher",
+    "note": "Armin Ronacher (Flask, Sentry) writes in English; titles are short.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "sakana-ai",
+    "note": "Sakana AI publishes in English and Japanese; require_english drops the Japanese posts.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "honeybadger-blog",
+    "note": "Honeybadger's developer blog is in English.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "businesskorea",
+    "note": "BusinessKorea is an English-language Korean business and technology daily.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "two-sigma-articles",
+    "note": "Two Sigma's articles are in English.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "the-morning-paper",
+    "note": "Adrian Colyer's paper summaries are in English; titles are paper names.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "render-blog",
+    "note": "Render's engineering and product blog is in English.",
+    "reviewed_at": "2026-11-24"
+  },
+  {
+    "id": "a-list-apart",
+    "note": "A List Apart is an English web design and development magazine.",
+    "reviewed_at": "2026-11-24"
+  }
+]

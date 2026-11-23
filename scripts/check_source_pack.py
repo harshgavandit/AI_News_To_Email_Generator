@@ -30,13 +30,29 @@ def detection_is_reliable(source):
     return source.coverage not in LANGUAGE_FROM_REVIEW and source.kind not in LANGUAGE_FROM_REVIEW_KINDS
 
 
-def english_enough(source, recent, english, other_languages):
+# Version titles ("v2.4.1", "1.18.0-rc.2") are noise to a language detector, so release
+# feeds take their language from the review of the project rather than from detection.
+TRUSTED_COVERAGE = {"release"}
+REVIEWED_ENGLISH = Path(__file__).resolve().parents[1] / "docs" / "research" / "english-reviewed.json"
+
+
+def reviewed_english(path=REVIEWED_ENGLISH):
+    """Ids a reviewer read and confirmed as English publications whose short titles fool detection."""
+    if not path.exists():
+        return set()
+    return {row["id"] for row in json.loads(path.read_text(encoding="utf-8"))}
+
+
+def english_enough(source, recent, english, other_languages, *, reviewed=False):
     """Accept a reviewed English feed when detection broadly agrees with the review.
 
     Short headlines make a detector misfire occasionally, so one stray result no longer
     rejects a feed. Promoted article feeds also set require_english, which drops any
-    non-English item at ingestion.
+    non-English item at ingestion, so a feed confirmed by hand still never shows a
+    confidently foreign headline.
     """
+    if reviewed or source.coverage in TRUSTED_COVERAGE:
+        return True
     if not detection_is_reliable(source):
         return other_languages * 5 <= recent  # At most 20% confidently non-English.
     return english * 5 >= recent * 3 and other_languages * 10 <= recent
@@ -67,6 +83,7 @@ def main():
     candidates = json.loads(args.input.read_text(encoding="utf-8"))
     existing_ids = {source.id for source in DEFAULT_SOURCES}
     existing_urls = {source.url for source in DEFAULT_SOURCES}
+    confirmed_english = reviewed_english()
     gates = {}
     for row in candidates:
         gates.setdefault(urlsplit(row["url"]).hostname, threading.Semaphore(2))
@@ -97,7 +114,8 @@ def main():
                 parsed_entries=len(items), recent_entries=len(recent), error=state.get("error"),
                 english_entries=english, non_english_entries=other_languages,
                 language_basis="entries" if sample else "review",
-                english_verified=english_feed and (not sample or english_enough(source, len(sample), english, other_languages)),
+                english_verified=english_feed and (not sample or english_enough(source, len(sample), english, other_languages,
+                                                                                       reviewed=source.id in confirmed_english)),
                 latest_published_at=max((item["published_at"] for item in items), default=None),
                 sample_urls=[item["url"] for item in recent[:2]],
                 seconds=round(time.monotonic() - started, 3))

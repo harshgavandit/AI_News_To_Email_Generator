@@ -60,7 +60,12 @@ def test_language_policy_trusts_review_for_short_title_feeds_only():
     from scripts.check_source_pack import english_enough, requires_english
     release = SimpleNamespace(coverage="release", kind="engineering")
     blog = SimpleNamespace(coverage="article", kind="engineering")
-    assert english_enough(release, 10, 1, 0) and not english_enough(release, 10, 0, 3)
+    video = SimpleNamespace(coverage="publisher", kind="video")
+    # Release titles are version numbers, so the review decides; video keeps a loose check.
+    assert english_enough(release, 10, 1, 0) and english_enough(release, 10, 0, 3)
+    assert english_enough(video, 10, 1, 2) and not english_enough(video, 10, 0, 3)
+    # A feed a reviewer confirmed as English passes even when short titles fool detection.
+    assert not english_enough(blog, 10, 2, 2) and english_enough(blog, 10, 2, 2, reviewed=True)
     assert english_enough(blog, 20, 13, 1) and not english_enough(blog, 20, 11, 0) and not english_enough(blog, 20, 18, 3)
     assert not requires_english({"coverage": "release", "kind": "engineering"})
     assert not requires_english({"coverage": "publisher", "kind": "video"})
@@ -205,9 +210,13 @@ def test_round_two_pack_2026_11_24_promotes_exactly_the_validated_feeds():
 
 
 def retried_in_round_three():
-    """Ids from earlier rounds that were checked again in round three (2026-11-24)."""
-    with open("docs/research/source-candidates-2026-11-24-round3.json", encoding="utf-8") as handle:
-        return {row["id"] for row in json.load(handle)}
+    """Ids from earlier rounds that were checked again later: transient failures in round
+    three, and feeds held back only by language detection in round seven (2026-11-24)."""
+    ids = set()
+    for name in ("round3", "round7"):
+        with open(f"docs/research/source-candidates-2026-11-24-{name}.json", encoding="utf-8") as handle:
+            ids |= {row["id"] for row in json.load(handle)}
+    return ids
 
 
 def test_round_three_pack_2026_11_24_promotes_exactly_the_validated_feeds():
@@ -230,7 +239,10 @@ def test_round_four_pack_2026_11_24_promotes_exactly_the_validated_feeds():
     # Validation run #11 (feeds found by publisher discovery run #4): active or quiet, English confirmed.
     validated = set("""jack-vanlightly,risc-v-international-news,arcticstartup,auth0-blog,it-brief-australia,it-brief-new-zealand,maddyness-uk,rappler-technology,sambanova-blog,surfing-complexity,tech-in-africa,vox-technology,writer-blog,mashable-tech,pcmag,qodo-blog,isovalent-blog,the-developing-dev,gitguardian-blog,pcworld,forbes-innovation,cilium-blog,gunnar-morling,istio-blog,voyage-ai-blog,digital-trends,politico-europe-technology,sierra-blog,elevenlabs-blog,theelec,tom-s-guide,chainguard-unchained,horizon3-ai-attack-research,euronews-next,increment""".split(","))
     assert len(validated) == 35
+    retried = retried_in_round_three()
     for row in pack:
+        if row["id"] in retried:
+            continue  # Judged by the round seven check below.
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
@@ -243,7 +255,10 @@ def test_round_five_pack_2026_11_24_promotes_exactly_the_validated_feeds():
     # Validation run #12 (feeds from publisher discovery runs #5 to #7): active or quiet, English confirmed.
     validated = set("""andrej-karpathy,buildkite-blog,digital-news-asia,elixir-blog,linux-kernel-releases,transformer-circuits,apache-software-foundation-news,cloud-native-now,dremio-blog,eclipse-foundation-news,electronics-for-you,emerging-europe,hackread,mariadb-foundation,meta-newsroom,new-scientist-technology,petri,popular-science-technology,propakistani,proton-blog,ruby-news,salesforce-news,singularity-hub,spacelift-blog,teslarati,the-logic,tor-project-blog,windows-latest,wordpress-news,zero-day-initiative-blog,ably-blog,coder-blog,tigris-blog,zuplo-blog,access-now,apollo-graphql-blog,sanity-blog,droid-life,element-blog,mux-blog,siliconera,the-diff,the-recursive,evil-martians-chronicles,metr,mobilesyrup,duckduckgo-spread-privacy,intercom-blog,kent-c-dodds,laion-blog,nomic-ai-blog,all-about-circuits,arn-australia,bgr,builder-io-blog,depot-blog,gsmarena,idownloadblog,kde-blogs,kotaku,liliputing,macworld,make-wordpress-core,newcomer,ovhcloud-blog,slashgear,france-24-technology,hothardware,daily-blog,the-drive-tech,businessworld-technology,city-am-technology,foojay,kitguru,sap-news-center,storagereview,techzim,android-headlines,spring-blog,centre-for-the-governance-of-ai,ghacks,gizmochina,quarkus-blog,live-science-technology,ibm-newsroom,khronos-group-news,vlad-mihalcea,android-central,edge-ai-and-vision-alliance,pc-gamer,popular-mechanics-technology,spring-security-advisories,cult-of-mac,nutanix-dev,new-atlas-technology,reddit-inc-news,symfony-blog,futurism,cisco-blogs,cloudinary-blog,rock-paper-shotgun,ghost-blog,margins,the-quint-tech-and-auto,total-typescript,trunk-blog""".split(","))
     assert len(validated) == 106
+    retried = retried_in_round_three()
     for row in pack:
+        if row["id"] in retried:
+            continue  # Judged by the round seven check below.
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
@@ -268,3 +283,14 @@ def test_round_six_pack_2026_11_24_promotes_exactly_the_validated_feeds():
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+def test_reviewed_english_list_names_held_back_candidates_only():
+    from scripts.check_source_pack import reviewed_english
+    with open("docs/research/english-reviewed.json", encoding="utf-8") as handle:
+        rows = json.load(handle)
+    assert all(row["note"] and row["reviewed_at"] for row in rows)
+    with open("docs/research/source-candidates-2026-11-24-round7.json", encoding="utf-8") as handle:
+        round_seven = {row["id"]: row for row in json.load(handle)}
+    assert reviewed_english() <= set(round_seven)
+    # Everything else in round seven is a release feed, which takes its language from review.
+    assert all(row["coverage"] == "release" for ident, row in round_seven.items() if ident not in reviewed_english())

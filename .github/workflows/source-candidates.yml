@@ -5,7 +5,7 @@ on:
       pack:
         description: Candidate pack to check (JSON list in the repository)
         type: string
-        default: docs/research/source-candidates-2026-11-24-round6.json
+        default: docs/research/source-candidates-2026-11-24-round7.json
 permissions:
   contents: read
 concurrency:
