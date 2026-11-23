@@ -19,7 +19,7 @@
   {
     "id": "ahead-of-ai",
     "group": "ahead-of-ai",
-    "label": "Ahead of AI â€” Sebastian Raschka",
+    "label": "Ahead of AI — Sebastian Raschka",
     "url": "https://magazine.sebastianraschka.com/feed",
     "hosts": [
       "magazine.sebastianraschka.com"
@@ -1004,7 +1004,7 @@
   {
     "id": "import-ai",
     "group": "import-ai",
-    "label": "Import AI â€” Jack Clark",
+    "label": "Import AI — Jack Clark",
     "url": "https://importai.substack.com/feed",
     "hosts": [
       "importai.substack.com"
@@ -1020,7 +1020,7 @@
   {
     "id": "interconnects",
     "group": "interconnects",
-    "label": "Interconnects â€” Nathan Lambert",
+    "label": "Interconnects — Nathan Lambert",
     "url": "https://www.interconnects.ai/feed",
     "hosts": [
       "interconnects.ai",
@@ -1404,7 +1404,7 @@
   {
     "id": "one-useful-thing",
     "group": "one-useful-thing",
-    "label": "One Useful Thing â€” Ethan Mollick",
+    "label": "One Useful Thing — Ethan Mollick",
     "url": "https://www.oneusefulthing.org/feed",
     "hosts": [
       "oneusefulthing.org",

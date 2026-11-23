@@ -24,6 +24,8 @@ from fastapi import HTTPException
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("publisher_sweep")
+# One line per feed request would bury the sweep summary in the job log.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 LEASE_WAIT_SECONDS = 30
 
