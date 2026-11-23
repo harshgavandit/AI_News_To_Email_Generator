@@ -85,7 +85,7 @@ def test_medium_custom_domain_blogs_read_through_medium_feeds():
 
 def test_feed_repairs_and_pauses_from_the_november_23_review():
     assert BY_ID["graphics-programming-weekly"].url == "https://www.jendrikillner.com/index.xml"
-    assert BY_ID["doordash-blog"].url == "https://careersatdoordash.com/blog/category/engineering/feed/"
+    assert "doordash-blog" not in BY_ID, "removed after HTTP 403 from production"
     for key in ("hpcwire", "uktn", "stripe-engineering"):
         assert not BY_ID[key].enabled and BY_ID[key].pause_reason
     stripe = [source for source in DEFAULT_SOURCES if source.enabled and source.url == "https://stripe.com/blog/feed.rss"]
