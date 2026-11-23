@@ -1490,5 +1490,555 @@
     "language": "en",
     "refresh_minutes": 60,
     "collection": "Global technology"
+  },
+  {
+    "id": "intercom-blog",
+    "group": "intercom-blog",
+    "label": "Intercom Blog",
+    "url": "https://www.intercom.com/blog/feed",
+    "hosts": [
+      "intercom.com",
+      "www.intercom.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "thoughtbot",
+    "group": "thoughtbot",
+    "label": "thoughtbot",
+    "url": "https://feed.thoughtbot.com",
+    "hosts": [
+      "thoughtbot.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "evil-martians-chronicles",
+    "group": "evil-martians-chronicles",
+    "label": "Evil Martians Chronicles",
+    "url": "https://evilmartians.com/chronicles.atom",
+    "hosts": [
+      "evilmartians.com",
+      "www.evilmartians.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "meta-newsroom",
+    "group": "meta-newsroom",
+    "label": "Meta Newsroom",
+    "url": "https://about.fb.com/feed/",
+    "hosts": [
+      "about.fb.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "reddit-inc-news",
+    "group": "reddit-inc-news",
+    "label": "Reddit Inc. News",
+    "url": "https://redditinc.com/news/rss.xml",
+    "hosts": [
+      "redditinc.com",
+      "www.redditinc.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "salesforce-news",
+    "group": "salesforce-news",
+    "label": "Salesforce News",
+    "url": "https://www.salesforce.com/news/feed/",
+    "hosts": [
+      "salesforce.com",
+      "www.salesforce.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "sap-news-center",
+    "group": "sap-news-center",
+    "label": "SAP News Center",
+    "url": "https://news.sap.com/feed/",
+    "hosts": [
+      "news.sap.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "ibm-newsroom",
+    "group": "ibm-newsroom",
+    "label": "IBM Newsroom",
+    "url": "https://newsroom.ibm.com/announcements?pagetemplate=rss",
+    "hosts": [
+      "newsroom.ibm.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "apache-software-foundation-news",
+    "group": "apache-software-foundation-news",
+    "label": "Apache Software Foundation News",
+    "url": "https://news.apache.org/feed",
+    "hosts": [
+      "news.apache.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "eclipse-foundation-news",
+    "group": "eclipse-foundation-news",
+    "label": "Eclipse Foundation News",
+    "url": "https://newsroom.eclipse.org/news.xml",
+    "hosts": [
+      "newsroom.eclipse.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "mariadb-foundation",
+    "group": "mariadb-foundation",
+    "label": "MariaDB Foundation",
+    "url": "https://mariadb.org/feed/",
+    "hosts": [
+      "mariadb.org",
+      "www.mariadb.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "linux-kernel-releases",
+    "group": "linux-kernel-releases",
+    "label": "Linux Kernel Releases",
+    "url": "https://www.kernel.org/feeds/kdist.xml",
+    "hosts": [
+      "kernel.org",
+      "www.kernel.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "kde-blogs",
+    "group": "kde-blogs",
+    "label": "KDE Blogs",
+    "url": "https://blogs.kde.org/index.xml",
+    "hosts": [
+      "blogs.kde.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tor-project-blog",
+    "group": "tor-project-blog",
+    "label": "Tor Project Blog",
+    "url": "https://blog.torproject.org/feed.xml",
+    "hosts": [
+      "blog.torproject.org"
+    ],
+    "kind": "news",
+    "topic": "security",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Security"
+  },
+  {
+    "id": "element-blog",
+    "group": "element-blog",
+    "label": "Element Blog",
+    "url": "https://element.io/blog/rss/",
+    "hosts": [
+      "element.io",
+      "www.element.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "proton-blog",
+    "group": "proton-blog",
+    "label": "Proton Blog",
+    "url": "https://proton.me/blog/feed",
+    "hosts": [
+      "proton.me",
+      "www.proton.me"
+    ],
+    "kind": "news",
+    "topic": "security",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Security"
+  },
+  {
+    "id": "vivaldi-blog",
+    "group": "vivaldi-blog",
+    "label": "Vivaldi Blog",
+    "url": "https://vivaldi.com/feed/blog/news/",
+    "hosts": [
+      "vivaldi.com",
+      "www.vivaldi.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "duckduckgo-spread-privacy",
+    "group": "duckduckgo-spread-privacy",
+    "label": "DuckDuckGo Spread Privacy",
+    "url": "https://spreadprivacy.com/rss/",
+    "hosts": [
+      "spreadprivacy.com",
+      "www.spreadprivacy.com"
+    ],
+    "kind": "news",
+    "topic": "security",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Security"
+  },
+  {
+    "id": "access-now",
+    "group": "access-now",
+    "label": "Access Now",
+    "url": "https://www.accessnow.org/feed/",
+    "hosts": [
+      "accessnow.org",
+      "www.accessnow.org"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "metr",
+    "group": "metr",
+    "label": "METR",
+    "url": "https://metr.org/feed.xml",
+    "hosts": [
+      "metr.org",
+      "www.metr.org"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Research"
+  },
+  {
+    "id": "centre-for-the-governance-of-ai",
+    "group": "centre-for-the-governance-of-ai",
+    "label": "Centre for the Governance of AI",
+    "url": "https://www.governance.ai/post/rss.xml",
+    "hosts": [
+      "governance.ai",
+      "www.governance.ai"
+    ],
+    "kind": "research",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Research"
+  },
+  {
+    "id": "laion-blog",
+    "group": "laion-blog",
+    "label": "LAION Blog",
+    "url": "https://laion.ai/blog/rss.xml",
+    "hosts": [
+      "laion.ai",
+      "www.laion.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "the-diff",
+    "group": "the-diff",
+    "label": "The Diff",
+    "url": "https://www.thediff.co/archive/rss/",
+    "hosts": [
+      "thediff.co",
+      "www.thediff.co"
+    ],
+    "kind": "engineering",
+    "topic": "industry",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Global technology"
+  },
+  {
+    "id": "margins",
+    "group": "margins",
+    "label": "Margins",
+    "url": "https://www.readmargins.com/feed",
+    "hosts": [
+      "readmargins.com",
+      "www.readmargins.com"
+    ],
+    "kind": "engineering",
+    "topic": "industry",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Global technology"
+  },
+  {
+    "id": "newcomer",
+    "group": "newcomer",
+    "label": "Newcomer",
+    "url": "https://www.newcomer.co/feed",
+    "hosts": [
+      "newcomer.co",
+      "www.newcomer.co"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "storagereview",
+    "group": "storagereview",
+    "label": "StorageReview",
+    "url": "https://www.storagereview.com/feed",
+    "hosts": [
+      "storagereview.com",
+      "www.storagereview.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "cloud-native-now",
+    "group": "cloud-native-now",
+    "label": "Cloud Native Now",
+    "url": "https://cloudnativenow.com/feed/",
+    "hosts": [
+      "cloudnativenow.com",
+      "www.cloudnativenow.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "petri",
+    "group": "petri",
+    "label": "Petri",
+    "url": "https://petri.com/feed/",
+    "hosts": [
+      "petri.com",
+      "www.petri.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "windows-latest",
+    "group": "windows-latest",
+    "label": "Windows Latest",
+    "url": "https://www.windowslatest.com/feed/",
+    "hosts": [
+      "windowslatest.com",
+      "www.windowslatest.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "ghacks",
+    "group": "ghacks",
+    "label": "gHacks",
+    "url": "https://www.ghacks.net/feed/",
+    "hosts": [
+      "ghacks.net",
+      "www.ghacks.net"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "android-headlines",
+    "group": "android-headlines",
+    "label": "Android Headlines",
+    "url": "https://www.androidheadlines.com/feed",
+    "hosts": [
+      "androidheadlines.com",
+      "www.androidheadlines.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
   }
 ]
