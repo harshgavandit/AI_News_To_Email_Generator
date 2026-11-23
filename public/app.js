@@ -17,6 +17,7 @@ import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
 import { markDevelopmentsSeen } from "./development-seen.js";
 import { createCoverageDialog } from "./coverage-dialog.js";
 import { createVisitCatchup } from "./visit-catchup.js";
+import { catchupCard } from "./catchup-cards.js";
 import { openVisit } from "./visit-history.js";
 import { renderCuriosityCards } from "./curiosity.js";
 import { createSearchSuggestions } from "./search-suggest.js";
@@ -1477,46 +1478,12 @@ async function loadHomeCatchup() {
       signal: controller.signal,
     });
     if (state.controller !== controller || state.view !== "catchup") return;
+    const helpers = { node, externalLink, openDossier, developmentLink, appendClaimEvidence, relativeTime, readableTime,
+      topicLabel: (id) => topicOptions()[id] || "" };
     for (const event of data.events || []) {
-      const story = event.articles?.[0];
-      if (!story) continue;
+      const card = catchupCard(event, helpers);
+      if (!card) continue;
       visibleCatchup.push(event);
-      const card = node("article", "briefing-overview");
-      const open = node("button", "text-button", event.title);
-      open.type = "button";
-      open.addEventListener("click", () => openDossier(story, open));
-      const title = node("h3");
-      title.append(open);
-      const copy = node("div");
-      copy.append(node("p", "small", `${event.source_count} ${event.source_count === 1 ? "publisher" : "publishers"} · ${readableTime(event.updated_at)}`), title);
-      if (event.change_sources?.length) {
-        for (const change of event.change_sources) {
-          copy.append(node("p", "small", change.change_label), node("p", "", change.excerpt),
-            externalLink(change.url, `${change.publisher} ↗`));
-        }
-      } else {
-        if (story.cleanSummary) copy.append(node("p", "", story.cleanSummary));
-        copy.append(externalLink(story.url, `${story.publisher} ↗`));
-      }
-      if (event.explanation?.claims?.length) {
-        const explained = node("details", "catchup-explanation");
-        explained.append(node("summary", "", "AI explanation"));
-        for (const claim of event.explanation.claims) {
-          const finding = node("div");
-          finding.append(node("p", "", claim.kind === "analysis" ? `Interpretation · ${claim.text}` : claim.text));
-          appendClaimEvidence(finding, claim, event.explanation_evidence || [], externalLink);
-          explained.append(finding);
-        }
-        if (event.explanation.limitations) explained.append(node("p", "small", event.explanation.limitations));
-        copy.append(explained);
-      }
-      card.append(copy);
-      const timelineHref = developmentLink(event.id);
-      if (timelineHref) {
-        const timeline = node("a", "text-button", "View story timeline ↗");
-        timeline.href = timelineHref;
-        copy.append(timeline);
-      }
       results.append(card);
     }
     mark.hidden = !results.childElementCount;
