@@ -234,3 +234,24 @@ def test_round_four_pack_2026_11_24_promotes_exactly_the_validated_feeds():
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+
+def test_round_five_pack_2026_11_24_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round5.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #12 (feeds from publisher discovery runs #5 to #7): active or quiet, English confirmed.
+    validated = set("""andrej-karpathy,buildkite-blog,digital-news-asia,elixir-blog,linux-kernel-releases,transformer-circuits,apache-software-foundation-news,cloud-native-now,dremio-blog,eclipse-foundation-news,electronics-for-you,emerging-europe,hackread,mariadb-foundation,meta-newsroom,new-scientist-technology,petri,popular-science-technology,propakistani,proton-blog,ruby-news,salesforce-news,singularity-hub,spacelift-blog,teslarati,the-logic,tor-project-blog,windows-latest,wordpress-news,zero-day-initiative-blog,ably-blog,coder-blog,tigris-blog,zuplo-blog,access-now,apollo-graphql-blog,sanity-blog,droid-life,element-blog,mux-blog,siliconera,the-diff,the-recursive,evil-martians-chronicles,metr,mobilesyrup,duckduckgo-spread-privacy,intercom-blog,kent-c-dodds,laion-blog,nomic-ai-blog,all-about-circuits,arn-australia,bgr,builder-io-blog,depot-blog,gsmarena,idownloadblog,kde-blogs,kotaku,liliputing,macworld,make-wordpress-core,newcomer,ovhcloud-blog,slashgear,france-24-technology,hothardware,daily-blog,the-drive-tech,businessworld-technology,city-am-technology,foojay,kitguru,sap-news-center,storagereview,techzim,android-headlines,spring-blog,centre-for-the-governance-of-ai,ghacks,gizmochina,quarkus-blog,live-science-technology,ibm-newsroom,khronos-group-news,vlad-mihalcea,android-central,edge-ai-and-vision-alliance,pc-gamer,popular-mechanics-technology,spring-security-advisories,cult-of-mac,nutanix-dev,new-atlas-technology,reddit-inc-news,symfony-blog,futurism,cisco-blogs,cloudinary-blog,rock-paper-shotgun,ghost-blog,margins,the-quint-tech-and-auto,total-typescript,trunk-blog""".split(","))
+    assert len(validated) == 106
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]
+
+
+def test_catalog_can_grow_past_a_thousand_reviewed_sources():
+    import json as _json
+    from pathlib import Path
+    from app.sources import load_source_pack
+    rows = _json.loads(Path("app/source_catalog.json").read_text(encoding="utf-8"))
+    assert len(rows) > 1000 and len(load_source_pack("app/source_catalog.json")) == len(rows)

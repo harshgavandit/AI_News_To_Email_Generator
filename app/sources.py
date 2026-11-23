@@ -585,7 +585,8 @@ def validate_source(source):
 def load_source_pack(path):
     """Load reviewed configuration only. Importing a pack never fetches a URL."""
     records = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(records, list) or len(records) > 1000:
+    # A sanity bound for a reviewed catalog, not a coverage target.
+    if not isinstance(records, list) or len(records) > 3000:
         raise ValueError("A source pack must be a bounded list")
     result, ids, urls = [], set(), set()
     for row in records:

@@ -306,3 +306,19 @@ Publisher discovery run #4 scanned 146 new publisher pages (`app/discovery_seeds
 - **Engineering writers:** Jack Vanlightly, Gunnar Morling, The Developing Dev, Surfing Complexity, Increment and RISC-V International News.
 
 Five working feeds were held back because their entries could not be confirmed as English: Sakana AI, Honeybadger, BusinessKorea, Two Sigma and the morning paper.
+
+## Round five from publisher discovery (2026-11-24)
+
+Publisher discovery runs #5 to #7 scanned three new seed batches (133, 108 and 81 pages). Their new feed links were reduced to 114 candidates in `source-candidates-2026-11-24-round5.json`. Validation run #12 promoted 106 of them, and the catalog now has 1,245 enabled sources. The reviewed catalog file passed 1,000 entries, so the loader's sanity bound in `load_source_pack` was raised to 3,000.
+
+- **Developer platforms:** Buildkite, Spacelift, Dremio, Tigris, Coder, Depot, Trunk, Zuplo, Ably, Apollo GraphQL, Daily, Mux, Cloudinary, Sanity, Builder.io, Ghost, Nutanix.dev, OVHcloud and Cisco Blogs.
+- **Languages, frameworks and open source:** Ruby, Elixir, Spring (plus Spring security advisories), Quarkus, Symfony, foojay, WordPress News and Make WordPress Core, KDE, MariaDB Foundation, the Apache and Eclipse foundations, and Linux kernel releases.
+- **AI and research:** Andrej Karpathy, Transformer Circuits, METR, the Centre for the Governance of AI, LAION, Nomic and Intercom.
+- **Security and privacy:** Zero Day Initiative, Hackread, Tor Project, Proton, Element, DuckDuckGo Spread Privacy and Access Now.
+- **Company newsrooms:** Meta, Reddit, Salesforce, SAP and IBM.
+- **Consumer tech, hardware and games:** GSMArena, Android Central, Android Headlines, Droid Life, BGR, SlashGear, Macworld, Cult of Mac, iDownloadBlog, Gizmochina, Liliputing, KitGuru, HotHardware, StorageReview, All About Circuits, Edge AI and Vision, Electronics For You, PC Gamer, Rock Paper Shotgun, Kotaku, Siliconera and Khronos.
+- **Science and technology:** New Scientist, Live Science, Popular Science, Popular Mechanics, New Atlas, Singularity Hub and Futurism.
+- **Regional, trade and business press:** ProPakistani, Digital News Asia, BusinessWorld, Techzim, France 24, The Recursive, Emerging Europe, City AM, ARN, MobileSyrup, The Logic, The Quint, Petri, Windows Latest, gHacks, Cloud Native Now, Teslarati, The Drive, The Diff, Margins and Newcomer.
+- **Engineering writers:** Kent C. Dodds, Total TypeScript, Vlad Mihalcea and Evil Martians.
+
+Render and A List Apart were held back because English could not be confirmed. Green Car Reports, New Statesman, Stainless, thoughtbot, Tyk and Vivaldi were unavailable.
