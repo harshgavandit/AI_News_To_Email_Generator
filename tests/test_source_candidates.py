@@ -221,3 +221,16 @@ def test_round_three_pack_2026_11_24_promotes_exactly_the_validated_feeds():
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+
+def test_round_four_pack_2026_11_24_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round4.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #11 (feeds found by publisher discovery run #4): active or quiet, English confirmed.
+    validated = set("""jack-vanlightly,risc-v-international-news,arcticstartup,auth0-blog,it-brief-australia,it-brief-new-zealand,maddyness-uk,rappler-technology,sambanova-blog,surfing-complexity,tech-in-africa,vox-technology,writer-blog,mashable-tech,pcmag,qodo-blog,isovalent-blog,the-developing-dev,gitguardian-blog,pcworld,forbes-innovation,cilium-blog,gunnar-morling,istio-blog,voyage-ai-blog,digital-trends,politico-europe-technology,sierra-blog,elevenlabs-blog,theelec,tom-s-guide,chainguard-unchained,horizon3-ai-attack-research,euronews-next,increment""".split(","))
+    assert len(validated) == 35
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]

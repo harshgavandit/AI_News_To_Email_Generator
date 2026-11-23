@@ -16992,5 +16992,708 @@
     ],
     "reviewed_at": "2026-11-23",
     "require_english": true
+  },
+  {
+    "id": "jack-vanlightly",
+    "group": "jack-vanlightly",
+    "label": "Jack Vanlightly",
+    "url": "https://jack-vanlightly.com/blog?format=rss",
+    "hosts": [
+      "jack-vanlightly.com",
+      "www.jack-vanlightly.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "risc-v-international-news",
+    "group": "risc-v-international-news",
+    "label": "RISC-V International News",
+    "url": "https://riscv.org/blog/category/news/feed/",
+    "hosts": [
+      "riscv.org",
+      "www.riscv.org"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "arcticstartup",
+    "group": "arcticstartup",
+    "label": "ArcticStartup",
+    "url": "https://arcticstartup.com/feed/",
+    "hosts": [
+      "arcticstartup.com",
+      "www.arcticstartup.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "auth0-blog",
+    "group": "auth0-blog",
+    "label": "Auth0 Blog",
+    "url": "https://auth0.com/blog/rss.xml",
+    "hosts": [
+      "auth0.com",
+      "www.auth0.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "it-brief-australia",
+    "group": "it-brief-australia",
+    "label": "IT Brief Australia",
+    "url": "https://itbrief.com.au/feed",
+    "hosts": [
+      "itbrief.com.au"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "APAC",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "it-brief-new-zealand",
+    "group": "it-brief-new-zealand",
+    "label": "IT Brief New Zealand",
+    "url": "https://itbrief.co.nz/feed",
+    "hosts": [
+      "itbrief.co.nz"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "APAC",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "maddyness-uk",
+    "group": "maddyness-uk",
+    "label": "Maddyness UK",
+    "url": "https://www.maddyness.com/uk/feed/",
+    "hosts": [
+      "maddyness.com",
+      "www.maddyness.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "article_paths": [
+      "/uk/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "rappler-technology",
+    "group": "rappler-technology",
+    "label": "Rappler Technology",
+    "url": "https://www.rappler.com/technology/feed/",
+    "hosts": [
+      "rappler.com",
+      "www.rappler.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sambanova-blog",
+    "group": "sambanova-blog",
+    "label": "SambaNova Blog",
+    "url": "https://sambanova.ai/blog/rss.xml",
+    "hosts": [
+      "sambanova.ai",
+      "www.sambanova.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "surfing-complexity",
+    "group": "surfing-complexity",
+    "label": "Surfing Complexity",
+    "url": "https://surfingcomplexity.blog/feed/",
+    "hosts": [
+      "surfingcomplexity.blog",
+      "www.surfingcomplexity.blog"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "tech-in-africa",
+    "group": "tech-in-africa",
+    "label": "Tech In Africa",
+    "url": "https://www.techinafrica.com/feed/",
+    "hosts": [
+      "techinafrica.com",
+      "www.techinafrica.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Africa",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "vox-technology",
+    "group": "vox-technology",
+    "label": "Vox Technology",
+    "url": "https://www.vox.com/rss/technology/index.xml",
+    "hosts": [
+      "vox.com",
+      "www.vox.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "writer-blog",
+    "group": "writer-blog",
+    "label": "Writer Blog",
+    "url": "https://writer.com/feed/",
+    "hosts": [
+      "writer.com",
+      "www.writer.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "mashable-tech",
+    "group": "mashable-tech",
+    "label": "Mashable Tech",
+    "url": "https://mashable.com/feeds/rss/tech",
+    "hosts": [
+      "mashable.com",
+      "www.mashable.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "pcmag",
+    "group": "pcmag",
+    "label": "PCMag",
+    "url": "https://www.pcmag.com/feeds/rss/latest",
+    "hosts": [
+      "pcmag.com",
+      "www.pcmag.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "qodo-blog",
+    "group": "qodo-blog",
+    "label": "Qodo Blog",
+    "url": "https://www.qodo.ai/feed/",
+    "hosts": [
+      "qodo.ai",
+      "www.qodo.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "isovalent-blog",
+    "group": "isovalent-blog",
+    "label": "Isovalent Blog",
+    "url": "https://isovalent.com/blog/rss.xml",
+    "hosts": [
+      "isovalent.com",
+      "www.isovalent.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "the-developing-dev",
+    "group": "the-developing-dev",
+    "label": "The Developing Dev",
+    "url": "https://www.developing.dev/feed",
+    "hosts": [
+      "developing.dev",
+      "www.developing.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "gitguardian-blog",
+    "group": "gitguardian-blog",
+    "label": "GitGuardian Blog",
+    "url": "https://blog.gitguardian.com/rss/",
+    "hosts": [
+      "blog.gitguardian.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "pcworld",
+    "group": "pcworld",
+    "label": "PCWorld",
+    "url": "https://www.pcworld.com/feed",
+    "hosts": [
+      "pcworld.com",
+      "www.pcworld.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "forbes-innovation",
+    "group": "forbes-innovation",
+    "label": "Forbes Innovation",
+    "url": "https://www.forbes.com/innovation/feed/",
+    "hosts": [
+      "forbes.com",
+      "www.forbes.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "cilium-blog",
+    "group": "cilium-blog",
+    "label": "Cilium Blog",
+    "url": "https://cilium.io/blog/rss.xml",
+    "hosts": [
+      "cilium.io",
+      "www.cilium.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "gunnar-morling",
+    "group": "gunnar-morling",
+    "label": "Gunnar Morling",
+    "url": "https://www.morling.dev/index.xml",
+    "hosts": [
+      "morling.dev",
+      "www.morling.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "istio-blog",
+    "group": "istio-blog",
+    "label": "Istio Blog",
+    "url": "https://istio.io/latest/blog/feed.xml",
+    "hosts": [
+      "istio.io",
+      "www.istio.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "voyage-ai-blog",
+    "group": "voyage-ai-blog",
+    "label": "Voyage AI Blog",
+    "url": "https://blog.voyageai.com/feed/",
+    "hosts": [
+      "blog.voyageai.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "digital-trends",
+    "group": "digital-trends",
+    "label": "Digital Trends",
+    "url": "https://www.digitaltrends.com/feed/",
+    "hosts": [
+      "digitaltrends.com",
+      "www.digitaltrends.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "politico-europe-technology",
+    "group": "politico-europe-technology",
+    "label": "Politico Europe Technology",
+    "url": "https://www.politico.eu/section/technology/feed/",
+    "hosts": [
+      "politico.eu",
+      "www.politico.eu"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sierra-blog",
+    "group": "sierra-blog",
+    "label": "Sierra Blog",
+    "url": "https://sierra.ai/rss.xml",
+    "hosts": [
+      "sierra.ai",
+      "www.sierra.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "elevenlabs-blog",
+    "group": "elevenlabs-blog",
+    "label": "ElevenLabs Blog",
+    "url": "https://elevenlabs.io/blog/rss.xml",
+    "hosts": [
+      "elevenlabs.io",
+      "www.elevenlabs.io"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "theelec",
+    "group": "theelec",
+    "label": "TheElec",
+    "url": "https://cdn.thelec.net/rss/gn_rss_allArticle.xml",
+    "hosts": [
+      "thelec.net",
+      "www.thelec.net",
+      "cdn.thelec.net"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "tom-s-guide",
+    "group": "tom-s-guide",
+    "label": "Tom's Guide",
+    "url": "https://www.tomsguide.com/feeds.xml",
+    "hosts": [
+      "tomsguide.com",
+      "www.tomsguide.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "chainguard-unchained",
+    "group": "chainguard-unchained",
+    "label": "Chainguard Unchained",
+    "url": "https://www.chainguard.dev/api/rss",
+    "hosts": [
+      "chainguard.dev",
+      "www.chainguard.dev"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "horizon3-ai-attack-research",
+    "group": "horizon3-ai-attack-research",
+    "label": "Horizon3.ai Attack Research",
+    "url": "https://horizon3.ai/category/attack-research/feed/",
+    "hosts": [
+      "horizon3.ai",
+      "www.horizon3.ai"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "euronews-next",
+    "group": "euronews-next",
+    "label": "Euronews Next",
+    "url": "https://www.euronews.com/rss?level=vertical&name=next",
+    "hosts": [
+      "euronews.com",
+      "www.euronews.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "article_paths": [
+      "/next/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "increment",
+    "group": "increment",
+    "label": "Increment",
+    "url": "https://increment.com/feed.xml",
+    "hosts": [
+      "increment.com",
+      "www.increment.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
   }
 ]

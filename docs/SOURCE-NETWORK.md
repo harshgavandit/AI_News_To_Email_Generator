@@ -294,3 +294,15 @@ Validation run #10 checked `source-candidates-2026-11-24-round3.json`, which has
 - **New (21):** Intuit Engineering, Brex Engineering, Zerodha Tech, 9to5Linux, Linuxiac, OMG! Ubuntu, Analytics Vidhya, CIO Dive, CIO.com, Canary Media, CleanTechnica, Finextra, Postman, IBM Research, HubSpot Product, AppleInsider, Daring Fireball, Six Colors, Khan Academy Engineering, Mercado Libre Tech and ShareChat TechByte.
 
 Several feeds failed from GitHub's network again, and GitHub now runs the production sweeps, so they are not added: the Google blogs (Project Zero, Security, Android Developers), Dan Luu, Heroku, Laravel News, LangChain, NCC Group, Elastic Security Labs and rachelbythebay. The Cooperpress newsletters (JavaScript, Golang, Ruby, Postgres Weekly, Frontend Focus) list issues without dates, so they had no eligible entries. Lawfare, Telecoms.com and Fintech Futures denied access.
+
+## Round four from publisher discovery (2026-11-24)
+
+Publisher discovery run #4 scanned 146 new publisher pages (`app/discovery_seeds.json`) and found 87 new feed links. Those were reduced to 40 candidates by dropping comment feeds, duplicate section feeds and site-wide feeds. Validation run #11 checked `source-candidates-2026-11-24-round4.json`, and 35 passed with English confirmed and were promoted. The catalog now has 1,139 enabled sources.
+
+- **AI:** SambaNova, ElevenLabs, Voyage AI, Sierra, Writer and Qodo.
+- **Cloud and security:** Istio, Cilium, Isovalent, Chainguard Unchained, Auth0, Horizon3.ai Attack Research and GitGuardian.
+- **Regional press:** TheElec (Korea), Rappler Technology (Philippines), Tech In Africa, Euronews Next, ArcticStartup, Maddyness UK, IT Brief New Zealand, IT Brief Australia and Politico Europe Technology.
+- **Consumer tech:** PCWorld, PCMag, Forbes Innovation, Vox Technology, Mashable Tech, Digital Trends and Tom's Guide.
+- **Engineering writers:** Jack Vanlightly, Gunnar Morling, The Developing Dev, Surfing Complexity, Increment and RISC-V International News.
+
+Five working feeds were held back because their entries could not be confirmed as English: Sakana AI, Honeybadger, BusinessKorea, Two Sigma and the morning paper.
