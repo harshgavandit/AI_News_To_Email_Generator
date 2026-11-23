@@ -208,6 +208,10 @@ Informa AI is a broad directory of reliable, mostly English technology sources. 
 - **Quiet**: the feed was fetched and parsed but has no entries from the last 90 days. Quiet feeds are promoted and kept; their language is judged on whatever entries they have, or on the review when they have none. In production the same distinction appears as `content_status` (`recent`, `quiet`, `no_retained_content`), which never marks a source as failed.
 - **Unavailable**: the feed could not be fetched or parsed (`feed_not_found`, `access_denied`, `invalid_feed`, repeated `fetch_failed`, `no_eligible_entries`). Only these are rejected or paused, with a recorded reason.
 
+### Source policy: publishers that deny access are not fetched
+
+A publisher that refuses automated access (HTTP 401 or 403, recorded as `access_denied`) is not part of the news feed. The candidate validator already reports such feeds as `unavailable`, so they are never promoted. Because GitHub's runners and Vercel's servers are blocked differently, production applies the same rule (`access_denied` in `app/ingestion.py`): a feed that has never worked stops being fetched after its first refusal, and a feed that has worked gets 14 days to recover from a passing block. It then appears as paused in the source catalog and leaves the "feeds up to date" count, and it is removed from the catalog at the next review. Rate limits (HTTP 429), timeouts and publisher outages are not refusals: those feeds stay, back off and are retried in every sweep.
+
 Fresh daily news comes from ranking and the reader's time window, not from removing quieter publishers. On November 21, 2026 the 21 quiet candidates from run 44917117113 (for example Andrej Karpathy's blog, The Gradient, Stanford AI Lab, V8, AutoGen, Aider, Keras and Nuclei releases) were promoted on this basis; Google's Gemini cookbook release feed was left out because it is documentation, not news. Enabled sources: 685.
 
 ## Second wave (November 21, 2026)

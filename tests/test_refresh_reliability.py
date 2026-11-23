@@ -224,12 +224,12 @@ def test_conditional_refresh_preserves_articles_through_not_modified_and_outage(
 
 def test_region_reload_reads_archive_and_only_owner_can_refresh_a_source(archive, monkeypatch, daily_clock):
     store, client = archive
-    ids = {"tech-in-asia", "sifted", "bbc-tech"}
+    ids = {"robohub", "sifted", "bbc-tech"}
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", tuple(s for s in ingestion.DEFAULT_SOURCES if s.id in ids))
     daily_clock(MORNING - timedelta(hours=12))
     store.ingest("bbc-tech", [], True)
     store.ingest("sifted", [], False, "fetch_failed")
-    store.ingest("tech-in-asia", [], False, "fetch_failed")
+    store.ingest("robohub", [], False, "fetch_failed")
     daily_clock(MORNING)
     refreshed = []
 

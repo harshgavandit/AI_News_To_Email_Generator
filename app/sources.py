@@ -176,9 +176,6 @@ DEFAULT_SOURCES = (
 
     # 3. World & Regional Tech
     reporting("rest-of-world", "Rest of World", "https://restofworld.org/feed/latest/", "restofworld.org", region="Global", topic="industry"),
-    Source("tech-in-asia", "tech-in-asia", "Tech in Asia", "news", "https://www.techinasia.com/feed",
-           ("techinasia.com",), enabled=False, topic="startups", coverage="reporting", region="APAC",
-           pause_reason="The publisher denies automated feed access. TNGlobal remains active for APAC technology news."),
     reporting("sifted", "Sifted", "https://sifted.eu/feed", "sifted.eu", region="EU", topic="startups"),
     Source("hacker-news", "hacker-news", "Hacker News", "news", "https://hacker-news.firebaseio.com/v0/topstories.json",
            ("news.ycombinator.com",), topic="software", coverage="discussion", integration="hacker-news-api"),
