@@ -23,6 +23,8 @@ jobs:
           uv sync --frozen
       - name: Discover publisher-declared feeds
         run: uv run python -m scripts.discover_source_feeds --seeds app/discovery_seeds.json --report reports/discovered-feeds.json
+      - name: Summarize discovered feeds
+        run: uv run python -m scripts.summarize_discovery reports/discovered-feeds.json | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Validate reviewed source pack
         run: uv run python -m scripts.check_source_pack app/source_catalog.json --report reports/source-health.json
       - name: Retain review evidence
