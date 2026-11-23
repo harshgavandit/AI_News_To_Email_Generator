@@ -1,36 +1,24 @@
-// Informa AI "Signal Globe": a dependency-free WebGL globe of regional technology coverage.
-// Dots trace coarse continents, hubs mark publisher regions, and light pulses travel the
-// arcs between them. The globe is decoration plus a shortcut: every hub is also exposed as
+// Informa AI "Signal Globe": a dependency-free WebGL planet of regional technology coverage.
+// A ray-cast shader draws real coastlines as a dot matrix, the live day/night terminator and
+// city lights; hubs mark publisher regions with light pillars, and packets travel the arcs
+// between them. The globe is decoration plus a shortcut: every hub is also exposed as
 // a real button by the page, so nothing here is required to read or filter the news.
+
+import { LAND_MASK, MASK_HEIGHT, MASK_WIDTH } from "./land-mask.js";
 
 const TAU = Math.PI * 2;
 
-// Coarse continent outlines as [longitude, latitude] rings. Recognisable at globe scale,
-// not cartographically exact.
-const LAND = [
-  [[-168, 66], [-160, 71], [-140, 70], [-120, 73], [-95, 72], [-82, 73], [-64, 61], [-56, 52], [-66, 44], [-75, 35],
-   [-81, 25], [-90, 30], [-97, 26], [-97, 19], [-88, 15], [-83, 9], [-78, 8], [-86, 12], [-92, 15], [-105, 19],
-   [-110, 23], [-117, 32], [-124, 40], [-125, 48], [-133, 56], [-150, 60], [-166, 60]],
-  [[-80, 10], [-73, 12], [-62, 10], [-50, 0], [-35, -6], [-39, -15], [-48, -26], [-58, -35], [-65, -42],
-   [-69, -52], [-75, -50], [-73, -37], [-71, -18], [-77, -12], [-81, -5], [-78, 2]],
-  [[-55, 60], [-42, 60], [-20, 70], [-20, 80], [-40, 83], [-62, 82], [-72, 77], [-56, 70]],
-  [[-10, 36], [-9, 43], [-2, 44], [-4, 48], [2, 51], [8, 54], [9, 58], [5, 62], [14, 69], [28, 71], [41, 67],
-   [40, 60], [31, 55], [31, 46], [40, 44], [28, 41], [23, 37], [15, 38], [12, 44], [3, 42]],
-  [[-6, 50], [1, 51], [2, 53], [-2, 57], [-5, 58], [-6, 55]],
-  [[-17, 15], [-16, 22], [-10, 30], [-5, 36], [10, 37], [20, 32], [32, 31], [35, 28], [43, 12], [51, 12],
-   [42, -2], [40, -15], [35, -25], [20, -35], [17, -29], [12, -17], [13, -6], [9, 4], [-5, 5], [-12, 8]],
-  [[44, -25], [47, -25], [50, -15], [49, -12], [44, -17]],
-  [[35, 28], [43, 12], [52, 15], [59, 22], [56, 26], [50, 30], [48, 30], [36, 33]],
-  [[28, 41], [40, 44], [48, 41], [55, 37], [57, 25], [62, 25], [67, 24], [72, 21], [77, 8], [80, 15], [88, 22],
-   [92, 22], [98, 16], [100, 13], [103, 1], [105, 10], [109, 12], [107, 21], [118, 24], [122, 30], [121, 40],
-   [125, 40], [129, 35], [131, 43], [140, 48], [143, 59], [160, 61], [170, 66], [180, 68], [180, 72], [140, 73],
-   [110, 77], [80, 73], [60, 70], [45, 68], [41, 67], [40, 60], [31, 55], [31, 46], [40, 44]],
-  [[95, 5], [105, -6], [115, -8], [125, -9], [135, -4], [141, -3], [130, 1], [119, 5], [110, 2], [100, 3]],
-  [[130, 31], [135, 34], [141, 38], [142, 45], [140, 41], [133, 34]],
-  [[114, -22], [122, -18], [130, -12], [137, -12], [142, -11], [146, -19], [153, -26], [150, -37], [141, -38],
-   [131, -31], [116, -35], [114, -26]],
-  [[172, -34], [178, -38], [174, -41], [167, -46], [170, -46]],
-];
+// Decode the 1-degree land mask once: one byte per cell, row 0 at latitude 89.5.
+let landCells = null;
+export function landCellsGrid() {
+  if (landCells) return landCells;
+  const binary = typeof atob === "function" ? atob(LAND_MASK) : Buffer.from(LAND_MASK, "base64").toString("binary");
+  landCells = new Uint8Array(MASK_WIDTH * MASK_HEIGHT);
+  for (let i = 0; i < landCells.length; i++) {
+    if (binary.charCodeAt(i >> 3) & (1 << (i & 7))) landCells[i] = 255;
+  }
+  return landCells;
+}
 
 // Publisher regions used by the Reading Room's region filter.
 export const HUBS = [
@@ -50,15 +38,25 @@ export function toVector(lat, lon) {
 }
 
 export function isLand(lat, lon) {
-  for (const ring of LAND) {
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const [xi, yi] = ring[i], [xj, yj] = ring[j];
-      if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
-    }
-    if (inside) return true;
-  }
-  return false;
+  const row = Math.min(MASK_HEIGHT - 1, Math.max(0, Math.floor(90 - lat)));
+  const column = ((Math.floor(lon + 180) % MASK_WIDTH) + MASK_WIDTH) % MASK_WIDTH;
+  return landCellsGrid()[row * MASK_WIDTH + column] > 0;
+}
+
+// The point on Earth where the sun is overhead, accurate to about a degree: enough to draw
+// the live day/night terminator. Returns { lat, lon } in degrees.
+export function subsolarPoint(date = new Date()) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const day = (date.getTime() - start) / 86400000;
+  const gamma = TAU / 365 * (day - 1);
+  const declination = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+    - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma);
+  const equation = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma)
+    - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+  const minutes = date.getUTCHours() * 60 + date.getUTCMinutes() + date.getUTCSeconds() / 60;
+  let lon = -((minutes + equation) / 4 - 180);
+  lon = ((lon + 540) % 360) - 180;
+  return { lat: declination * 180 / Math.PI, lon };
 }
 
 // Rotate by yaw (around Y) then pitch (around X); returns view-space coordinates.
@@ -126,57 +124,146 @@ export function orbitalPosition(orbit, time) {
   return [px * cn + z1 * sn, y, -px * sn + z1 * cn];
 }
 
-function sphereDots(count) {
-  const dots = [], golden = Math.PI * (3 - Math.sqrt(5));
+// Orbital rings that frame the planet like an instrument bezel: [x, y, z, t] per point.
+export function orbitRing(radius, tilt, node, count = 160) {
+  const points = [];
   for (let i = 0; i < count; i++) {
-    const y = 1 - (i / (count - 1)) * 2, radius = Math.sqrt(1 - y * y), theta = golden * i;
-    const x = Math.cos(theta) * radius, z = Math.sin(theta) * radius;
-    const lat = Math.asin(y) * 180 / Math.PI, lon = Math.atan2(x, z) * 180 / Math.PI;
-    dots.push([x, y, z, isLand(lat, lon) ? 1 : 0]);
+    const a = (i / count) * TAU;
+    const px = Math.cos(a) * radius, pz = Math.sin(a) * radius;
+    const y = pz * Math.sin(tilt), z1 = pz * Math.cos(tilt);
+    const cn = Math.cos(node), sn = Math.sin(node);
+    points.push([px * cn + z1 * sn, y, -px * sn + z1 * cn, i / count]);
   }
-  return dots;
+  return points;
 }
+
+// Shared view transform: yaw around Y, then pitch around X. Points behind the planet's disc
+// are hidden so the planet reads as solid.
+const ROTATE_GLSL = `
+uniform float uYaw, uPitch, uScale, uAspect;
+vec3 view(vec3 a) {
+  float cy = cos(uYaw), sy = sin(uYaw), cp = cos(uPitch), sp = sin(uPitch);
+  vec3 p = vec3(a.x * cy + a.z * sy, a.y, -a.x * sy + a.z * cy);
+  return vec3(p.x, p.y * cp - p.z * sp, p.y * sp + p.z * cp);
+}
+float occluded(vec3 p) { return (p.z < 0.0 && length(p.xy) < 0.995) ? 1.0 : 0.0; }`;
 
 const POINT_VS = `
 attribute vec3 aPos; attribute float aSize; attribute vec4 aColor; attribute float aGlow;
-uniform float uYaw, uPitch, uScale, uAspect, uDpr;
-varying vec4 vColor; varying float vGlow, vFront;
+uniform float uDpr, uPx;
+varying vec4 vColor; varying float vGlow, vHidden;
+${ROTATE_GLSL}
 void main() {
-  float cy = cos(uYaw), sy = sin(uYaw), cp = cos(uPitch), sp = sin(uPitch);
-  vec3 p = vec3(aPos.x * cy + aPos.z * sy, aPos.y, -aPos.x * sy + aPos.z * cy);
-  p = vec3(p.x, p.y * cp - p.z * sp, p.y * sp + p.z * cp);
-  vFront = p.z; vColor = aColor; vGlow = aGlow;
-  gl_Position = vec4(p.x * uScale / uAspect, p.y * uScale, -p.z * 0.5, 1.0);
-  gl_PointSize = aSize * uDpr * (0.55 + 0.45 * max(p.z, 0.0));
+  vec3 p = view(aPos);
+  vColor = aColor; vGlow = aGlow; vHidden = occluded(p);
+  gl_Position = vec4(p.x * uScale / uAspect, p.y * uScale, -p.z * 0.3, 1.0);
+  gl_PointSize = aSize * uDpr * uPx * (0.62 + 0.38 * clamp(p.z + 0.4, 0.0, 1.0));
 }`;
 const POINT_FS = `
 precision mediump float;
-varying vec4 vColor; varying float vGlow, vFront;
+varying vec4 vColor; varying float vGlow, vHidden;
 void main() {
+  if (vHidden > 0.5) discard;
   float d = length(gl_PointCoord - 0.5) * 2.0;
   if (d > 1.0) discard;
-  float side = vFront < 0.0 ? 0.16 : 1.0;
-  float a = vGlow > 0.0 ? pow(1.0 - d, 1.5) + (1.0 - smoothstep(0.0, 0.3, d)) * 0.8 : 1.0 - smoothstep(0.55, 1.0, d);
-  gl_FragColor = vec4(vColor.rgb, vColor.a * a * side);
+  float a = vGlow > 0.0 ? pow(1.0 - d, 2.2) + (1.0 - smoothstep(0.0, 0.22, d)) * 0.9 : 1.0 - smoothstep(0.5, 1.0, d);
+  gl_FragColor = vec4(vColor.rgb, vColor.a * a);
 }`;
 const LINE_VS = `
 attribute vec4 aPos;
-uniform float uYaw, uPitch, uScale, uAspect;
-varying float vT, vFront;
+varying float vT, vFront, vHidden;
+${ROTATE_GLSL}
 void main() {
-  float cy = cos(uYaw), sy = sin(uYaw), cp = cos(uPitch), sp = sin(uPitch);
-  vec3 p = vec3(aPos.x * cy + aPos.z * sy, aPos.y, -aPos.x * sy + aPos.z * cy);
-  p = vec3(p.x, p.y * cp - p.z * sp, p.y * sp + p.z * cp);
-  vT = aPos.w; vFront = p.z;
-  gl_Position = vec4(p.x * uScale / uAspect, p.y * uScale, -p.z * 0.5, 1.0);
+  vec3 p = view(aPos.xyz);
+  vT = aPos.w; vFront = p.z; vHidden = occluded(p);
+  gl_Position = vec4(p.x * uScale / uAspect, p.y * uScale, -p.z * 0.3, 1.0);
 }`;
 const LINE_FS = `
 precision mediump float;
-uniform vec3 uColor;
-varying float vT, vFront;
+uniform vec3 uColor; uniform float uAlpha;
+varying float vT, vFront, vHidden;
 void main() {
-  float edge = smoothstep(0.0, 0.12, vT) * (1.0 - smoothstep(0.88, 1.0, vT));
-  gl_FragColor = vec4(uColor, (vFront < -0.15 ? 0.06 : 0.45) * edge);
+  if (vHidden > 0.5) discard;
+  float edge = smoothstep(0.0, 0.1, vT) * (1.0 - smoothstep(0.9, 1.0, vT));
+  gl_FragColor = vec4(uColor, uAlpha * edge);
+}`;
+
+// The planet itself is ray-cast per pixel on one full-canvas quad: ocean, a dot-matrix of
+// land from the mask texture, the graticule, sunlight with a live terminator, city lights on
+// the night side, a Fresnel rim and an atmospheric halo.
+const PLANET_VS = `
+attribute vec2 aQuad; varying vec2 vUv;
+void main() { vUv = aQuad; gl_Position = vec4(aQuad, 0.0, 1.0); }`;
+const PLANET_FS = `
+precision highp float;
+uniform vec2 uRes; uniform float uScale, uYaw, uPitch, uTime, uDots;
+uniform vec3 uSun, uSunView;
+uniform sampler2D uLand;
+uniform vec3 uOcean, uOceanDeep, uLandTint, uDot, uCity, uRim;
+varying vec2 vUv;
+const float PI = 3.14159265;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float landAt(float lat, float lon) {
+  vec2 uv = vec2((lon + PI) / (2.0 * PI), (PI * 0.5 - lat) / PI);
+  return texture2D(uLand, uv).r;
+}
+void main() {
+  vec2 p = vec2(vUv.x * uRes.x / uRes.y, vUv.y) / uScale;
+  float r = length(p);
+  float px = 2.0 / (uScale * uRes.y);           // one pixel in sphere units
+  // Atmosphere halo outside the disc, brighter on the sunlit limb.
+  float halo = exp(-max(r - 1.0, 0.0) * 7.5) * smoothstep(1.0 - px, 1.0 + px, r);
+  float sunSide = 0.55 + 0.45 * dot(normalize(p + 1e-5), normalize(uSunView.xy + 1e-5));
+  vec4 outside = vec4(uRim, halo * 0.5 * sunSide);
+  if (r > 1.0 + px) { gl_FragColor = outside; return; }
+
+  vec3 n = vec3(p, sqrt(max(0.0, 1.0 - r * r)));
+  // Undo pitch, then yaw, to find the world-space point under this pixel.
+  float cy = cos(uYaw), sy = sin(uYaw), cp = cos(uPitch), sp = sin(uPitch);
+  float y = n.y * cp + n.z * sp, z1 = -n.y * sp + n.z * cp;
+  vec3 w = vec3(n.x * cy - z1 * sy, y, n.x * sy + z1 * cy);
+  float lat = asin(clamp(w.y, -1.0, 1.0)), lon = atan(w.x, w.z);
+  float land = smoothstep(0.3, 0.7, landAt(lat, lon));
+
+  // Sunlight: a soft terminator and a thin bright dawn line that sweeps with the real clock.
+  float ndl = dot(w, uSun);
+  float day = smoothstep(-0.18, 0.28, ndl);
+  float dawn = exp(-abs(ndl) * 48.0);
+
+  vec3 color = mix(uOceanDeep, uOcean, 0.25 + 0.55 * day + 0.2 * n.z);
+  color = mix(color, uLandTint, land * (0.22 + 0.25 * day));
+
+  // Dot matrix: each cell samples land at its centre so dots are whole.
+  float latDeg = lat * 180.0 / PI, lonDeg = lon * 180.0 / PI;
+  float gy = latDeg / uDots, cyc = floor(gy) + 0.5;
+  float rowLat = cyc * uDots;
+  float span = uDots / max(cos(rowLat * PI / 180.0), 0.08);
+  float gx = (lonDeg + 180.0) / span, cxc = floor(gx) + 0.5;
+  float cellLand = smoothstep(0.35, 0.65, landAt(rowLat * PI / 180.0, (cxc * span - 180.0) * PI / 180.0));
+  vec2 f = vec2(fract(gx), fract(gy)) - 0.5;
+  float dotMask = (1.0 - smoothstep(0.2, 0.34, length(f))) * cellLand;
+  float seed = hash(vec2(cxc, cyc));
+  float shimmer = 0.75 + 0.25 * sin(uTime * 1.3 + seed * 40.0);
+  color += uDot * dotMask * (0.12 + 0.88 * day) * shimmer * (0.6 + 0.4 * n.z);
+  // City lights: a scatter of land cells glows on the night side, twinkling slowly.
+  float city = step(0.9, seed) * dotMask * (1.0 - day);
+  color += uCity * city * (0.7 + 0.3 * sin(uTime * 2.0 + seed * 90.0)) * 0.9;
+
+  // Graticule every 15 degrees, fading toward the limb.
+  float gLat = abs(fract(latDeg / 15.0 + 0.5) - 0.5) * 15.0;
+  float gLon = abs(fract(lonDeg / 15.0 + 0.5) - 0.5) * 15.0 * cos(lat);
+  float grid = (1.0 - smoothstep(0.0, 0.32, min(gLat, gLon))) * 0.10 * n.z;
+  color += uRim * grid;
+
+  color += uRim * dawn * 0.14;
+  // Ocean glint and a Fresnel rim of atmosphere.
+  vec3 h = normalize(uSunView + vec3(0.0, 0.0, 1.0));
+  color += vec3(0.85, 0.95, 1.0) * pow(max(dot(n, h), 0.0), 60.0) * (1.0 - land) * 0.45 * day;
+  float fresnel = pow(1.0 - n.z, 2.6);
+  color = mix(color, uRim, fresnel * (0.35 + 0.4 * day));
+
+  float edge = clamp((1.0 - r) / px, 0.0, 1.0);
+  gl_FragColor = vec4(mix(outside.rgb, color, edge), mix(outside.a, 1.0, edge));
 }`;
 
 function program(gl, vs, fs) {
@@ -203,8 +290,13 @@ function readPalette(element) {
     const hex = match ? match[1] : fallback;
     return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
   };
-  return { land: color("--globe-land", "bfefff"), sea: color("--globe-sea", "4f7fb8"),
-    hub: color("--globe-hub", "5fe3ff"), active: color("--globe-active", "ffffff"), arc: color("--globe-arc", "7dd3fc") };
+  return {
+    land: color("--globe-land", "bfefff"), hub: color("--globe-hub", "5fe3ff"),
+    active: color("--globe-active", "ffffff"), arc: color("--globe-arc", "7dd3fc"),
+    ocean: color("--globe-ocean", "123a74"), oceanDeep: color("--globe-ocean-deep", "040d24"),
+    landTint: color("--globe-land-tint", "2a6fb8"), dot: color("--globe-dot", "9ff0ff"),
+    city: color("--globe-city", "ffe3a3"), rim: color("--globe-rim", "6fd8ff"),
+  };
 }
 
 /**
@@ -218,64 +310,84 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
   } catch { gl = null; }
   if (!gl) return null;
 
-  let points, lines;
+  let points, lines, planet;
   try {
     points = program(gl, POINT_VS, POINT_FS);
     lines = program(gl, LINE_VS, LINE_FS);
+    planet = program(gl, PLANET_VS, PLANET_FS);
   } catch {
     return null;  // Keep the accessible region list when shaders cannot compile.
   }
   const palette = readPalette(canvas);
-  const dots = sphereDots(window.matchMedia?.("(max-width: 760px)").matches ? 1800 : 4200);
+  const small = window.matchMedia?.("(max-width: 760px)").matches;
+
+  // Land mask texture: bilinear filtering turns the 1-degree grid into soft coastlines.
+  const landTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, landTexture);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, MASK_WIDTH, MASK_HEIGHT, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, landCellsGrid());
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const quadBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
   const hubs = HUBS.map((hub) => ({ ...hub, vector: toVector(hub.lat, hub.lon), weight: 0.5 }));
   const arcs = LINKS.map(([a, b], index) => ({
-    path: arcPoints(hubs.find((h) => h.id === a).vector, hubs.find((h) => h.id === b).vector),
-    offset: index * 0.37, speed: 0.11 + (index % 3) * 0.03,
+    path: arcPoints(hubs.find((h) => h.id === a).vector, hubs.find((h) => h.id === b).vector, 64),
+    offset: index * 0.37, speed: 0.09 + (index % 3) * 0.03,
   }));
+  const rings = [orbitRing(1.32, 0.42, 0.6, small ? 90 : 180), orbitRing(1.46, -0.28, 2.2, small ? 90 : 200)];
 
   // Arcs are also drawn as dotted trails: WebGL lines are one pixel wide on most devices.
   const trail = arcs.flatMap((arc) => arc.path.filter((_, i) => i % 2 === 0 && i > 1 && i < arc.path.length - 2));
-  const staticCount = dots.length + trail.length;
+  const ringDots = rings.flatMap((ring) => ring.filter((_, i) => i % 2 === 0));
+  const staticCount = trail.length + ringDots.length;
   const staticData = new Float32Array(staticCount * 9);
-  dots.forEach(([x, y, z, land], i) => {
-    const c = land ? palette.land : palette.sea;
-    staticData.set([x, y, z, land ? 3.0 : 2.0, c[0], c[1], c[2], land ? 1.0 : 0.55, 0], i * 9);
-  });
   trail.forEach(([x, y, z], i) => {
-    staticData.set([x, y, z, 2.4, palette.arc[0], palette.arc[1], palette.arc[2], 0.55, 0], (dots.length + i) * 9);
+    staticData.set([x, y, z, 2.2, palette.arc[0], palette.arc[1], palette.arc[2], 0.42, 0], i * 9);
+  });
+  ringDots.forEach(([x, y, z], i) => {
+    staticData.set([x, y, z, 1.6, palette.rim[0], palette.rim[1], palette.rim[2], 0.28, 0], (trail.length + i) * 9);
   });
   const staticBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, staticBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, staticData, gl.STATIC_DRAW);
 
   const lineData = [];
-  for (const arc of arcs) {
-    for (let i = 0; i < arc.path.length - 1; i++) lineData.push(...arc.path[i], ...arc.path[i + 1]);
+  for (const path of [...arcs.map((arc) => arc.path), ...rings]) {
+    for (let i = 0; i < path.length - 1; i++) lineData.push(...path[i], ...path[i + 1]);
   }
+  const arcLineCount = arcs.reduce((sum, arc) => sum + (arc.path.length - 1) * 2, 0);
   const lineBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineData), gl.STATIC_DRAW);
   const dynamicBuffer = gl.createBuffer();
-  const satellites = orbitals(window.matchMedia?.("(max-width: 760px)").matches ? 60 : 150);
+  const satellites = orbitals(small ? 40 : 110);
   const ripples = [];
-  const RIPPLE_POINTS = 40, MAX_RIPPLES = 6, TRAIL = 6;
-  const dynamic = new Float32Array((hubs.length * 2 + arcs.length * TRAIL + satellites.length +
-    MAX_RIPPLES * RIPPLE_POINTS) * 9);
+  const RIPPLE_POINTS = 48, MAX_RIPPLES = 6, TRAIL = 12, BEAM = 14;
+  const dynamic = new Float32Array((hubs.length * (2 + BEAM) + arcs.length * TRAIL + satellites.length +
+    MAX_RIPPLES * RIPPLE_POINTS * 2) * 9);
 
-  const state = { yaw: -0.35, pitch: 0.32, velocity: reduceMotion ? 0 : 0.0016, dragging: false, active: null,
+  const state = { yaw: -0.35, pitch: 0.32, velocity: reduceMotion ? 0 : 0.0014, dragging: false, active: null,
     hover: null, lastX: 0, lastY: 0, tiltX: 0, tiltY: 0, visible: true, frame: 0, start: performance.now() };
-  let width = 1, height = 1, dpr = 1, scale = 0.8;
+  let width = 1, height = 1, dpr = 1, scale = 0.8, pxScale = 1;
+  let sun = toVector(0, 0), sunChecked = 0;
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2);
     const box = canvas.getBoundingClientRect();
     width = Math.max(1, Math.round(box.width * dpr));
     height = Math.max(1, Math.round(box.height * dpr));
     canvas.width = width;
     canvas.height = height;
     gl.viewport(0, 0, width, height);
-    // The globe's pixel radius is scale * height / 2; keep it inside narrow canvases too.
-    scale = 0.86 * Math.min(1, width / height);
+    // The globe's pixel radius is scale * height / 2; leave room for the halo and rings.
+    scale = 0.8 * Math.min(1, width / height);
+    // Point sizes were tuned for a ~440px globe; keep small orbs proportionate.
+    pxScale = Math.max(0.35, Math.min(1.15, box.height / 440));
   }
 
   function attrib(prog, name, size, stride, offset) {
@@ -284,14 +396,17 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
     gl.enableVertexAttribArray(location);
     gl.vertexAttribPointer(location, size, gl.FLOAT, false, stride * 4, offset * 4);
   }
+  const u = (prog, name) => gl.getUniformLocation(prog, name);
 
   function uniforms(prog, yaw, pitch) {
-    gl.uniform1f(gl.getUniformLocation(prog, "uYaw"), yaw);
-    gl.uniform1f(gl.getUniformLocation(prog, "uPitch"), pitch);
-    gl.uniform1f(gl.getUniformLocation(prog, "uScale"), scale);
-    gl.uniform1f(gl.getUniformLocation(prog, "uAspect"), width / height);
-    const dprLocation = gl.getUniformLocation(prog, "uDpr");
+    gl.uniform1f(u(prog, "uYaw"), yaw);
+    gl.uniform1f(u(prog, "uPitch"), pitch);
+    gl.uniform1f(u(prog, "uScale"), scale);
+    gl.uniform1f(u(prog, "uAspect"), width / height);
+    const dprLocation = u(prog, "uDpr");
     if (dprLocation) gl.uniform1f(dprLocation, dpr);
+    const pxLocation = u(prog, "uPx");
+    if (pxLocation) gl.uniform1f(pxLocation, pxScale);
   }
 
   function project(vector, yaw, pitch) {
@@ -299,8 +414,38 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
     return { x: (x * scale / (width / height) + 1) / 2 * width / dpr, y: (1 - (y * scale + 1) / 2) * height / dpr, z };
   }
 
+  function drawPlanet(yaw, pitch, time) {
+    gl.useProgram(planet);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    attrib(planet, "aQuad", 2, 2, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, landTexture);
+    gl.uniform1i(u(planet, "uLand"), 0);
+    gl.uniform2f(u(planet, "uRes"), width, height);
+    gl.uniform1f(u(planet, "uScale"), scale);
+    gl.uniform1f(u(planet, "uYaw"), yaw);
+    gl.uniform1f(u(planet, "uPitch"), pitch);
+    gl.uniform1f(u(planet, "uTime"), reduceMotion ? 0 : time);
+    // Finer dots on bigger globes; never below ~3 device pixels per cell.
+    gl.uniform1f(u(planet, "uDots"), Math.max(1.1, Math.min(3.2, 520 / (scale * height))));
+    gl.uniform3fv(u(planet, "uSun"), sun);
+    gl.uniform3fv(u(planet, "uSunView"), rotate(sun, yaw, pitch));
+    gl.uniform3fv(u(planet, "uOcean"), palette.ocean);
+    gl.uniform3fv(u(planet, "uOceanDeep"), palette.oceanDeep);
+    gl.uniform3fv(u(planet, "uLandTint"), palette.landTint);
+    gl.uniform3fv(u(planet, "uDot"), palette.dot);
+    gl.uniform3fv(u(planet, "uCity"), palette.city);
+    gl.uniform3fv(u(planet, "uRim"), palette.rim);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
   function draw(now) {
     const time = (now - state.start) / 1000;
+    if (now - sunChecked > 60000) {  // The terminator follows the real clock, minute by minute.
+      const point = subsolarPoint(new Date());
+      sun = toVector(point.lat, point.lon);
+      sunChecked = now;
+    }
     if (state.target && !state.dragging) {
       // Critically damped glide toward a focused hub; the spin resumes once it arrives.
       const dy = shortestAngle(state.yaw, state.target.yaw), dp = state.target.pitch - state.pitch;
@@ -308,20 +453,29 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
       if (Math.abs(dy) < 0.002 && Math.abs(dp) < 0.002) state.target = null;
     } else if (!state.dragging) {
       state.yaw += state.velocity;
-      if (!reduceMotion) state.velocity += ((state.hold ? 0 : 0.0016) - state.velocity) * 0.02;
+      if (!reduceMotion) state.velocity += ((state.hold ? 0 : 0.0014) - state.velocity) * 0.02;
     }
     const yaw = state.yaw + state.tiltX, pitch = state.pitch + state.tiltY;
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Keep the canvas alpha unpremultiplied so the halo stays bright over the page.
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    drawPlanet(yaw, pitch, time);
+    // Light adds up from here on: arcs, beams and packets glow over the planet.
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
 
     gl.useProgram(lines);
     uniforms(lines, yaw, pitch);
-    gl.uniform3fv(gl.getUniformLocation(lines, "uColor"), palette.arc);
     gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
     attrib(lines, "aPos", 4, 4, 0);
-    gl.drawArrays(gl.LINES, 0, lineData.length / 4);
+    gl.uniform3fv(u(lines, "uColor"), palette.arc);
+    gl.uniform1f(u(lines, "uAlpha"), 0.5);
+    gl.drawArrays(gl.LINES, 0, arcLineCount);
+    gl.uniform3fv(u(lines, "uColor"), palette.rim);
+    gl.uniform1f(u(lines, "uAlpha"), 0.16);
+    gl.drawArrays(gl.LINES, arcLineCount, lineData.length / 4 - arcLineCount);
 
     gl.useProgram(points);
     uniforms(points, yaw, pitch);
@@ -334,28 +488,37 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
     for (const hub of hubs) {
       const selected = state.active === hub.id || state.hover === hub.id;
       const pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(time * 2.2 + hub.lon);
-      const size = 14 + 22 * hub.weight + (selected ? 12 : 0);
-      put(hub.vector, size * (2.2 + pulse * 0.9), selected ? palette.active : palette.hub, 0.38 + pulse * 0.2, 1);
-      put(hub.vector, size * 0.7, selected ? palette.active : palette.hub, 1, 1);
+      const size = 12 + 20 * hub.weight + (selected ? 12 : 0);
+      const color = selected ? palette.active : palette.hub;
+      put(hub.vector, size * (2.0 + pulse * 0.8), color, 0.3 + pulse * 0.18, 1);
+      put(hub.vector, size * 0.62, color, 1, 1);
+      // A light pillar rises from each hub, taller where more stories come from.
+      const height = 0.06 + 0.16 * hub.weight + (selected ? 0.06 : 0);
+      for (let k = 1; k <= BEAM; k++) {
+        const t = k / BEAM, lift = 1 + height * t;
+        put(hub.vector.map((c) => c * lift), (5 - 3 * t) + (selected ? 2 : 0), color, (1 - t) * 0.75, 1);
+      }
     }
     if (!reduceMotion) {
       for (const arc of arcs) {
         for (let k = 0; k < TRAIL; k++) {
-          const t = (((time * arc.speed + arc.offset - k * 0.018) % 1) + 1) % 1;
+          const t = (((time * arc.speed + arc.offset - k * 0.012) % 1) + 1) % 1;
           const p = arc.path[Math.min(arc.path.length - 1, Math.floor(t * (arc.path.length - 1)))];
-          put(p, 13 - k * 1.8, k ? palette.arc : palette.active, 0.95 - k * 0.15, 1);
+          put(p, 14 - k * 1.05, k ? palette.arc : palette.active, (0.95 - k * 0.075) * Math.sin(Math.PI * t), 1);
         }
       }
       for (const orbit of satellites) {
-        put(orbitalPosition(orbit, time), orbit.size, palette.arc, 0.55, 0);
+        put(orbitalPosition(orbit, time), orbit.size, palette.arc, 0.6, 0);
       }
     }
     for (let r = ripples.length - 1; r >= 0; r--) {
-      const age = (now - ripples[r].start) / 1600;
+      const age = (now - ripples[r].start) / 1800;
       if (age >= 1) { ripples.splice(r, 1); continue; }
       const fade = 1 - age;
-      for (const point of ringAround(ripples[r].hub.vector, 0.02 + age * 0.32, RIPPLE_POINTS)) {
-        put(point, 5 * fade + 2, palette.active, 0.9 * fade, 1);
+      for (const [index, radius] of [0.02 + age * 0.34, 0.01 + age * 0.2].entries()) {
+        for (const point of ringAround(ripples[r].hub.vector, radius, RIPPLE_POINTS)) {
+          put(point, (5 * fade + 2) * (index ? 0.7 : 1), palette.active, 0.9 * fade * (index ? 0.6 : 1), 1);
+        }
       }
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, dynamicBuffer);
@@ -386,7 +549,7 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
   }
 
   canvas.addEventListener("pointerdown", (event) => {
-    state.dragging = true; state.moved = 0;
+    state.dragging = true; state.moved = 0; state.target = null;
     state.lastX = event.clientX; state.lastY = event.clientY;
     canvas.setPointerCapture?.(event.pointerId);
     kick();
@@ -397,7 +560,8 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
       state.moved += Math.abs(dx) + Math.abs(dy);
       state.yaw += dx * 0.006;
       state.pitch = Math.max(-1.1, Math.min(1.1, state.pitch + dy * 0.004));
-      state.velocity = dx * 0.0009;
+      // Flicks carry momentum; friction in draw() brings the spin back to its idle pace.
+      state.velocity = Math.max(-0.08, Math.min(0.08, dx * 0.0012));
       state.lastX = event.clientX; state.lastY = event.clientY;
     } else if (event.pointerType === "mouse") {
       const box = canvas.getBoundingClientRect();
@@ -455,7 +619,7 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
       else { state.yaw = yaw; state.pitch = pitch; state.target = null; }
       kick();
     },
-    // An expanding ring at a hub marks a story arriving from that region.
+    // An expanding double ring at a hub marks a story arriving from that region.
     pulse(id) {
       const hub = hubs.find((h) => h.id === id);
       if (!hub || reduceMotion) return;
@@ -472,7 +636,7 @@ export function createGlobe(canvas, { onHover = () => {}, onSelect = () => {}, o
     hold(value) { state.hold = Boolean(value); },
     setMotion(allowed) {
       reduceMotion = !allowed;
-      state.velocity = reduceMotion ? 0 : 0.0016;
+      state.velocity = reduceMotion ? 0 : 0.0014;
       if (reduceMotion) { ripples.length = 0; state.tiltX = 0; state.tiltY = 0; }
       kick();
     },
