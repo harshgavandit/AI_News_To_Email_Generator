@@ -36,6 +36,18 @@ def status_error(cls, status, code=None):
     return cls("no", response=httpx.Response(status, request=request), body={"code": code} if code else None)
 
 
+def test_openai_client_allows_reasoning_calls_to_finish(monkeypatch):
+    created = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "test-provider-key")
+    monkeypatch.setattr(openai_client, "OpenAI", lambda **options: created.update(options) or object())
+    openai_client.get_client.cache_clear()
+    try:
+        openai_client.get_client()
+    finally:
+        openai_client.get_client.cache_clear()
+    assert created["timeout"] == 45
+
+
 def fake_client(behaviour):
     """behaviour(model) returns content or raises; usage is reported for successes."""
     calls = []
@@ -78,6 +90,23 @@ def test_unavailable_model_falls_back_and_usage_is_recorded(store, monkeypatch):
     success = rows[("compare", "gpt-6-luna")]
     assert (success["calls"], success["prompt"], success["completion"]) == (1, 1000, 500)
     assert success["estimated_usd"] == pytest.approx((1000 * 0.10 + 500 * 0.50) / 1_000_000)
+
+
+def test_transient_openai_timeout_is_retried_once(store, monkeypatch):
+    attempts = []
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+
+    def behaviour(model):
+        attempts.append(model)
+        if len(attempts) == 1:
+            from openai import APITimeoutError
+            raise APITimeoutError(request=request)
+        return "{}"
+
+    client, _ = fake_client(behaviour)
+    monkeypatch.setattr(openai_client, "get_client", lambda: client)
+    assert openai_client.generate_response("x", task="visit_catchup") == "{}"
+    assert attempts == ["gpt-6-luna", "gpt-6-luna"]
 
 
 def test_authentication_errors_do_not_fall_back(store, monkeypatch):

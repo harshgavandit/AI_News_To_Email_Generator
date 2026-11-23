@@ -10,6 +10,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 DEFAULT_MODEL = "gpt-6-luna"  # gpt-4o-mini shuts down on 14 Jan 2027.
+REQUEST_TIMEOUT_SECONDS = 45
 # Each task maps to a cost tier. Cheap, high-volume work uses the fast tier; multi-source
 # comparison uses the deep tier. Tiers are configured with NEWS_AI_MODEL_<TIER>.
 TASK_TIERS = {
@@ -78,7 +79,7 @@ def fallback_model(primary: str) -> str | None:
 
 @lru_cache(maxsize=1)
 def get_client() -> OpenAI:
-    return OpenAI(api_key=get_openai_api_key(), timeout=12, max_retries=0)
+    return OpenAI(api_key=get_openai_api_key(), timeout=REQUEST_TIMEOUT_SECONDS, max_retries=0)
 
 
 def _record(task, model, usage=None, *, ok=True):
@@ -132,7 +133,6 @@ def generate_response(prompt: str, system_prompt: str = "Return JSON.", response
     ]
     primary = model or route_model(task)
     candidates = [primary, *filter(None, [fallback_model(primary)])]
-    started = time.monotonic()
     last_error = None
     for index, current in enumerate(candidates):
         for attempt in range(2):
@@ -144,10 +144,10 @@ def generate_response(prompt: str, system_prompt: str = "Return JSON.", response
                 last_error = error
                 _record(task, current, ok=False)
                 transient = isinstance(error, APIConnectionError) or error.status_code >= 500
-                if attempt or not transient or time.monotonic() - started > 3:
+                if attempt or not transient:
                     break
                 time.sleep(0.35)
-        if index + 1 < len(candidates) and _fallback_worthy(last_error) and time.monotonic() - started < 20:
+        if index + 1 < len(candidates) and _fallback_worthy(last_error):
             continue
         raise last_error
     raise last_error
