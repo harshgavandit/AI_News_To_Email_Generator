@@ -5583,6 +5583,8 @@
     "id": "hpcwire",
     "group": "hpcwire",
     "label": "HPCwire",
+    "enabled": false,
+    "pause_reason": "The publisher has denied automated feed access (HTTP 403) in every check since November 21, 2026. Paused until a supported feed access path is reviewed.",
     "url": "https://www.hpcwire.com/feed/",
     "hosts": [
       "hpcwire.com"
@@ -5987,6 +5989,8 @@
     "id": "uktn",
     "group": "uktn",
     "label": "UKTN",
+    "enabled": false,
+    "pause_reason": "The publisher has denied automated feed access (HTTP 403) in every check since November 21, 2026. Paused until a supported feed access path is reviewed.",
     "url": "https://www.uktech.news/feed",
     "hosts": [
       "uktech.news"
@@ -11841,7 +11845,7 @@
     "id": "graphics-programming-weekly",
     "group": "graphics-programming-weekly",
     "label": "Graphics Programming Weekly",
-    "url": "https://www.jendrikillner.com/post/index.xml",
+    "url": "https://www.jendrikillner.com/index.xml",
     "hosts": [
       "jendrikillner.com",
       "www.jendrikillner.com"
@@ -11857,7 +11861,7 @@
     "article_paths": [
       "/post/"
     ],
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {
@@ -12001,7 +12005,7 @@
     "id": "doordash-blog",
     "group": "doordash-blog",
     "label": "DoorDash Blog",
-    "url": "https://careersatdoordash.com/blog/feed/",
+    "url": "https://careersatdoordash.com/blog/category/engineering/feed/",
     "hosts": [
       "careersatdoordash.com"
     ],
@@ -12013,7 +12017,7 @@
     "language": "en",
     "refresh_minutes": 360,
     "collection": "Systems and software",
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {
@@ -12230,10 +12234,12 @@
   },
   {
     "id": "hotstar-tech",
-    "group": "hotstar-tech",
+    "group": "medium",
     "label": "JioHotstar Tech",
-    "url": "https://blog.hotstar.com/feed",
+    "publisher_group": "hotstar-tech",
+    "url": "https://medium.com/feed/hotstar",
     "hosts": [
+      "medium.com",
       "blog.hotstar.com"
     ],
     "kind": "engineering",
@@ -12244,7 +12250,7 @@
     "language": "en",
     "refresh_minutes": 360,
     "collection": "Systems and software",
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {
@@ -12366,10 +12372,12 @@
   },
   {
     "id": "cookpad-sourcediving",
-    "group": "cookpad-sourcediving",
+    "group": "medium",
     "label": "Cookpad Source Diving",
-    "url": "https://sourcediving.com/feed",
+    "publisher_group": "cookpad-sourcediving",
+    "url": "https://medium.com/feed/sourcediving",
     "hosts": [
+      "medium.com",
       "sourcediving.com"
     ],
     "kind": "engineering",
@@ -12380,15 +12388,17 @@
     "language": "en",
     "refresh_minutes": 360,
     "collection": "Systems and software",
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {
     "id": "dream11-engineering",
-    "group": "dream11-engineering",
+    "group": "medium",
     "label": "Dream11 Engineering",
-    "url": "https://blog.dream11engineering.com/feed",
+    "publisher_group": "dream11-engineering",
+    "url": "https://medium.com/feed/dream11-tech-blog",
     "hosts": [
+      "medium.com",
       "blog.dream11engineering.com"
     ],
     "kind": "engineering",
@@ -12399,7 +12409,7 @@
     "language": "en",
     "refresh_minutes": 360,
     "collection": "Systems and software",
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {
@@ -12423,10 +12433,12 @@
   },
   {
     "id": "klarna-engineering",
-    "group": "klarna-engineering",
+    "group": "medium",
     "label": "Klarna Engineering",
-    "url": "https://engineering.klarna.com/feed",
+    "publisher_group": "klarna-engineering",
+    "url": "https://medium.com/feed/klarna-engineering",
     "hosts": [
+      "medium.com",
       "engineering.klarna.com"
     ],
     "kind": "engineering",
@@ -12437,7 +12449,7 @@
     "language": "en",
     "refresh_minutes": 360,
     "collection": "Systems and software",
-    "reviewed_at": "2026-11-22",
+    "reviewed_at": "2026-11-23",
     "require_english": true
   },
   {

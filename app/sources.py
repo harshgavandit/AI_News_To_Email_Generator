@@ -259,7 +259,9 @@ DEFAULT_SOURCES = (
     Source("cloudflare-blog", "cloudflare-blog", "Cloudflare Blog", "engineering", "https://blog.cloudflare.com/rss/", ("blog.cloudflare.com",), topic="software"),
     Source("stripe-engineering", "stripe", "Stripe Engineering", "engineering", "https://stripe.com/blog",
            ("stripe.com",), topic="software", coverage="article", language="en",
-           article_paths=("/blog/",), integration="publisher-metadata", require_english=True),
+           article_paths=("/blog/",), integration="publisher-metadata", require_english=True,
+           enabled=False, pause_reason="The blog listing stopped yielding complete article metadata on November 21, 2026 "
+           "(metadata_incomplete). Stripe's official blog RSS remains active as a separate Stripe Engineering source."),
     Source("uber-engineering", "uber", "Uber Engineering", "engineering", "https://www.uber.com/us/en/blog/",
            ("uber.com", "www.uber.com"), topic="software", coverage="article", region="Global", tech_only=True,
            language="en", article_paths=("/us/en/blog/",), integration="publisher-metadata", require_english=True,
