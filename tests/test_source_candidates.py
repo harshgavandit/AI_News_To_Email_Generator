@@ -304,3 +304,17 @@ def test_round_seven_pack_2026_11_24_promotes_every_rechecked_feed():
     assert len(pack) == 30
     for row in pack:
         assert promoted.get(row["id"]) == row["url"], row["id"]
+
+
+def test_round_eight_pack_2026_11_24_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round8.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #16 (video channels and podcasts from discovery run #9).
+    validated = set("""sebastian-lague,pycon-us,anthonywritescode,arjancodes,aws-developers,coldfusion,ippsec,jeff-geerling,langchain-on-youtube,servethehome-on-youtube,marques-brownlee,sam-witteveen,shoptalk-show,stanford-online,black-hat,cncf-on-youtube,ndc-conferences,unity-on-youtube,unreal-engine-on-youtube,def-con,digital-foundry-on-youtube,gamers-nexus,goto-conferences,hardware-unboxed,let-s-get-rusty,level1techs,techtechpotato,tsoding-daily,vercel-on-youtube,dreams-of-code,infoq-on-youtube,javidx9,no-boilerplate,cyberwire-daily,the-cloudcast,ai-engineering-podcast,john-hammond,matt-pocock,no-priors,techaltar,the-cherno,weights-biases-on-youtube,cs50,david-bombal,web-dev-simplified,a16z-on-youtube,cloudflare-on-youtube,linus-tech-tips,nahamsec,cppcon,liveoverflow,microsoft-developer,devoxx,docker-on-youtube,kevin-powell,supabase-on-youtube,beyond-fireship,codeaesthetic,jack-herrington,jon-gjengset,mcoding,signals-and-threads,strange-loop-conference,umar-jamil""".split(","))
+    assert len(validated) == 64
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]
+            assert row["kind"] in {"video", "podcast"}

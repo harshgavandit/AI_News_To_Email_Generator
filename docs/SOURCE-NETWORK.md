@@ -342,3 +342,17 @@ Thirty working feeds had been held back only because language detection could no
 `source-candidates-2026-11-24-round7.json` rechecks those 30 feeds with their original ids and URLs. The tests for earlier rounds skip ids that appear in round three or round seven.
 
 Validation run #15 passed all 30 rechecked feeds, and they were promoted. The catalog now has 1,292 enabled sources.
+
+## Round eight: video channels and podcasts (2026-11-24)
+
+Video and podcasts were the thinnest part of the catalog (29 video and 14 podcast sources in the reviewed catalog file). Publisher discovery run #9 scanned 69 YouTube channel pages and 30 podcast sites. YouTube channel pages declare their own feed, so the channel feeds came straight from discovery. Validation run #16 checked the 70 candidates in `source-candidates-2026-11-24-round8.json` and promoted 64. The catalog now has 1,356 enabled sources, including 98 video channels and 19 podcasts.
+
+- **Conference talks:** CppCon, GOTO, InfoQ, Strange Loop, NDC, Devoxx, CNCF, PyCon US, Black Hat, DEF CON and Stanford Online.
+- **Hardware and consumer technology:** Gamers Nexus, Hardware Unboxed, Jeff Geerling, Level1Techs, TechTechPotato, ServeTheHome, Marques Brownlee, Linus Tech Tips and TechAltar.
+- **Programming:** Jon Gjengset, Matt Pocock, Kevin Powell, Jack Herrington, Web Dev Simplified, ArjanCodes, mCoding, anthonywritescode, No Boilerplate, Tsoding, Let's Get Rusty, Dreams of Code, CodeAesthetic, Beyond Fireship and CS50.
+- **Game engines and graphics:** Unreal Engine, Unity, The Cherno, Sebastian Lague, javidx9 and Digital Foundry.
+- **AI:** Umar Jamil, Sam Witteveen, LangChain, Weights & Biases, No Priors and the AI Engineering Podcast.
+- **Security:** John Hammond, LiveOverflow, IppSec, NahamSec, David Bombal and CyberWire Daily.
+- **Company channels and other shows:** Microsoft Developer, AWS Developers, Cloudflare, Vercel, Supabase, Docker, a16z, ColdFusion, Signals and Threads, ShopTalk Show and The Cloudcast.
+
+der8auer and Acquired on YouTube were held back because their English could not be confirmed. Four podcast feeds could not be fetched from GitHub's network: Data Engineering Podcast, Python Podcast.__init__, Ruby on Rails Podcast and Front End Happy Hour.
