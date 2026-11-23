@@ -1,0 +1,1264 @@
+[
+  {
+    "id": "codeaesthetic",
+    "group": "youtube",
+    "label": "CodeAesthetic",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCaSCt8s_4nfkRglWCvNSDrg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cppcon",
+    "group": "youtube",
+    "label": "CppCon",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCMlGfpWw-RUdWX_JbLCukXg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "goto-conferences",
+    "group": "youtube",
+    "label": "GOTO Conferences",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCs_tLP3AiwYKwdUHpltJPuA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "infoq-on-youtube",
+    "group": "youtube",
+    "label": "InfoQ on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCkQX1tChV7Z7l1LFF4L9j_g",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "strange-loop-conference",
+    "group": "youtube",
+    "label": "Strange Loop Conference",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_QIfHvN9auy2CoOdSfMWDw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "ndc-conferences",
+    "group": "youtube",
+    "label": "NDC Conferences",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCTdw38Cw6jcm0atBPA39a0Q",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "devoxx",
+    "group": "youtube",
+    "label": "Devoxx",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCCBVCTuk6uJrN3iFV_3vurg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cncf-on-youtube",
+    "group": "youtube",
+    "label": "CNCF on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCvqbFHwN-nwalWPjPUKpvTA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "techaltar",
+    "group": "youtube",
+    "label": "TechAltar",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtZO3K2p8mqFwiKWb9k7fXA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "bigtech",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "marques-brownlee",
+    "group": "youtube",
+    "label": "Marques Brownlee",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBJycsmduvYEL83R_U4JriQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "bigtech",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "linus-tech-tips",
+    "group": "youtube",
+    "label": "Linus Tech Tips",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCXuqSBlHAE6Xw-yeJA0Tunw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "bigtech",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "gamers-nexus",
+    "group": "youtube",
+    "label": "Gamers Nexus",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UChIs72whgZI9w6d6FhwGGHA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "hardware-unboxed",
+    "group": "youtube",
+    "label": "Hardware Unboxed",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCI8iQa1hv7oV_Z8D35vVuSg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "digital-foundry-on-youtube",
+    "group": "youtube",
+    "label": "Digital Foundry on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9PBzalIcEQCsiIkq36PyUA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "der8auer",
+    "group": "youtube",
+    "label": "der8auer",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCYAg4bYdyqENxEyHUX7t1FA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "techtechpotato",
+    "group": "youtube",
+    "label": "TechTechPotato",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC1r0DG-KEPyqOeW6o79PByw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "servethehome-on-youtube",
+    "group": "youtube",
+    "label": "ServeTheHome on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCv6J_jJa8GJqFwQNgNrMuww",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "level1techs",
+    "group": "youtube",
+    "label": "Level1Techs",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC4w1YQAJMWOz4qtxinq55LQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "jeff-geerling",
+    "group": "youtube",
+    "label": "Jeff Geerling",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCR-DXc1voovS8nhAvccRZhg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "chips",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "no-boilerplate",
+    "group": "youtube",
+    "label": "No Boilerplate",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCUMwY9iS8oMyWDYIe6_RmoA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "web-dev-simplified",
+    "group": "youtube",
+    "label": "Web Dev Simplified",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCFbNIlppjAuEX4znoulh0Cw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "kevin-powell",
+    "group": "youtube",
+    "label": "Kevin Powell",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJZv4d5rbIKd4QHMPkcABCw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "jack-herrington",
+    "group": "youtube",
+    "label": "Jack Herrington",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC6vRUjYqDuoUsYsku86Lrsw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "matt-pocock",
+    "group": "youtube",
+    "label": "Matt Pocock",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCswG6FSbgZjbWtdf_hMLaow",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "beyond-fireship",
+    "group": "youtube",
+    "label": "Beyond Fireship",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC2Xd-TjJByJyK2w1zNwY0zQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "arjancodes",
+    "group": "youtube",
+    "label": "ArjanCodes",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCVhQ2NnY5Rskt6UjCUkJ_DA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "mcoding",
+    "group": "youtube",
+    "label": "mCoding",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCaiL2GDNpLYH6Wokkk1VNcg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "anthonywritescode",
+    "group": "youtube",
+    "label": "anthonywritescode",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC46xhU1EH7aywEgvA9syS3w",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "jon-gjengset",
+    "group": "youtube",
+    "label": "Jon Gjengset",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_iD0xppBwwsrM9DegC5cQQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "let-s-get-rusty",
+    "group": "youtube",
+    "label": "Let's Get Rusty",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSp-OaMpsO8K0KkOqyBl7_w",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "dreams-of-code",
+    "group": "youtube",
+    "label": "Dreams of Code",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCWQaM7SpSECp9FELz-cHzuQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "sebastian-lague",
+    "group": "youtube",
+    "label": "Sebastian Lague",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmtyQOKKmrMVaKuRXz02jbQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "javidx9",
+    "group": "youtube",
+    "label": "javidx9",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC-yuWVUplUJZvieEligKBkA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "tsoding-daily",
+    "group": "youtube",
+    "label": "Tsoding Daily",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCrqM0Ym_NbK1fqeQG2VIohg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "the-cherno",
+    "group": "youtube",
+    "label": "The Cherno",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCQ-W1KE9EYfdxhL6S4twUNw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "unreal-engine-on-youtube",
+    "group": "youtube",
+    "label": "Unreal Engine on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBobmJyzsJ6Ll7UbfhI4iwQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "unity-on-youtube",
+    "group": "youtube",
+    "label": "Unity on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCG08EqOAXJk_YXPDsAvReSg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Game engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "umar-jamil",
+    "group": "youtube",
+    "label": "Umar Jamil",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCtAcpQcYerN8xxZJYTfWBMw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "sam-witteveen",
+    "group": "youtube",
+    "label": "Sam Witteveen",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC55ODQSvARtgSyc8ThfiepQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "langchain-on-youtube",
+    "group": "youtube",
+    "label": "LangChain on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCC-lyoTfSrcJzA1ab3APAgw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "weights-biases-on-youtube",
+    "group": "youtube",
+    "label": "Weights & Biases on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCAoex7Afqs1bWf5Xy8xaSfQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "microsoft-developer",
+    "group": "youtube",
+    "label": "Microsoft Developer",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsMica-v34Irf9KVTh6xx-g",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cloudflare-on-youtube",
+    "group": "youtube",
+    "label": "Cloudflare on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCgv3xMy6kECn0boYP9d2o-g",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "vercel-on-youtube",
+    "group": "youtube",
+    "label": "Vercel on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCLq8gNoee7oXM7MvTdjyQvA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "supabase-on-youtube",
+    "group": "youtube",
+    "label": "Supabase on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNTVzV1InxHV-YR0fSajqPQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "docker-on-youtube",
+    "group": "youtube",
+    "label": "Docker on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC76AVf2JkrwjxNKMuPpscHQ",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "black-hat",
+    "group": "youtube",
+    "label": "Black Hat",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCJ6q9Ie29ajGqKApbLqfBOg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "def-con",
+    "group": "youtube",
+    "label": "DEF CON",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC6Om9kAkl32dWlDSNlDS9Iw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "john-hammond",
+    "group": "youtube",
+    "label": "John Hammond",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCVeW9qkBjo3zosnqUbG7CFw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "liveoverflow",
+    "group": "youtube",
+    "label": "LiveOverflow",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UClcE-kVhqyiHCcjYwcpfj9w",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "ippsec",
+    "group": "youtube",
+    "label": "IppSec",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCa6eh7gCkpPo5XXUDfygQQA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "david-bombal",
+    "group": "youtube",
+    "label": "David Bombal",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCP7WmQ_U4GB3K51Od9QvM0w",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "nahamsec",
+    "group": "youtube",
+    "label": "NahamSec",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCCZDt7MuC3Hzs6IH4xODLBw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "security",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "stanford-online",
+    "group": "youtube",
+    "label": "Stanford Online",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCBa5G_ESCn8Yd4vw5U-gIcg",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Research",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cs50",
+    "group": "youtube",
+    "label": "CS50",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcabW7890RKJzL968QWEykA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "no-priors",
+    "group": "youtube",
+    "label": "No Priors",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCSI7h9hydQ40K5MJHnCrQvw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "ai",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "coldfusion",
+    "group": "youtube",
+    "label": "ColdFusion",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC4QZ_LsYcvcq7qOsOhpAX4A",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "industry",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "a16z-on-youtube",
+    "group": "youtube",
+    "label": "a16z on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9cn0TuPq4dnbTY-CBsm8XA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "startups",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "acquired-on-youtube",
+    "group": "youtube",
+    "label": "Acquired on YouTube",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCyFqFYfTW2VoIQKylJ04Rtw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "industry",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Global technology",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "pycon-us",
+    "group": "youtube",
+    "label": "PyCon US",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCMjMBMGt0WJQLeluw6qNJuA",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "aws-developers",
+    "group": "youtube",
+    "label": "AWS Developers",
+    "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCT-nPlVzJI-ccQXlxjSvJmw",
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ],
+    "topic": "software",
+    "format": "video",
+    "coverage": "publisher",
+    "kind": "video",
+    "refresh_minutes": 30,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "shoptalk-show",
+    "group": "shoptalk-show",
+    "label": "ShopTalk Show",
+    "url": "https://shoptalkshow.com/feed/podcast",
+    "hosts": [
+      "shoptalkshow.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "signals-and-threads",
+    "group": "signals-and-threads",
+    "label": "Signals and Threads",
+    "url": "https://feeds.simplecast.com/L9810DOa",
+    "hosts": [
+      "feeds.simplecast.com",
+      "signalsandthreads.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cyberwire-daily",
+    "group": "cyberwire-daily",
+    "label": "CyberWire Daily",
+    "url": "https://thecyberwire.com/podcasts/daily-podcast/rss.xml",
+    "hosts": [
+      "thecyberwire.com"
+    ],
+    "topic": "security",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "the-ruby-on-rails-podcast",
+    "group": "the-ruby-on-rails-podcast",
+    "label": "The Ruby on Rails Podcast",
+    "url": "https://www.therubyonrailspodcast.com/rss",
+    "hosts": [
+      "therubyonrailspodcast.com",
+      "www.therubyonrailspodcast.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "the-python-podcast-init",
+    "group": "the-python-podcast-init",
+    "label": "The Python Podcast.__init__",
+    "url": "https://serve.podhome.fm/rss/0e91aeb8-10b7-54d0-8ded-d832dd2d857b",
+    "hosts": [
+      "pythonpodcast.com",
+      "serve.podhome.fm",
+      "www.pythonpodcast.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "data-engineering-podcast",
+    "group": "data-engineering-podcast",
+    "label": "Data Engineering Podcast",
+    "url": "https://serve.podhome.fm/rss/1c0357c0-6aba-5766-a2d5-2090d8dab6bc",
+    "hosts": [
+      "dataengineeringpodcast.com",
+      "serve.podhome.fm",
+      "www.dataengineeringpodcast.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "ai-engineering-podcast",
+    "group": "ai-engineering-podcast",
+    "label": "AI Engineering Podcast",
+    "url": "https://serve.podhome.fm/rss/c9abdd38-a5dc-5eb2-96fd-f833f93208a7",
+    "hosts": [
+      "aiengineeringpodcast.com",
+      "serve.podhome.fm",
+      "www.aiengineeringpodcast.com"
+    ],
+    "topic": "ai",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "the-cloudcast",
+    "group": "the-cloudcast",
+    "label": "The Cloudcast",
+    "url": "https://www.thecloudcast.net/feeds/posts/default?alt=rss",
+    "hosts": [
+      "thecloudcast.net",
+      "www.thecloudcast.net"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "front-end-happy-hour",
+    "group": "front-end-happy-hour",
+    "label": "Front End Happy Hour",
+    "url": "https://feeds.soundcloud.com/users/soundcloud:users:206137365/sounds.rss",
+    "hosts": [
+      "feeds.soundcloud.com",
+      "frontendhappyhour.com",
+      "soundcloud.com"
+    ],
+    "topic": "software",
+    "format": "podcast",
+    "coverage": "article",
+    "kind": "podcast",
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "language": "en",
+    "region": "Global"
+  }
+]
