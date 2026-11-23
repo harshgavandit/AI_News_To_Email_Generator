@@ -1,0 +1,543 @@
+[
+  {
+    "id": "dremio-blog",
+    "group": "dremio-blog",
+    "label": "Dremio Blog",
+    "url": "https://www.dremio.com/feed/",
+    "hosts": [
+      "dremio.com",
+      "www.dremio.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tigris-blog",
+    "group": "tigris-blog",
+    "label": "Tigris Blog",
+    "url": "https://www.tigrisdata.com/blog/rss.xml",
+    "hosts": [
+      "tigrisdata.com",
+      "www.tigrisdata.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "render-blog",
+    "group": "render-blog",
+    "label": "Render Blog",
+    "url": "https://render.com/blog/feed.xml",
+    "hosts": [
+      "render.com",
+      "www.render.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "spacelift-blog",
+    "group": "spacelift-blog",
+    "label": "Spacelift Blog",
+    "url": "https://spacelift.io/rss",
+    "hosts": [
+      "spacelift.io",
+      "www.spacelift.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "buildkite-blog",
+    "group": "buildkite-blog",
+    "label": "Buildkite Blog",
+    "url": "https://buildkite.com/blog.atom",
+    "hosts": [
+      "buildkite.com",
+      "www.buildkite.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "depot-blog",
+    "group": "depot-blog",
+    "label": "Depot Blog",
+    "url": "https://depot.dev/rss.xml",
+    "hosts": [
+      "depot.dev",
+      "www.depot.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "coder-blog",
+    "group": "coder-blog",
+    "label": "Coder Blog",
+    "url": "https://coder.com/api/rss.xml",
+    "hosts": [
+      "coder.com",
+      "www.coder.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "trunk-blog",
+    "group": "trunk-blog",
+    "label": "Trunk Blog",
+    "url": "https://trunk.io/feed.xml",
+    "hosts": [
+      "trunk.io",
+      "www.trunk.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "stainless-blog",
+    "group": "stainless-blog",
+    "label": "Stainless Blog",
+    "url": "https://www.stainless.com/rss.xml",
+    "hosts": [
+      "stainless.com",
+      "www.stainless.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "zuplo-blog",
+    "group": "zuplo-blog",
+    "label": "Zuplo Blog",
+    "url": "https://zuplo.com/blog/rss.xml",
+    "hosts": [
+      "www.zuplo.com",
+      "zuplo.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tyk-blog",
+    "group": "tyk-blog",
+    "label": "Tyk Blog",
+    "url": "https://tyk.io/feed/",
+    "hosts": [
+      "tyk.io",
+      "www.tyk.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "apollo-graphql-blog",
+    "group": "apollo-graphql-blog",
+    "label": "Apollo GraphQL Blog",
+    "url": "https://www.apollographql.com/blog/rss.xml",
+    "hosts": [
+      "apollographql.com",
+      "www.apollographql.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "ably-blog",
+    "group": "ably-blog",
+    "label": "Ably Blog",
+    "url": "https://voltaire.ably.com/blog/rss.xml",
+    "hosts": [
+      "ably.com",
+      "www.ably.com",
+      "voltaire.ably.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "daily-blog",
+    "group": "daily-blog",
+    "label": "Daily Blog",
+    "url": "https://www.daily.co/blog/rss/",
+    "hosts": [
+      "daily.co",
+      "www.daily.co"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "mux-blog",
+    "group": "mux-blog",
+    "label": "Mux Blog",
+    "url": "https://www.mux.com/blog/rss.xml",
+    "hosts": [
+      "mux.com",
+      "www.mux.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "cloudinary-blog",
+    "group": "cloudinary-blog",
+    "label": "Cloudinary Blog",
+    "url": "https://cloudinary.com/blog/feed",
+    "hosts": [
+      "cloudinary.com",
+      "www.cloudinary.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "nomic-ai-blog",
+    "group": "nomic-ai-blog",
+    "label": "Nomic AI Blog",
+    "url": "https://www.nomic.ai/feed.xml",
+    "hosts": [
+      "nomic.ai",
+      "www.nomic.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "businessworld-technology",
+    "group": "businessworld-technology",
+    "label": "BusinessWorld Technology",
+    "url": "https://bworldonline.com/technology/feed/",
+    "hosts": [
+      "bworldonline.com",
+      "www.bworldonline.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "digital-news-asia",
+    "group": "digital-news-asia",
+    "label": "Digital News Asia",
+    "url": "https://www.digitalnewsasia.com/rss.xml",
+    "hosts": [
+      "digitalnewsasia.com",
+      "www.digitalnewsasia.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "propakistani",
+    "group": "propakistani",
+    "label": "ProPakistani",
+    "url": "https://propakistani.pk/feed/",
+    "hosts": [
+      "propakistani.pk",
+      "www.propakistani.pk"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "techzim",
+    "group": "techzim",
+    "label": "Techzim",
+    "url": "https://www.techzim.co.zw/feed/",
+    "hosts": [
+      "techzim.co.zw",
+      "www.techzim.co.zw"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Africa",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "france-24-technology",
+    "group": "france-24-technology",
+    "label": "France 24 Technology",
+    "url": "https://www.france24.com/en/tag/tech-1/rss",
+    "hosts": [
+      "france24.com",
+      "www.france24.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "the-recursive",
+    "group": "the-recursive",
+    "label": "The Recursive",
+    "url": "https://www.therecursive.com/rss/",
+    "hosts": [
+      "therecursive.com",
+      "www.therecursive.com"
+    ],
+    "kind": "news",
+    "topic": "startups",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "emerging-europe",
+    "group": "emerging-europe",
+    "label": "Emerging Europe",
+    "url": "https://emerging-europe.com/feed/",
+    "hosts": [
+      "emerging-europe.com",
+      "www.emerging-europe.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "city-am-technology",
+    "group": "city-am-technology",
+    "label": "City AM Technology",
+    "url": "https://www.cityam.com/category/technology/feed/",
+    "hosts": [
+      "cityam.com",
+      "www.cityam.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "new-statesman-technology",
+    "group": "new-statesman-technology",
+    "label": "New Statesman Technology",
+    "url": "https://www.newstatesman.com/technology/feed",
+    "hosts": [
+      "newstatesman.com",
+      "www.newstatesman.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "arn-australia",
+    "group": "arn-australia",
+    "label": "ARN Australia",
+    "url": "https://www.arnnet.com.au/feed/",
+    "hosts": [
+      "arnnet.com.au",
+      "www.arnnet.com.au"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "APAC",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "mobilesyrup",
+    "group": "mobilesyrup",
+    "label": "MobileSyrup",
+    "url": "https://mobilesyrup.com/feed/",
+    "hosts": [
+      "mobilesyrup.com",
+      "www.mobilesyrup.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "North America",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "the-logic",
+    "group": "the-logic",
+    "label": "The Logic",
+    "url": "https://thelogic.co/feed/",
+    "hosts": [
+      "thelogic.co",
+      "www.thelogic.co"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "North America",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "the-quint-tech-and-auto",
+    "group": "the-quint-tech-and-auto",
+    "label": "The Quint Tech and Auto",
+    "url": "https://www.thequint.com/stories.rss?section=tech-and-auto",
+    "hosts": [
+      "thequint.com",
+      "www.thequint.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  }
+]
