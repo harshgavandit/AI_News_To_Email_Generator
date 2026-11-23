@@ -313,3 +313,29 @@
 @media (max-width: 560px) {
   .motion-toggle.is-floating { position: fixed; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 45; width: 40px; height: 40px; box-shadow: var(--sys-e2); }
 }
+
+/* ---------- Signal Orb: the globe docks beside the feed and follows the story being read ---------- */
+.signal-orb {
+  position: fixed; right: 76px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; gap: 12px;
+  max-width: 320px; padding: 8px 16px 8px 8px; border: 1px solid rgb(103 232 249 / 28%); border-radius: 999px;
+  color: #e7f1fc; text-align: left; cursor: pointer;
+  background: linear-gradient(150deg, rgb(6 22 50 / 92%), rgb(11 42 92 / 88%));
+  box-shadow: 0 18px 40px -18px rgb(4 11 25 / 70%), inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  animation: orb-dock 520ms var(--sys-curve, ease) both;
+}
+.signal-orb[hidden] { display: none; }
+.signal-orb:hover { border-color: rgb(103 232 249 / 55%); }
+.signal-orb:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
+.signal-orb-sphere {
+  position: relative; flex: none; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, rgb(56 189 248 / 30%), rgb(4 11 25 / 90%) 70%);
+  box-shadow: 0 0 0 1px rgb(103 232 249 / 25%), 0 0 26px -4px rgb(34 211 238 / 55%);
+}
+.signal-orb-sphere canvas { display: block; width: 64px; height: 64px; }
+.signal-orb-text { display: grid; gap: 2px; min-width: 0; }
+.signal-orb-kicker { color: #67e8f9; font: 700 9px/1.4 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; }
+.signal-orb-place { overflow: hidden; color: #ffffff; font: 600 13px/1.35 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+@keyframes orb-dock { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.9); } to { opacity: 1; transform: none; } }
+:root[data-motion="off"] .signal-orb { display: none; }
+@media print { .signal-orb { display: none; } }

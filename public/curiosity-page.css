@@ -72,3 +72,20 @@
   .curiosity-stats dd { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .curiosity-theme-tab { transition: none; } }
+
+/* Knowledge constellation: themes as stars, linked by the stories they share. Decorative; the tabs are the control. */
+@media (min-width: 900px) {
+  .curiosity-hero { grid-template-columns: minmax(0, 1fr) minmax(320px, 42%); column-gap: 24px; }
+  .curiosity-hero > :not(.curiosity-constellation) { grid-column: 1; }
+  .curiosity-constellation {
+    grid-column: 2; grid-row: 1 / span 4; position: relative; min-height: 300px; align-self: stretch;
+    --constellation-ink: #e7f1fc; --constellation-glow: #22d3ee; --constellation-accent: #67e8f9;
+  }
+  .curiosity-constellation canvas { position: absolute; inset: 0; display: block; }
+  .curiosity-constellation p {
+    position: absolute; right: 0; bottom: 0; margin: 0; color: #9bb0cc; font: 650 10px/1.4 var(--font-ui);
+    letter-spacing: .08em; text-transform: uppercase; pointer-events: none;
+  }
+}
+@media (max-width: 899px) { .curiosity-constellation { display: none; } }
+.curiosity-constellation[hidden] { display: none; }

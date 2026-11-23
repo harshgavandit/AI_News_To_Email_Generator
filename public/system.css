@@ -471,12 +471,16 @@ body::after {
 :root[data-sys-scrolled] .site-header { box-shadow: 0 1px 0 var(--line), 0 12px 32px -22px rgb(20 41 28 / .45); }
 
 /* ---------- Masthead: a lit 3D plate with parallax layers ---------- */
+/* At rest the plate and its text are flat, so headlines are never resampled at fractional zoom (125%, 150%).
+   The depth only appears while the pointer is tilting the plate. */
 .desk-masthead {
   transform-style: preserve-3d;
-  transform: perspective(1400px) rotateX(var(--hy, 0deg)) rotateY(var(--hx, 0deg));
   transition: transform 700ms var(--sys-curve), box-shadow 400ms var(--sys-curve);
 }
-.desk-masthead[data-tilting] { transition: transform 120ms linear, box-shadow 400ms; }
+.desk-masthead[data-tilting] {
+  transform: perspective(1400px) rotateX(var(--hy, 0deg)) rotateY(var(--hx, 0deg));
+  transition: transform 120ms linear, box-shadow 400ms;
+}
 @media (min-width: 761px) {
   .desk-masthead { background-position: 0 0, calc(100% + var(--px, 0px)) calc(49% + var(--py, 0px) + var(--hs, 0px)); }
 }
@@ -487,12 +491,13 @@ body::after {
     radial-gradient(320px 220px at 78% 70%, #d88a4a33, transparent 70%);
   animation: sys-orbit 26s ease-in-out infinite alternate;
 }
-.desk-masthead > div { transform: translateZ(36px); }
+.desk-masthead > div { transition: transform 700ms var(--sys-curve); }
+.desk-masthead[data-tilting] > div { transform: translateZ(36px); }
 .desk-masthead > div > * { animation: sys-hero-in 900ms var(--sys-curve) backwards; }
 .desk-masthead > div > :nth-child(2) { animation-delay: 120ms; }
 .desk-masthead > div > :nth-child(3) { animation-delay: 240ms; }
 .desk-masthead h1 { text-shadow: 0 1px 0 #0003, 0 18px 40px #0006; }
-.desk-masthead .edition-coverage { transform: translateZ(60px); }
+.desk-masthead[data-tilting] .edition-coverage { transform: translateZ(60px); }
 @keyframes sys-orbit { from { transform: translate3d(-4%, 2%, 0) rotate(0deg); } to { transform: translate3d(5%, -3%, 0) rotate(8deg); } }
 @keyframes sys-hero-in { from { opacity: 0; transform: translate3d(0, 18px, 0); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
 

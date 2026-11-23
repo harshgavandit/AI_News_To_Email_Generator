@@ -1,6 +1,8 @@
 import { CURIOSITY_FORMATS, CURIOSITY_LEVELS, CURIOSITY_THEMES, MAX_CURIOSITY_CARDS, cardThemes, curiosityCompanies,
   filterCuriosityCards, renderCuriosityCards } from "./curiosity.js";
 
+import { mountConstellation, themeGraph } from "./curiosity-constellation.js";
+
 const PAGE = 24;
 const byId = (id) => document.getElementById(id);
 const number = new Intl.NumberFormat("en-US");
@@ -49,6 +51,8 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
   const company = byId("curiosity-company");
   const sort = byId("curiosity-sort");
   const status = byId("curiosity-result-status");
+  const sky = byId("curiosity-constellation");
+  let constellation = null;
 
   function persist() {
     history.replaceState(null, "", `${location.pathname}${writeCuriosityState(state)}`);
@@ -83,6 +87,7 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
   function update() {
     persist();
     renderThemes();
+    constellation?.setActive(state.theme);
     const filter = { theme: state.theme, format: state.format, level: state.level, company: state.company, sort: state.sort, query: state.query };
     const matches = filterCuriosityCards(state.cards, filter);
     status.textContent = state.cards.length
@@ -140,6 +145,14 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
       byId("curiosity-stat-fresh").textContent = number.format(fresh);
       byId("curiosity-stat-fresh").parentElement.hidden = !fresh;
       collection.setAttribute("aria-busy", "false");
+      if (sky && globalThis.matchMedia?.("(min-width: 900px)").matches) {
+        sky.parentElement.hidden = false;  // Measure the real size before the first layout.
+        constellation = mountConstellation(sky, themeGraph(state.cards, CURIOSITY_THEMES), {
+          motion: globalThis.informaMotion,
+          onSelect: (id) => themes.querySelector(`[data-theme="${state.theme === id ? "all" : id}"]`)?.click(),
+        });
+        sky.parentElement.hidden = !constellation;
+      }
       update();
     })
     .catch(() => {

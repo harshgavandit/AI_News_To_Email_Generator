@@ -868,6 +868,10 @@ function renderStories() {
       `story${state.pins.has(String(article.id)) ? " pinned" : ""}${isRead ? " is-read" : " is-unread"}`,
     );
     card.dataset.storyCardId = String(article.id);
+    // The docking Signal Orb follows the region of the story being read.
+    const storyRegion = article.region_id || regionId(article);
+    if (storyRegion && storyRegion !== "Global") card.dataset.region = storyRegion;
+    if (article.publisher) card.dataset.publisher = String(article.publisher).slice(0, 80);
     const main = node("div", "story-main");
     const top = node("div", "story-top");
     if (!isRead) {
