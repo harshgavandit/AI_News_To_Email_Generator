@@ -340,3 +340,5 @@ Thirty working feeds had been held back only because language detection could no
 - **Reviewed English publications** are listed in `docs/research/english-reviewed.json`, with a note and date for each id. They pass the English check even when short titles fool detection. Promoted article feeds still set `require_english`, so a confidently non-English entry is dropped at ingestion (for example, Sakana AI's Japanese posts).
 
 `source-candidates-2026-11-24-round7.json` rechecks those 30 feeds with their original ids and URLs. The tests for earlier rounds skip ids that appear in round three or round seven.
+
+Validation run #15 passed all 30 rechecked feeds, and they were promoted. The catalog now has 1,292 enabled sources.

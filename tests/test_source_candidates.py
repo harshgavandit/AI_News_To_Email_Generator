@@ -294,3 +294,13 @@ def test_reviewed_english_list_names_held_back_candidates_only():
     assert reviewed_english() <= set(round_seven)
     # Everything else in round seven is a release feed, which takes its language from review.
     assert all(row["coverage"] == "release" for ident, row in round_seven.items() if ident not in reviewed_english())
+
+
+def test_round_seven_pack_2026_11_24_promotes_every_rechecked_feed():
+    with open("docs/research/source-candidates-2026-11-24-round7.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #15: all 30 feeds held back by language detection passed the revised check.
+    assert len(pack) == 30
+    for row in pack:
+        assert promoted.get(row["id"]) == row["url"], row["id"]

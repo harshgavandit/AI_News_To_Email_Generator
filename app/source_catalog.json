@@ -20142,5 +20142,593 @@
     "collection": "Systems and software",
     "reviewed_at": "2026-11-23",
     "require_english": true
+  },
+  {
+    "id": "a-list-apart",
+    "group": "a-list-apart",
+    "label": "A List Apart",
+    "url": "https://alistapart.com/main/feed/",
+    "hosts": [
+      "alistapart.com",
+      "www.alistapart.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "aphyr",
+    "group": "aphyr",
+    "label": "Aphyr",
+    "url": "https://aphyr.com/posts.atom",
+    "hosts": [
+      "aphyr.com",
+      "www.aphyr.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "armin-ronacher",
+    "group": "armin-ronacher",
+    "label": "Armin Ronacher",
+    "url": "https://lucumr.pocoo.org/feed.atom",
+    "hosts": [
+      "lucumr.pocoo.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "businesskorea",
+    "group": "businesskorea",
+    "label": "BusinessKorea",
+    "url": "https://www.businesskorea.co.kr/rss/gns_allArticle.xml",
+    "hosts": [
+      "businesskorea.co.kr",
+      "www.businesskorea.co.kr"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "capital-one-tech",
+    "group": "capital-one-tech",
+    "label": "Capital One Tech",
+    "url": "https://medium.com/feed/capital-one-tech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/capital-one-tech/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "delivery-hero-tech-hub",
+    "group": "delivery-hero-tech-hub",
+    "label": "Delivery Hero Tech Hub",
+    "url": "https://medium.com/feed/deliveryherotechhub",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/deliveryherotechhub/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "honeybadger-blog",
+    "group": "honeybadger-blog",
+    "label": "Honeybadger Blog",
+    "url": "https://www.honeybadger.io/blog/feed.xml",
+    "hosts": [
+      "honeybadger.io",
+      "www.honeybadger.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "maarten-grootendorst",
+    "group": "maarten-grootendorst",
+    "label": "Maarten Grootendorst",
+    "url": "https://newsletter.maartengrootendorst.com/feed",
+    "hosts": [
+      "newsletter.maartengrootendorst.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "mitchell-hashimoto",
+    "group": "mitchell-hashimoto",
+    "label": "Mitchell Hashimoto",
+    "url": "https://mitchellh.com/feed.xml",
+    "hosts": [
+      "mitchellh.com",
+      "www.mitchellh.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "modular-blog",
+    "group": "modular-blog",
+    "label": "Modular Blog",
+    "url": "https://www.modular.com/blog/rss.xml",
+    "hosts": [
+      "modular.com",
+      "www.modular.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "nikita-prokopov-tonsky",
+    "group": "nikita-prokopov-tonsky",
+    "label": "Nikita Prokopov (tonsky)",
+    "url": "https://tonsky.me/atom.xml",
+    "hosts": [
+      "tonsky.me",
+      "www.tonsky.me"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-apache-pulsar",
+    "group": "github-releases",
+    "label": "apache/pulsar Releases",
+    "kind": "engineering",
+    "url": "https://github.com/apache/pulsar/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/apache/pulsar/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-crystal-lang-crystal",
+    "group": "github-releases",
+    "label": "crystal-lang/crystal Releases",
+    "kind": "engineering",
+    "url": "https://github.com/crystal-lang/crystal/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/crystal-lang/crystal/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-dotnet-aspnetcore",
+    "group": "github-releases",
+    "label": "dotnet/aspnetcore Releases",
+    "kind": "engineering",
+    "url": "https://github.com/dotnet/aspnetcore/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/dotnet/aspnetcore/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-dotnet-runtime",
+    "group": "github-releases",
+    "label": "dotnet/runtime Releases",
+    "kind": "engineering",
+    "url": "https://github.com/dotnet/runtime/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/dotnet/runtime/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-drizzle-team-drizzle-orm",
+    "group": "github-releases",
+    "label": "drizzle-team/drizzle-orm Releases",
+    "kind": "engineering",
+    "url": "https://github.com/drizzle-team/drizzle-orm/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/drizzle-team/drizzle-orm/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-fluent-fluent-bit",
+    "group": "github-releases",
+    "label": "fluent/fluent-bit Releases",
+    "kind": "engineering",
+    "url": "https://github.com/fluent/fluent-bit/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/fluent/fluent-bit/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-gravitational-teleport",
+    "group": "github-releases",
+    "label": "gravitational/teleport Releases",
+    "kind": "engineering",
+    "url": "https://github.com/gravitational/teleport/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/gravitational/teleport/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-remix-run-react-router",
+    "group": "github-releases",
+    "label": "remix-run/react-router Releases",
+    "kind": "engineering",
+    "url": "https://github.com/remix-run/react-router/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/remix-run/react-router/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-starrocks-starrocks",
+    "group": "github-releases",
+    "label": "StarRocks/starrocks Releases",
+    "kind": "engineering",
+    "url": "https://github.com/StarRocks/starrocks/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/StarRocks/starrocks/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-vectordotdev-vector",
+    "group": "github-releases",
+    "label": "vectordotdev/vector Releases",
+    "kind": "engineering",
+    "url": "https://github.com/vectordotdev/vector/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/vectordotdev/vector/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-victoriametrics-victoriametrics",
+    "group": "github-releases",
+    "label": "VictoriaMetrics/VictoriaMetrics Releases",
+    "kind": "engineering",
+    "url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/VictoriaMetrics/VictoriaMetrics/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-yarnpkg-berry",
+    "group": "github-releases",
+    "label": "yarnpkg/berry Releases",
+    "kind": "engineering",
+    "url": "https://github.com/yarnpkg/berry/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/yarnpkg/berry/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "render-blog",
+    "group": "render-blog",
+    "label": "Render Blog",
+    "url": "https://render.com/blog/feed.xml",
+    "hosts": [
+      "render.com",
+      "www.render.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sakana-ai",
+    "group": "sakana-ai",
+    "label": "Sakana AI",
+    "url": "https://sakana.ai/feed.xml",
+    "hosts": [
+      "sakana.ai",
+      "www.sakana.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "scattered-thoughts",
+    "group": "scattered-thoughts",
+    "label": "Scattered Thoughts",
+    "url": "https://www.scattered-thoughts.net/atom.xml",
+    "hosts": [
+      "scattered-thoughts.net",
+      "www.scattered-thoughts.net"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "system-design-one",
+    "group": "system-design-one",
+    "label": "System Design One",
+    "url": "https://newsletter.systemdesign.one/feed",
+    "hosts": [
+      "newsletter.systemdesign.one"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "the-morning-paper",
+    "group": "the-morning-paper",
+    "label": "the morning paper",
+    "url": "https://blog.acolyer.org/feed/",
+    "hosts": [
+      "blog.acolyer.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "two-sigma-articles",
+    "group": "two-sigma-articles",
+    "label": "Two Sigma Articles",
+    "url": "https://www.twosigma.com/articles/feed/",
+    "hosts": [
+      "twosigma.com",
+      "www.twosigma.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "zig-news",
+    "group": "zig-news",
+    "label": "Zig News",
+    "url": "https://ziglang.org/news/index.xml",
+    "hosts": [
+      "www.ziglang.org",
+      "ziglang.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
   }
 ]
