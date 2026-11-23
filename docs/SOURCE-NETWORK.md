@@ -264,3 +264,15 @@ Validation run #7 (23 November) checked `source-candidates-2026-11-23-discovered
 - **Quiet (1):** Shreya Shankar.
 
 The Syntax podcast feed could not be fetched and was not added. The publisher review workflow now prints discovered feeds on its run page.
+
+Validation run #8 (23 November) checked `source-candidates-2026-11-23-round1.json`, 114 candidates covering company engineering blogs, regional English press, AI tooling, security, chips and independent engineers. Fifty-seven feeds passed with English confirmed and were promoted:
+
+- **Active (37):** Engineer's Codex, Shrivu Shankar, Transactional (Alex Miller), CircleCI, Django, EE Times Asia, Ruby on Rails, SANS Internet Storm Center, SitePoint, InfluxData, SingleStore, Duolingo, Murat Demirbas, O'Reilly Radar, Allegro Tech, Data Science at Microsoft, All Things Distributed, Coding Horror, Myntra Engineering, Strava Engineering, Sean Goedecke, Twilio, Drew Breunig, HelloFresh Tech, ING Tech, Whatnot Engineering, Daniel Lemire, TechTrends Kenya, Marc Brooker, monday.com Engineering, Philipp Schmid, Teads Engineering, The Hindu BusinessLine Info-Tech, Tech World with Milan, Angular, Val Town and Wix Engineering.
+- **Quiet (20):** Adevinta, Answer.AI, ASOS Tech, Back Market, BBC Product & Technology, Bumble Tech, Disney Streaming, fasterthanli.me, Guardian Engineering, Joel on Software, Miro Engineering, OLX Engineering, Riskified, Square Developer, Squarespace Engineering, Tokopedia, Traveloka, TrendForce, Udemy Engineering and Vue.js.
+
+Ten working feeds were held back because their headlines could not be confirmed as English (mostly short or code-heavy titles): Maarten Grootendorst, Capital One Tech, Mitchell Hashimoto, Scattered Thoughts, Zig News, System Design One, Aphyr, Modular, Delivery Hero and Nikita Prokopov. Forty-seven were unavailable. Sixteen of these, mostly Medium publications, were rate limited during the run and can be retried in a later pack. The others returned no feed, denied access or could not be fetched.
+
+## Vercel Active CPU (2026-11-23)
+
+Vercel paused the project on 23 November until 23 December after it exceeded the Hobby plan's Fluid Active CPU allowance. Usage rose from a minute or two a day to 25–35 minutes a day from 15 November. GitHub's five-minute schedule called the morning-mail, mail-health and intelligence endpoints about 860 times a day, and each intelligence call re-ran monitoring, indexing and the brief. That schedule is now a three-hourly mail backup only. Vercel's hourly intelligence crons already release due briefs and update the index, and intelligence runs from GitHub only on manual dispatch.
+

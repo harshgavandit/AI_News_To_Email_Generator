@@ -597,3 +597,15 @@ def test_morning_briefs_have_their_own_vercel_schedule_and_hourly_release(archiv
     store.subscribe("mailbox-1", "reader@example.org", "Asia/Kolkata", 1)
     assert client.get("/api/jobs/intelligence", headers=JOB_HEADERS).json() == {"status": "checked"}
     assert handoffs == ["/api/jobs/morning"]
+
+
+def test_github_no_longer_polls_vercel_every_five_minutes():
+    """Five-minute polling used most of the Vercel Hobby Active CPU allowance."""
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    crons = [line.split("'")[1] for line in workflow.splitlines() if line.strip().startswith("- cron:")]
+    for cron in crons:
+        minute, hour = cron.split()[:2]
+        assert "/" not in minute and hour != "*", cron
+    intelligence = workflow.split("  intelligence:\n", 1)[1].split("  priority:\n", 1)[0]
+    assert "if: inputs.intelligence_only" in intelligence

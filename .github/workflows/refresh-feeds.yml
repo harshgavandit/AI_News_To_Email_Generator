@@ -1,8 +1,10 @@
 name: Refresh world tech feeds
 on:
   schedule:
-    # The frequent trigger only processes mail and intelligence.
-    - cron: '2-57/5 * * * *'
+    # Backup for morning mail only, every three hours. Vercel's hourly intelligence crons
+    # already release due briefs and update the index; polling Vercel every five minutes
+    # used most of the Hobby plan's Active CPU allowance (paused on 23 November).
+    - cron: '23 */3 * * *'
     # Finish any sources left due by Vercel's bounded 08:00/20:00 IST sweep.
     # GitHub schedule cron is UTC: 02:40 and 14:40 UTC are 08:10 and 20:10 IST,
     # after Vercel's first batch has started.
@@ -94,7 +96,7 @@ jobs:
           jq . <<< "$health"
           jq -e '.status != "stalled"' <<< "$health"
   mail:
-    if: github.event.schedule == '2-57/5 * * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
+    if: github.event.schedule == '23 */3 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -118,7 +120,7 @@ jobs:
             exit 1
           fi
   intelligence:
-    if: github.event.schedule == '2-57/5 * * * *' || inputs.intelligence_only
+    if: inputs.intelligence_only
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
