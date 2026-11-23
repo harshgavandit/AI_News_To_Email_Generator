@@ -157,3 +157,18 @@ On 23 November the 08:00 IST morning brief arrived at 15:21 IST. Morning mail wa
 ## Catch-up cards (2026-11-23)
 
 The Catch up view now shows each new or updated development as a card (`public/catchup-cards.js`, styles in `public/orbital.css`) in a responsive grid: a New or Updated badge, the topic, the relative time (exact time on hover), the headline (opens the story details), a three-line summary or up to three "what changed" notes with their sources, a folded AI explanation when one exists, and a footer with the publisher, the number of publishers, **Read original** and **Timeline**. Release entries titled only with a version number are shown with their project name ("pulumi/pulumi v3.277.0"). The status line and actions sit in one toolbar, and the source-check notice is a slim banner. Every card still links straight to the original publisher. Tests: `tests/client/catchup-cards.test.mjs`.
+
+## Publisher sweeps run on GitHub Actions (24 November)
+
+Vercel paused the project on 23 November for exceeding the Hobby plan's Fluid Active CPU allowance. Feed fetching and parsing now run on GitHub Actions, which is free for this public repository. Vercel only serves pages, mail and the hourly intelligence job.
+
+- **Start.** Vercel Schedules still fires `POST /api/jobs/feed-sweep` at 08:00 and 20:00 IST. With `GITHUB_SWEEP_TOKEN` set, the endpoint makes one `workflow_dispatch` call to `refresh-feeds.yml` and returns `{"status": "dispatched"}`. Dispatched runs start within a minute or two, unlike GitHub's own schedule. If the token is missing or GitHub refuses, Vercel runs the sweep itself as before.
+- **Sweep.** The `refresh` job runs `python -m scripts.run_publisher_sweep --run full` against `NEWS_DATABASE_URL`. It uses the same rules as the site: one check per source per sweep, the same windows, leases, host backoffs and pruning. It keeps going until every eligible feed is checked (30-minute budget). It then calls `/api/jobs/morning` so briefs carry that sweep's news. The 08:15 IST Vercel schedule and the hourly intelligence crons still send anything due.
+- **Follow-ups and priority checks.** The `40 2,14` and `17 5,17` UTC schedules finish a sweep whose start was missed. The `32 8,20` UTC priority check (`--run priority`) also runs in the runner. A manual run can choose `full` or `priority`.
+
+**Setup (once):**
+
+1. GitHub repository → Settings → Secrets and variables → Actions: add `NEWS_DATABASE_URL` with the same value as in Vercel production. `FEED_REFRESH_SECRET` is already there.
+2. GitHub → Settings → Developer settings → Fine-grained tokens: create a token for this repository only with **Actions: Read and write** (nothing else). Add it in Vercel production as `GITHUB_SWEEP_TOKEN`.
+3. Test with **Run workflow** on "Refresh world tech feeds" (feeds only). The run page shows a sweep summary.
+

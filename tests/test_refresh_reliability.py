@@ -456,7 +456,9 @@ def test_follow_up_waits_for_a_running_vercel_batch():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
-    assert '"$status" == "already_started"' in refresh_job and "sleep 30" in refresh_job
+    assert "scripts.run_publisher_sweep --run full" in refresh_job
+    from scripts import run_publisher_sweep
+    assert run_publisher_sweep.LEASE_WAIT_SECONDS == 30
 
 
 def test_transient_failures_are_retried_once_within_the_sweep(archive, monkeypatch, daily_clock):

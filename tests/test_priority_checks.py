@@ -89,4 +89,4 @@ def test_github_starts_priority_runs_inside_their_window_and_vercel_schedule_is_
         assert timedelta(0) < fired - opened < PRIORITY_WINDOW - timedelta(minutes=60)
     job = workflow.split("  priority:\n", 1)[1]
     assert "if: github.event.schedule == '32 8,20 * * *'" in job
-    assert "run=priority" in job and "run=scheduled" not in job
+    assert "--run priority" in job and "--run full" not in job

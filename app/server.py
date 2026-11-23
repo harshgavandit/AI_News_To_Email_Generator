@@ -5,6 +5,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import smtplib
 import threading
@@ -1061,6 +1062,38 @@ def refresh_job(run: str | None = None, hop: Annotated[int, Query(ge=0, le=SWEEP
     return run_sweep()
 
 
+GITHUB_SWEEP_WORKFLOW = "refresh-feeds.yml"
+GITHUB_REPOSITORY = re.compile(r"[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}")
+
+
+def dispatch_github_sweep():
+    """Start the publisher sweep on GitHub Actions; returns True once GitHub accepted it.
+
+    Fetching and parsing about a thousand feeds used most of Vercel's Hobby Active CPU
+    allowance. With GITHUB_SWEEP_TOKEN set (a fine-grained token with Actions read and
+    write on this repository only), Vercel's schedule just starts the GitHub run, which
+    fetches feeds and writes to the same database. Without it, or if GitHub refuses,
+    Vercel runs the sweep itself as before.
+    """
+    token = os.getenv("GITHUB_SWEEP_TOKEN", "")
+    repository = os.getenv("GITHUB_SWEEP_REPOSITORY", "harshgavandit/AI_News_To_Email_Generator")
+    if len(token) < 20 or not GITHUB_REPOSITORY.fullmatch(repository):
+        return False
+    try:
+        reply = httpx.post(f"https://api.github.com/repos/{repository}/actions/workflows/{GITHUB_SWEEP_WORKFLOW}/dispatches",
+                           headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                                    "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "InformaAI-jobs/1.0"},
+                           json={"ref": "main", "inputs": {"feeds_only": "true"}},
+                           timeout=httpx.Timeout(10, connect=5), follow_redirects=False)
+    except httpx.HTTPError as error:
+        logger.warning("github_sweep_dispatch_failed error_type=%s", type(error).__name__)
+        return False
+    if reply.status_code != 204:
+        logger.warning("github_sweep_dispatch_failed status=%s", reply.status_code)
+        return False
+    return True
+
+
 @app.post("/api/jobs/feed-sweep")
 def scheduled_feed_sweep(response: Response, authorization: str | None = Header(default=None),
                          scheduled_at: str = Header(alias="ce-vssscheduledat", max_length=48)):
@@ -1073,6 +1106,10 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
         scheduled = datetime.fromisoformat(scheduled_at)
     except ValueError as exc:
         raise HTTPException(422, "Invalid sweep time.") from exc
+    now = datetime.now(timezone.utc)
+    if latest_sweep(now) == scheduled and now < scheduled + SWEEP_WINDOW and dispatch_github_sweep():
+        logger.info("publisher_sweep_dispatched scheduled=%s runner=github", scheduled.isoformat())
+        return {"status": "dispatched", "runner": "github", "scheduled_at": scheduled.isoformat()}
     result = run_sweep(expected_slot=scheduled)
     result["handed_off"] = continue_sweep(result, 0)
     result["mail_started"] = deliver_after_sweep(result)

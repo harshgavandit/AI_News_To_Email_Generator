@@ -5,9 +5,9 @@ on:
     # already release due briefs and update the index; polling Vercel every five minutes
     # used most of the Hobby plan's Active CPU allowance (paused on 23 November).
     - cron: '23 */3 * * *'
-    # Finish any sources left due by Vercel's bounded 08:00/20:00 IST sweep.
-    # GitHub schedule cron is UTC: 02:40 and 14:40 UTC are 08:10 and 20:10 IST,
-    # after Vercel's first batch has started.
+    # Vercel's 08:00/20:00 IST schedule starts the sweep here through workflow_dispatch.
+    # These follow-ups finish it if that start was missed. GitHub schedule cron is UTC:
+    # 02:40 and 14:40 UTC are 08:10 and 20:10 IST.
     - cron: '40 2,14 * * *'
     # Light checks of the busiest newsrooms, advisories and status pages between full
     # sweeps: 20:32 and 08:32 UTC are 02:02 and 14:02 IST (each window is two hours).
@@ -26,6 +26,11 @@ on:
         description: Update the search index and intelligence briefing only
         type: boolean
         default: false
+      run:
+        description: Which publisher check to run
+        type: choice
+        options: [full, priority]
+        default: full
 
 permissions: {}
 concurrency:
@@ -34,69 +39,36 @@ concurrency:
 
 jobs:
   refresh:
-    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only) || (github.event_name == 'schedule' && (github.event.schedule == '40 2,14 * * *' || github.event.schedule == '17 5,17 * * *'))
+    # Vercel's 08:00/20:00 IST schedule starts this run through workflow_dispatch when
+    # GITHUB_SWEEP_TOKEN is set; the two schedules below finish any sweep left unfinished.
+    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && inputs.run != 'priority') || (github.event_name == 'schedule' && (github.event.schedule == '40 2,14 * * *' || github.event.schedule == '17 5,17 * * *'))
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    env:
-      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
     steps:
-      - name: Check published sources
-        shell: bash
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
         run: |
-          set -euo pipefail
-          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
-            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
-            exit 1
-          fi
-          # Multiple batches cover distinct sources in the same sweep.
-          deadline=$((SECONDS + 1800))
-          finished=false
-          for batch in {1..20}; do
-            result=$(curl --silent --show-error --fail --max-time 125 \
-              --header @- 'https://getinformdaily.com/api/jobs/refresh?run=scheduled' \
-              <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-            jq '{status, checked, healthy, remaining, deferred, scheduled_at}' <<< "$result"
-            jq -r '.failures[]? | "::warning::\(.label) (\(.id)): \(.reason)"' <<< "$result"
-            jq -r '.deferrals[]? | "::warning::\(.label) (\(.id)): backoff until \(.retry_at)"' <<< "$result"
-            jq -r '.unconfirmed[]? | "::error::\(.): started without a recorded result. Skipping repeat attempt."' <<< "$result"
-            status=$(jq -r '.status' <<< "$result")
-            if [[ "$status" == "already_started" ]]; then
-              # Vercel's scheduled batch holds the refresh lease; wait for it and continue.
-              if (( SECONDS >= deadline )); then break; fi
-              sleep 30
-              continue
-            fi
-            if [[ "$status" == "closed" ]]; then
-              echo 'This sweep is closed; the next one starts at 08:00 or 20:00 IST.'
-              exit 0
-            fi
-            if jq -e '(.status == "complete" or .status == "refreshed") and .remaining == 0' <<< "$result" > /dev/null; then
-              jq -e '(.unconfirmed | length) == 0' <<< "$result" > /dev/null
-              finished=true
-              break
-            fi
-            if ! jq -e '.status == "refreshed" and .checked > 0 and .remaining > 0' <<< "$result" > /dev/null; then
-              echo '::error::Publisher sweep did not advance. See the batch status above.'
-              exit 1
-            fi
-            if (( SECONDS >= deadline )); then break; fi
-          done
-          if [[ "$finished" != true ]]; then
-            echo '::error::Publisher sweep reached its batch or time limit before all eligible sources were checked.'
-            exit 1
-          fi
-          ready=$(curl --silent --show-error --fail-with-body --max-time 10 \
-            'https://ai-news-to-email-generator.vercel.app/api/ready')
-          jq -e '.freshness.counts | select(.fresh > 0)' <<< "$ready"
-          if [[ $(jq -r '.status' <<< "$ready") == 'degraded' ]]; then
-            echo '::warning::Some feeds are behind or unavailable. See the public source catalog.'
-          fi
-          health=$(curl --silent --show-error --fail --max-time 15 \
-            'https://ai-news-to-email-generator.vercel.app/api/discovery/ingestion')
-          jq . <<< "$health"
-          jq -e '.status != "stalled"' <<< "$health"
+          python -m pip install uv
+          uv sync --frozen --no-dev
+      - name: Check published sources
+        # Feeds are fetched here and written to the production database, so Vercel's
+        # Active CPU allowance does not limit the size of the source catalog.
+        # Each source is still checked once per sweep; a run started while another is
+        # working waits for its lease.
+        env:
+          NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
+          FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+          PUBLIC_ORIGIN: https://getinformdaily.com
+        run: uv run --no-dev python -m scripts.run_publisher_sweep --run full --budget-minutes 30
   mail:
-    if: github.event.schedule == '23 */3 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only)
+    if: github.event.schedule == '23 */3 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only && inputs.run != 'priority')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -158,46 +130,24 @@ jobs:
                  or ($transient and . == "unavailable")))' \
             <<< "$result" > /dev/null
   priority:
-    if: github.event.schedule == '32 8,20 * * *'
+    if: github.event.schedule == '32 8,20 * * *' || (github.event_name == 'workflow_dispatch' && inputs.run == 'priority')
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
     steps:
-      - name: Check the busiest sources
-        shell: bash
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
         run: |
-          set -euo pipefail
-          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
-            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
-            exit 1
-          fi
-          deadline=$((SECONDS + 900))
-          for batch in {1..10}; do
-            result=$(curl --silent --show-error --fail --max-time 125 \
-              --header @- 'https://getinformdaily.com/api/jobs/refresh?run=priority' \
-              <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-            jq '{status, checked, healthy, remaining, deferred, scheduled_at}' <<< "$result"
-            jq -r '.failures[]? | "::warning::\(.label) (\(.id)): \(.reason)"' <<< "$result"
-            status=$(jq -r '.status' <<< "$result")
-            if [[ "$status" == "closed" ]]; then
-              # GitHub started this run after the two-hour window; the next full sweep covers it.
-              echo '::warning::Priority window closed before this run started.'
-              exit 0
-            fi
-            if [[ "$status" == "already_started" ]]; then
-              if (( SECONDS >= deadline )); then break; fi
-              sleep 20
-              continue
-            fi
-            if jq -e '.remaining == 0' <<< "$result" > /dev/null; then
-              exit 0
-            fi
-            if ! jq -e '.status == "refreshed" and .checked > 0' <<< "$result" > /dev/null; then
-              echo '::error::Priority check did not advance. See the batch status above.'
-              exit 1
-            fi
-            if (( SECONDS >= deadline )); then break; fi
-          done
-          # Unchecked sources are still covered by the next full sweep.
-          echo '::warning::Priority check reached its time limit with sources remaining.'
+          python -m pip install uv
+          uv sync --frozen --no-dev
+      - name: Check the busiest sources
+        # Unchecked sources are still covered by the next full sweep.
+        env:
+          NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
+        run: uv run --no-dev python -m scripts.run_publisher_sweep --run priority --budget-minutes 15
