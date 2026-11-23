@@ -350,6 +350,9 @@ def test_publisher_followup_drains_only_inside_the_two_daily_sweep_windows():
     assert config["schedules"] == {"publisher-feed-sweep": {
         "schedule": "0 8,20 * * *", "timezone": "Asia/Kolkata",
         "path": VERCEL_SWEEP, "requestMethod": "POST",
+    }, "morning-brief-delivery": {
+        "schedule": "15 8 * * *", "timezone": "Asia/Kolkata",
+        "path": "/api/jobs/morning-brief", "requestMethod": "POST",
     }}
     assert all(item["path"].startswith("/api/jobs/intelligence") for item in config["crons"])
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
@@ -552,7 +555,9 @@ def test_unfinished_sweep_hands_off_to_a_continuation_run(archive, monkeypatch, 
     daily_clock(MORNING + timedelta(minutes=7))
     result = client.get("/api/jobs/refresh?run=continue&hop=1", headers={"Authorization": handoffs[0][2]}).json()
     assert result["status"] == "refreshed" and result["checked"] == 3 and result["remaining"] == 0
-    assert result["handed_off"] is False and len(handoffs) == 1
+    assert result["handed_off"] is False and result["mail_started"] is True
+    assert [call[0] for call in handoffs] == ["https://getinformdaily.com/api/jobs/refresh",
+                                              "https://getinformdaily.com/api/jobs/morning"], "mail follows a finished sweep"
     assert sorted(fetched) == sorted(source.id for source in sources), "each feed is checked once per sweep"
     assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 5
     # A finished sweep, a run outside production and the hop limit never hand off.
@@ -561,7 +566,8 @@ def test_unfinished_sweep_hands_off_to_a_continuation_run(archive, monkeypatch, 
     assert server.continue_sweep({"status": "refreshed", "remaining": 4}, server.SWEEP_CHAIN_LIMIT) is False
     monkeypatch.setenv("VERCEL_ENV", "preview")
     assert server.continue_sweep({"status": "refreshed", "remaining": 4}, 0) is False
-    assert len(handoffs) == 1
+    assert server.deliver_after_sweep({"status": "refreshed", "remaining": 0}) is False
+    assert len(handoffs) == 2
 
 
 def test_continuation_runs_respect_the_sweep_window(archive, monkeypatch, daily_clock):
@@ -569,5 +575,25 @@ def test_continuation_runs_respect_the_sweep_window(archive, monkeypatch, daily_
     monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: ([], {"available": True}))
     daily_clock(MORNING + ingestion.SWEEP_CATCHUP)
     assert client.get("/api/jobs/refresh?run=continue&hop=1", headers=JOB_HEADERS).json() == {
-        "status": "closed", "scheduled_at": EVENING.isoformat(), "handed_off": False}
+        "status": "closed", "scheduled_at": EVENING.isoformat(), "handed_off": False, "mail_started": False}
     assert client.get("/api/jobs/refresh?run=continue").status_code == 401
+
+
+def test_morning_briefs_have_their_own_vercel_schedule_and_hourly_release(archive, monkeypatch):
+    store, client = archive
+    calls = []
+    monkeypatch.setattr(server, "run_morning_delivery", lambda: calls.append("mail") or {"sent": 1, "unconfirmed": 0})
+    assert client.post("/api/jobs/morning-brief").status_code == 401
+    assert client.post("/api/jobs/morning-brief", headers=JOB_HEADERS).status_code == 401, "only Vercel's cron secret"
+    assert client.post("/api/jobs/morning-brief", headers=VERCEL_HEADERS).json() == {"sent": 1, "unconfirmed": 0}
+    assert calls == ["mail"]
+    # The hourly intelligence cron releases briefs due in readers' own time zones.
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    handoffs = []
+    monkeypatch.setattr(server, "hand_off", lambda path, params=None, *, label: handoffs.append(path) or True)
+    monkeypatch.setattr(server, "run_intelligence_check", lambda store_: {"status": "checked"})
+    assert client.get("/api/jobs/intelligence", headers=JOB_HEADERS).json() == {"status": "checked"}
+    assert handoffs == [], "nothing due, no mail run"
+    store.subscribe("mailbox-1", "reader@example.org", "Asia/Kolkata", 1)
+    assert client.get("/api/jobs/intelligence", headers=JOB_HEADERS).json() == {"status": "checked"}
+    assert handoffs == ["/api/jobs/morning"]

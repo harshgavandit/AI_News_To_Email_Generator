@@ -202,7 +202,8 @@ def test_scheduled_brief_includes_saved_curiosity_cards_and_removal_stops_future
         'markdown': 'Daily technology brief', 'html': '<html><body><p>Daily brief</p></body></html>'})
 
     assert result['sent'] == 1
-    assert '## Curiosity Cards' in inbox[-1]['body']
+    assert '## Your Curiosity Cards' in inbox[-1]['body']
+    assert '## Worth your curiosity today' in inbox[-1]['body'], 'daily suggestions come with saved cards'
     assert 'Attention Is All You Need' in inbox[-1]['body']
     assert 'Google Research' in inbox[-1]['body']
     assert 'https://research.google/pubs/attention-is-all-you-need' in inbox[-1]['body']
@@ -215,4 +216,27 @@ def test_scheduled_brief_includes_saved_curiosity_cards_and_removal_stops_future
         'markdown': 'Second daily technology brief', 'html': '<html><body><p>Daily brief</p></body></html>'})
 
     assert result['sent'] == 1
-    assert 'Curiosity Cards' not in inbox[-1]['body']
+    assert 'Your Curiosity Cards' not in inbox[-1]['body']
+    assert 'Attention Is All You Need' not in inbox[-1]['body'].split('## Worth your curiosity today')[0]
+    assert '## Worth your curiosity today' in inbox[-1]['body'], 'suggestions continue without saved cards'
+
+
+def test_morning_suggestions_change_daily_without_repeats_and_skip_saved_cards(mail):
+    from datetime import UTC, datetime, timedelta
+    from app import mail_schedule
+
+    store, _, _ = mail
+    mailbox = public_mail.digest_key('mailbox:reader@example.org')
+    morning = datetime(2026, 11, 24, 2, 30, tzinfo=UTC)
+    days = [mail_schedule.curiosity_suggestions(store, mailbox, morning + timedelta(days=offset)) for offset in range(6)]
+    assert all(len(picks) == mail_schedule.SUGGESTIONS_PER_DAY for picks in days)
+    ids = [card['id'] for picks in days for card in picks]
+    assert len(set(ids)) == len(ids), 'no card repeats while the shelf lasts'
+    assert days[0] == mail_schedule.curiosity_suggestions(store, mailbox, morning + timedelta(hours=5)), 'stable within a day'
+    other = public_mail.digest_key('mailbox:someone@example.org')
+    assert [c['id'] for c in mail_schedule.curiosity_suggestions(store, other, morning)] != [c['id'] for c in days[0]]
+    saved = days[0][:1]
+    brief = mail_schedule.append_curiosity_section({'markdown': 'Brief', 'html': '<p>Brief</p>'}, saved, days[0])
+    assert brief['markdown'].count(saved[0]['url']) == 1, 'a saved card is not suggested again'
+    for card in days[0]:
+        assert card['url'] in brief['html'] and 'Read the original source' in brief['html']

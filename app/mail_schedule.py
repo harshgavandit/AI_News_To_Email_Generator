@@ -58,13 +58,8 @@ def with_unsubscribe(brief, url, *, scheduled=False):
     return dict(brief, html=html, markdown=f'{brief["markdown"]}\n\nUnsubscribe: {url}')
 
 
-def append_curiosity_section(brief, cards):
-    """Append short, source-linked card snapshots to a scheduled email."""
-    cards = cards[:5]
-    if not cards:
-        return brief
-    rows_html = []
-    rows_markdown = []
+def _curiosity_rows(cards):
+    rows_html, rows_markdown, ids = [], [], []
     for card in cards:
         title = str(card.get("title", ""))[:500]
         summary = str(card.get("summary", ""))[:900]
@@ -74,29 +69,94 @@ def append_curiosity_section(brief, cards):
         if not title or not summary or url == "#":
             continue
         safe_url = escape(url, quote=True)
+        minutes = card.get("read_minutes")
+        meta = f"{company} · {publisher}" + (f" · {int(minutes)} min read" if isinstance(minutes, int) and minutes > 0 else "")
         rows_html.append(
             '<li style="margin:0 0 16px;">'
             f'<h3 style="font:600 16px/1.4 Arial,sans-serif;margin:0 0 5px;">'
-            f'<a href="{safe_url}" style="color:#294a3b;">{escape(title)}</a></h3>'
-            f'<p style="font-size:12px;color:#697169;margin:0 0 6px;">{escape(company)} · {escape(publisher)}</p>'
+            f'<a href="{safe_url}" style="color:#0b3a78;">{escape(title)}</a></h3>'
+            f'<p style="font-size:12px;color:#5b6b80;margin:0 0 6px;">{escape(meta)}</p>'
             f'<p style="font-size:13px;line-height:1.6;margin:0 0 5px;">{escape(summary)}</p>'
-            f'<a href="{safe_url}" style="font-size:12px;color:#294a3b;">Read the original source →</a></li>'
+            f'<a href="{safe_url}" style="font-size:12px;color:#0b3a78;">Read the original source →</a></li>'
         )
         rows_markdown.append(
-            f'- **{markdown_text(title)}** — {markdown_text(company)} · {markdown_text(publisher)}\n'
+            f'- **{markdown_text(title)}** — {markdown_text(meta)}\n'
             f'  {markdown_text(summary)}\n  Original source: {url}'
         )
-    if not rows_html:
+        ids.append(card.get("id"))
+    return rows_html, rows_markdown, ids
+
+
+def append_curiosity_section(brief, cards, suggestions=()):
+    """Append the reader's saved cards, then today's suggestions, as source-linked snapshots."""
+    saved_html, saved_markdown, saved_ids = _curiosity_rows(list(cards)[:5])
+    picks = [card for card in suggestions if card.get("id") not in saved_ids][:max(0, 5 - len(saved_ids))]
+    suggested_html, suggested_markdown, _ = _curiosity_rows(picks)
+    if not saved_html and not suggested_html:
         return brief
-    items_html = "".join(rows_html)
-    section_html = (
-        '<section style="margin:28px 0 0;padding:20px 0 0;border-top:2px solid #dedfd5;">'
-        '<h2 style="font:600 20px/1.3 Georgia,serif;color:#252e29;margin:0 0 16px;">Curiosity Cards</h2>'
-        f'<ul style="list-style:none;padding:0;margin:0;">{items_html}</ul></section>'
-    )
-    return dict(brief, markdown=f'{brief["markdown"]}\n\n## Curiosity Cards\n\n' + "\n\n".join(rows_markdown),
+    blocks_html, blocks_markdown = [], []
+    if saved_html:
+        blocks_html.append('<h2 style="font:600 20px/1.3 Georgia,serif;color:#0b1f3a;margin:0 0 16px;">Your Curiosity Cards</h2>'
+                           f'<ul style="list-style:none;padding:0;margin:0 0 8px;">{"".join(saved_html)}</ul>')
+        blocks_markdown.append("## Your Curiosity Cards\n\n" + "\n\n".join(saved_markdown))
+    if suggested_html:
+        blocks_html.append('<h2 style="font:600 20px/1.3 Georgia,serif;color:#0b1f3a;margin:0 0 6px;">Worth your curiosity today</h2>'
+                           '<p style="font-size:12px;color:#5b6b80;margin:0 0 16px;">Engineering deep dives picked from '
+                           'Curiosity Cards. A new set every morning.</p>'
+                           f'<ul style="list-style:none;padding:0;margin:0;">{"".join(suggested_html)}</ul>')
+        blocks_markdown.append("## Worth your curiosity today\n\nEngineering deep dives picked from Curiosity Cards.\n\n"
+                               + "\n\n".join(suggested_markdown))
+    section_html = ('<section style="margin:28px 0 0;padding:20px 0 0;border-top:2px solid #d6e4f5;">'
+                    + "".join(blocks_html) + "</section>")
+    return dict(brief, markdown=f'{brief["markdown"]}\n\n' + "\n\n".join(blocks_markdown),
                 html=brief["html"].replace("</body>", f"{section_html}</body>")
                 if "</body>" in brief["html"] else brief["html"] + section_html)
+
+
+SUGGESTIONS_PER_DAY = 3
+
+
+def curiosity_suggestions(store, mailbox, moment=None, count=SUGGESTIONS_PER_DAY):
+    """Daily Curiosity Card picks: a fresh discovery plus evergreen deep dives, new each morning.
+
+    Each mailbox walks its own shuffled order of the card shelf, a few cards a day, so picks
+    do not repeat until the shelf has been read through. No model call is made here.
+    """
+    import hashlib
+    from copy import deepcopy
+    from app.curiosity import _card, featured_seeds
+    moment = moment or datetime.now(UTC)
+    day = int(moment.timestamp() // 86400)
+    order = lambda card: hashlib.sha256(f"{mailbox}:{card['id']}".encode()).hexdigest()  # noqa: E731
+    try:
+        evergreen = sorted((_card(deepcopy(article), {}) for article in featured_seeds()), key=order)
+    except Exception as error:
+        logger.warning("curiosity_suggestions_unavailable error_type=%s", type(error).__name__)
+        evergreen = []
+    try:
+        discoveries = sorted((card for card in store.curiosity_library(120) if card.get("url")), key=order)
+    except Exception as error:
+        logger.warning("curiosity_library_unavailable error_type=%s", type(error).__name__)
+        discoveries = []
+
+    def take(cards, amount):
+        if not cards or amount <= 0:
+            return []
+        start = (day * amount) % len(cards)
+        return [cards[(start + index) % len(cards)] for index in range(min(amount, len(cards)))]
+
+    picks = take(discoveries, 1)
+    for card in take(evergreen, count):
+        if len(picks) < count and card["id"] not in {pick["id"] for pick in picks}:
+            picks.append(card)
+    for card in take(discoveries, count):  # Top up if there are few evergreen cards.
+        if len(picks) < count and card["id"] not in {pick["id"] for pick in picks}:
+            picks.append(card)
+    return picks
+
+
+def morning_curiosity(store, mailbox, brief, moment=None):
+    return append_curiosity_section(brief, store.curiosity_selection(mailbox), curiosity_suggestions(store, mailbox, moment))
 
 
 def personalized_morning_brief(store, mailbox, fallback, load_events):
@@ -180,7 +240,7 @@ def run_due_subscriptions(generate_fn):
         if not store.subscription(mailbox)["enabled"]:
             continue
         message = with_unsubscribe(content, unsub_url, scheduled=True)
-        message = append_curiosity_section(message, store.curiosity_selection(mailbox))
+        message = morning_curiosity(store, mailbox, message)
         try:
             accepted = public_mail.send_message(
                 email,
