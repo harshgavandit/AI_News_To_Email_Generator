@@ -13845,5 +13845,2489 @@
     "collection": "Systems and software",
     "reviewed_at": "2026-11-23",
     "require_english": true
+  },
+  {
+    "id": "crunchy-data-blog",
+    "group": "crunchy-data-blog",
+    "label": "Crunchy Data Blog",
+    "url": "https://www.crunchydata.com/blog/rss.xml",
+    "hosts": [
+      "crunchydata.com",
+      "www.crunchydata.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-coredns-coredns",
+    "group": "github-releases",
+    "label": "coredns/coredns Releases",
+    "kind": "engineering",
+    "url": "https://github.com/coredns/coredns/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/coredns/coredns/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-lightning-ai-pytorch-lightning",
+    "group": "github-releases",
+    "label": "Lightning-AI/pytorch-lightning Releases",
+    "kind": "engineering",
+    "url": "https://github.com/Lightning-AI/pytorch-lightning/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/Lightning-AI/pytorch-lightning/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-longhorn-longhorn",
+    "group": "github-releases",
+    "label": "longhorn/longhorn Releases",
+    "kind": "engineering",
+    "url": "https://github.com/longhorn/longhorn/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/longhorn/longhorn/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-redpanda-data-redpanda",
+    "group": "github-releases",
+    "label": "redpanda-data/redpanda Releases",
+    "kind": "engineering",
+    "url": "https://github.com/redpanda-data/redpanda/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/redpanda-data/redpanda/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "databricks-blog",
+    "group": "databricks-blog",
+    "label": "Databricks Blog",
+    "url": "https://www.databricks.com/feed",
+    "hosts": [
+      "databricks.com",
+      "www.databricks.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "ettelecom",
+    "group": "ettelecom",
+    "label": "ETTelecom",
+    "url": "https://telecom.economictimes.indiatimes.com/rss/topstories",
+    "hosts": [
+      "telecom.economictimes.indiatimes.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "percona-blog",
+    "group": "percona-blog",
+    "label": "Percona Blog",
+    "url": "https://www.percona.com/blog/feed/",
+    "hosts": [
+      "percona.com",
+      "www.percona.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-anchore-grype",
+    "group": "github-releases",
+    "label": "anchore/grype Releases",
+    "kind": "engineering",
+    "url": "https://github.com/anchore/grype/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/anchore/grype/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-anchore-syft",
+    "group": "github-releases",
+    "label": "anchore/syft Releases",
+    "kind": "engineering",
+    "url": "https://github.com/anchore/syft/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/anchore/syft/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-appwrite-appwrite",
+    "group": "github-releases",
+    "label": "appwrite/appwrite Releases",
+    "kind": "engineering",
+    "url": "https://github.com/appwrite/appwrite/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/appwrite/appwrite/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-cloudflare-workerd",
+    "group": "github-releases",
+    "label": "cloudflare/workerd Releases",
+    "kind": "engineering",
+    "url": "https://github.com/cloudflare/workerd/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/cloudflare/workerd/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-confident-ai-deepeval",
+    "group": "github-releases",
+    "label": "confident-ai/deepeval Releases",
+    "kind": "engineering",
+    "url": "https://github.com/confident-ai/deepeval/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/confident-ai/deepeval/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-dagster-io-dagster",
+    "group": "github-releases",
+    "label": "dagster-io/dagster Releases",
+    "kind": "engineering",
+    "url": "https://github.com/dagster-io/dagster/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/dagster-io/dagster/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-elixir-lang-elixir",
+    "group": "github-releases",
+    "label": "elixir-lang/elixir Releases",
+    "kind": "engineering",
+    "url": "https://github.com/elixir-lang/elixir/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/elixir-lang/elixir/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-getsentry-sentry",
+    "group": "github-releases",
+    "label": "getsentry/sentry Releases",
+    "kind": "engineering",
+    "url": "https://github.com/getsentry/sentry/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/getsentry/sentry/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-grafana-mimir",
+    "group": "github-releases",
+    "label": "grafana/mimir Releases",
+    "kind": "engineering",
+    "url": "https://github.com/grafana/mimir/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/grafana/mimir/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-honojs-hono",
+    "group": "github-releases",
+    "label": "honojs/hono Releases",
+    "kind": "engineering",
+    "url": "https://github.com/honojs/hono/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/honojs/hono/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-invoke-ai-invokeai",
+    "group": "github-releases",
+    "label": "invoke-ai/InvokeAI Releases",
+    "kind": "engineering",
+    "url": "https://github.com/invoke-ai/InvokeAI/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/invoke-ai/InvokeAI/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-langchain-ai-langchainjs",
+    "group": "github-releases",
+    "label": "langchain-ai/langchainjs Releases",
+    "kind": "engineering",
+    "url": "https://github.com/langchain-ai/langchainjs/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/langchain-ai/langchainjs/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-meilisearch-meilisearch",
+    "group": "github-releases",
+    "label": "meilisearch/meilisearch Releases",
+    "kind": "engineering",
+    "url": "https://github.com/meilisearch/meilisearch/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/meilisearch/meilisearch/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-open-policy-agent-opa",
+    "group": "github-releases",
+    "label": "open-policy-agent/opa Releases",
+    "kind": "engineering",
+    "url": "https://github.com/open-policy-agent/opa/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/open-policy-agent/opa/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-pingcap-tidb",
+    "group": "github-releases",
+    "label": "pingcap/tidb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/pingcap/tidb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/pingcap/tidb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-rollup-rollup",
+    "group": "github-releases",
+    "label": "rollup/rollup Releases",
+    "kind": "engineering",
+    "url": "https://github.com/rollup/rollup/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/rollup/rollup/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-semgrep-semgrep",
+    "group": "github-releases",
+    "label": "semgrep/semgrep Releases",
+    "kind": "engineering",
+    "url": "https://github.com/semgrep/semgrep/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/semgrep/semgrep/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-sqlalchemy-sqlalchemy",
+    "group": "github-releases",
+    "label": "sqlalchemy/sqlalchemy Releases",
+    "kind": "engineering",
+    "url": "https://github.com/sqlalchemy/sqlalchemy/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/sqlalchemy/sqlalchemy/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-strapi-strapi",
+    "group": "github-releases",
+    "label": "strapi/strapi Releases",
+    "kind": "engineering",
+    "url": "https://github.com/strapi/strapi/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/strapi/strapi/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-sveltejs-kit",
+    "group": "github-releases",
+    "label": "sveltejs/kit Releases",
+    "kind": "engineering",
+    "url": "https://github.com/sveltejs/kit/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/sveltejs/kit/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-tikv-tikv",
+    "group": "github-releases",
+    "label": "tikv/tikv Releases",
+    "kind": "engineering",
+    "url": "https://github.com/tikv/tikv/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/tikv/tikv/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-trufflesecurity-trufflehog",
+    "group": "github-releases",
+    "label": "trufflesecurity/trufflehog Releases",
+    "kind": "engineering",
+    "url": "https://github.com/trufflesecurity/trufflehog/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/trufflesecurity/trufflehog/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-vitessio-vitess",
+    "group": "github-releases",
+    "label": "vitessio/vitess Releases",
+    "kind": "engineering",
+    "url": "https://github.com/vitessio/vitess/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/vitessio/vitess/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-webpack-webpack",
+    "group": "github-releases",
+    "label": "webpack/webpack Releases",
+    "kind": "engineering",
+    "url": "https://github.com/webpack/webpack/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/webpack/webpack/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-zaproxy-zaproxy",
+    "group": "github-releases",
+    "label": "zaproxy/zaproxy Releases",
+    "kind": "engineering",
+    "url": "https://github.com/zaproxy/zaproxy/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/zaproxy/zaproxy/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "xe-iaso",
+    "group": "xe-iaso",
+    "label": "Xe Iaso",
+    "url": "https://xeiaso.net/blog.rss",
+    "hosts": [
+      "www.xeiaso.net",
+      "xeiaso.net"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "devclass",
+    "group": "devclass",
+    "label": "DevClass",
+    "url": "https://devclass.com/feed/",
+    "hosts": [
+      "devclass.com",
+      "www.devclass.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "datadog-security-labs",
+    "group": "datadog-security-labs",
+    "label": "Datadog Security Labs",
+    "url": "https://securitylabs.datadoghq.com/rss/feed.xml",
+    "hosts": [
+      "securitylabs.datadoghq.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "drew-devault",
+    "group": "drew-devault",
+    "label": "Drew DeVault",
+    "url": "https://drewdevault.com/blog/index.xml",
+    "hosts": [
+      "drewdevault.com",
+      "www.drewdevault.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "jessie-frazelle",
+    "group": "jessie-frazelle",
+    "label": "Jessie Frazelle",
+    "url": "https://blog.jessfraz.com/index.xml",
+    "hosts": [
+      "blog.jessfraz.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-apache-doris",
+    "group": "github-releases",
+    "label": "apache/doris Releases",
+    "kind": "engineering",
+    "url": "https://github.com/apache/doris/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/apache/doris/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-apache-hudi",
+    "group": "github-releases",
+    "label": "apache/hudi Releases",
+    "kind": "engineering",
+    "url": "https://github.com/apache/hudi/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/apache/hudi/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-apache-tvm",
+    "group": "github-releases",
+    "label": "apache/tvm Releases",
+    "kind": "engineering",
+    "url": "https://github.com/apache/tvm/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/apache/tvm/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-expressjs-express",
+    "group": "github-releases",
+    "label": "expressjs/express Releases",
+    "kind": "engineering",
+    "url": "https://github.com/expressjs/express/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/expressjs/express/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-hashicorp-packer",
+    "group": "github-releases",
+    "label": "hashicorp/packer Releases",
+    "kind": "engineering",
+    "url": "https://github.com/hashicorp/packer/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/hashicorp/packer/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-kedacore-keda",
+    "group": "github-releases",
+    "label": "kedacore/keda Releases",
+    "kind": "engineering",
+    "url": "https://github.com/kedacore/keda/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/kedacore/keda/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-knative-serving",
+    "group": "github-releases",
+    "label": "knative/serving Releases",
+    "kind": "engineering",
+    "url": "https://github.com/knative/serving/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/knative/serving/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-osquery-osquery",
+    "group": "github-releases",
+    "label": "osquery/osquery Releases",
+    "kind": "engineering",
+    "url": "https://github.com/osquery/osquery/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/osquery/osquery/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-ossf-scorecard",
+    "group": "github-releases",
+    "label": "ossf/scorecard Releases",
+    "kind": "engineering",
+    "url": "https://github.com/ossf/scorecard/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/ossf/scorecard/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-questdb-questdb",
+    "group": "github-releases",
+    "label": "questdb/questdb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/questdb/questdb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/questdb/questdb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "the-information",
+    "group": "the-information",
+    "label": "The Information",
+    "url": "https://www.theinformation.com/feed",
+    "hosts": [
+      "theinformation.com",
+      "www.theinformation.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "itwire",
+    "group": "itwire",
+    "label": "iTWire",
+    "url": "https://itwire.com/feed",
+    "hosts": [
+      "itwire.com",
+      "www.itwire.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "APAC",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-bevyengine-bevy",
+    "group": "github-releases",
+    "label": "bevyengine/bevy Releases",
+    "kind": "engineering",
+    "url": "https://github.com/bevyengine/bevy/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/bevyengine/bevy/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-celery-celery",
+    "group": "github-releases",
+    "label": "celery/celery Releases",
+    "kind": "engineering",
+    "url": "https://github.com/celery/celery/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/celery/celery/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-crowdsecurity-crowdsec",
+    "group": "github-releases",
+    "label": "crowdsecurity/crowdsec Releases",
+    "kind": "engineering",
+    "url": "https://github.com/crowdsecurity/crowdsec/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/crowdsecurity/crowdsec/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-gleam-lang-gleam",
+    "group": "github-releases",
+    "label": "gleam-lang/gleam Releases",
+    "kind": "engineering",
+    "url": "https://github.com/gleam-lang/gleam/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/gleam-lang/gleam/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-google-osv-scanner",
+    "group": "github-releases",
+    "label": "google/osv-scanner Releases",
+    "kind": "engineering",
+    "url": "https://github.com/google/osv-scanner/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/google/osv-scanner/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-huggingface-tokenizers",
+    "group": "github-releases",
+    "label": "huggingface/tokenizers Releases",
+    "kind": "engineering",
+    "url": "https://github.com/huggingface/tokenizers/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/huggingface/tokenizers/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-jestjs-jest",
+    "group": "github-releases",
+    "label": "jestjs/jest Releases",
+    "kind": "engineering",
+    "url": "https://github.com/jestjs/jest/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/jestjs/jest/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-ml-explore-mlx-lm",
+    "group": "github-releases",
+    "label": "ml-explore/mlx-lm Releases",
+    "kind": "engineering",
+    "url": "https://github.com/ml-explore/mlx-lm/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/ml-explore/mlx-lm/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-onnx-onnx",
+    "group": "github-releases",
+    "label": "onnx/onnx Releases",
+    "kind": "engineering",
+    "url": "https://github.com/onnx/onnx/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/onnx/onnx/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-payloadcms-payload",
+    "group": "github-releases",
+    "label": "payloadcms/payload Releases",
+    "kind": "engineering",
+    "url": "https://github.com/payloadcms/payload/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/payloadcms/payload/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-vercel-turborepo",
+    "group": "github-releases",
+    "label": "vercel/turborepo Releases",
+    "kind": "engineering",
+    "url": "https://github.com/vercel/turborepo/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/vercel/turborepo/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-goharbor-harbor",
+    "group": "github-releases",
+    "label": "goharbor/harbor Releases",
+    "kind": "engineering",
+    "url": "https://github.com/goharbor/harbor/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/goharbor/harbor/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-grafana-k6",
+    "group": "github-releases",
+    "label": "grafana/k6 Releases",
+    "kind": "engineering",
+    "url": "https://github.com/grafana/k6/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/grafana/k6/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-kubernetes-sigs-cluster-api",
+    "group": "github-releases",
+    "label": "kubernetes-sigs/cluster-api Releases",
+    "kind": "engineering",
+    "url": "https://github.com/kubernetes-sigs/cluster-api/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/kubernetes-sigs/cluster-api/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-kubernetes-sigs-karpenter",
+    "group": "github-releases",
+    "label": "kubernetes-sigs/karpenter Releases",
+    "kind": "engineering",
+    "url": "https://github.com/kubernetes-sigs/karpenter/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/kubernetes-sigs/karpenter/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-nextcloud-server",
+    "group": "github-releases",
+    "label": "nextcloud/server Releases",
+    "kind": "engineering",
+    "url": "https://github.com/nextcloud/server/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/nextcloud/server/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-open-telemetry-opentelemetry-python",
+    "group": "github-releases",
+    "label": "open-telemetry/opentelemetry-python Releases",
+    "kind": "engineering",
+    "url": "https://github.com/open-telemetry/opentelemetry-python/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/open-telemetry/opentelemetry-python/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-rancher-rancher",
+    "group": "github-releases",
+    "label": "rancher/rancher Releases",
+    "kind": "engineering",
+    "url": "https://github.com/rancher/rancher/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/rancher/rancher/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-storybookjs-storybook",
+    "group": "github-releases",
+    "label": "storybookjs/storybook Releases",
+    "kind": "engineering",
+    "url": "https://github.com/storybookjs/storybook/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/storybookjs/storybook/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-wazuh-wazuh",
+    "group": "github-releases",
+    "label": "wazuh/wazuh Releases",
+    "kind": "engineering",
+    "url": "https://github.com/wazuh/wazuh/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/wazuh/wazuh/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "atlassian-engineering",
+    "group": "atlassian-engineering",
+    "label": "Atlassian Engineering",
+    "url": "https://www.atlassian.com/engineering/feed",
+    "hosts": [
+      "atlassian.com",
+      "www.atlassian.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "eli-bendersky",
+    "group": "eli-bendersky",
+    "label": "Eli Bendersky",
+    "url": "https://eli.thegreenplace.net/feeds/all.atom.xml",
+    "hosts": [
+      "eli.thegreenplace.net"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-huggingface-huggingface-hub",
+    "group": "github-releases",
+    "label": "huggingface/huggingface_hub Releases",
+    "kind": "engineering",
+    "url": "https://github.com/huggingface/huggingface_hub/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/huggingface/huggingface_hub/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-python-poetry-poetry",
+    "group": "github-releases",
+    "label": "python-poetry/poetry Releases",
+    "kind": "engineering",
+    "url": "https://github.com/python-poetry/poetry/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/python-poetry/poetry/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-wandb-wandb",
+    "group": "github-releases",
+    "label": "wandb/wandb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/wandb/wandb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/wandb/wandb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-zenml-io-zenml",
+    "group": "github-releases",
+    "label": "zenml-io/zenml Releases",
+    "kind": "engineering",
+    "url": "https://github.com/zenml-io/zenml/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/zenml-io/zenml/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "ken-shirriff",
+    "group": "ken-shirriff",
+    "label": "Ken Shirriff",
+    "url": "https://www.righto.com/feeds/posts/default",
+    "hosts": [
+      "righto.com",
+      "www.righto.com"
+    ],
+    "kind": "engineering",
+    "topic": "chips",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-crossplane-crossplane",
+    "group": "github-releases",
+    "label": "crossplane/crossplane Releases",
+    "kind": "engineering",
+    "url": "https://github.com/crossplane/crossplane/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/crossplane/crossplane/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-fastify-fastify",
+    "group": "github-releases",
+    "label": "fastify/fastify Releases",
+    "kind": "engineering",
+    "url": "https://github.com/fastify/fastify/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/fastify/fastify/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-gohugoio-hugo",
+    "group": "github-releases",
+    "label": "gohugoio/hugo Releases",
+    "kind": "engineering",
+    "url": "https://github.com/gohugoio/hugo/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/gohugoio/hugo/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-grafana-tempo",
+    "group": "github-releases",
+    "label": "grafana/tempo Releases",
+    "kind": "engineering",
+    "url": "https://github.com/grafana/tempo/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/grafana/tempo/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-immich-app-immich",
+    "group": "github-releases",
+    "label": "immich-app/immich Releases",
+    "kind": "engineering",
+    "url": "https://github.com/immich-app/immich/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/immich-app/immich/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-julialang-julia",
+    "group": "github-releases",
+    "label": "JuliaLang/julia Releases",
+    "kind": "engineering",
+    "url": "https://github.com/JuliaLang/julia/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/JuliaLang/julia/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-mintplex-labs-anything-llm",
+    "group": "github-releases",
+    "label": "Mintplex-Labs/anything-llm Releases",
+    "kind": "engineering",
+    "url": "https://github.com/Mintplex-Labs/anything-llm/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/Mintplex-Labs/anything-llm/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-prettier-prettier",
+    "group": "github-releases",
+    "label": "prettier/prettier Releases",
+    "kind": "engineering",
+    "url": "https://github.com/prettier/prettier/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/prettier/prettier/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-risingwavelabs-risingwave",
+    "group": "github-releases",
+    "label": "risingwavelabs/risingwave Releases",
+    "kind": "engineering",
+    "url": "https://github.com/risingwavelabs/risingwave/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/risingwavelabs/risingwave/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-cockroachdb-cockroach",
+    "group": "github-releases",
+    "label": "cockroachdb/cockroach Releases",
+    "kind": "engineering",
+    "url": "https://github.com/cockroachdb/cockroach/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/cockroachdb/cockroach/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-cypress-io-cypress",
+    "group": "github-releases",
+    "label": "cypress-io/cypress Releases",
+    "kind": "engineering",
+    "url": "https://github.com/cypress-io/cypress/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/cypress-io/cypress/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-directus-directus",
+    "group": "github-releases",
+    "label": "directus/directus Releases",
+    "kind": "engineering",
+    "url": "https://github.com/directus/directus/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/directus/directus/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-hoppscotch-hoppscotch",
+    "group": "github-releases",
+    "label": "hoppscotch/hoppscotch Releases",
+    "kind": "engineering",
+    "url": "https://github.com/hoppscotch/hoppscotch/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/hoppscotch/hoppscotch/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-mattermost-mattermost",
+    "group": "github-releases",
+    "label": "mattermost/mattermost Releases",
+    "kind": "engineering",
+    "url": "https://github.com/mattermost/mattermost/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/mattermost/mattermost/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-nodejs-node",
+    "group": "github-releases",
+    "label": "nodejs/node Releases",
+    "kind": "engineering",
+    "url": "https://github.com/nodejs/node/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/nodejs/node/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-nrwl-nx",
+    "group": "github-releases",
+    "label": "nrwl/nx Releases",
+    "kind": "engineering",
+    "url": "https://github.com/nrwl/nx/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/nrwl/nx/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-prefecthq-prefect",
+    "group": "github-releases",
+    "label": "PrefectHQ/prefect Releases",
+    "kind": "engineering",
+    "url": "https://github.com/PrefectHQ/prefect/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/PrefectHQ/prefect/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-timescale-timescaledb",
+    "group": "github-releases",
+    "label": "timescale/timescaledb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/timescale/timescaledb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/timescale/timescaledb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-authelia-authelia",
+    "group": "github-releases",
+    "label": "authelia/authelia Releases",
+    "kind": "engineering",
+    "url": "https://github.com/authelia/authelia/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/authelia/authelia/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-pnpm-pnpm",
+    "group": "github-releases",
+    "label": "pnpm/pnpm Releases",
+    "kind": "engineering",
+    "url": "https://github.com/pnpm/pnpm/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/pnpm/pnpm/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-keycloak-keycloak",
+    "group": "github-releases",
+    "label": "keycloak/keycloak Releases",
+    "kind": "engineering",
+    "url": "https://github.com/keycloak/keycloak/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/keycloak/keycloak/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-pocketbase-pocketbase",
+    "group": "github-releases",
+    "label": "pocketbase/pocketbase Releases",
+    "kind": "engineering",
+    "url": "https://github.com/pocketbase/pocketbase/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/pocketbase/pocketbase/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-surrealdb-surrealdb",
+    "group": "github-releases",
+    "label": "surrealdb/surrealdb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/surrealdb/surrealdb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/surrealdb/surrealdb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-swc-project-swc",
+    "group": "github-releases",
+    "label": "swc-project/swc Releases",
+    "kind": "engineering",
+    "url": "https://github.com/swc-project/swc/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/swc-project/swc/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-tailscale-tailscale",
+    "group": "github-releases",
+    "label": "tailscale/tailscale Releases",
+    "kind": "engineering",
+    "url": "https://github.com/tailscale/tailscale/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/tailscale/tailscale/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "bartosz-ciechanowski",
+    "group": "bartosz-ciechanowski",
+    "label": "Bartosz Ciechanowski",
+    "url": "https://ciechanow.ski/atom.xml",
+    "hosts": [
+      "ciechanow.ski",
+      "www.ciechanow.ski"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "brandur-leach",
+    "group": "brandur-leach",
+    "label": "Brandur Leach",
+    "url": "https://brandur.org/articles.atom",
+    "hosts": [
+      "brandur.org",
+      "www.brandur.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "python-insider",
+    "group": "python-insider",
+    "label": "Python Insider",
+    "url": "https://pythoninsider.blogspot.com/feeds/posts/default",
+    "hosts": [
+      "pythoninsider.blogspot.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "release-airbytehq-airbyte",
+    "group": "github-releases",
+    "label": "airbytehq/airbyte Releases",
+    "kind": "engineering",
+    "url": "https://github.com/airbytehq/airbyte/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/airbytehq/airbyte/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-automatic1111-stable-diffusion-webui",
+    "group": "github-releases",
+    "label": "AUTOMATIC1111/stable-diffusion-webui Releases",
+    "kind": "engineering",
+    "url": "https://github.com/AUTOMATIC1111/stable-diffusion-webui/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/AUTOMATIC1111/stable-diffusion-webui/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-calcom-cal-com",
+    "group": "github-releases",
+    "label": "calcom/cal.com Releases",
+    "kind": "engineering",
+    "url": "https://github.com/calcom/cal.com/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/calcom/cal.com/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-encode-httpx",
+    "group": "github-releases",
+    "label": "encode/httpx Releases",
+    "kind": "engineering",
+    "url": "https://github.com/encode/httpx/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/encode/httpx/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-evanw-esbuild",
+    "group": "github-releases",
+    "label": "evanw/esbuild Releases",
+    "kind": "engineering",
+    "url": "https://github.com/evanw/esbuild/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/evanw/esbuild/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-explodinggradients-ragas",
+    "group": "github-releases",
+    "label": "explodinggradients/ragas Releases",
+    "kind": "engineering",
+    "url": "https://github.com/explodinggradients/ragas/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/explodinggradients/ragas/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-facebook-react-native",
+    "group": "github-releases",
+    "label": "facebook/react-native Releases",
+    "kind": "engineering",
+    "url": "https://github.com/facebook/react-native/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/facebook/react-native/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-gitleaks-gitleaks",
+    "group": "github-releases",
+    "label": "gitleaks/gitleaks Releases",
+    "kind": "engineering",
+    "url": "https://github.com/gitleaks/gitleaks/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/gitleaks/gitleaks/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-godotengine-godot",
+    "group": "github-releases",
+    "label": "godotengine/godot Releases",
+    "kind": "engineering",
+    "url": "https://github.com/godotengine/godot/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/godotengine/godot/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-helix-editor-helix",
+    "group": "github-releases",
+    "label": "helix-editor/helix Releases",
+    "kind": "engineering",
+    "url": "https://github.com/helix-editor/helix/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/helix-editor/helix/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-jetbrains-kotlin",
+    "group": "github-releases",
+    "label": "JetBrains/kotlin Releases",
+    "kind": "engineering",
+    "url": "https://github.com/JetBrains/kotlin/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/JetBrains/kotlin/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-kubernetes-ingress-nginx",
+    "group": "github-releases",
+    "label": "kubernetes/ingress-nginx Releases",
+    "kind": "engineering",
+    "url": "https://github.com/kubernetes/ingress-nginx/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/kubernetes/ingress-nginx/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-lancedb-lancedb",
+    "group": "github-releases",
+    "label": "lancedb/lancedb Releases",
+    "kind": "engineering",
+    "url": "https://github.com/lancedb/lancedb/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/lancedb/lancedb/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-lm-sys-fastchat",
+    "group": "github-releases",
+    "label": "lm-sys/FastChat Releases",
+    "kind": "engineering",
+    "url": "https://github.com/lm-sys/FastChat/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/lm-sys/FastChat/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-neondatabase-neon",
+    "group": "github-releases",
+    "label": "neondatabase/neon Releases",
+    "kind": "engineering",
+    "url": "https://github.com/neondatabase/neon/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/neondatabase/neon/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-oobabooga-text-generation-webui",
+    "group": "github-releases",
+    "label": "oobabooga/text-generation-webui Releases",
+    "kind": "engineering",
+    "url": "https://github.com/oobabooga/text-generation-webui/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "ai",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/oobabooga/text-generation-webui/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-ory-kratos",
+    "group": "github-releases",
+    "label": "ory/kratos Releases",
+    "kind": "engineering",
+    "url": "https://github.com/ory/kratos/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "security",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/ory/kratos/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-pallets-flask",
+    "group": "github-releases",
+    "label": "pallets/flask Releases",
+    "kind": "engineering",
+    "url": "https://github.com/pallets/flask/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/pallets/flask/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-prisma-prisma",
+    "group": "github-releases",
+    "label": "prisma/prisma Releases",
+    "kind": "engineering",
+    "url": "https://github.com/prisma/prisma/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/prisma/prisma/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-psf-requests",
+    "group": "github-releases",
+    "label": "psf/requests Releases",
+    "kind": "engineering",
+    "url": "https://github.com/psf/requests/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/psf/requests/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "release-typesense-typesense",
+    "group": "github-releases",
+    "label": "typesense/typesense Releases",
+    "kind": "engineering",
+    "url": "https://github.com/typesense/typesense/releases.atom",
+    "hosts": [
+      "github.com"
+    ],
+    "topic": "software",
+    "coverage": "release",
+    "format": "release",
+    "article_paths": [
+      "/typesense/typesense/releases/tag/"
+    ],
+    "refresh_minutes": 60,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "russ-cox",
+    "group": "russ-cox",
+    "label": "Russ Cox",
+    "url": "https://research.swtch.com/feed.atom",
+    "hosts": [
+      "research.swtch.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "soundcloud-backstage",
+    "group": "soundcloud-backstage",
+    "label": "SoundCloud Backstage",
+    "url": "https://developers.soundcloud.com/blog/blog.rss",
+    "hosts": [
+      "developers.soundcloud.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "the-korea-herald-tech",
+    "group": "the-korea-herald-tech",
+    "label": "The Korea Herald Tech",
+    "url": "https://www.koreaherald.com/rss/020000000000.xml",
+    "hosts": [
+      "koreaherald.com",
+      "www.koreaherald.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "without-boats",
+    "group": "without-boats",
+    "label": "Without Boats",
+    "url": "https://without.boats/index.xml",
+    "hosts": [
+      "without.boats",
+      "www.without.boats"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
   }
 ]
