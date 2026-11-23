@@ -65,6 +65,8 @@ jobs:
         env:
           NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
           FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+          # Publishers that refuse GitHub's network are fetched by Vercel (app/ingestion.py).
+          INFORMA_SWEEP_RUNNER: github
           PUBLIC_ORIGIN: https://getinformdaily.com
         run: uv run --no-dev python -m scripts.run_publisher_sweep --run full --budget-minutes 50
   mail:
@@ -150,4 +152,5 @@ jobs:
         # Unchecked sources are still covered by the next full sweep.
         env:
           NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
+          INFORMA_SWEEP_RUNNER: github
         run: uv run --no-dev python -m scripts.run_publisher_sweep --run priority --budget-minutes 15

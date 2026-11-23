@@ -45,8 +45,9 @@ from app.discovery import (
 from app.web_digest import build_digest
 from app.world_edition import build_world, select_world
 from app.services.email import send_email
-from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, SWEEP_INTERVAL, SWEEP_WINDOW, feed_freshness,
-                           latest_priority_check, latest_sweep, refresh_sources, source_catalog, sweep_plan)
+from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, SWEEP_INTERVAL, SWEEP_WINDOW, VERCEL_FETCHED,
+                           feed_freshness, latest_priority_check, latest_sweep, refresh_sources, runner_excluded,
+                           source_catalog, sweep_plan)
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
@@ -1109,7 +1110,16 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
     now = datetime.now(timezone.utc)
     if latest_sweep(now) == scheduled and now < scheduled + SWEEP_WINDOW and dispatch_github_sweep():
         logger.info("publisher_sweep_dispatched scheduled=%s runner=github", scheduled.isoformat())
-        return {"status": "dispatched", "runner": "github", "scheduled_at": scheduled.isoformat()}
+        result = {"status": "dispatched", "runner": "github", "scheduled_at": scheduled.isoformat()}
+        # Vercel fetches the few publishers that refuse GitHub's network. This is a partial
+        # sweep, so it never starts morning mail; the GitHub run does once it finishes.
+        try:
+            own = run_sweep(expected_slot=scheduled, source_ids=VERCEL_FETCHED)
+        except HTTPException as error:
+            own = {"status": "failed", "detail": error.detail}
+        result["vercel_feeds"] = {key: own.get(key) for key in ("status", "checked", "healthy", "remaining")}
+        logger.info("publisher_sweep_vercel_feeds scheduled=%s result=%s", scheduled.isoformat(), result["vercel_feeds"])
+        return result
     result = run_sweep(expected_slot=scheduled)
     result["handed_off"] = continue_sweep(result, 0)
     result["mail_started"] = deliver_after_sweep(result)
@@ -1136,8 +1146,12 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, 
     # Vercel's scheduled delivery must arrive inside the sweep window; the follow-up and owner
     # recovery may finish the same sweep later, before the next one starts.
     window = PRIORITY_WINDOW if priority else SWEEP_WINDOW if expected_slot is not None else SWEEP_CATCHUP
+    full_sweep = source_ids is None and not priority
     if priority:
         source_ids = PRIORITY_SOURCE_IDS
+    if excluded := runner_excluded():
+        # The GitHub runner leaves publishers that refuse its network to Vercel.
+        source_ids = (frozenset(BY_ID) if source_ids is None else frozenset(source_ids)) - excluded
     closes = scheduled + window
     next_sweep = (scheduled + SWEEP_INTERVAL).isoformat()
     if now >= closes or (expected_slot is not None and expected_slot != scheduled):
@@ -1172,7 +1186,7 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, 
                                              host_backoffs=store.feed_host_backoffs(now.timestamp()))
 
         checked = {ident for ident in pending if (after.get(ident, {}).get("checked") or 0) >= scheduled.timestamp()}
-        if checked and not remaining and not owner and not priority:
+        if checked and not remaining and not owner and full_sweep:
             store.prune()
         if pending and not checked and now < closes:
             raise HTTPException(503, "The feed refresh batch made no progress.")

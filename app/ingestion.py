@@ -3,6 +3,7 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import UTC, datetime, timedelta, timezone
 from collections import Counter
 import logging
+import os
 import threading
 import time
 from urllib.parse import urlsplit
@@ -28,6 +29,24 @@ PRIORITY_POLL_MINUTES = 15
 # Hosts that serve many reviewed feeds from robust infrastructure. GitHub release
 # Atom feeds (~80 sources) would otherwise drain two at a time and miss the sweep.
 HOST_LIMITS = {"github.com": 6}
+
+
+# Publishers that refuse GitHub Actions' network (HTTP 403 from Substack, Cloudflare or
+# Akamai rules for cloud ranges) but serve Vercel. GitHub runs every other feed; Vercel's
+# 08:00/20:00 IST schedule fetches only these few itself, which costs seconds of CPU.
+# Found in GitHub sweep run #77 on 23 November 2026.
+VERCEL_FETCHED = frozenset({
+    "import-ai", "the-chip-letter", "thezvi",            # Substack
+    "indian-express-tech", "gizmodo-tech", "tech-eu", "the-bridge-jp",
+    "moneycontrol-tech", "moneycontrol-news-index",
+})
+SWEEP_RUNNER_ENV = "INFORMA_SWEEP_RUNNER"
+
+
+def runner_excluded(environ=None):
+    """Sources this process must leave to another runner (none outside GitHub Actions)."""
+    environ = os.environ if environ is None else environ
+    return VERCEL_FETCHED if environ.get(SWEEP_RUNNER_ENV) == "github" else frozenset()
 
 
 def host_limit(host):

@@ -166,6 +166,8 @@ Vercel paused the project on 23 November for exceeding the Hobby plan's Fluid Ac
 - **Sweep.** The `refresh` job runs `python -m scripts.run_publisher_sweep --run full` against `NEWS_DATABASE_URL`. It uses the same rules as the site: one check per source per sweep, the same windows, leases, host backoffs and pruning. It keeps going until every eligible feed is checked (50-minute budget). It then calls `/api/jobs/morning` so briefs carry that sweep's news. The 08:15 IST Vercel schedule and the hourly intelligence crons still send anything due.
 - **Follow-ups and priority checks.** The `40 2,14` and `17 5,17` UTC schedules finish a sweep whose start was missed. The `32 8,20` UTC priority check (`--run priority`) also runs in the runner. A manual run can choose `full` or `priority`.
 
+- **Publishers that refuse GitHub.** Some publishers answer GitHub's network with HTTP 403 but serve Vercel: Substack (Import AI, The Chip Letter, Don't Worry About the Vase), The Indian Express, Gizmodo, Tech.eu, The Bridge and Moneycontrol. They are listed in `VERCEL_FETCHED` (`app/ingestion.py`). The GitHub runner sets `INFORMA_SWEEP_RUNNER=github` and leaves them out of its plan, so its sweep still finishes with nothing remaining. After Vercel's scheduled call dispatches GitHub, it fetches just these feeds itself, which takes a few seconds and never starts mail. Add an id there when a feed works from Vercel but GitHub's run reports `access_denied` for it.
+
 **Setup (once):**
 
 1. GitHub repository → Settings → Secrets and variables → Actions: add `NEWS_DATABASE_URL` with the same value as in Vercel production. `FEED_REFRESH_SECRET` is already there.

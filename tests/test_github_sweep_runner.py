@@ -23,6 +23,7 @@ def test_vercel_schedule_starts_the_github_run_instead_of_fetching(archive, monk
     store, client = archive
     monkeypatch.setenv("GITHUB_SWEEP_TOKEN", TOKEN)
     monkeypatch.setattr(server, "refresh_sources", no_fetch)
+    monkeypatch.setattr(server, "VERCEL_FETCHED", frozenset())
     calls = []
 
     def post(url, **kwargs):
@@ -32,7 +33,8 @@ def test_vercel_schedule_starts_the_github_run_instead_of_fetching(archive, monk
     monkeypatch.setattr(server.httpx, "post", post)
     daily_clock(MORNING + timedelta(minutes=1))
     result = client.post(VERCEL_SWEEP, headers=HEADERS).json()
-    assert result == {"status": "dispatched", "runner": "github", "scheduled_at": MORNING.isoformat()}
+    assert {key: result[key] for key in ("status", "runner", "scheduled_at")} == {
+        "status": "dispatched", "runner": "github", "scheduled_at": MORNING.isoformat()}
     url, kwargs = calls[0]
     assert url == ("https://api.github.com/repos/harshgavandit/AI_News_To_Email_Generator"
                    "/actions/workflows/refresh-feeds.yml/dispatches")
@@ -138,4 +140,41 @@ def test_a_run_started_minutes_early_waits_for_its_slot():
     assert run_publisher_sweep.wait_for_slot("full", datetime(2026, 11, 24, 2, 40, tzinfo=timezone.utc), sleep=slept.append) == 0
     assert run_publisher_sweep.wait_for_slot("priority", datetime(2026, 11, 23, 18, 0, tzinfo=timezone.utc), sleep=slept.append) == 0
     assert slept == []
+
+
+def test_publishers_that_refuse_github_are_swept_by_vercel_only(archive, monkeypatch, daily_clock):  # noqa: F811
+    """GitHub sweeps everything except VERCEL_FETCHED; Vercel's scheduled call fetches just those."""
+    store, client = archive
+    from app.sources import BY_ID
+    blocked, normal = BY_ID["import-ai"], BY_ID["bbc-tech"]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", (blocked, normal))
+    monkeypatch.setattr(server, "BY_ID", {blocked.id: blocked, normal.id: normal})
+    fetched = []
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: (fetched.append(feed.id) or [], {"available": True}))
+    monkeypatch.setattr(server.httpx, "post", lambda url, **kwargs: httpx.Response(204))
+    monkeypatch.setattr(server, "deliver_after_sweep", lambda result: pytest.fail("a partial sweep must not start mail"))
+    # The GitHub runner sweeps everything except the Vercel-only feed and still finishes.
+    monkeypatch.setenv("INFORMA_SWEEP_RUNNER", "github")
+    daily_clock(MORNING + timedelta(minutes=2))
+    summary = run_publisher_sweep.sweep("full", 600)
+    assert summary["status"] == "refreshed" and summary["remaining"] == 0 and summary["checked"] == 1
+    assert fetched == ["bbc-tech"]
+    # Vercel's scheduled call starts GitHub and fetches only the feed GitHub cannot reach.
+    monkeypatch.delenv("INFORMA_SWEEP_RUNNER")
+    monkeypatch.setenv("GITHUB_SWEEP_TOKEN", TOKEN)
+    daily_clock(MORNING + timedelta(minutes=5))
+    result = client.post(VERCEL_SWEEP, headers=HEADERS).json()
+    assert result["status"] == "dispatched" and result["vercel_feeds"]["checked"] == 1
+    assert fetched == ["bbc-tech", "import-ai"]
+
+
+def test_vercel_fetched_sources_exist_and_only_github_excludes_them():
+    from app.sources import BY_ID
+    assert ingestion.VERCEL_FETCHED <= set(BY_ID)
+    assert ingestion.runner_excluded({"INFORMA_SWEEP_RUNNER": "github"}) == ingestion.VERCEL_FETCHED
+    assert ingestion.runner_excluded({}) == frozenset()
+    workflow = (ROOT / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
+    for job in ("  refresh:\n", "  priority:\n"):
+        section = workflow.split(job, 1)[1].split("\n  mail:\n", 1)[0]
+        assert "INFORMA_SWEEP_RUNNER: github" in section
 
