@@ -1,0 +1,1308 @@
+[
+  {
+    "id": "blablacar-tech",
+    "group": "blablacar-tech",
+    "label": "BlaBlaCar Tech",
+    "url": "https://medium.com/feed/blablacar",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blablacar/"
+    ]
+  },
+  {
+    "id": "blackrock-engineering",
+    "group": "blackrock-engineering",
+    "label": "BlackRock Engineering",
+    "url": "https://medium.com/feed/blackrock-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blackrock-engineering/"
+    ]
+  },
+  {
+    "id": "bolt-labs",
+    "group": "bolt-labs",
+    "label": "Bolt Labs",
+    "url": "https://medium.com/feed/bolt-labs",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/bolt-labs/"
+    ]
+  },
+  {
+    "id": "coursera-engineering",
+    "group": "coursera-engineering",
+    "label": "Coursera Engineering",
+    "url": "https://medium.com/feed/coursera-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/coursera-engineering/"
+    ]
+  },
+  {
+    "id": "doctolib-engineering",
+    "group": "doctolib-engineering",
+    "label": "Doctolib Engineering",
+    "url": "https://medium.com/feed/doctolib",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/doctolib/"
+    ]
+  },
+  {
+    "id": "ft-product-technology",
+    "group": "ft-product-technology",
+    "label": "FT Product & Technology",
+    "url": "https://medium.com/feed/ft-product-technology",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/ft-product-technology/"
+    ]
+  },
+  {
+    "id": "ifood-engineering",
+    "group": "ifood-engineering",
+    "label": "iFood Engineering",
+    "url": "https://medium.com/feed/ifood-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Latin America",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/ifood-engineering/"
+    ]
+  },
+  {
+    "id": "makemytrip-engineering",
+    "group": "makemytrip-engineering",
+    "label": "MakeMyTrip Engineering",
+    "url": "https://medium.com/feed/makemytrip-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/makemytrip-engineering/"
+    ]
+  },
+  {
+    "id": "nyt-open",
+    "group": "nyt-open",
+    "label": "NYT Open",
+    "url": "https://open.nytimes.com/feed",
+    "hosts": [
+      "open.nytimes.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "quintoandar-tech",
+    "group": "quintoandar-tech",
+    "label": "QuintoAndar Tech",
+    "url": "https://medium.com/feed/quintoandar-tech-blog",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Latin America",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/quintoandar-tech-blog/"
+    ]
+  },
+  {
+    "id": "skyscanner-engineering",
+    "group": "skyscanner-engineering",
+    "label": "Skyscanner Engineering",
+    "url": "https://medium.com/feed/skyscanner-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/skyscanner-engineering/"
+    ]
+  },
+  {
+    "id": "thumbtack-engineering",
+    "group": "thumbtack-engineering",
+    "label": "Thumbtack Engineering",
+    "url": "https://medium.com/feed/thumbtack-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/thumbtack-engineering/"
+    ]
+  },
+  {
+    "id": "urban-company-engineering",
+    "group": "urban-company-engineering",
+    "label": "Urban Company Engineering",
+    "url": "https://medium.com/feed/urbancompany-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/urbancompany-engineering/"
+    ]
+  },
+  {
+    "id": "vimeo-engineering",
+    "group": "vimeo-engineering",
+    "label": "Vimeo Engineering",
+    "url": "https://medium.com/feed/vimeo-engineering-blog",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/vimeo-engineering-blog/"
+    ]
+  },
+  {
+    "id": "wise-engineering",
+    "group": "wise-engineering",
+    "label": "Wise Engineering",
+    "url": "https://medium.com/feed/wise-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/wise-engineering/"
+    ]
+  },
+  {
+    "id": "dan-luu",
+    "group": "dan-luu",
+    "label": "Dan Luu",
+    "url": "https://danluu.com/atom.xml",
+    "hosts": [
+      "danluu.com",
+      "www.danluu.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "elastic-security-labs",
+    "group": "elastic-security-labs",
+    "label": "Elastic Security Labs",
+    "url": "https://www.elastic.co/security-labs/rss/feed.xml",
+    "hosts": [
+      "elastic.co",
+      "www.elastic.co"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security"
+  },
+  {
+    "id": "heroku-engineering",
+    "group": "heroku-engineering",
+    "label": "Heroku Engineering",
+    "url": "https://blog.heroku.com/engineering/feed",
+    "hosts": [
+      "blog.heroku.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "laravel-news",
+    "group": "laravel-news",
+    "label": "Laravel News",
+    "url": "https://laravel-news.com/feed",
+    "hosts": [
+      "laravel-news.com",
+      "www.laravel-news.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "phil-eaton",
+    "group": "phil-eaton",
+    "label": "Phil Eaton",
+    "url": "https://notes.eatonphil.com/rss.xml",
+    "hosts": [
+      "notes.eatonphil.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "robinhood-engineering",
+    "group": "robinhood-engineering",
+    "label": "Robinhood Engineering",
+    "url": "https://robinhood.engineering/feed",
+    "hosts": [
+      "robinhood.engineering",
+      "www.robinhood.engineering"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "robotics-business-review",
+    "group": "robotics-business-review",
+    "label": "Robotics Business Review",
+    "url": "https://www.roboticsbusinessreview.com/feed/",
+    "hosts": [
+      "roboticsbusinessreview.com",
+      "www.roboticsbusinessreview.com"
+    ],
+    "kind": "news",
+    "topic": "research",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Research"
+  },
+  {
+    "id": "the-straits-times-tech",
+    "group": "the-straits-times-tech",
+    "label": "The Straits Times Tech",
+    "url": "https://www.straitstimes.com/news/tech/rss.xml",
+    "hosts": [
+      "straitstimes.com",
+      "www.straitstimes.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "deliveroo-tech",
+    "group": "deliveroo-tech",
+    "label": "Deliveroo Tech",
+    "url": "https://tech.deliveroo.co.uk/feed.xml",
+    "hosts": [
+      "tech.deliveroo.co.uk"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "neptune-ai-blog",
+    "group": "neptune-ai-blog",
+    "label": "neptune.ai Blog",
+    "url": "https://neptune.ai/blog/feed",
+    "hosts": [
+      "neptune.ai",
+      "www.neptune.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "rachelbythebay",
+    "group": "rachelbythebay",
+    "label": "rachelbythebay",
+    "url": "https://rachelbythebay.com/w/atom.xml",
+    "hosts": [
+      "rachelbythebay.com",
+      "www.rachelbythebay.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "android-developers-blog",
+    "group": "android-developers-blog",
+    "label": "Android Developers Blog",
+    "url": "https://android-developers.googleblog.com/feeds/posts/default",
+    "hosts": [
+      "android-developers.googleblog.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "google-project-zero",
+    "group": "google-project-zero",
+    "label": "Google Project Zero",
+    "url": "https://googleprojectzero.blogspot.com/feeds/posts/default",
+    "hosts": [
+      "googleprojectzero.blogspot.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security"
+  },
+  {
+    "id": "google-security-blog",
+    "group": "google-security-blog",
+    "label": "Google Security Blog",
+    "url": "https://security.googleblog.com/feeds/posts/default",
+    "hosts": [
+      "security.googleblog.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security"
+  },
+  {
+    "id": "langchain-blog",
+    "group": "langchain-blog",
+    "label": "LangChain Blog",
+    "url": "https://blog.langchain.dev/rss/",
+    "hosts": [
+      "blog.langchain.dev"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "ncc-group-research",
+    "group": "ncc-group-research",
+    "label": "NCC Group Research",
+    "url": "https://research.nccgroup.com/feed/",
+    "hosts": [
+      "research.nccgroup.com"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security"
+  },
+  {
+    "id": "arabian-business-tech",
+    "group": "arabian-business-tech",
+    "label": "Arabian Business Tech",
+    "url": "https://www.arabianbusiness.com/rss/technology",
+    "hosts": [
+      "arabianbusiness.com",
+      "www.arabianbusiness.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Middle East & North Africa",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "appleinsider",
+    "group": "appleinsider",
+    "label": "AppleInsider",
+    "url": "https://appleinsider.com/rss/news/",
+    "hosts": [
+      "appleinsider.com",
+      "www.appleinsider.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "six-colors",
+    "group": "six-colors",
+    "label": "Six Colors",
+    "url": "https://sixcolors.com/feed/",
+    "hosts": [
+      "sixcolors.com",
+      "www.sixcolors.com"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "daring-fireball",
+    "group": "daring-fireball",
+    "label": "Daring Fireball",
+    "url": "https://daringfireball.net/feeds/main",
+    "hosts": [
+      "daringfireball.net",
+      "www.daringfireball.net"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "fierce-network",
+    "group": "fierce-network",
+    "label": "Fierce Network",
+    "url": "https://www.fierce-network.com/rss/xml",
+    "hosts": [
+      "fierce-network.com",
+      "www.fierce-network.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "telecoms-com",
+    "group": "telecoms-com",
+    "label": "Telecoms.com",
+    "url": "https://www.telecoms.com/feed/",
+    "hosts": [
+      "telecoms.com",
+      "www.telecoms.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "cio-dive",
+    "group": "cio-dive",
+    "label": "CIO Dive",
+    "url": "https://www.ciodive.com/feeds/news/",
+    "hosts": [
+      "ciodive.com",
+      "www.ciodive.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "cio-com",
+    "group": "cio-com",
+    "label": "CIO.com",
+    "url": "https://www.cio.com/feed/",
+    "hosts": [
+      "cio.com",
+      "www.cio.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "cleantechnica",
+    "group": "cleantechnica",
+    "label": "CleanTechnica",
+    "url": "https://cleantechnica.com/feed/",
+    "hosts": [
+      "cleantechnica.com",
+      "www.cleantechnica.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "canary-media",
+    "group": "canary-media",
+    "label": "Canary Media",
+    "url": "https://www.canarymedia.com/rss.rss",
+    "hosts": [
+      "canarymedia.com",
+      "www.canarymedia.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "finextra",
+    "group": "finextra",
+    "label": "Finextra",
+    "url": "https://www.finextra.com/rss/headlines.aspx",
+    "hosts": [
+      "finextra.com",
+      "www.finextra.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "fintech-futures",
+    "group": "fintech-futures",
+    "label": "Fintech Futures",
+    "url": "https://www.fintechfutures.com/feed/",
+    "hosts": [
+      "fintechfutures.com",
+      "www.fintechfutures.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "tech-policy-press",
+    "group": "tech-policy-press",
+    "label": "Tech Policy Press",
+    "url": "https://www.techpolicy.press/feed/",
+    "hosts": [
+      "techpolicy.press",
+      "www.techpolicy.press"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "lawfare",
+    "group": "lawfare",
+    "label": "Lawfare",
+    "url": "https://www.lawfaremedia.org/feeds/rss",
+    "hosts": [
+      "lawfaremedia.org",
+      "www.lawfaremedia.org"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "it-s-foss",
+    "group": "it-s-foss",
+    "label": "It's FOSS",
+    "url": "https://itsfoss.com/rss/",
+    "hosts": [
+      "itsfoss.com",
+      "www.itsfoss.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "omg-ubuntu",
+    "group": "omg-ubuntu",
+    "label": "OMG! Ubuntu",
+    "url": "https://www.omgubuntu.co.uk/feed",
+    "hosts": [
+      "omgubuntu.co.uk",
+      "www.omgubuntu.co.uk"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "9to5linux",
+    "group": "9to5linux",
+    "label": "9to5Linux",
+    "url": "https://9to5linux.com/feed/atom",
+    "hosts": [
+      "9to5linux.com",
+      "www.9to5linux.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "linuxiac",
+    "group": "linuxiac",
+    "label": "Linuxiac",
+    "url": "https://linuxiac.com/feed/",
+    "hosts": [
+      "linuxiac.com",
+      "www.linuxiac.com"
+    ],
+    "kind": "news",
+    "topic": "software",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology"
+  },
+  {
+    "id": "javascript-weekly",
+    "group": "javascript-weekly",
+    "label": "JavaScript Weekly",
+    "url": "https://cprss.s3.amazonaws.com/javascriptweekly.com.xml",
+    "hosts": [
+      "cprss.s3.amazonaws.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "golang-weekly",
+    "group": "golang-weekly",
+    "label": "Golang Weekly",
+    "url": "https://cprss.s3.amazonaws.com/golangweekly.com.xml",
+    "hosts": [
+      "cprss.s3.amazonaws.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "ruby-weekly",
+    "group": "ruby-weekly",
+    "label": "Ruby Weekly",
+    "url": "https://cprss.s3.amazonaws.com/rubyweekly.com.xml",
+    "hosts": [
+      "cprss.s3.amazonaws.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "frontend-focus",
+    "group": "frontend-focus",
+    "label": "Frontend Focus",
+    "url": "https://cprss.s3.amazonaws.com/frontendfoc.us.xml",
+    "hosts": [
+      "cprss.s3.amazonaws.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "postgres-weekly",
+    "group": "postgres-weekly",
+    "label": "Postgres Weekly",
+    "url": "https://cprss.s3.amazonaws.com/postgresweekly.com.xml",
+    "hosts": [
+      "cprss.s3.amazonaws.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "acm-queue",
+    "group": "acm-queue",
+    "label": "ACM Queue",
+    "url": "https://queue.acm.org/rss/feeds/queuecontent.xml",
+    "hosts": [
+      "queue.acm.org"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Research"
+  },
+  {
+    "id": "ibm-research-blog",
+    "group": "ibm-research-blog",
+    "label": "IBM Research Blog",
+    "url": "https://research.ibm.com/rss",
+    "hosts": [
+      "research.ibm.com"
+    ],
+    "kind": "research",
+    "topic": "research",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Research"
+  },
+  {
+    "id": "analytics-vidhya",
+    "group": "analytics-vidhya",
+    "label": "Analytics Vidhya",
+    "url": "https://www.analyticsvidhya.com/feed/",
+    "hosts": [
+      "analyticsvidhya.com",
+      "www.analyticsvidhya.com"
+    ],
+    "kind": "news",
+    "topic": "ai",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "nubank-engineering",
+    "group": "nubank-engineering",
+    "label": "Nubank Engineering",
+    "url": "https://building.nubank.com.br/feed/",
+    "hosts": [
+      "building.nubank.com.br"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Latin America",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "mercado-libre-tech",
+    "group": "mercado-libre-tech",
+    "label": "Mercado Libre Tech",
+    "url": "https://medium.com/feed/mercadolibre-tech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Latin America",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/mercadolibre-tech/"
+    ]
+  },
+  {
+    "id": "sharechat-techbyte",
+    "group": "sharechat-techbyte",
+    "label": "ShareChat TechByte",
+    "url": "https://medium.com/feed/sharechat-techbyte",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/sharechat-techbyte/"
+    ]
+  },
+  {
+    "id": "zerodha-tech",
+    "group": "zerodha-tech",
+    "label": "Zerodha Tech",
+    "url": "https://zerodha.tech/blog/index.xml",
+    "hosts": [
+      "www.zerodha.tech",
+      "zerodha.tech"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "postman-blog",
+    "group": "postman-blog",
+    "label": "Postman Blog",
+    "url": "https://blog.postman.com/feed/",
+    "hosts": [
+      "blog.postman.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "picnic-engineering",
+    "group": "picnic-engineering",
+    "label": "Picnic Engineering",
+    "url": "https://blog.picnic.nl/feed",
+    "hosts": [
+      "blog.picnic.nl"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "bol-com-techlab",
+    "group": "bol-com-techlab",
+    "label": "bol.com Techlab",
+    "url": "https://techlab.bol.com/en/feed/",
+    "hosts": [
+      "techlab.bol.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "brex-engineering",
+    "group": "brex-engineering",
+    "label": "Brex Engineering",
+    "url": "https://medium.com/feed/brexeng",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/brexeng/"
+    ]
+  },
+  {
+    "id": "asana-engineering",
+    "group": "asana-engineering",
+    "label": "Asana Engineering",
+    "url": "https://blog.asana.com/category/eng/feed/",
+    "hosts": [
+      "blog.asana.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "hubspot-product-blog",
+    "group": "hubspot-product-blog",
+    "label": "HubSpot Product Blog",
+    "url": "https://product.hubspot.com/blog/rss.xml",
+    "hosts": [
+      "product.hubspot.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "khan-academy-engineering",
+    "group": "khan-academy-engineering",
+    "label": "Khan Academy Engineering",
+    "url": "https://blog.khanacademy.org/engineering/feed/",
+    "hosts": [
+      "blog.khanacademy.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "wikimedia-tech-blog",
+    "group": "wikimedia-tech-blog",
+    "label": "Wikimedia Tech Blog",
+    "url": "https://techblog.wikimedia.org/feed/",
+    "hosts": [
+      "techblog.wikimedia.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "intuit-engineering",
+    "group": "intuit-engineering",
+    "label": "Intuit Engineering",
+    "url": "https://medium.com/feed/intuit-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/intuit-engineering/"
+    ]
+  },
+  {
+    "id": "riot-games-technology",
+    "group": "riot-games-technology",
+    "label": "Riot Games Technology",
+    "url": "https://technology.riotgames.com/news/feed",
+    "hosts": [
+      "technology.riotgames.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "roblox-tech-blog",
+    "group": "roblox-tech-blog",
+    "label": "Roblox Tech Blog",
+    "url": "https://blog.roblox.com/category/tech/feed/",
+    "hosts": [
+      "blog.roblox.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Game engineering"
+  }
+]
