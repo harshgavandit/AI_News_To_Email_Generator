@@ -131,3 +131,16 @@ On 22 November the 08:00 IST sweep checked 477 of the 840 enabled feeds before V
 - **Region edges**: story cards carry a thin top edge in their publisher region's hue.
 - Everything is decorative and gated by the site's motion switch, `prefers-reduced-motion`, Save-Data, forced colours and print. CSP is unchanged: no external scripts, styles, fonts or images. Tests: `tests/client/orbital.test.mjs`.
 - No backend, API, database, ingestion, email or schedule changes. Full sweeps stay at 08:00 and 20:00 IST, with light checks at 02:00 and 14:00 IST.
+
+## Every feed checked in every sweep (2026-11-23)
+
+On 23 November the Reading Room showed "708 of 889 feeds up to date". The 08:00 IST sweep's Vercel run checked 708 feeds before its 230-second budget ran out, and GitHub's follow-up, which was meant to finish the other 156, had not started more than six hours later. Another 14 feeds had been added after that sweep began, and 11 failed.
+
+- **Sweep hand-off** (`continue_sweep` in `app/server.py`): when the scheduled Vercel run ends with feeds still unchecked, it immediately starts a continuation run, `GET /api/jobs/refresh?run=continue&hop=N`, authorised with `CRON_SECRET`. Each continuation works against the same 230-second budget and checks only feeds still unchecked in that sweep, so each feed is still fetched once per sweep. It hands off again only if it made progress, at most 6 times, only in production and only while the sweep window is open. GitHub's follow-up stays as a safety net. The schedule is unchanged: full sweeps at 08:00 and 20:00 IST, light checks at 02:00 and 14:00 IST.
+- **Feed repairs** (validated in a browser on 23 November):
+  - JioHotstar, Klarna, Cookpad Source Diving and Dream11 are Medium publications on custom domains. Medium answered their custom-domain feeds with HTTP 429 from cloud hosts, while `medium.com/feed/<publication>` works for every other Medium source. They now read `medium.com/feed/hotstar`, `klarna-engineering`, `sourcediving` and `dream11-tech-blog`, and each stays its own publisher.
+  - Graphics Programming Weekly's `/post/index.xml` is 6.7 MB, over the 5 MB feed limit. It now reads the 220 KB site feed `/index.xml`.
+  - DoorDash's `/blog/feed/` was a comments feed. It now reads the engineering category feed.
+  - Lobsters items link to external sites, so every item was rejected (`no_eligible_entries`). Like Hacker News, it now keeps each item's Lobsters discussion link.
+- **Paused with reasons**: HPCwire and UKTN have denied automated access (HTTP 403) in every check since they were added. Stripe Engineering's listing scraper stopped yielding article metadata; Stripe's official blog RSS stays active as a separate Stripe Engineering source.
+- Feeds that a publisher has temporarily taken down (for example Exploit-DB's `upstream_unavailable`) are retried once per sweep and still count as not up to date until they answer. The label never hides a real failure.

@@ -515,3 +515,59 @@ def test_second_follow_up_cron_covers_skipped_github_runs():
     for hour in (5, 17):
         fired = datetime(2026, 11, 21, hour, 17, tzinfo=UTC)
         assert fired - latest_sweep(fired) < SWEEP_CATCHUP - timedelta(hours=1)
+
+
+def test_unfinished_sweep_hands_off_to_a_continuation_run(archive, monkeypatch, daily_clock):
+    """Vercel's run checks what fits its budget, then a continuation run finishes the same sweep."""
+    store, client = archive
+    sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:5]
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    monkeypatch.setenv("CRON_SECRET", "cron-secret-for-tests-0123")
+    fetched, handoffs = [], []
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: (fetched.append(feed.id) or [], {"available": True}))
+    real_refresh = ingestion.refresh_sources
+
+    def budgeted(store_, only=None, *, source_ids=None, **kwargs):
+        # The scheduled run's budget runs out after two feeds.
+        if kwargs.get("deadline") is not None and not handoffs:
+            source_ids = set(sorted(source_ids)[:2])
+        return real_refresh(store_, only, source_ids=source_ids, **kwargs)
+
+    monkeypatch.setattr(server, "refresh_sources", budgeted)
+
+    def handoff(url, *, params, headers, **kwargs):
+        handoffs.append((url, params, headers["Authorization"]))
+        raise httpx.ReadTimeout("the continuation keeps running")
+
+    monkeypatch.setattr(server.httpx, "get", handoff)
+    daily_clock(MORNING + timedelta(minutes=2))
+    headers = {"Authorization": "Bearer cron-secret-for-tests-0123", "ce-vssscheduledat": MORNING.isoformat()}
+    response = client.post(VERCEL_SWEEP, headers=headers)
+    result = response.json()
+    assert response.status_code == 503 and result["remaining"] == 3 and result["handed_off"] is True
+    assert handoffs == [("https://getinformdaily.com/api/jobs/refresh", {"run": "continue", "hop": 1},
+                         "Bearer cron-secret-for-tests-0123")]
+    # The continuation (accepted with the same secret) finishes the sweep and stops chaining.
+    daily_clock(MORNING + timedelta(minutes=7))
+    result = client.get("/api/jobs/refresh?run=continue&hop=1", headers={"Authorization": handoffs[0][2]}).json()
+    assert result["status"] == "refreshed" and result["checked"] == 3 and result["remaining"] == 0
+    assert result["handed_off"] is False and len(handoffs) == 1
+    assert sorted(fetched) == sorted(source.id for source in sources), "each feed is checked once per sweep"
+    assert client.get("/api/ready").json()["freshness"]["counts"]["fresh"] == 5
+    # A finished sweep, a run outside production and the hop limit never hand off.
+    assert client.get("/api/jobs/refresh?run=continue&hop=2", headers=JOB_HEADERS).json()["status"] == "complete"
+    assert client.get("/api/jobs/refresh?run=continue&hop=99", headers=JOB_HEADERS).status_code == 422
+    assert server.continue_sweep({"status": "refreshed", "remaining": 4}, server.SWEEP_CHAIN_LIMIT) is False
+    monkeypatch.setenv("VERCEL_ENV", "preview")
+    assert server.continue_sweep({"status": "refreshed", "remaining": 4}, 0) is False
+    assert len(handoffs) == 1
+
+
+def test_continuation_runs_respect_the_sweep_window(archive, monkeypatch, daily_clock):
+    _, client = archive
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: ([], {"available": True}))
+    daily_clock(MORNING + ingestion.SWEEP_CATCHUP)
+    assert client.get("/api/jobs/refresh?run=continue&hop=1", headers=JOB_HEADERS).json() == {
+        "status": "closed", "scheduled_at": EVENING.isoformat(), "handed_off": False}
+    assert client.get("/api/jobs/refresh?run=continue").status_code == 401

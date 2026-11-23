@@ -27,6 +27,8 @@ _cache = {}
 _lock = threading.Lock()
 _refreshed = 0
 MAX_BYTES = 5_000_000
+# Discussion feeds whose items point at external articles; the reviewed comments page is kept.
+DISCUSSION_LINKS = frozenset({"hacker-news", "lobsters"})
 FEED_WORKERS = 14
 TRACKERS = {"fbclid", "gclid", "mc_cid", "mc_eid", "wt_mc", ".tsrc", "__source", "shem"}
 TECH_SECTION = re.compile(r"\b(?:tech(?:nology|-science)?|artificial intelligence|ai)\b", re.I)
@@ -268,8 +270,8 @@ def read_feed(task, *, validators=None, known_urls=()):
         now = datetime.now(timezone.utc)
         for entry in parsed.entries[:200]:
             try:
-                # HN links to arbitrary external sites; retain the reviewed discussion URL.
-                raw_link = entry.get("comments", "") if s.id == "hacker-news" else entry.get("link", "")
+                # HN and Lobsters link to arbitrary external sites; retain the reviewed discussion URL.
+                raw_link = entry.get("comments", "") if s.id in DISCUSSION_LINKS else entry.get("link", "")
                 # Older publisher feeds still advertise HTTP permalinks. Upgrade only
                 # reviewed hosts; this never fetches an article or relaxes URL validation.
                 candidate = urlsplit(raw_link)

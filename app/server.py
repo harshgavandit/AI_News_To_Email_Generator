@@ -15,6 +15,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Annotated, Literal
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -34,7 +35,7 @@ from app.mail_events import router as mail_events_router
 from app import public_mail, reader_freshness
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
-from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, TAGLINE
+from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, PUBLIC_SITE, TAGLINE
 from app.coverage import REGION_LABELS, TOPICS, article_source, public_article, region_id, region_matches, topic_for
 from app.discovery import (
     COVERAGE_TYPES, InvalidCursor, SortOrder, facet_counts, page_fingerprint, page_result, page_window,
@@ -975,11 +976,45 @@ def mail_job_health(authorization: str | None = Header(default=None)):
             **source_store().mail_backlog(time.time())}
 
 
+# A sweep that outgrows one function run hands the rest to a fresh run straight away instead
+# of waiting for GitHub's follow-up, which can start hours late. Each run checks feeds that
+# are still unchecked in the same sweep, so a publisher is never fetched twice per sweep.
+SWEEP_CHAIN_LIMIT = 6
+SWEEP_RUN_SECONDS = 230
+
+
+def continue_sweep(result, hop):
+    """Start the next run of an unfinished sweep; returns True when one was handed off."""
+    if (os.getenv("VERCEL_ENV") != "production" or hop >= SWEEP_CHAIN_LIMIT
+            or result.get("status") != "refreshed" or not result.get("remaining")):
+        return False
+    secret = os.getenv("CRON_SECRET", "")
+    if len(secret) < 16:
+        return False
+    try:
+        httpx.get(f"{PUBLIC_SITE}/api/jobs/refresh", params={"run": "continue", "hop": hop + 1},
+                  headers={"Authorization": f"Bearer {secret}", "User-Agent": "InformaAI-sweep/1.0"},
+                  timeout=httpx.Timeout(4, connect=4),
+                  follow_redirects=False)
+    except httpx.TimeoutException:
+        pass  # Expected: the next run keeps working after this one stops waiting for its reply.
+    except httpx.HTTPError as error:
+        logger.warning("publisher_sweep_handoff_failed hop=%s error_type=%s", hop + 1, type(error).__name__)
+        return False
+    logger.info("publisher_sweep_handoff hop=%s remaining=%s", hop + 1, result.get("remaining"))
+    return True
+
+
 @app.get("/api/jobs/refresh")
-def refresh_job(run: str | None = None, authorization: str | None = Header(default=None)):
+def refresh_job(run: str | None = None, hop: Annotated[int, Query(ge=0, le=SWEEP_CHAIN_LIMIT)] = 0,
+                authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
     if run == "priority":
         return run_sweep(priority=True)
+    if run == "continue":
+        result = run_sweep(continuation=True)
+        result["handed_off"] = continue_sweep(result, hop)
+        return result
     if run != "scheduled":
         return {"status": "inactive"}  # Legacy workers and fallback crons cannot fetch.
     return run_sweep()
@@ -998,14 +1033,16 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
     except ValueError as exc:
         raise HTTPException(422, "Invalid sweep time.") from exc
     result = run_sweep(expected_slot=scheduled)
+    result["handed_off"] = continue_sweep(result, 0)
     incomplete = result["status"] == "closed" or result.get("remaining") or result.get("unconfirmed")
     if incomplete:
         response.status_code = 503
         for ident in result.get("unconfirmed", ()):
             logger.error("publisher_check_interrupted source_id=%s scheduled=%s", ident, scheduled.isoformat())
         for ident in result.get("unfinished", ()):
-            logger.error("publisher_check_not_started source_id=%s scheduled=%s reason=sweep_budget", ident,
-                         scheduled.isoformat())
+            logger.log(logging.INFO if result["handed_off"] else logging.ERROR,
+                       "publisher_check_not_started source_id=%s scheduled=%s reason=sweep_budget handed_off=%s",
+                       ident, scheduled.isoformat(), result["handed_off"])
     logger.log(logging.WARNING if incomplete or result.get("deferrals") else logging.INFO,
                "publisher_sweep scheduled=%s status=%s checked=%s healthy=%s remaining=%s deferred=%s unconfirmed=%s",
                scheduled.isoformat(), result["status"], result.get("checked"), result.get("healthy"),
@@ -1013,7 +1050,7 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
     return result
 
 
-def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, priority=False):
+def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, priority=False, continuation=False):
     """Check publishers once per slot: every source at 08:00/20:00 IST, the busiest also at 02:00/14:00 IST."""
     now = datetime.now(timezone.utc)
     scheduled = latest_priority_check(now) if priority else latest_sweep(now)
@@ -1043,9 +1080,12 @@ def run_sweep(*, source=None, source_ids=None, owner=False, expected_slot=None, 
                                        host_backoffs=store.feed_host_backoffs(now.timestamp()))
         after, remaining = before, pending
         if pending:
+            # Vercel's scheduled run and its continuations work against a time budget; GitHub's
+            # follow-up and owner refreshes take bounded batches.
+            budgeted = expected_slot is not None or continuation
             refresh_sources(store, source, source_ids=pending, scheduled=scheduled,
-                            maximum=None if expected_slot is not None else 64,
-                            deadline=time.monotonic() + 230 if expected_slot is not None else None, window=window)
+                            maximum=None if budgeted else 64,
+                            deadline=time.monotonic() + SWEEP_RUN_SECONDS if budgeted else None, window=window)
             after = store.source_state(include_archive=False)
             attempts = store.feed_attempts(slot)
             now = datetime.now(timezone.utc)

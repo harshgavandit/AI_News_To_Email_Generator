@@ -145,10 +145,17 @@ def test_global_pack_2026_11_22_is_valid_and_its_checked_feeds_are_promoted():
                "dagster-blog", "hotstar-tech", "railway-blog", "airtable-engineering", "trivago-tech", "semiwiki",
                "unity-blog", "plausible-blog", "cookpad-sourcediving", "dream11-engineering", "high-scalability",
                "klarna-engineering", "vite-blog"}
+    # Feed addresses repaired after production checks on November 23 (see docs/LAUNCH.md).
+    repaired = {"graphics-programming-weekly": "https://www.jendrikillner.com/index.xml",
+                "doordash-blog": "https://careersatdoordash.com/blog/category/engineering/feed/",
+                "hotstar-tech": "https://medium.com/feed/hotstar",
+                "cookpad-sourcediving": "https://medium.com/feed/sourcediving",
+                "dream11-engineering": "https://medium.com/feed/dream11-tech-blog",
+                "klarna-engineering": "https://medium.com/feed/klarna-engineering"}
     for row in pack:
         assert (row["id"] in checked) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
-            assert promoted[row["id"]] == row["url"]
+            assert promoted[row["id"]] == repaired.get(row["id"], row["url"])
 
 
 def test_discovered_pack_2026_11_23_promotes_exactly_the_validated_feeds():
