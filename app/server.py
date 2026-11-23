@@ -896,6 +896,13 @@ def require_job_secret(authorization):
 @app.get("/api/jobs/intelligence")
 def research_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
+    # Vercel runs this every hour on the hour: it also releases briefs that fell due at 08:00
+    # in readers' own time zones, without waiting for GitHub's five-minute schedule.
+    try:
+        if source_store().has_due_subscription(time.time()):
+            hand_off("/api/jobs/morning", label="morning_mail")
+    except SQLAlchemyError as error:
+        logger.warning("morning_mail_check_failed error_type=%s", type(error).__name__)
     return run_intelligence_check(source_store())
 
 
@@ -950,6 +957,22 @@ def check_monitoring(authorization: str | None = Header(default=None)):
 @app.get("/api/jobs/morning")
 def morning_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
+    return run_morning_delivery()
+
+
+# Vercel starts this at 08:15 IST in case the 08:00 sweep could not hand off to mail itself.
+# Subscriptions that already went out are not due again, so a second trigger sends nothing.
+@app.post("/api/jobs/morning-brief")
+def scheduled_morning_brief(authorization: str | None = Header(default=None)):
+    secret = os.getenv("CRON_SECRET", "")
+    if len(secret) < 16 or not hmac.compare_digest(authorization or "", f"Bearer {secret}"):
+        raise HTTPException(401, "Unauthorized.")
+    if os.getenv("VERCEL_ENV") in {"preview", "development"}:
+        return {"status": "inactive"}
+    return run_morning_delivery()
+
+
+def run_morning_delivery():
     if not public_mail.ready():
         return {"status": "disabled"}
     store = source_store()
@@ -983,26 +1006,43 @@ SWEEP_CHAIN_LIMIT = 6
 SWEEP_RUN_SECONDS = 230
 
 
-def continue_sweep(result, hop):
-    """Start the next run of an unfinished sweep; returns True when one was handed off."""
-    if (os.getenv("VERCEL_ENV") != "production" or hop >= SWEEP_CHAIN_LIMIT
-            or result.get("status") != "refreshed" or not result.get("remaining")):
+def hand_off(path, params=None, *, label):
+    """Start another production job run and stop waiting once the request is delivered."""
+    if os.getenv("VERCEL_ENV") != "production":
         return False
     secret = os.getenv("CRON_SECRET", "")
     if len(secret) < 16:
         return False
     try:
-        httpx.get(f"{PUBLIC_SITE}/api/jobs/refresh", params={"run": "continue", "hop": hop + 1},
-                  headers={"Authorization": f"Bearer {secret}", "User-Agent": "InformaAI-sweep/1.0"},
-                  timeout=httpx.Timeout(4, connect=4),
-                  follow_redirects=False)
+        httpx.get(f"{PUBLIC_SITE}{path}", params=params or {},
+                  headers={"Authorization": f"Bearer {secret}", "User-Agent": "InformaAI-jobs/1.0"},
+                  timeout=httpx.Timeout(4, connect=4), follow_redirects=False)
     except httpx.TimeoutException:
         pass  # Expected: the next run keeps working after this one stops waiting for its reply.
     except httpx.HTTPError as error:
-        logger.warning("publisher_sweep_handoff_failed hop=%s error_type=%s", hop + 1, type(error).__name__)
+        logger.warning("job_handoff_failed job=%s error_type=%s", label, type(error).__name__)
         return False
-    logger.info("publisher_sweep_handoff hop=%s remaining=%s", hop + 1, result.get("remaining"))
     return True
+
+
+def continue_sweep(result, hop):
+    """Start the next run of an unfinished sweep; returns True when one was handed off."""
+    if hop >= SWEEP_CHAIN_LIMIT or result.get("status") != "refreshed" or not result.get("remaining"):
+        return False
+    started = hand_off("/api/jobs/refresh", {"run": "continue", "hop": hop + 1}, label="publisher_sweep")
+    if started:
+        logger.info("publisher_sweep_handoff hop=%s remaining=%s", hop + 1, result.get("remaining"))
+    return started
+
+
+def deliver_after_sweep(result):
+    """Morning briefs go out as soon as a sweep has checked every feed, so they carry its news.
+
+    Only the run that checked the last feeds starts delivery; later runs find nothing to do.
+    """
+    if result.get("status") == "refreshed" and not result.get("remaining"):
+        return hand_off("/api/jobs/morning", label="morning_mail")
+    return False
 
 
 @app.get("/api/jobs/refresh")
@@ -1014,6 +1054,7 @@ def refresh_job(run: str | None = None, hop: Annotated[int, Query(ge=0, le=SWEEP
     if run == "continue":
         result = run_sweep(continuation=True)
         result["handed_off"] = continue_sweep(result, hop)
+        result["mail_started"] = deliver_after_sweep(result)
         return result
     if run != "scheduled":
         return {"status": "inactive"}  # Legacy workers and fallback crons cannot fetch.
@@ -1034,6 +1075,7 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
         raise HTTPException(422, "Invalid sweep time.") from exc
     result = run_sweep(expected_slot=scheduled)
     result["handed_off"] = continue_sweep(result, 0)
+    result["mail_started"] = deliver_after_sweep(result)
     incomplete = result["status"] == "closed" or result.get("remaining") or result.get("unconfirmed")
     if incomplete:
         response.status_code = 503

@@ -136,6 +136,12 @@
       "timezone": "Asia/Kolkata",
       "path": "/api/jobs/feed-sweep",
       "requestMethod": "POST"
+    },
+    "morning-brief-delivery": {
+      "schedule": "15 8 * * *",
+      "timezone": "Asia/Kolkata",
+      "path": "/api/jobs/morning-brief",
+      "requestMethod": "POST"
     }
   },
   "crons": [

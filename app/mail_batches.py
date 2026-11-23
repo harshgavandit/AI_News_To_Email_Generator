@@ -69,7 +69,7 @@ def dispatch_batch(store, row):
 
 
 def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
-    from app.mail_schedule import (append_curiosity_section, next_morning, with_unsubscribe,
+    from app.mail_schedule import (morning_curiosity, next_morning, with_unsubscribe,
                                    build_unsubscribe_url, morning_event_loader, personalized_morning_brief)
 
     sender = batch_sender()
@@ -103,7 +103,7 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
                         return None, next_run
                     history = content.get("_catchup")
                     content = with_unsubscribe(content, url, scheduled=True)
-                    content = append_curiosity_section(content, store.curiosity_selection(subscription["mailbox"]))
+                    content = morning_curiosity(store, subscription["mailbox"], content, moment)
                     message = {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
                             "text": content["markdown"], "html": content["html"], "headers": {
                                 "List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
