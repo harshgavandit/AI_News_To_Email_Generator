@@ -255,3 +255,16 @@ def test_catalog_can_grow_past_a_thousand_reviewed_sources():
     from app.sources import load_source_pack
     rows = _json.loads(Path("app/source_catalog.json").read_text(encoding="utf-8"))
     assert len(rows) > 1000 and len(load_source_pack("app/source_catalog.json")) == len(rows)
+
+
+def test_round_six_pack_2026_11_24_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round6.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #13 (feeds from publisher discovery run #8): active or quiet, English confirmed.
+    validated = set("""ben-kuhn,express-computer,asterisk,tahawultech,rakyll,yoshua-wuyts,construction-physics,techguide-australia,ciol,dataquest-india,digitimes-asia,deccan-chronicle-technology,dave-cheney,kalzumeus,materialized-view,nick-craver,writing-an-os-in-rust""".split(","))
+    assert len(validated) == 17
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]

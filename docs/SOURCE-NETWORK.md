@@ -322,3 +322,12 @@ Publisher discovery runs #5 to #7 scanned three new seed batches (133, 108 and 8
 - **Engineering writers:** Kent C. Dodds, Total TypeScript, Vlad Mihalcea and Evil Martians.
 
 Render and A List Apart were held back because English could not be confirmed. Green Car Reports, New Statesman, Stainless, thoughtbot, Tyk and Vivaldi were unavailable.
+
+## Round six and the end of this expansion (2026-11-24)
+
+Publisher discovery run #8 scanned 135 regional technology desks and engineering-writer pages. Most of the 80 new links it found were whole general-news feeds (national papers in Nigeria, Ghana, Morocco, Mexico, Argentina, Costa Rica, Ireland, Scotland, Wales, the Netherlands, Lithuania, Ukraine, Portugal, Spain and Italy). These were left out because the catalog lists technology coverage. The remaining 20 went into `source-candidates-2026-11-24-round6.json`, and validation run #13 promoted 17 of them. The catalog now has 1,262 enabled sources.
+
+- **Added:** Deccan Chronicle Technology, Express Computer, Dataquest India, CIOL, DIGITIMES Asia, TahawulTech, TechGuide Australia, Materialized View, Nick Craver, Rakyll, Dave Cheney, Yoshua Wuyts, Writing an OS in Rust, Kalzumeus, Ben Kuhn, Construction Physics and Asterisk.
+- **Not reachable from GitHub:** Baby Steps (Niko Matsakis), Korea Tech Desk and Punch Technology.
+
+Yield across the six rounds fell from 130 per round to 17, and most well-known English technology publishers are now covered. Further growth should come from feeds that readers or reviewers notice are missing, not from broad sweeps.

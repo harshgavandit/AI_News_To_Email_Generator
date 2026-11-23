@@ -19805,5 +19805,342 @@
     "collection": "Systems and software",
     "reviewed_at": "2026-11-23",
     "require_english": true
+  },
+  {
+    "id": "ben-kuhn",
+    "group": "ben-kuhn",
+    "label": "Ben Kuhn",
+    "url": "https://www.benkuhn.net/index.xml",
+    "hosts": [
+      "benkuhn.net",
+      "www.benkuhn.net"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "express-computer",
+    "group": "express-computer",
+    "label": "Express Computer",
+    "url": "https://www.expresscomputer.in/feed/",
+    "hosts": [
+      "expresscomputer.in",
+      "www.expresscomputer.in"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "asterisk",
+    "group": "asterisk",
+    "label": "Asterisk",
+    "url": "https://asteriskmag.com/feed",
+    "hosts": [
+      "asteriskmag.com",
+      "www.asteriskmag.com"
+    ],
+    "kind": "engineering",
+    "topic": "research",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "tahawultech",
+    "group": "tahawultech",
+    "label": "TahawulTech",
+    "url": "https://www.tahawultech.com/feed/",
+    "hosts": [
+      "tahawultech.com",
+      "www.tahawultech.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Middle East & North Africa",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "rakyll",
+    "group": "rakyll",
+    "label": "Rakyll",
+    "url": "https://rakyll.org/index.xml",
+    "hosts": [
+      "rakyll.org",
+      "www.rakyll.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "yoshua-wuyts",
+    "group": "yoshua-wuyts",
+    "label": "Yoshua Wuyts",
+    "url": "https://blog.yoshuawuyts.com/rss.xml",
+    "hosts": [
+      "blog.yoshuawuyts.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "construction-physics",
+    "group": "construction-physics",
+    "label": "Construction Physics",
+    "url": "https://www.construction-physics.com/feed",
+    "hosts": [
+      "construction-physics.com",
+      "www.construction-physics.com"
+    ],
+    "kind": "engineering",
+    "topic": "research",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "techguide-australia",
+    "group": "techguide-australia",
+    "label": "TechGuide Australia",
+    "url": "https://www.techguide.com.au/feed/",
+    "hosts": [
+      "techguide.com.au",
+      "www.techguide.com.au"
+    ],
+    "kind": "news",
+    "topic": "bigtech",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "APAC",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "ciol",
+    "group": "ciol",
+    "label": "CIOL",
+    "url": "https://www.ciol.com/rss",
+    "hosts": [
+      "ciol.com",
+      "www.ciol.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "dataquest-india",
+    "group": "dataquest-india",
+    "label": "Dataquest India",
+    "url": "https://www.dqindia.com/rss",
+    "hosts": [
+      "dqindia.com",
+      "www.dqindia.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "digitimes-asia",
+    "group": "digitimes-asia",
+    "label": "DIGITIMES Asia",
+    "url": "https://www.digitimes.com/rss/daily.xml",
+    "hosts": [
+      "digitimes.com",
+      "www.digitimes.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "deccan-chronicle-technology",
+    "group": "deccan-chronicle-technology",
+    "label": "Deccan Chronicle Technology",
+    "url": "https://www.deccanchronicle.com/category/technology/google_feeds.xml",
+    "hosts": [
+      "deccanchronicle.com",
+      "www.deccanchronicle.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "dave-cheney",
+    "group": "dave-cheney",
+    "label": "Dave Cheney",
+    "url": "https://dave.cheney.net/feed",
+    "hosts": [
+      "dave.cheney.net"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "kalzumeus",
+    "group": "kalzumeus",
+    "label": "Kalzumeus",
+    "url": "https://www.kalzumeus.com/feed/articles/",
+    "hosts": [
+      "kalzumeus.com",
+      "www.kalzumeus.com"
+    ],
+    "kind": "engineering",
+    "topic": "startups",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "materialized-view",
+    "group": "materialized-view",
+    "label": "Materialized View",
+    "url": "https://materializedview.io/feed",
+    "hosts": [
+      "materializedview.io",
+      "www.materializedview.io"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "nick-craver",
+    "group": "nick-craver",
+    "label": "Nick Craver",
+    "url": "https://nickcraver.com/blog/feed.xml",
+    "hosts": [
+      "nickcraver.com",
+      "www.nickcraver.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "writing-an-os-in-rust",
+    "group": "writing-an-os-in-rust",
+    "label": "Writing an OS in Rust",
+    "url": "https://os.phil-opp.com/rss.xml",
+    "hosts": [
+      "os.phil-opp.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
   }
 ]
