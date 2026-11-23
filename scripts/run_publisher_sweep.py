@@ -13,6 +13,7 @@ After a full sweep has checked every feed, morning mail is started on the site
 (PUBLIC_ORIGIN with FEED_REFRESH_SECRET) so briefs carry that sweep's news.
 """
 import argparse
+from datetime import UTC, datetime, timedelta
 import logging
 import os
 import sys
@@ -28,6 +29,22 @@ logger = logging.getLogger("publisher_sweep")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 LEASE_WAIT_SECONDS = 30
+# GitHub sometimes starts a scheduled job a few minutes before its cron time. A run that
+# arrives just before its slot opens waits for it instead of finding the window closed.
+EARLY_START_GRACE = timedelta(minutes=20)
+
+
+def wait_for_slot(kind, now=None, sleep=time.sleep):
+    """Sleep until the next slot opens when it is at most EARLY_START_GRACE away."""
+    from app.ingestion import SWEEP_INTERVAL, latest_priority_check, latest_sweep
+    now = now or datetime.now(UTC)
+    opened = (latest_priority_check if kind == "priority" else latest_sweep)(now)
+    wait = (opened + SWEEP_INTERVAL - now).total_seconds()
+    if 0 < wait <= EARLY_START_GRACE.total_seconds():
+        logger.info("Started %.0f minutes before the %s slot; waiting for it to open.", wait / 60, kind)
+        sleep(wait + 5)
+        return wait
+    return 0
 
 
 def annotate(result):
@@ -114,6 +131,7 @@ def main(argv=None):
     if not os.getenv("NEWS_DATABASE_URL"):
         print("::error::Add the production NEWS_DATABASE_URL as a repository secret. See docs/LAUNCH.md.")
         return 1
+    wait_for_slot(args.run)
     summary = sweep(args.run, args.budget_minutes * 60)
     logger.info("Sweep finished: status=%s checked=%s healthy=%s remaining=%s batches=%s", summary["status"],
                 summary.get("checked"), summary.get("healthy"), summary.get("remaining"), summary.get("batches"))

@@ -121,3 +121,21 @@ def test_workflow_runs_the_sweep_in_the_runner_not_on_vercel():
         assert "NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}" in job
         assert "persist-credentials: false" in job and "uv sync --frozen" in job
     assert "inputs.run != 'priority'" in refresh_job
+
+
+def test_a_run_started_minutes_early_waits_for_its_slot():
+    from datetime import datetime, timezone
+    slept = []
+    # Priority slot 02:00 IST is 20:30 UTC; GitHub started the 20:32 cron at 20:27.
+    early = datetime(2026, 11, 23, 20, 27, 56, tzinfo=timezone.utc)
+    waited = run_publisher_sweep.wait_for_slot("priority", early, sleep=slept.append)
+    assert 120 < waited < 130 and slept == [waited + 5]
+    # Full sweep 08:00 IST is 02:30 UTC.
+    assert run_publisher_sweep.wait_for_slot("full", datetime(2026, 11, 24, 2, 22, tzinfo=timezone.utc),
+                                             sleep=slept.append) == 480
+    # Inside a window, or long before the next one, nothing waits.
+    slept.clear()
+    assert run_publisher_sweep.wait_for_slot("full", datetime(2026, 11, 24, 2, 40, tzinfo=timezone.utc), sleep=slept.append) == 0
+    assert run_publisher_sweep.wait_for_slot("priority", datetime(2026, 11, 23, 18, 0, tzinfo=timezone.utc), sleep=slept.append) == 0
+    assert slept == []
+
