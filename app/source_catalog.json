@@ -12002,25 +12002,6 @@
     "require_english": true
   },
   {
-    "id": "doordash-blog",
-    "group": "doordash-blog",
-    "label": "DoorDash Blog",
-    "url": "https://careersatdoordash.com/blog/category/engineering/feed/",
-    "hosts": [
-      "careersatdoordash.com"
-    ],
-    "kind": "engineering",
-    "topic": "software",
-    "coverage": "publisher",
-    "format": "blog",
-    "region": "Global",
-    "language": "en",
-    "refresh_minutes": 360,
-    "collection": "Systems and software",
-    "reviewed_at": "2026-11-23",
-    "require_english": true
-  },
-  {
     "id": "electronics-weekly",
     "group": "electronics-weekly",
     "label": "Electronics Weekly",

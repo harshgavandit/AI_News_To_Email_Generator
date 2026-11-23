@@ -139,7 +139,7 @@ def test_global_pack_2026_11_22_is_valid_and_its_checked_feeds_are_promoted():
                                   for key, value in row.items()}))
     promoted = {source.id: source.url for source in DEFAULT_SOURCES}
     checked = {"game-developer", "gamesindustry-biz", "eighty-level", "graphics-programming-weekly", "josh-comeau",
-               "overreacted", "tkdodo", "addy-osmani", "css-tricks", "posthog-blog", "vespa-blog", "doordash-blog",
+               "overreacted", "tkdodo", "addy-osmani", "css-tricks", "posthog-blog", "vespa-blog",
                # Validation run #6 (active or quiet, English confirmed).
                "tailwind-blog", "tigerbeetle-blog", "snowflake-engineering", "motherduck-blog", "nextjs-blog",
                "dagster-blog", "hotstar-tech", "railway-blog", "airtable-engineering", "trivago-tech", "semiwiki",
@@ -147,11 +147,12 @@ def test_global_pack_2026_11_22_is_valid_and_its_checked_feeds_are_promoted():
                "klarna-engineering", "vite-blog"}
     # Feed addresses repaired after production checks on November 23 (see docs/LAUNCH.md).
     repaired = {"graphics-programming-weekly": "https://www.jendrikillner.com/index.xml",
-                "doordash-blog": "https://careersatdoordash.com/blog/category/engineering/feed/",
                 "hotstar-tech": "https://medium.com/feed/hotstar",
                 "cookpad-sourcediving": "https://medium.com/feed/sourcediving",
                 "dream11-engineering": "https://medium.com/feed/dream11-tech-blog",
                 "klarna-engineering": "https://medium.com/feed/klarna-engineering"}
+    # DoorDash was removed on November 23: it denies automated access (HTTP 403) from production.
+    assert "doordash-blog" not in promoted
     for row in pack:
         assert (row["id"] in checked) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:

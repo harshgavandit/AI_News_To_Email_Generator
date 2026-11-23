@@ -140,7 +140,7 @@ On 23 November the Reading Room showed "708 of 889 feeds up to date". The 08:00 
 - **Feed repairs** (validated in a browser on 23 November):
   - JioHotstar, Klarna, Cookpad Source Diving and Dream11 are Medium publications on custom domains. Medium answered their custom-domain feeds with HTTP 429 from cloud hosts, while `medium.com/feed/<publication>` works for every other Medium source. They now read `medium.com/feed/hotstar`, `klarna-engineering`, `sourcediving` and `dream11-tech-blog`, and each stays its own publisher.
   - Graphics Programming Weekly's `/post/index.xml` is 6.7 MB, over the 5 MB feed limit. It now reads the 220 KB site feed `/index.xml`.
-  - DoorDash's `/blog/feed/` was a comments feed. It now reads the engineering category feed.
   - Lobsters items link to external sites, so every item was rejected (`no_eligible_entries`). Like Hacker News, it now keeps each item's Lobsters discussion link.
+- **Removed**: DoorDash. Its `/blog/feed/` was a comments feed, and its engineering category feed also returned HTTP 403 from production on 23 November.
 - **Paused with reasons**: HPCwire and UKTN have denied automated access (HTTP 403) in every check since they were added. Stripe Engineering's listing scraper stopped yielding article metadata; Stripe's official blog RSS stays active as a separate Stripe Engineering source.
 - Feeds that a publisher has temporarily taken down (for example Exploit-DB's `upstream_unavailable`) are retried once per sweep and still count as not up to date until they answer. The label never hides a real failure.
