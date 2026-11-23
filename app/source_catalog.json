@@ -5580,27 +5580,6 @@
     "require_english": true
   },
   {
-    "id": "hpcwire",
-    "group": "hpcwire",
-    "label": "HPCwire",
-    "enabled": false,
-    "pause_reason": "The publisher has denied automated feed access (HTTP 403) in every check since November 21, 2026. Paused until a supported feed access path is reviewed.",
-    "url": "https://www.hpcwire.com/feed/",
-    "hosts": [
-      "hpcwire.com"
-    ],
-    "kind": "news",
-    "topic": "chips",
-    "coverage": "reporting",
-    "format": "news",
-    "region": "Global",
-    "language": "en",
-    "refresh_minutes": 0,
-    "collection": "Global technology",
-    "reviewed_at": "2026-11-21",
-    "require_english": true
-  },
-  {
     "id": "itnext",
     "group": "itnext",
     "label": "ITNEXT",
@@ -5979,27 +5958,6 @@
     "coverage": "reporting",
     "format": "news",
     "region": "Global",
-    "language": "en",
-    "refresh_minutes": 0,
-    "collection": "Global technology",
-    "reviewed_at": "2026-11-21",
-    "require_english": true
-  },
-  {
-    "id": "uktn",
-    "group": "uktn",
-    "label": "UKTN",
-    "enabled": false,
-    "pause_reason": "The publisher has denied automated feed access (HTTP 403) in every check since November 21, 2026. Paused until a supported feed access path is reviewed.",
-    "url": "https://www.uktech.news/feed",
-    "hosts": [
-      "uktech.news"
-    ],
-    "kind": "news",
-    "topic": "startups",
-    "coverage": "reporting",
-    "format": "news",
-    "region": "Europe",
     "language": "en",
     "refresh_minutes": 0,
     "collection": "Global technology",

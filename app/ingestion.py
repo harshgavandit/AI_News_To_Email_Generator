@@ -71,8 +71,21 @@ def priority_source(source):
 PRIORITY_SOURCE_IDS = frozenset(source.id for source in DEFAULT_SOURCES if priority_source(source))
 
 
+def access_denied(state, now=None):
+    """A publisher that refuses us access (HTTP 401/403) is taken out of fetching.
+
+    A feed that has never worked leaves on its first refusal. One that has worked keeps
+    TEMPORARY_GRACE to recover from a passing block. Rate limits (HTTP 429), timeouts and
+    publisher outages are not refusals: those feeds stay and are retried.
+    """
+    if state.get("available") is not False or state.get("error") != "access_denied":
+        return False
+    last = state.get("last_success")
+    return not last or (now or time.time()) - last >= TEMPORARY_GRACE.total_seconds()
+
+
 def source_enabled(source, state):
-    return source.enabled and state.get("enabled", True)
+    return source.enabled and state.get("enabled", True) and not access_denied(state)
 
 
 def sweep_plan(state, scheduled, now, *, attempts=(), source_ids=None, host_backoffs=None):
@@ -282,6 +295,8 @@ def source_catalog(store=None, *, include_archive=True):
             "quiet" if latest < (now - timedelta(days=30)).isoformat() else "recent")
         if state.get("error"):
             feed["error"] = state["error"]
+        if s.enabled and access_denied(state, now.timestamp()):
+            feed["pause_reason"] = "The publisher denies automated access, so this feed is no longer fetched."
         if feed["enabled"] and retry > now.timestamp():
             feed["retry_at"] = timestamp(retry)
         feed["freshness"] = (source_freshness(feed, now) if feed["enabled"] else "paused")

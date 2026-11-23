@@ -1,7 +1,7 @@
 import socket
 import ssl
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -30,7 +30,7 @@ def test_configured_pause_overrides_preexisting_enabled_state(tmp_path, monkeypa
 
 
 def test_owner_cannot_enable_a_connector_paused_in_the_registry(monkeypatch):
-    source = BY_ID["tech-in-asia"]
+    source = BY_ID["robohub"]
     monkeypatch.setattr(server, "BY_ID", {source.id: replace(source, enabled=False)})
     monkeypatch.setenv("ADMIN_TOKEN", "owner-key-for-tests-0123456789abcdef0123")
     monkeypatch.setattr(server, "source_store", lambda: pytest.fail("Paused source was changed"))
@@ -40,7 +40,7 @@ def test_owner_cannot_enable_a_connector_paused_in_the_registry(monkeypatch):
 
 
 def test_paused_connectors_keep_reasons_and_coverage_alternatives():
-    paused = ("tech-in-asia", "hashnode-discover", "venturebeat", "venturebeat-news-index", "moneycontrol-it", "robohub")
+    paused = ("hashnode-discover", "venturebeat", "venturebeat-news-index", "moneycontrol-it", "robohub")
     assert all(not BY_ID[key].enabled and BY_ID[key].pause_reason for key in paused)
     active = [source for source in DEFAULT_SOURCES if source.enabled]
     assert len(active) >= 501
@@ -86,7 +86,7 @@ def test_medium_custom_domain_blogs_read_through_medium_feeds():
 def test_feed_repairs_and_pauses_from_the_november_23_review():
     assert BY_ID["graphics-programming-weekly"].url == "https://www.jendrikillner.com/index.xml"
     assert "doordash-blog" not in BY_ID, "removed after HTTP 403 from production"
-    for key in ("hpcwire", "uktn", "stripe-engineering"):
+    for key in ("stripe-engineering",):
         assert not BY_ID[key].enabled and BY_ID[key].pause_reason
     stripe = [source for source in DEFAULT_SOURCES if source.enabled and source.url == "https://stripe.com/blog/feed.rss"]
     assert [source.id for source in stripe] == ["engineering-stripe"], "Stripe's blog stays covered"
@@ -103,3 +103,30 @@ def test_lobsters_keeps_the_discussion_link_instead_of_the_external_article(monk
     items, status = news.read_feed(BY_ID["lobsters"])
     assert status["available"] is True
     assert [item["url"] for item in items] == ["https://lobste.rs/s/leqwqu/github_actions_accepts_invalid_yaml"]
+
+
+def test_publishers_that_deny_access_leave_the_feed_but_rate_limits_do_not(tmp_path, monkeypatch):
+    for key in ("hpcwire", "uktn", "tech-in-asia", "doordash-blog"):
+        assert key not in BY_ID, f"{key} denied access and was removed"
+    sources = tuple(BY_ID[key] for key in ("bbc-tech", "sifted", "the-verge", "ars-technica"))
+    monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
+    store = Store(f"sqlite:///{tmp_path / 'denied.db'}")
+    store.migrate()
+    store.ingest("bbc-tech", [], False, "access_denied")        # Refused on its first check.
+    store.ingest("sifted", [], False, "rate_limited")            # Busy, not refusing.
+    store.ingest("the-verge", [], True)                          # Worked before a passing block.
+    store.ingest("the-verge", [], False, "access_denied")
+    store.ingest("ars-technica", [], False, "upstream_unavailable")
+    state = store.source_state()
+    assert ingestion.access_denied(state["bbc-tech"]) and not ingestion.access_denied(state["sifted"])
+    assert not ingestion.access_denied(state["the-verge"]), "a working feed gets time to recover"
+    later = state["the-verge"]["last_success"] + ingestion.TEMPORARY_GRACE.total_seconds()
+    assert ingestion.access_denied(state["the-verge"], later), "but not forever"
+    upcoming = ingestion.latest_sweep(datetime.now(UTC)) + ingestion.SWEEP_INTERVAL  # The next sweep.
+    planned, deferred = ingestion.sweep_plan(state, upcoming, upcoming + timedelta(days=1))
+    assert "bbc-tech" not in planned | deferred.keys()
+    assert {"sifted", "the-verge", "ars-technica"} <= planned | deferred.keys()
+    catalog = {feed["id"]: feed for feed in ingestion.source_catalog(store, include_archive=False)}
+    assert catalog["bbc-tech"]["enabled"] is False and catalog["bbc-tech"]["freshness"] == "paused"
+    assert "denies automated access" in catalog["bbc-tech"]["pause_reason"]
+    assert ingestion.feed_freshness(list(catalog.values()))["counts"]["enabled"] == 3
