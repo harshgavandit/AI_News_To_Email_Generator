@@ -1,0 +1,271 @@
+[
+  {
+    "id": "shreya-shankar",
+    "group": "shreya-shankar",
+    "label": "Shreya Shankar",
+    "url": "https://www.sh-reya.com/rss.xml",
+    "hosts": [
+      "sh-reya.com",
+      "www.sh-reya.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "zed-blog",
+    "group": "zed-blog",
+    "label": "Zed Blog",
+    "url": "https://zed.dev/blog.rss",
+    "hosts": [
+      "zed.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blog/"
+    ]
+  },
+  {
+    "id": "materialize-blog",
+    "group": "materialize-blog",
+    "label": "Materialize Blog",
+    "url": "https://materialize.com/rss.xml",
+    "hosts": [
+      "materialize.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "tinybird-blog",
+    "group": "tinybird-blog",
+    "label": "Tinybird Blog",
+    "url": "https://www.tinybird.co/blog/rss.xml",
+    "hosts": [
+      "tinybird.co",
+      "www.tinybird.co"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "encore-blog",
+    "group": "encore-blog",
+    "label": "Encore Blog",
+    "url": "https://encore.dev/rss/feed.xml",
+    "hosts": [
+      "encore.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "netlify-blog",
+    "group": "netlify-blog",
+    "label": "Netlify Blog",
+    "url": "https://www.netlify.com/feed.xml",
+    "hosts": [
+      "netlify.com",
+      "www.netlify.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blog/"
+    ]
+  },
+  {
+    "id": "remix-blog",
+    "group": "remix-blog",
+    "label": "Remix Blog",
+    "url": "https://remix.run/blog/rss.xml",
+    "hosts": [
+      "remix.run"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "linear-now",
+    "group": "linear-now",
+    "label": "Linear Now",
+    "url": "https://linear.app/rss/now.xml",
+    "hosts": [
+      "linear.app"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "eurogamer-tech",
+    "group": "eurogamer-tech",
+    "label": "Eurogamer Tech (Digital Foundry)",
+    "url": "https://www.eurogamer.net/feed/tag/topics/tech",
+    "hosts": [
+      "eurogamer.net",
+      "www.eurogamer.net"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Game engineering"
+  },
+  {
+    "id": "phonepe-engineering",
+    "group": "phonepe-engineering",
+    "label": "PhonePe Tech",
+    "url": "https://tech.phonepe.com/rss.xml",
+    "hosts": [
+      "tech.phonepe.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software"
+  },
+  {
+    "id": "e2b-blog",
+    "group": "e2b-blog",
+    "label": "E2B Blog",
+    "url": "https://e2b.dev/rss.xml",
+    "hosts": [
+      "e2b.dev"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "arize-blog",
+    "group": "arize-blog",
+    "label": "Arize AI Blog",
+    "url": "https://arize.com/feed/",
+    "hosts": [
+      "arize.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "stripe-dev-blog",
+    "group": "stripe-dev-blog",
+    "label": "Stripe Dot Dev Blog",
+    "url": "https://stripe.dev/blog/feed",
+    "hosts": [
+      "stripe.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/blog/"
+    ]
+  },
+  {
+    "id": "mistral-news",
+    "group": "mistral-news",
+    "label": "Mistral AI News",
+    "url": "https://mistral.ai/news/rss",
+    "hosts": [
+      "mistral.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering"
+  },
+  {
+    "id": "syntax-fm-podcast",
+    "group": "syntax-fm-podcast",
+    "label": "Syntax (podcast)",
+    "url": "https://feed.syntax.fm",
+    "hosts": [
+      "syntax.fm",
+      "feed.syntax.fm"
+    ],
+    "kind": "podcast",
+    "topic": "software",
+    "coverage": "article",
+    "format": "podcast",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 720,
+    "collection": "Systems and software"
+  }
+]
