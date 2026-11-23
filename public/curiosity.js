@@ -20,6 +20,8 @@ const ORIGINS = [["all", "All"], ["fresh", "Fresh"], ["classic", "Classics"]];
 // Labels mirror app/curiosity.py; the API also returns them so new themes appear without a client change.
 export const CURIOSITY_THEMES = {
   "game-engineering": "Game engineering",
+  agents: "AI agents",
+  "ai-engineering": "AI-native engineering",
   ai: "AI & LLMs",
   "distributed-systems": "Distributed systems",
   databases: "Databases & storage",
@@ -62,7 +64,7 @@ export function cardThemes(card) {
 }
 
 function searchable(card) {
-  return [card.title, companyOf(card), card.publisher, CURIOSITY_LEVELS[card.level], card.publisher_detail, card.author, card.summary, card.why_read,
+  return [card.title, card.question, companyOf(card), card.publisher, CURIOSITY_LEVELS[card.level], card.publisher_detail, card.author, card.summary, card.why_read,
     ...(Array.isArray(card.technologies) ? card.technologies : []), ...(Array.isArray(card.tags) ? card.tags : []),
     ...cardThemes(card).map((theme) => CURIOSITY_THEMES[theme] || theme)]
     .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
@@ -185,6 +187,11 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
   if (meta.childElementCount) article.append(meta);
 
   article.append(element(document, "h3", "curiosity-card-title", card.title));
+  if (typeof card.question === "string" && card.question.trim()) {
+    const question = element(document, "p", "curiosity-question");
+    question.append(element(document, "span", "", "Answers "), document.createTextNode(card.question.trim()));
+    article.append(question);
+  }
   const byline = [card.author, card.publisher_detail || card.publisher].filter(Boolean).join(" · ");
   if (byline) article.append(element(document, "p", "curiosity-byline", byline));
   const basis = card.summary_basis === "ai_feed_summary" ? "AI summary from the publisher excerpt" :

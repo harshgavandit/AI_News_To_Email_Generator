@@ -156,6 +156,9 @@ test('cards show date, format, theme, technologies and a labelled reason to read
   assert.equal(card.querySelector('.curiosity-theme').textContent, 'Game engineering');
   assert.equal(card.querySelector('.curiosity-level').textContent, 'Intermediate');
   assert.match(card.querySelector('.curiosity-why').textContent, /^Why read it A first-party look/);
+  assert.equal(card.querySelector('.curiosity-question'), null, 'no question unless one was reviewed');
+  renderCuriosityCards(container, [{ ...rich, question: 'How does VALORANT fight peeker’s advantage?' }], { actions: false });
+  assert.match(container.querySelector('.curiosity-question').textContent, /^Answers How does VALORANT/);
   assert.deepEqual([...card.querySelectorAll('.curiosity-tag')].map((node) => node.textContent), ['Netcode', 'Multiplayer']);
   assert.equal(card.querySelectorAll('.curiosity-tech').length, 1);
   assert.equal(card.querySelector('[data-curiosity-pin]'), null, 'collection page cards carry no brief actions');

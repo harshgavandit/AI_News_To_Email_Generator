@@ -470,3 +470,27 @@ def test_curated_card_outside_the_feed_catalog_reaches_brief_and_email(monkeypat
     assert escape(safe_href(seed["url"]), quote=True) in html and escape(seed["title"], quote=True) in html
     from app.curiosity import resolve_curiosity_cards
     assert resolve_curiosity_cards(store, [seed["id"]])[0]["url"] == seed["url"]
+
+
+def test_agentic_and_ai_native_engineering_are_first_class_themes():
+    from app import curiosity
+
+    cards = {card["id"]: card for card in curiosity.build_curiosity_cards(None, limit=curiosity.MAX_CURIOSITY_CARDS)}
+    agents = [card for card in cards.values() if card["theme"] == "agents"]
+    factories = [card for card in cards.values() if card["theme"] == "ai-engineering"]
+    assert len(agents) >= 10 and len(factories) >= 6
+    assert cards["stripe-minions-coding-agents"]["theme"] == "ai-engineering"
+    assert cards["manus-context-engineering"]["theme"] == "agents"
+    assert cards["anthropic-building-effective-agents"]["theme"] == "agents"
+    # Every reviewed question is a real question, and fresh feed items never get an invented one.
+    for card in cards.values():
+        if card["question"]:
+            assert card["seed"] and card["question"].endswith("?") and len(card["question"]) <= 120, card["id"]
+    assert cards["discord-elixir-5m-concurrent"]["question"] == "How does Discord handle millions of concurrent users?"
+    companies = {card["company"] for card in cards.values()}
+    assert {"Cognition", "Manus", "Slack", "Pinterest", "Figma", "ByteDance", "Shopify", "Spotify"} <= companies
+    article = {"title": "How we built a multi-agent orchestration layer with LangGraph and MCP tool calling",
+               "description": "Engineers describe agent routing, memory, retries and tracing in production. " * 3}
+    assert curiosity.card_themes(article)[0] == "agents"
+    assert curiosity.card_themes({"title": "Our background coding agents opened 2,000 pull requests",
+                                  "description": "Lessons from AI-generated code review and test generation. " * 3})[0] == "ai-engineering"

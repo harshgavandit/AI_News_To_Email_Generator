@@ -57,9 +57,9 @@ export function layoutStep(graph, width, height, pointer = null, dt = 1) {
       a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
       // Labels sit under the stars: keep stars on a similar line further apart than their labels are wide.
       const overlapX = ((a.w || 0) + (b.w || 0)) / 2 + 8 - Math.abs(dx);
-      const overlapY = 30 - Math.abs(dy);
+      const overlapY = 34 - Math.abs(dy);
       if (overlapX > 0 && overlapY > 0) {
-        const push = Math.min(overlapX, overlapY) * 0.06;
+        const push = Math.min(overlapX, overlapY) * 0.16;
         if (overlapY < overlapX) { const s = dy >= 0 ? 1 : -1; a.vy -= push * s; b.vy += push * s; }
         else { const s = dx >= 0 ? 1 : -1; a.vx -= push * s; b.vx += push * s; }
       }
@@ -120,7 +120,7 @@ export function mountConstellation(canvas, graph, { onSelect = () => {}, motion 
       for (const node of graph.nodes) { node.x *= nextWidth / width; node.y *= nextHeight / height; }
     } else {
       seedLayout(graph, nextWidth, nextHeight);
-      for (let i = 0; i < 240; i += 1) layoutStep(graph, nextWidth, nextHeight);  // Settle before the first frame.
+      for (let i = 0; i < 600; i += 1) layoutStep(graph, nextWidth, nextHeight);  // Settle before the first frame.
     }
     width = nextWidth; height = nextHeight;
     canvas.width = width * dpr; canvas.height = height * dpr;

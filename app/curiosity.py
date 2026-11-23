@@ -15,7 +15,7 @@ from app.sources import BY_ID, DEFAULT_SOURCES
 
 def _seed(ident, title, url, publisher, company, year, description, tags, read_minutes, source_id, *,
           authors="", publisher_detail="", read_time_basis="estimate", published="", why="", themes=(),
-          kind="engineering"):
+          kind="engineering", question=""):
     """A manually reviewed card. ``source_id`` is None for talks and posts outside the feed catalog."""
     source = BY_ID[source_id] if source_id else None
     kind = source.kind if source else kind
@@ -31,6 +31,7 @@ def _seed(ident, title, url, publisher, company, year, description, tags, read_m
         "summary": description,
         "summary_basis": "editorial_source_summary",
         "why_read": why,
+        "question": question,
         "themes": list(themes),
         "tags": list(tags),
         "read_minutes": read_minutes,
@@ -543,6 +544,177 @@ CURATED_CURIOSITY = (
           authors="Mostafa Elhemali and co-authors", publisher_detail="USENIX ATC 2022 research paper",
           why="Rare detail on how a hyperscale managed database is actually run.",
           themes=("databases", "distributed-systems")),
+    # --- Agentic AI in production (each link checked 2026-11-23) ------------------------------------------
+    _seed("cognition-dont-build-multi-agents", "Don’t Build Multi-Agents",
+          "https://cognition.ai/blog/dont-build-multi-agents", "Cognition", "Cognition", 2025,
+          "The team behind the Devin coding agent argues that splitting work across parallel sub-agents breaks down when they cannot share context, and sets out two context-engineering principles: share full context, and remember that actions carry implicit decisions.",
+          ("Multi-agent systems", "Context engineering", "Coding agents"), 12, None, published="2025-06-12",
+          authors="Walden Yan", publisher_detail="Cognition blog",
+          why="A sharp counterpoint to multi-agent hype from a team running agents on real codebases.",
+          question="When do multi-agent architectures fail, and why?", themes=("agents", "ai-engineering")),
+    _seed("manus-context-engineering", "Context Engineering for AI Agents: Lessons from Building Manus",
+          "https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus", "Manus", "Manus", 2025,
+          "Lessons from building the Manus agent: design around the KV-cache, mask tools instead of removing them, use the file system as context, steer attention through recitation, keep mistakes in context, and avoid getting stuck in few-shot patterns.",
+          ("AI agents", "Context engineering", "KV-cache", "Tool calling"), 15, None, published="2025-07-18",
+          authors="Yichao ‘Peak’ Ji", publisher_detail="Manus blog",
+          why="Concrete, hard-won rules for agents that run hundreds of tool calls without losing the plot.",
+          question="How do production agents manage context across long tool-calling loops?", themes=("agents",)),
+    _seed("simonw-prompt-injection-design-patterns", "Design Patterns for Securing LLM Agents against Prompt Injections",
+          "https://simonwillison.net/2025/Jun/13/prompt-injection-design-patterns/", "Simon Willison’s Weblog",
+          "Simon Willison", 2025,
+          "Simon Willison walks through a paper by researchers from IBM, Invariant Labs, ETH Zurich, Google and Microsoft that describes design patterns for LLM agents that limit what a prompt injection can make an agent do.",
+          ("Prompt injection", "Agent security", "LLMs"), 14, "simon-willison", published="2025-06-13",
+          authors="Simon Willison", publisher_detail="Independent analysis",
+          why="Practical architecture patterns for one of the hardest unsolved problems in agent security.",
+          question="How can AI agents be designed to resist prompt injection?", themes=("agents", "security")),
+    _seed("hamel-your-ai-product-needs-evals", "Your AI Product Needs Evals",
+          "https://hamel.dev/blog/posts/evals/", "Hamel’s Blog", "Hamel Husain", 2024,
+          "Hamel Husain explains how to build domain-specific evaluation systems for LLM products, from unit-test-style assertions to human and model-based review, drawing on years of building language-model tools.",
+          ("Evals", "LLMs", "Testing"), 20, "hamel-husain", published="2024-03-29", authors="Hamel Husain",
+          publisher_detail="Independent engineering blog",
+          why="The most cited practical guide to measuring whether an LLM product actually works.",
+          question="How do teams evaluate and debug LLM products?", themes=("agents", "ai-engineering")),
+    _seed("anthropic-model-context-protocol", "Introducing the Model Context Protocol",
+          "https://www.anthropic.com/news/model-context-protocol", "Anthropic", "Anthropic", 2024,
+          "Anthropic introduces the Model Context Protocol (MCP), an open standard for connecting AI assistants to the systems where data lives, such as content repositories, business tools and development environments.",
+          ("MCP", "Tool calling", "AI agents"), 6, "anthropic-news", published="2024-11-25", publisher_detail="Anthropic",
+          why="The origin of the protocol most agent tooling now builds on.",
+          question="What is MCP and why did agents need a common protocol?", themes=("agents",)),
+    _seed("anthropic-code-execution-with-mcp", "Code execution with MCP: Building more efficient agents",
+          "https://www.anthropic.com/engineering/code-execution-with-mcp", "Anthropic", "Anthropic", 2025,
+          "Anthropic’s engineers describe having agents call MCP tools by writing and running code, rather than loading every tool definition and intermediate result into the model’s context, to make connected agents more efficient.",
+          ("MCP", "Code execution", "Context engineering"), 12, "anthropic-engineering", published="2025-11-04",
+          publisher_detail="Anthropic engineering",
+          why="A design pattern for agents connected to hundreds of tools without drowning in context.",
+          question="How do agents scale to many tools without exhausting their context window?", themes=("agents",)),
+    _seed("anthropic-claude-code-sandboxing", "Beyond permission prompts: making Claude Code more secure and autonomous",
+          "https://www.anthropic.com/engineering/claude-code-sandboxing", "Anthropic", "Anthropic", 2025,
+          "How Anthropic used sandboxing to give its Claude Code coding agent more autonomy while containing the risks of broad codebase and command access, including prompt injection.",
+          ("Sandboxing", "Coding agents", "Agent security"), 10, "anthropic-engineering", published="2025-10-20",
+          publisher_detail="Anthropic engineering",
+          why="Shows how isolation, not just permission prompts, makes autonomous coding agents safer.",
+          question="How do you let a coding agent run commands safely?", themes=("agents", "security")),
+    _seed("openai-practical-guide-to-agents", "A practical guide to building agents",
+          "https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/", "OpenAI", "OpenAI", 2026,
+          "OpenAI’s guide for product and engineering teams building their first agents, covering when agents fit, how to choose models and tools, orchestration patterns and guardrails.",
+          ("AI agents", "Orchestration", "Guardrails"), 25, "openai-news", published="2026-01-15", publisher_detail="OpenAI guide",
+          why="A vendor’s own playbook for single-agent and multi-agent designs, with the trade-offs stated.",
+          question="How should teams structure, orchestrate and guard production agents?", themes=("agents",)),
+    _seed("slack-long-running-agent-context", "Managing context in long-run agentic applications",
+          "https://slack.engineering/managing-context-in-long-run-agentic-applications/", "Engineering at Slack", "Slack", 2026,
+          "Slack describes how a team of AI agents investigates security alerts, with a Director orchestrating, specialist Experts gathering evidence and a Critic reviewing findings, and the techniques used to keep them coherent over long investigations.",
+          ("Multi-agent systems", "Agent memory", "Security operations"), 14, "engineering-slack", published="2026-04-13",
+          authors="Dominic Marks", publisher_detail="Engineering at Slack",
+          why="A rare inside look at a production multi-agent system with explicit roles and long-running state.",
+          question="How do teams of agents stay coherent over long-running tasks?", themes=("agents", "security")),
+    _seed("slack-agentic-e2e-testing", "Agentic Testing: Where Agents Fit in the E2E Testing Stack",
+          "https://slack.engineering/agentic-testing-where-agents-fit-in-the-e2e-testing-stack/", "Engineering at Slack", "Slack", 2026,
+          "Slack ran more than 200 agent-driven end-to-end test workflows with the Playwright MCP, Playwright CLI and agent-generated tests to see whether goal-based agentic tests should complement or replace deterministic ones.",
+          ("Agentic testing", "Playwright", "MCP"), 12, "engineering-slack", published="2026-06-11",
+          authors="Sergii Gorbachov", publisher_detail="Engineering at Slack",
+          why="Measured results on where agents help in testing and where deterministic tests still win.",
+          question="Can AI agents replace end-to-end tests?", themes=("ai-engineering", "agents")),
+
+    # --- AI-native engineering and software factories ------------------------------------------------------
+    _seed("stripe-minions-coding-agents", "Minions: Stripe’s one-shot, end-to-end coding agents",
+          "https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents", "Stripe Dot Dev Blog", "Stripe", 2026,
+          "Stripe’s homegrown, fully unattended coding agents start from a Slack message and end in a pull request that passes CI and is ready for human review. Over a thousand merged pull requests a week are written entirely by them.",
+          ("Coding agents", "CI/CD", "Developer productivity"), 8, "stripe-engineering", published="2026-02-09",
+          authors="Alistair Gray", publisher_detail="Stripe Dot Dev Blog", read_time_basis="publisher",
+          why="A working AI software factory at a payments company, with humans reviewing every change.",
+          question="How does a company run unattended coding agents at scale?", themes=("ai-engineering", "agents")),
+    _seed("spotify-honk-background-coding-agent", "1,500+ PRs Later: Spotify’s Journey with Our Background Coding Agent (Honk, Part 1)",
+          "https://engineering.atspotify.com/2025/11/spotifys-background-coding-agent-part-1", "Spotify Engineering", "Spotify", 2025,
+          "How Spotify extended its Fleet Management platform, which applies code changes across all of its repositories, with background coding agents, and what more than 1,500 merged AI-generated pull requests taught it about large-scale maintenance.",
+          ("Coding agents", "Fleet management", "Code migrations"), 12, "spotify-engineering", published="2025-11-06",
+          publisher_detail="Spotify Engineering · part 1 of 4",
+          why="Fleet-wide code changes by agents, with the failure modes and guardrails spelled out.",
+          question="How do coding agents maintain thousands of repositories?", themes=("ai-engineering", "engineering-practice")),
+    _seed("google-ai-in-software-engineering", "AI in software engineering at Google: Progress and the path ahead",
+          "https://research.google/blog/ai-in-software-engineering-at-google-progress-and-the-path-ahead/", "Google Research",
+          "Google", 2024,
+          "Google’s engineers review how AI assistance has spread through its internal developer tools, what it has changed for engineers, and where they expect it to go next.",
+          ("AI-assisted coding", "Developer tools", "Code completion"), 12, "google-research", published="2024-06-06",
+          authors="Satish Chandra · Maxim Tabachnyk", publisher_detail="Google Research blog",
+          why="Measured adoption data from one of the largest internal engineering organizations.",
+          question="How is AI changing software engineering inside Google?", themes=("ai-engineering",)),
+    _seed("meta-ach-llm-bug-catchers", "Revolutionizing software testing: Introducing LLM-powered bug catchers",
+          "https://engineering.fb.com/2025/02/05/security/revolutionizing-software-testing-llm-powered-bug-catchers-meta-ach/",
+          "Engineering at Meta", "Meta", 2025,
+          "Meta’s Automated Compliance Hardening (ACH) tool uses LLMs to generate realistic faults (mutants) in a chosen area of concern, such as privacy, and then generates tests that catch them.",
+          ("Mutation testing", "LLM test generation", "Privacy"), 10, "meta-engineering", published="2025-02-05",
+          publisher_detail="Engineering at Meta",
+          why="An unusual, mutation-guided use of LLMs to harden code against regressions.",
+          question="How can LLMs write tests that catch real bugs?", themes=("ai-engineering", "security")),
+    _seed("airbnb-llm-test-migration", "Accelerating large-scale test migration with LLMs",
+          "https://medium.com/airbnb-engineering/accelerating-large-scale-test-migration-with-llms-9565c208023b",
+          "The Airbnb Tech Blog", "Airbnb", 2025,
+          "Airbnb used frontier models and automation to migrate nearly 3,500 React component test files from Enzyme to React Testing Library, work it had estimated at a year and a half of engineering time by hand.",
+          ("Code migrations", "LLMs", "Testing"), 7, "airbnb-engineering", published="2025-03-13",
+          authors="Charles Covey-Brandt", publisher_detail="The Airbnb Tech Blog · Medium publisher estimate",
+          read_time_basis="publisher",
+          why="A concrete playbook for LLM-driven migrations across thousands of files.",
+          question="How do you migrate thousands of files with an LLM pipeline?", themes=("ai-engineering", "engineering-practice")),
+    _seed("shopify-roast-structured-ai-workflows", "Introducing Roast: Structured AI workflows made easy",
+          "https://shopify.engineering/introducing-roast", "Shopify Engineering", "Shopify", 2025,
+          "Shopify’s Augmented Engineering team found that breaking complex developer tasks such as flaky tests and low coverage into discrete steps made AI agents reliable, and open-sourced Roast to structure those workflows.",
+          ("AI workflows", "Developer productivity", "Open source"), 10, "engineering-shopify", published="2025-06-18",
+          authors="Obie Fernandez", publisher_detail="Shopify Engineering",
+          why="Why structure beats free-form autonomy for agents doing routine engineering work.",
+          question="How do you make AI agents reliable for routine engineering tasks?", themes=("ai-engineering", "agents")),
+
+    # --- How massive systems actually work -----------------------------------------------------------------
+    _seed("discord-elixir-5m-concurrent", "How Discord Scaled Elixir to 5,000,000 Concurrent Users",
+          "https://discord.com/blog/how-discord-scaled-elixir-to-5-000-000-concurrent-users", "Discord Blog", "Discord", 2017,
+          "Discord explains how it built its real-time system on Elixir and the Erlang VM, and the work needed to keep it fast as concurrent users grew into the millions.",
+          ("Elixir", "Erlang VM", "Real-time systems", "Concurrency"), 10, "engineering-discord", published="2017-07-06",
+          authors="Stanislav Vishnevskiy", publisher_detail="Discord Engineering",
+          why="A classic on scaling a real-time chat backend on the BEAM.",
+          question="How does Discord handle millions of concurrent users?", themes=("distributed-systems", "performance")),
+    _seed("figma-multiplayer", "How Figma’s multiplayer technology works",
+          "https://www.figma.com/blog/how-figmas-multiplayer-technology-works/", "Figma Blog", "Figma", 2019,
+          "Figma’s co-founder explains the homegrown system behind live collaborative editing in Figma, and why the team chose its own approach over operational transformation.",
+          ("Real-time collaboration", "CRDTs", "Multiplayer"), 15, "figma-blog", published="2019-10-16",
+          authors="Evan Wallace", publisher_detail="Figma Blog",
+          why="The design reasoning behind one of the best-known real-time collaboration engines.",
+          question="How does real-time collaborative editing work at Figma?", themes=("distributed-systems",)),
+    _seed("stripe-docdb-zero-downtime-migrations", "How Stripe’s document databases supported 99.999% uptime with zero-downtime data migrations",
+          "https://stripe.com/blog/how-stripes-document-databases-supported-99.999-uptime-with-zero-downtime-data-migrations",
+          "Stripe Dot Dev Blog", "Stripe", 2024,
+          "How Stripe moves data between database shards without downtime while keeping its document databases at 99.999% uptime for a payments platform that processed $1 trillion in 2023.",
+          ("Databases", "Sharding", "Data migrations", "Reliability"), 11, "stripe-engineering", published="2024-06-06",
+          authors="Jimmy Morzaria · Suraj Narkhede", publisher_detail="Stripe Dot Dev Blog", read_time_basis="publisher",
+          why="Payment-grade reliability while the data underneath is constantly moving.",
+          question="How does Stripe keep payments reliable while migrating data?", themes=("databases", "reliability")),
+    _seed("pinterest-mysql-sharding", "Sharding Pinterest: How we scaled our MySQL fleet",
+          "https://medium.com/pinterest-engineering/sharding-pinterest-how-we-scaled-our-mysql-fleet-3f341e96ca6f",
+          "Pinterest Engineering Blog", "Pinterest", 2015,
+          "A technical dive into how Pinterest split its data across many MySQL servers, an approach launched in 2012 that still stored its core data years later.",
+          ("MySQL", "Sharding", "Databases"), 11, "engineering-pinterest", published="2015-08-17",
+          authors="Marty Weiner", publisher_detail="Pinterest Engineering · Medium publisher estimate", read_time_basis="publisher",
+          why="A clear, durable sharding design that many teams still copy.",
+          question="How do you shard a relational database for a fast-growing product?", themes=("databases", "distributed-systems")),
+    _seed("vllm-pagedattention", "vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention",
+          "https://blog.vllm.ai/2023/06/20/vllm.html", "vLLM Blog", "vLLM (UC Berkeley)", 2023,
+          "The vLLM team introduces PagedAttention, which manages the attention key-value cache like virtual memory pages so LLM serving wastes far less GPU memory and can batch many more requests.",
+          ("LLM serving", "PagedAttention", "GPU", "KV-cache"), 8, None, published="2023-06-20", kind="research",
+          authors="Woosuk Kwon and co-authors", publisher_detail="vLLM project blog",
+          why="The idea behind much of today’s open-source LLM inference.",
+          question="How do AI companies serve millions of LLM requests efficiently?", themes=("ai", "performance")),
+    _seed("bytedance-monolith-recommendations", "Monolith: Real Time Recommendation System With Collisionless Embedding Table",
+          "https://arxiv.org/abs/2209.07663", "arXiv", "ByteDance", 2022,
+          "ByteDance researchers describe Monolith, a recommendation system for time-sensitive feedback such as short-video ranking, with collisionless embedding tables and real-time online training.",
+          ("Recommendation systems", "Embeddings", "Online training"), 30, "arxiv-cs-ir", published="2022-09-16",
+          authors="Zhuoran Liu and co-authors", publisher_detail="arXiv research paper",
+          why="A public look at the kind of real-time recommender behind short-video feeds.",
+          question="How do short-video apps personalise feeds in real time?", themes=("ai", "distributed-systems")),
+    _seed("slack-ai-multi-cloud", "Slack AI: The Path to Multi-Cloud",
+          "https://slack.engineering/slack-ai-the-path-to-multi-cloud/", "Engineering at Slack", "Slack", 2026,
+          "How Slack’s LLM serving evolved over three years from a SageMaker start to a multi-cloud, multi-vendor architecture built to survive regional outages and GPU scarcity at enterprise scale.",
+          ("LLM serving", "Multi-cloud", "GPU capacity"), 17, "engineering-slack", published="2026-05-28",
+          authors="Shaurya Kethireddy", publisher_detail="Engineering at Slack",
+          why="An honest timeline of what serving LLMs to enterprises actually required.",
+          question="How do companies serve LLM features reliably at enterprise scale?", themes=("ai", "cloud")),
 )
 # Reviewed themes where keyword evidence alone would mislabel a classic.
 for _ident, _themes in {
@@ -550,7 +722,13 @@ for _ident, _themes in {
     "google-borg": ("cloud", "distributed-systems"),
     "paloalto-unified-data-platform": ("databases", "distributed-systems", "cloud"),
     "uber-big-data-platform": ("databases", "distributed-systems"),
-    "anthropic-teams-claude-code": ("ai", "engineering-practice"),
+    "anthropic-teams-claude-code": ("ai-engineering", "agents"),
+    "claude-code-best-practices": ("ai-engineering", "agents"),
+    "anthropic-building-effective-agents": ("agents", "ai"),
+    "anthropic-multi-agent-research": ("agents", "ai"),
+    "anthropic-context-engineering": ("agents", "ai"),
+    "anthropic-writing-tools": ("agents", "ai"),
+    "microsoft-learn-mcp": ("agents", "ai"),
     "anthropic-opus-4-6": ("ai",),
     "cloudflare-pingora": ("performance", "cloud"),
 }.items():
@@ -593,9 +771,19 @@ THEMES = (
         r"physics engines?|rigid[- ]body|animation|frame rate|fps|consoles?|playstation|xbox|esports|"
         r"valorant|fortnite|roblox|overwatch|halo|league of legends|gta|rockstar|factorio|simulation|"
         r"frame time)\b", re.I)),
+    ("agents", "AI agents", re.compile(
+        r"\b(?:ai agents?|llm agents?|agents|agentic|multi-agents?|sub-?agents?|agent (?:framework|orchestration|memory|"
+        r"routing|evaluation|security|loop|harness)|orchestrat\w*|tool (?:calling|use)|function calling|mcp|"
+        r"model context protocol|langgraph|crewai|autogen|human[- ]in[- ]the[- ]loop|prompt injection|"
+        r"context engineering|guardrails?|autonomous workflows?)\b", re.I)),
+    ("ai-engineering", "AI-native engineering", re.compile(
+        r"\b(?:coding agents?|background (?:coding )?agents?|ai[- ](?:assisted|generated|powered) (?:code|coding|tests?|"
+        r"review|development)|llm[- ](?:driven|powered|based) (?:migration|testing|test generation|code)|code review bots?|"
+        r"software factor(?:y|ies)|copilot|claude code|cursor|devin|codex|agentic (?:coding|testing|devops)|"
+        r"test generation|automated (?:code|pull requests?)|developer productivity)\b", re.I)),
     ("ai", "AI & LLMs", re.compile(
-        r"\b(?:llms?|large language models?|language models?|transformers?|rag|retrieval|embeddings?|agents?|"
-        r"agentic|inference|fine[- ]tun\w*|training runs?|model serving|prompt\w*|claude|gpt[\w.-]*|"
+        r"\b(?:llms?|large language models?|language models?|transformers?|rag|retrieval|embeddings?|"
+        r"inference|fine[- ]tun\w*|training runs?|model serving|prompt\w*|claude|gpt[\w.-]*|"
         r"machine learning|deep learning|neural|ml|ai|attention|tokens?|vector search)\b", re.I)),
     ("distributed-systems", "Distributed systems", re.compile(
         r"\b(?:distributed|consensus|replication|raft|paxos|microservices?|kafka|event[- ]driven|queues?|"
@@ -685,6 +873,8 @@ _quantitative = re.compile(
     r"nodes|servers|machines|gpus|cores|users|requests|connections|ticks?|fps|percent)\b|\d+\s?%", re.I)
 CURIOSITY_COMPANY_FRESH_CAP = 3
 
+_PRIORITY_THEMES = frozenset({"game-engineering", "agents", "ai-engineering"})
+
 LEVELS = {"introductory": "Introductory", "intermediate": "Intermediate", "advanced": "Advanced"}
 _introductory = re.compile(
     r"\b(?:an introduction|introduction to|intro to|beginners?|getting started|eli5|explained|basics|primer|101|"
@@ -765,8 +955,8 @@ def quality_score(article):
         score += 2
     score += min(2, len(_quantitative.findall(f"{title} {description}")))
     score += min(2, len(card_technologies(article)) // 2)
-    if THEMES[0][2].search(title):
-        score += 1  # Game engineering is rare in feeds; give it a little room.
+    if any(matcher.search(title) for ident, _, matcher in THEMES if ident in _PRIORITY_THEMES):
+        score += 1  # Game engineering, agents and AI-native engineering are rare in feeds; give them a little room.
     if _announcement.search(title):
         score -= 4
     return score
@@ -901,6 +1091,7 @@ def _card(article, summaries):
         "level": card_level(article),
         "technologies": card_technologies(article),
         "why_read": sanitize_text(article.get("why_read") or summary.get("whyItMatters"), 300),
+        "question": sanitize_text(article.get("question"), 200),
         "read_minutes": read_minutes,
         "read_time_basis": read_basis,
         "url": public["url"],

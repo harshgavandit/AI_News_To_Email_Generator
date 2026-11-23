@@ -78,7 +78,7 @@
   .curiosity-hero { grid-template-columns: minmax(0, 1fr) minmax(320px, 42%); column-gap: 24px; }
   .curiosity-hero > :not(.curiosity-constellation) { grid-column: 1; }
   .curiosity-constellation {
-    grid-column: 2; grid-row: 1 / span 4; position: relative; min-height: 300px; align-self: stretch;
+    grid-column: 2; grid-row: 1 / span 4; position: relative; min-height: 340px; align-self: stretch;
     --constellation-ink: #e7f1fc; --constellation-glow: #22d3ee; --constellation-accent: #67e8f9;
   }
   .curiosity-constellation canvas { position: absolute; inset: 0; display: block; }
