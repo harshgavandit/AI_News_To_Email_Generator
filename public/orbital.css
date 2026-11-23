@@ -1,0 +1,75 @@
+/*
+ * Informa AI orbital layer (orbital.js, globe.js). Loads after command.css on every page.
+ * Holds the planet palette, the aurora field, the comet overlay, region signal edges on
+ * story cards and the pinned-story "absorb" ring. All motion stops with the site's motion
+ * switch, reduced motion, forced colours and print.
+ */
+
+/* ---------- Planet palette (read by globe.js) ---------- */
+:root {
+  --globe-ocean: #13407e; --globe-ocean-deep: #030b20; --globe-land-tint: #2b78c9;
+  --globe-dot: #a8f1ff; --globe-city: #ffe2a0; --globe-rim: #67d6ff;
+  --aurora-a: #6ec3ff; --aurora-b: #00d0ef; --aurora-c: #3d7cff;
+  --region-NA: #38bdf8; --region-LatAm: #2dd4bf; --region-EU: #60a5fa;
+  --region-Africa: #22d3ee; --region-MENA: #7dd3fc; --region-APAC: #0ea5e9;
+}
+:root[data-theme="dark"] { --aurora-a: #0f4fa3; --aurora-b: #06b6d4; --aurora-c: #4f8dfb; }
+
+/* The shader now draws the planet, its halo and the dawn line; the CSS disc stays only as
+   the fallback when WebGL is unavailable. */
+.signal-globe.is-live::before, .command-deck .signal-globe.is-live::before {
+  background: radial-gradient(circle, #22d3ee1c 0 38%, transparent 62%);
+  box-shadow: none; inset: 4%;
+}
+@media (min-width: 1101px) { .command-deck .signal-globe.is-live { --globe-size: clamp(380px, 35vw, 540px); } }
+.command-deck .signal-globe.is-live::after { inset: 4%; border-color: #7dd3fc24; outline-offset: 26px; }
+
+/* ---------- Aurora field (orbital.js) ---------- */
+.aurora-field {
+  position: fixed; inset: 0; z-index: -2; width: 100vw; height: 100vh; pointer-events: none;
+  opacity: 0; animation: orbital-fade-in 1400ms ease-out 120ms forwards;
+}
+:root[data-motion="off"] .aurora-field { display: none; }
+@keyframes orbital-fade-in { to { opacity: 1; } }
+
+/* ---------- Comets, sparks and the warp-in ---------- */
+.orbital-overlay { position: fixed; inset: 0; z-index: 2147483000; width: 100vw; height: 100vh; pointer-events: none; }
+
+/* The Brief Builder takes in a pinned story with a ring of light. */
+.orbital-absorb { animation: orbital-absorb 820ms cubic-bezier(.2, .9, .2, 1); }
+@keyframes orbital-absorb {
+  0% { box-shadow: 0 0 0 0 #22d3eecc, 0 0 0 0 #38bdf880; scale: 1; }
+  25% { scale: 1.08; }
+  100% { box-shadow: 0 0 0 16px #22d3ee00, 0 0 34px 8px #38bdf800; scale: 1; }
+}
+
+/* ---------- Decoding headlines ---------- */
+[data-decoding] { font-variant-ligatures: none; }
+
+/* ---------- Region signal edges on story cards ---------- */
+.reading .stories:not(.story-list) > .story[data-region] {
+  --region-hue: var(--region-NA);
+  box-shadow: var(--sys-e1), inset 0 1px 0 var(--edge-highlight), inset 0 2px 0 color-mix(in srgb, var(--region-hue) 70%, transparent);
+}
+.reading .story[data-region="LatAm"] { --region-hue: var(--region-LatAm); }
+.reading .story[data-region="EU"] { --region-hue: var(--region-EU); }
+.reading .story[data-region="Africa"] { --region-hue: var(--region-Africa); }
+.reading .story[data-region="MENA"] { --region-hue: var(--region-MENA); }
+.reading .story[data-region="APAC"] { --region-hue: var(--region-APAC); }
+@media (hover: hover) and (pointer: fine) {
+  .reading .stories:not(.story-list) > .story[data-region]:hover {
+    box-shadow: var(--sys-e2), inset 0 1px 0 var(--edge-highlight), inset 0 2px 0 var(--region-hue), 0 18px 40px -26px var(--region-hue);
+  }
+}
+
+/* ---------- Accessibility and output fallbacks ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-field, .orbital-overlay { display: none !important; }
+  .orbital-absorb { animation: none; }
+}
+@media (forced-colors: active) {
+  .aurora-field, .orbital-overlay { display: none !important; }
+}
+@media print {
+  .aurora-field, .orbital-overlay { display: none !important; }
+}
