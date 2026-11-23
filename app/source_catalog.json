@@ -12688,5 +12688,1162 @@
     "collection": "AI engineering",
     "reviewed_at": "2026-11-23",
     "require_english": true
+  },
+  {
+    "id": "engineer-s-codex",
+    "group": "engineer-s-codex",
+    "label": "Engineer's Codex",
+    "url": "https://read.engineerscodex.com/feed",
+    "hosts": [
+      "read.engineerscodex.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "shrivu-shankar",
+    "group": "shrivu-shankar",
+    "label": "Shrivu Shankar",
+    "url": "https://blog.sshh.io/feed",
+    "hosts": [
+      "blog.sshh.io"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "transactional-alex-miller",
+    "group": "transactional-alex-miller",
+    "label": "Transactional (Alex Miller)",
+    "url": "https://transactional.blog/feed.xml",
+    "hosts": [
+      "transactional.blog",
+      "www.transactional.blog"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "circleci-blog",
+    "group": "circleci-blog",
+    "label": "CircleCI Blog",
+    "url": "https://circleci.com/blog/feed.xml",
+    "hosts": [
+      "circleci.com",
+      "www.circleci.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "django-weblog",
+    "group": "django-weblog",
+    "label": "Django Weblog",
+    "url": "https://www.djangoproject.com/rss/weblog/",
+    "hosts": [
+      "djangoproject.com",
+      "www.djangoproject.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "ee-times-asia",
+    "group": "ee-times-asia",
+    "label": "EE Times Asia",
+    "url": "https://www.eetasia.com/feed/",
+    "hosts": [
+      "eetasia.com",
+      "www.eetasia.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "ruby-on-rails-blog",
+    "group": "ruby-on-rails-blog",
+    "label": "Ruby on Rails Blog",
+    "url": "https://rubyonrails.org/feed.xml",
+    "hosts": [
+      "rubyonrails.org",
+      "www.rubyonrails.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sans-internet-storm-center",
+    "group": "sans-internet-storm-center",
+    "label": "SANS Internet Storm Center",
+    "url": "https://isc.sans.edu/rssfeed.xml",
+    "hosts": [
+      "isc.sans.edu"
+    ],
+    "kind": "engineering",
+    "topic": "security",
+    "coverage": "advisory",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Security",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sitepoint",
+    "group": "sitepoint",
+    "label": "SitePoint",
+    "url": "https://www.sitepoint.com/feed/",
+    "hosts": [
+      "sitepoint.com",
+      "www.sitepoint.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "influxdata-blog",
+    "group": "influxdata-blog",
+    "label": "InfluxData Blog",
+    "url": "https://www.influxdata.com/blog/feed/",
+    "hosts": [
+      "influxdata.com",
+      "www.influxdata.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "singlestore-blog",
+    "group": "singlestore-blog",
+    "label": "SingleStore Blog",
+    "url": "https://www.singlestore.com/blog/feed/",
+    "hosts": [
+      "singlestore.com",
+      "www.singlestore.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "duolingo-blog",
+    "group": "duolingo-blog",
+    "label": "Duolingo Blog",
+    "url": "https://blog.duolingo.com/rss/",
+    "hosts": [
+      "blog.duolingo.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "metadata-murat-demirbas",
+    "group": "metadata-murat-demirbas",
+    "label": "Metadata (Murat Demirbas)",
+    "url": "https://muratbuffalo.blogspot.com/feeds/posts/default",
+    "hosts": [
+      "muratbuffalo.blogspot.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "o-reilly-radar",
+    "group": "o-reilly-radar",
+    "label": "O'Reilly Radar",
+    "url": "https://www.oreilly.com/radar/feed/",
+    "hosts": [
+      "oreilly.com",
+      "www.oreilly.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "allegro-tech-blog",
+    "group": "allegro-tech-blog",
+    "label": "Allegro Tech Blog",
+    "url": "https://blog.allegro.tech/feed.xml",
+    "hosts": [
+      "blog.allegro.tech"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "data-science-at-microsoft",
+    "group": "data-science-at-microsoft",
+    "label": "Data Science at Microsoft",
+    "url": "https://medium.com/feed/data-science-at-microsoft",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "article_paths": [
+      "/data-science-at-microsoft/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "all-things-distributed",
+    "group": "all-things-distributed",
+    "label": "All Things Distributed",
+    "url": "https://www.allthingsdistributed.com/atom.xml",
+    "hosts": [
+      "allthingsdistributed.com",
+      "www.allthingsdistributed.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "coding-horror",
+    "group": "coding-horror",
+    "label": "Coding Horror",
+    "url": "https://blog.codinghorror.com/rss/",
+    "hosts": [
+      "blog.codinghorror.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "myntra-engineering",
+    "group": "myntra-engineering",
+    "label": "Myntra Engineering",
+    "url": "https://medium.com/feed/myntra-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/myntra-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "strava-engineering",
+    "group": "strava-engineering",
+    "label": "Strava Engineering",
+    "url": "https://medium.com/feed/strava-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/strava-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "sean-goedecke",
+    "group": "sean-goedecke",
+    "label": "Sean Goedecke",
+    "url": "https://www.seangoedecke.com/rss.xml",
+    "hosts": [
+      "seangoedecke.com",
+      "www.seangoedecke.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "twilio-blog",
+    "group": "twilio-blog",
+    "label": "Twilio Blog",
+    "url": "https://www.twilio.com/blog/feed",
+    "hosts": [
+      "twilio.com",
+      "www.twilio.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "drew-breunig",
+    "group": "drew-breunig",
+    "label": "Drew Breunig",
+    "url": "https://www.dbreunig.com/feed.xml",
+    "hosts": [
+      "dbreunig.com",
+      "www.dbreunig.com"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "hellofresh-tech",
+    "group": "hellofresh-tech",
+    "label": "HelloFresh Tech",
+    "url": "https://engineering.hellofresh.com/feed",
+    "hosts": [
+      "engineering.hellofresh.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "ing-tech-blog",
+    "group": "ing-tech-blog",
+    "label": "ING Tech Blog",
+    "url": "https://medium.com/feed/ing-blog",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/ing-blog/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "whatnot-engineering",
+    "group": "whatnot-engineering",
+    "label": "Whatnot Engineering",
+    "url": "https://medium.com/feed/whatnot-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/whatnot-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "daniel-lemire",
+    "group": "daniel-lemire",
+    "label": "Daniel Lemire",
+    "url": "https://lemire.me/blog/feed/",
+    "hosts": [
+      "lemire.me",
+      "www.lemire.me"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "techtrends-kenya",
+    "group": "techtrends-kenya",
+    "label": "TechTrends Kenya",
+    "url": "https://www.techtrendske.co.ke/feed/",
+    "hosts": [
+      "techtrendske.co.ke",
+      "www.techtrendske.co.ke"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Africa",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "marc-brooker",
+    "group": "marc-brooker",
+    "label": "Marc Brooker",
+    "url": "https://brooker.co.za/blog/rss.xml",
+    "hosts": [
+      "brooker.co.za"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "monday-com-engineering",
+    "group": "monday-com-engineering",
+    "label": "monday.com Engineering",
+    "url": "https://engineering.monday.com/feed/",
+    "hosts": [
+      "engineering.monday.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "philipp-schmid",
+    "group": "philipp-schmid",
+    "label": "Philipp Schmid",
+    "url": "https://www.philschmid.de/rss",
+    "hosts": [
+      "philschmid.de",
+      "www.philschmid.de"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "teads-engineering",
+    "group": "teads-engineering",
+    "label": "Teads Engineering",
+    "url": "https://medium.com/feed/teads-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/teads-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "the-hindu-businessline-info-tech",
+    "group": "the-hindu-businessline-info-tech",
+    "label": "The Hindu BusinessLine Info-tech",
+    "url": "https://www.thehindubusinessline.com/info-tech/feeder/default.rss",
+    "hosts": [
+      "thehindubusinessline.com",
+      "www.thehindubusinessline.com"
+    ],
+    "kind": "news",
+    "topic": "industry",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "India",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "tech-world-with-milan",
+    "group": "tech-world-with-milan",
+    "label": "Tech World with Milan",
+    "url": "https://newsletter.techworld-with-milan.com/feed",
+    "hosts": [
+      "newsletter.techworld-with-milan.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "angular-blog",
+    "group": "angular-blog",
+    "label": "Angular Blog",
+    "url": "https://blog.angular.dev/feed",
+    "hosts": [
+      "blog.angular.dev"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "val-town-blog",
+    "group": "val-town-blog",
+    "label": "Val Town Blog",
+    "url": "https://blog.val.town/rss.xml",
+    "hosts": [
+      "blog.val.town"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "wix-engineering",
+    "group": "wix-engineering",
+    "label": "Wix Engineering",
+    "url": "https://www.wix.engineering/blog-feed.xml",
+    "hosts": [
+      "wix.engineering",
+      "www.wix.engineering"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "adevinta-tech-blog",
+    "group": "adevinta-tech-blog",
+    "label": "Adevinta Tech Blog",
+    "url": "https://medium.com/feed/adevinta-tech-blog",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/adevinta-tech-blog/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "answer-ai",
+    "group": "answer-ai",
+    "label": "Answer.AI",
+    "url": "https://www.answer.ai/index.xml",
+    "hosts": [
+      "answer.ai",
+      "www.answer.ai"
+    ],
+    "kind": "engineering",
+    "topic": "ai",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "AI engineering",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "asos-tech-blog",
+    "group": "asos-tech-blog",
+    "label": "ASOS Tech Blog",
+    "url": "https://medium.com/feed/asos-techblog",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/asos-techblog/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "back-market-engineering",
+    "group": "back-market-engineering",
+    "label": "Back Market Engineering",
+    "url": "https://engineering.backmarket.com/feed",
+    "hosts": [
+      "engineering.backmarket.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "bbc-product-technology",
+    "group": "bbc-product-technology",
+    "label": "BBC Product & Technology",
+    "url": "https://medium.com/feed/bbc-product-technology",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/bbc-product-technology/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "bumble-tech",
+    "group": "bumble-tech",
+    "label": "Bumble Tech",
+    "url": "https://medium.com/feed/bumble-tech",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/bumble-tech/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "disney-streaming-technology",
+    "group": "disney-streaming-technology",
+    "label": "Disney Streaming Technology",
+    "url": "https://medium.com/feed/disney-streaming",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/disney-streaming/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "fasterthanli-me",
+    "group": "fasterthanli-me",
+    "label": "fasterthanli.me",
+    "url": "https://fasterthanli.me/index.xml",
+    "hosts": [
+      "fasterthanli.me",
+      "www.fasterthanli.me"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "guardian-engineering",
+    "group": "guardian-engineering",
+    "label": "Guardian Engineering",
+    "url": "https://www.theguardian.com/info/series/engineering-blog/rss",
+    "hosts": [
+      "theguardian.com",
+      "www.theguardian.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/info/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "joel-on-software",
+    "group": "joel-on-software",
+    "label": "Joel on Software",
+    "url": "https://www.joelonsoftware.com/feed/",
+    "hosts": [
+      "joelonsoftware.com",
+      "www.joelonsoftware.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "article",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "miro-engineering",
+    "group": "miro-engineering",
+    "label": "Miro Engineering",
+    "url": "https://medium.com/feed/miro-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/miro-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "olx-engineering",
+    "group": "olx-engineering",
+    "label": "OLX Engineering",
+    "url": "https://tech.olx.com/feed",
+    "hosts": [
+      "tech.olx.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Europe",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "riskified-technology",
+    "group": "riskified-technology",
+    "label": "Riskified Technology",
+    "url": "https://medium.com/feed/riskified-technology",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/riskified-technology/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "square-developer-blog",
+    "group": "square-developer-blog",
+    "label": "Square Developer Blog",
+    "url": "https://developer.squareup.com/blog/rss.xml",
+    "hosts": [
+      "developer.squareup.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "squarespace-engineering",
+    "group": "squarespace-engineering",
+    "label": "Squarespace Engineering",
+    "url": "https://engineering.squarespace.com/blog?format=rss",
+    "hosts": [
+      "engineering.squarespace.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "tokopedia-engineering",
+    "group": "tokopedia-engineering",
+    "label": "Tokopedia Engineering",
+    "url": "https://medium.com/feed/tokopedia-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/tokopedia-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "traveloka-engineering",
+    "group": "traveloka-engineering",
+    "label": "Traveloka Engineering",
+    "url": "https://medium.com/feed/traveloka-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Asia",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/traveloka-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "trendforce-news",
+    "group": "trendforce-news",
+    "label": "TrendForce News",
+    "url": "https://www.trendforce.com/news/feed/",
+    "hosts": [
+      "trendforce.com",
+      "www.trendforce.com"
+    ],
+    "kind": "news",
+    "topic": "chips",
+    "coverage": "reporting",
+    "format": "news",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 60,
+    "collection": "Global technology",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "udemy-engineering",
+    "group": "udemy-engineering",
+    "label": "Udemy Engineering",
+    "url": "https://medium.com/feed/udemy-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "article_paths": [
+      "/udemy-engineering/"
+    ],
+    "reviewed_at": "2026-11-23",
+    "require_english": true
+  },
+  {
+    "id": "vue-js-blog",
+    "group": "vue-js-blog",
+    "label": "Vue.js Blog",
+    "url": "https://blog.vuejs.org/feed.rss",
+    "hosts": [
+      "blog.vuejs.org"
+    ],
+    "kind": "engineering",
+    "topic": "software",
+    "coverage": "publisher",
+    "format": "blog",
+    "region": "Global",
+    "language": "en",
+    "refresh_minutes": 360,
+    "collection": "Systems and software",
+    "reviewed_at": "2026-11-23",
+    "require_english": true
   }
 ]

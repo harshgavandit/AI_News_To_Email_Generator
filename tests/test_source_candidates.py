@@ -170,3 +170,16 @@ def test_discovered_pack_2026_11_23_promotes_exactly_the_validated_feeds():
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+
+def test_round_one_pack_2026_11_23_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-23-round1.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #8: active or quiet with English confirmed.
+    validated = set("""engineer-s-codex,shrivu-shankar,transactional-alex-miller,circleci-blog,django-weblog,ee-times-asia,ruby-on-rails-blog,sans-internet-storm-center,sitepoint,influxdata-blog,singlestore-blog,duolingo-blog,metadata-murat-demirbas,o-reilly-radar,allegro-tech-blog,data-science-at-microsoft,all-things-distributed,coding-horror,myntra-engineering,strava-engineering,sean-goedecke,twilio-blog,drew-breunig,hellofresh-tech,ing-tech-blog,whatnot-engineering,daniel-lemire,techtrends-kenya,marc-brooker,monday-com-engineering,philipp-schmid,teads-engineering,the-hindu-businessline-info-tech,tech-world-with-milan,angular-blog,val-town-blog,wix-engineering,adevinta-tech-blog,answer-ai,asos-tech-blog,back-market-engineering,bbc-product-technology,bumble-tech,disney-streaming-technology,fasterthanli-me,guardian-engineering,joel-on-software,miro-engineering,olx-engineering,riskified-technology,square-developer-blog,squarespace-engineering,tokopedia-engineering,traveloka-engineering,trendforce-news,udemy-engineering,vue-js-blog""".split(","))
+    assert len(validated) == 57
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]
