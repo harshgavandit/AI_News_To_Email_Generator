@@ -67,6 +67,7 @@ uv run python -m scripts.check_sources --source hacker-news
 |---|---|
 | [HTTP API](docs/API.md) | Every endpoint, including Curiosity Cards and briefs |
 | [Deployment](docs/LAUNCH.md) | Vercel, database, email and environment setup |
+| [Release flow](docs/RELEASE-FLOW.md) | Staging first, then a reviewed pull request into main |
 | [Source network](docs/SOURCE-NETWORK.md) | How sources are validated and promoted |
 | [English source policy](docs/ENGLISH-SOURCE-POLICY.md) | Rules for adding and keeping sources |
 | [Product](docs/PRODUCT.md) | Product direction and competitive review |
