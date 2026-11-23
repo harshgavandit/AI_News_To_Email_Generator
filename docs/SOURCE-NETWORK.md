@@ -253,3 +253,10 @@ Validation run #6 (22 November) checked `source-candidates-2026-11-22-global.jso
 ## Agentic AI and AI-native engineering in Curiosity Cards (2026-11-23)
 
 Curiosity Cards has two new themes, **AI agents** (multi-agent systems, orchestration, tool calling and MCP, context and memory, evals, sandboxing, prompt injection) and **AI-native engineering** (coding agents, AI-generated tests, migrations, code review and the "software factory"). Both rank a little higher among fresh feed articles. There are 23 new reviewed classics, each opened in a browser before it was written up. They come from Cognition, Manus, Simon Willison, Hamel Husain, Anthropic (MCP, code execution with MCP, Claude Code sandboxing), OpenAI's agents guide, Slack (long-running multi-agent security investigations, agentic E2E testing, multi-cloud LLM serving), Stripe Minions, Spotify Honk, Google, Meta ACH, Airbnb, Shopify Roast, Discord, Figma, Stripe DocDB, Pinterest, vLLM and ByteDance Monolith. Reviewed classics can carry a `question`, the engineering question the piece answers, which is shown and searchable on the card. Feed items never get a generated question. The discovery seeds now include 88 publisher pages, adding agent tooling, AI labs and fintech engineering blogs, for the **Review publisher discovery and source health** workflow.
+
+Validation run #7 (23 November) checked `source-candidates-2026-11-23-discovered.json`, which was built from publisher discovery run #3. Fourteen feeds passed with English confirmed and were promoted:
+
+- **Active (13):** Remix, Arize AI, Mistral AI News, Eurogamer Tech (Digital Foundry), E2B, Stripe Dot Dev Blog, Tinybird, Zed, Materialize, PhonePe Tech, Linear Now, Encore and Netlify.
+- **Quiet (1):** Shreya Shankar.
+
+The Syntax podcast feed could not be fetched and was not added. The publisher review workflow now prints discovered feeds on its run page.

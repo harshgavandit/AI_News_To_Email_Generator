@@ -149,3 +149,16 @@ def test_global_pack_2026_11_22_is_valid_and_its_checked_feeds_are_promoted():
         assert (row["id"] in checked) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+
+def test_discovered_pack_2026_11_23_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-23-discovered.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    validated = {"remix-blog", "arize-blog", "mistral-news", "eurogamer-tech", "e2b-blog", "stripe-dev-blog", "tinybird-blog",
+                 "zed-blog", "materialize-blog", "phonepe-engineering", "linear-now", "encore-blog", "netlify-blog",
+                 "shreya-shankar"}
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]
