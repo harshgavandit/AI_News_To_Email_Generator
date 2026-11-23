@@ -179,7 +179,10 @@ def test_round_one_pack_2026_11_23_promotes_exactly_the_validated_feeds():
     # Validation run #8: active or quiet with English confirmed.
     validated = set("""engineer-s-codex,shrivu-shankar,transactional-alex-miller,circleci-blog,django-weblog,ee-times-asia,ruby-on-rails-blog,sans-internet-storm-center,sitepoint,influxdata-blog,singlestore-blog,duolingo-blog,metadata-murat-demirbas,o-reilly-radar,allegro-tech-blog,data-science-at-microsoft,all-things-distributed,coding-horror,myntra-engineering,strava-engineering,sean-goedecke,twilio-blog,drew-breunig,hellofresh-tech,ing-tech-blog,whatnot-engineering,daniel-lemire,techtrends-kenya,marc-brooker,monday-com-engineering,philipp-schmid,teads-engineering,the-hindu-businessline-info-tech,tech-world-with-milan,angular-blog,val-town-blog,wix-engineering,adevinta-tech-blog,answer-ai,asos-tech-blog,back-market-engineering,bbc-product-technology,bumble-tech,disney-streaming-technology,fasterthanli-me,guardian-engineering,joel-on-software,miro-engineering,olx-engineering,riskified-technology,square-developer-blog,squarespace-engineering,tokopedia-engineering,traveloka-engineering,trendforce-news,udemy-engineering,vue-js-blog""".split(","))
     assert len(validated) == 57
+    retried = retried_in_round_three()
     for row in pack:
+        if row["id"] in retried:
+            continue  # Judged by the round three check below.
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
@@ -192,6 +195,28 @@ def test_round_two_pack_2026_11_24_promotes_exactly_the_validated_feeds():
     # Validation run #9: active or quiet with English confirmed.
     validated = set("""crunchy-data-blog,release-coredns-coredns,release-lightning-ai-pytorch-lightning,release-longhorn-longhorn,release-redpanda-data-redpanda,databricks-blog,ettelecom,percona-blog,release-anchore-grype,release-anchore-syft,release-appwrite-appwrite,release-cloudflare-workerd,release-confident-ai-deepeval,release-dagster-io-dagster,release-elixir-lang-elixir,release-getsentry-sentry,release-grafana-mimir,release-honojs-hono,release-invoke-ai-invokeai,release-langchain-ai-langchainjs,release-meilisearch-meilisearch,release-open-policy-agent-opa,release-pingcap-tidb,release-rollup-rollup,release-semgrep-semgrep,release-sqlalchemy-sqlalchemy,release-strapi-strapi,release-sveltejs-kit,release-tikv-tikv,release-trufflesecurity-trufflehog,release-vitessio-vitess,release-webpack-webpack,release-zaproxy-zaproxy,xe-iaso,devclass,datadog-security-labs,drew-devault,jessie-frazelle,release-apache-doris,release-apache-hudi,release-apache-tvm,release-expressjs-express,release-hashicorp-packer,release-kedacore-keda,release-knative-serving,release-osquery-osquery,release-ossf-scorecard,release-questdb-questdb,the-information,itwire,release-bevyengine-bevy,release-celery-celery,release-crowdsecurity-crowdsec,release-gleam-lang-gleam,release-google-osv-scanner,release-huggingface-tokenizers,release-jestjs-jest,release-ml-explore-mlx-lm,release-onnx-onnx,release-payloadcms-payload,release-vercel-turborepo,release-goharbor-harbor,release-grafana-k6,release-kubernetes-sigs-cluster-api,release-kubernetes-sigs-karpenter,release-nextcloud-server,release-open-telemetry-opentelemetry-python,release-rancher-rancher,release-storybookjs-storybook,release-wazuh-wazuh,atlassian-engineering,eli-bendersky,release-huggingface-huggingface-hub,release-python-poetry-poetry,release-wandb-wandb,release-zenml-io-zenml,ken-shirriff,release-crossplane-crossplane,release-fastify-fastify,release-gohugoio-hugo,release-grafana-tempo,release-immich-app-immich,release-julialang-julia,release-mintplex-labs-anything-llm,release-prettier-prettier,release-risingwavelabs-risingwave,release-cockroachdb-cockroach,release-cypress-io-cypress,release-directus-directus,release-hoppscotch-hoppscotch,release-mattermost-mattermost,release-nodejs-node,release-nrwl-nx,release-prefecthq-prefect,release-timescale-timescaledb,release-authelia-authelia,release-pnpm-pnpm,release-keycloak-keycloak,release-pocketbase-pocketbase,release-surrealdb-surrealdb,release-swc-project-swc,release-tailscale-tailscale,bartosz-ciechanowski,brandur-leach,python-insider,release-airbytehq-airbyte,release-automatic1111-stable-diffusion-webui,release-calcom-cal-com,release-encode-httpx,release-evanw-esbuild,release-explodinggradients-ragas,release-facebook-react-native,release-gitleaks-gitleaks,release-godotengine-godot,release-helix-editor-helix,release-jetbrains-kotlin,release-kubernetes-ingress-nginx,release-lancedb-lancedb,release-lm-sys-fastchat,release-neondatabase-neon,release-oobabooga-text-generation-webui,release-ory-kratos,release-pallets-flask,release-prisma-prisma,release-psf-requests,release-typesense-typesense,russ-cox,soundcloud-backstage,the-korea-herald-tech,without-boats""".split(","))
     assert len(validated) == 130
+    retried = retried_in_round_three()
+    for row in pack:
+        if row["id"] in retried:
+            continue  # Judged by the round three check below.
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]
+
+
+def retried_in_round_three():
+    """Ids from earlier rounds that were checked again in round three (2026-11-24)."""
+    with open("docs/research/source-candidates-2026-11-24-round3.json", encoding="utf-8") as handle:
+        return {row["id"] for row in json.load(handle)}
+
+
+def test_round_three_pack_2026_11_24_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round3.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Validation run #10: active or quiet with English confirmed (retries keep their id and URL).
+    validated = set("""blablacar-tech,nyt-open,zerodha-tech,9to5linux,analytics-vidhya,cio-dive,linuxiac,canary-media,postman-blog,omg-ubuntu,bolt-labs,quintoandar-tech,thumbtack-engineering,wise-engineering,cio-com,ibm-research-blog,hubspot-product-blog,finextra,cleantechnica,appleinsider,daring-fireball,doctolib-engineering,six-colors,brex-engineering,coursera-engineering,ft-product-technology,ifood-engineering,intuit-engineering,khan-academy-engineering,mercado-libre-tech,sharechat-techbyte,vimeo-engineering""".split(","))
+    assert len(validated) == 32
     for row in pack:
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
