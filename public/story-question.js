@@ -1,4 +1,5 @@
 import { appendClaimEvidence } from "./claim-evidence.js";
+import { countUse } from "./usage.js";
 
 export function createStoryQuestion(request, context, externalLink) {
   const byId = id => document.getElementById(id);
@@ -10,7 +11,10 @@ export function createStoryQuestion(request, context, externalLink) {
   opener.addEventListener("click", () => {
     panel.hidden = !panel.hidden;
     opener.setAttribute("aria-expanded", String(!panel.hidden));
-    if (!panel.hidden) input.focus();
+    if (!panel.hidden) {
+      countUse("story_ask", "open");
+      input.focus();
+    }
   });
   form.addEventListener("submit", async event => {
     event.preventDefault();
@@ -23,6 +27,7 @@ export function createStoryQuestion(request, context, externalLink) {
     output.setAttribute("aria-busy", "true");
     status.classList.remove("error");
     status.textContent = "Checking this story and its supporting sources…";
+    countUse("story_ask", "question");
     try {
       const data = await request("/api/intelligence/converse", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: active.signal,
@@ -55,8 +60,10 @@ export function createStoryQuestion(request, context, externalLink) {
       }
       status.textContent = claims.children.length ? "Answer with linked sources. Review the original reporting for context." :
         "The available source evidence cannot answer this question yet.";
+      countUse("story_ask", claims.children.length ? "answered" : "unanswered");
     } catch (error) {
       if (controller === active && !active.signal.aborted) {
+        countUse("story_ask", "error");
         status.classList.add("error");
         status.textContent = error.message;
       }

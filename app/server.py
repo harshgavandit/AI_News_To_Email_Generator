@@ -68,7 +68,7 @@ from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
 from app import research_projects
-from app import curiosity_api, curiosity_pages, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
+from app import curiosity_api, curiosity_pages, feature_usage, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
 from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
@@ -89,6 +89,7 @@ app.include_router(feeds.router)
 app.include_router(trackers.router)
 app.include_router(weekly_recap.router)
 app.include_router(feedback.router)
+app.include_router(feature_usage.router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000

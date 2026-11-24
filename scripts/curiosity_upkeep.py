@@ -92,6 +92,42 @@ def feedback_section(days, store_factory=None):
     return "\n".join(lines) + "\n"
 
 
+def feature_usage_section(days, store_factory=None):
+    """How often readers open a story's details and ask about it (anonymous, opted-in readers only)."""
+    if store_factory is None and not os.getenv("NEWS_DATABASE_URL"):
+        return ""
+    try:
+        from datetime import UTC, datetime, timedelta
+        from app import feature_usage
+        if store_factory is None:
+            from app.launch_store import get_store as store_factory
+        store = store_factory()
+        if not store:
+            return ""
+        counts = feature_usage.totals(store, (datetime.now(UTC) - timedelta(days=days)).date().isoformat())
+    except Exception as error:
+        logger.warning("curiosity_upkeep_feature_usage_failed error_type=%s", type(error).__name__)
+        return ""
+    opened = counts.get(("story_dossier", "open"), 0)
+    asked = counts.get(("story_ask", "question"), 0)
+    if not opened and not asked:
+        return f"## Ask about this story\n\nNo counts in the last {days} days (readers opt in through audience analytics).\n"
+    answered = counts.get(("story_ask", "answered"), 0)
+    share = lambda part, whole: f"{part / whole:.0%}" if whole else "n/a"  # noqa: E731
+    return "\n".join([
+        "## Ask about this story", "",
+        f"Anonymous counts from readers who turned on audience analytics, last {days} days.", "",
+        f"- Story details opened: {opened}",
+        f"- \"Ask about this story\" opened: {counts.get(('story_ask', 'open'), 0)} ({share(counts.get(('story_ask', 'open'), 0), opened)} of story details)",
+        f"- Questions asked: {asked} ({share(asked, opened)} of story details)",
+        f"- Answered with sources: {answered} ({share(answered, asked)} of questions); "
+        f"not answerable from the sources: {counts.get(('story_ask', 'unanswered'), 0)}; errors: {counts.get(('story_ask', 'error'), 0)}",
+        "",
+        "Rule of thumb: if questions stay under about 5% of story details, keep the feature where it is; "
+        "if they are well above that and mostly answered, make it more visible (a link on story cards, Ctrl+K).",
+    ]) + "\n"
+
+
 def build_report(link_results, queue_section, usage=""):
     return "\n".join([
         "# Curiosity Cards upkeep", "",
@@ -112,7 +148,7 @@ def main(argv=None):
     results = check_seeds()
     days = max(1, min(args.days, 180))
     report = build_report(results, review_queue_section(days, max(1, min(args.limit, 200))),
-                          usage_section(days) + feedback_section(days))
+                          usage_section(days) + feature_usage_section(days) + feedback_section(days))
     print(report)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

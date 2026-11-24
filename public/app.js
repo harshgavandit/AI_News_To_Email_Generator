@@ -7,6 +7,7 @@ import { readingContent } from "./reading-content.js";
 import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 import { createDeliveryStatus } from "./delivery-status.js";
 import { createStoryQuestion } from "./story-question.js";
+import { countUse } from "./usage.js";
 import { followedStories, followedTechnologies, saveStoryFollow } from "./technology-follow.js";
 import { catchupCheckpoint, entryView, homeCatchupRequest, markCatchupCheckpoint } from "./catchup-home.js";
 import { appendClaimEvidence, sourceEvidence } from "./claim-evidence.js";
@@ -2972,6 +2973,7 @@ function openDossier(article, trigger, details) {
   }
   renderDossier(details);
   $("dossier-drawer").showModal();
+  countUse("story_dossier", "open");
   $("dossier-title").focus({ preventScroll: true });
 }
 
