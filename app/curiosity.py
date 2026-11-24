@@ -1071,6 +1071,22 @@ CURATED_CURIOSITY = (
           authors="Phillip Carter", publisher_detail="Honeycomb blog",
           why="The practical problems a demo never shows, from a team that shipped an LLM feature.",
           question="What makes an LLM feature hard to ship?", themes=("ai",)),
+    _seed("google-cloud-europe-west2-power-2026", "Multiple services were experiencing issues in the europe-west2 region",
+          "https://status.cloud.google.com/incidents/Xs2XTHzAVC9YnafnPyzj", "Google Cloud Service Health", "Google", 2026,
+          "A utility cable fault cut power to the data center behind europe-west2-b while its second feed was open for repairs. The generator controller sensed live voltage upstream of that open breaker, decided utility power was healthy and never started the generators, so the zone went dark when its UPS batteries ran out.",
+          ("Postmortem", "Data centers", "Power", "Failover"), 12, None,
+          publisher_detail="Google Cloud incident report",
+          why="Redundant power that failed because a sensor was wired on the wrong side of a breaker.",
+          question="How did a data center with backup generators lose power?", themes=("reliability", "cloud")),
+    _seed("github-availability-september-2026", "GitHub availability report: September 2026",
+          "https://github.blog/news-insights/company-news/github-availability-report-september-2026/", "The GitHub Blog",
+          "GitHub", 2026,
+          "GitHub’s report on two incidents and its reliability work: moving services and MySQL databases to Azure, taking load off its oldest shared database, overload controls that shed lower-priority requests, and a planned failover whose automated emergency process disconnected database copies.",
+          ("Availability report", "MySQL", "Azure", "Load shedding"), 7, "github-availability", published="2026-10-14",
+          authors="Jakub Oleksy", publisher_detail="GitHub availability report", read_time_basis="publisher",
+          why="An unusually open progress report on a large migration, including the targets that were missed.",
+          question="What does GitHub’s move to Azure look like from the inside?",
+          themes=("reliability", "databases", "cloud")),
 )
 # Reviewed themes where keyword evidence alone would mislabel a classic.
 for _ident, _themes in {
@@ -1272,6 +1288,14 @@ REVIEWED_BREAKDOWNS = {
         "Turning natural language into a valid Honeycomb query is hard with huge schemas and slow models.",
         "Query Assistant sends one prompt with the schema, examples and instructions, then parses and corrects the output.",
         "A shipped feature, and a list of problems that had no complete solution."),
+    "google-cloud-europe-west2-power-2026": (
+        "Utility feed A failed while feed B’s breaker was open for repairs, and the generator controller saw voltage upstream of it.",
+        "The PLC never started the generators; the team moved the load to the standby utility source, then fixed the PLC logic.",
+        "europe-west2-b lost power once its UPS batteries ran out; the main impact was resolved within 6 hours and 8 minutes."),
+    "github-availability-september-2026": (
+        "Two September incidents hit GitHub while it moved production services and databases to Azure.",
+        "GitHub reduced load on shared databases, added overload controls and paused regional ramps when capacity was uneven.",
+        "By October 7, 120 of 160 services ran in Central US and 13 of 51 primary MySQL databases had moved."),
 }
 REVIEWED_PROBLEMS = {
     "gitlab-database-outage-2017": ("outages", "data-integrity"), "atlassian-outage-2022": ("outages", "data-integrity"),
@@ -1298,6 +1322,7 @@ REVIEWED_PROBLEMS = {
     "shopify-bfcm-scale-testing": ("scaling-traffic", "performance"),
     "hotstar-scaling-for-50m": ("scaling-traffic", "performance"), "spotify-tech-migrations": ("migrations",),
     "airbnb-great-migration-soa": ("migrations",), "honeycomb-hard-stuff-llms": ("performance", "dev-productivity"),
+    "google-cloud-europe-west2-power-2026": ("outages",), "github-availability-september-2026": ("outages", "migrations"),
 }
 for _seed_card in CURATED_CURIOSITY:
     if _seed_card["id"] in REVIEWED_BREAKDOWNS:
@@ -1913,10 +1938,11 @@ COLLECTIONS = (
       "fastly-outage-june-2021", "crowdstrike-falcon-pir-2024"), ("outages",)),
     ("when-backups-and-failover-fail", "When backups and failover fail",
      "Safety nets that did not catch the fall: missing backups, an automated failover that split writes across "
-     "two coasts, a deletion script, a data center that took the ‘redundant’ control plane with it, and a "
-     "multi-day outage.",
+     "two coasts, a deletion script, a data center that took the ‘redundant’ control plane with it, a "
+     "multi-day outage and backup generators that never started.",
      ("gitlab-database-outage-2017", "github-october-2018-incident", "atlassian-outage-2022",
-      "cloudflare-control-plane-2023", "roblox-return-to-service"), ("outages", "data-integrity")),
+      "cloudflare-control-plane-2023", "roblox-return-to-service", "google-cloud-europe-west2-power-2026"),
+     ("outages", "data-integrity")),
     ("retries-overload-and-cascading-failures", "Retries, overload and cascading failures",
      "Why systems under stress make themselves worse, and the patterns that stop it: timeouts with jitter, "
      "rate limiters, tail-latency tricks, and two Slack incidents where load fed on itself.",
@@ -2044,10 +2070,11 @@ LESSONS = (
      "company’s breach opened the door in these incidents. Treat any exposed secret or session as compromised.",
      ("cloudflare-thanksgiving-2023", "okta-support-system-rca-2023", "circleci-security-incident-2023")),
     ("test-backups-and-failover", "Test backups and failover before you need them",
-     "Backups that were missing, an automatic failover that split writes, deleted sites that took days to restore "
-     "and a ‘redundant’ control plane in one data center: recovery only works if it has been rehearsed.",
+     "Backups that were missing, an automatic failover that split writes, deleted sites that took days to restore, "
+     "a ‘redundant’ control plane in one data center and generators that never got the signal to start: recovery only "
+     "works if it has been rehearsed.",
      ("gitlab-database-outage-2017", "github-october-2018-incident", "atlassian-outage-2022",
-      "cloudflare-control-plane-2023")),
+      "cloudflare-control-plane-2023", "google-cloud-europe-west2-power-2026")),
     ("rehearse-peak-load", "Rehearse peak load before the real event",
      "Shopify and Hotstar both simulate their biggest day ahead of time, on purpose, so failures show up in a test "
      "rather than during Black Friday or a cricket final.",
