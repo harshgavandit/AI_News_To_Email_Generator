@@ -22156,5 +22156,67 @@
     "region": "India",
     "reviewed_at": "2026-11-24",
     "require_english": true
+  },
+  {
+    "id": "swiggy-bytes",
+    "group": "medium",
+    "publisher_group": "swiggy-bytes",
+    "label": "Swiggy Bytes",
+    "url": "https://medium.com/feed/swiggy-bytes",
+    "hosts": [
+      "medium.com",
+      "bytes.swiggy.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "zepto-engineering",
+    "group": "zepto-engineering",
+    "label": "Zepto TechXPress",
+    "url": "https://blog.zepto.com/feed",
+    "hosts": [
+      "blog.zepto.com",
+      "blog.zeptonow.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "groww-engineering",
+    "group": "medium",
+    "publisher_group": "groww-engineering",
+    "label": "The Groww Engineering Blog",
+    "url": "https://medium.com/feed/groww-engineering",
+    "hosts": [
+      "medium.com",
+      "tech.groww.in"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
   }
 ]

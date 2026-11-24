@@ -222,9 +222,15 @@ def retried_in_round_three():
 
 
 def retried_in_round_nine():
-    """Ids from earlier rounds proposed again in round nine (real-world engineering, 2026-11-24),
-    sometimes with a corrected feed URL. Round nine's own test decides whether they were promoted."""
+    """Ids from earlier rounds proposed again in round nine (real-world engineering, 2026-11-24) or
+    later, sometimes with a corrected feed URL. The later round's own test decides whether they were promoted."""
     with open("docs/research/source-candidates-2026-11-24-round9-real-world.json", encoding="utf-8") as handle:
+        return {row["id"] for row in json.load(handle)} | retried_in_round_ten()
+
+
+def retried_in_round_ten():
+    """Indian engineering blogs re-checked in round ten with feed URLs that moved (Swiggy, Zepto) or recovered (Groww)."""
+    with open("docs/research/source-candidates-2026-11-24-round10-india.json", encoding="utf-8") as handle:
         return {row["id"] for row in json.load(handle)}
 
 
@@ -341,7 +347,23 @@ def test_round_nine_real_world_pack_promotes_exactly_the_validated_feeds():
     validated = set("""github-availability,cloudflare-postmortems,doordash-engineering,heroku-engineering,zendesk-engineering,faire-craft,skyscanner-engineering,adyen-tech,deliveroo-engineering,mercari-engineering,cred-engineering""".split(","))
     assert len(validated) == 11
     assert all(row["collection"] == "Real-world engineering" and row["kind"] == "engineering" for row in pack)
+    retried = retried_in_round_ten()
     for row in pack:
+        if row["id"] in retried:
+            continue  # Re-checked with a corrected feed URL in round ten.
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
+
+
+def test_round_ten_india_pack_promotes_the_browser_checked_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round10-india.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source for source in DEFAULT_SOURCES}
+    # Checked in a browser on 2026-11-24: each feed returned English engineering posts from November 2026.
+    validated = {"swiggy-bytes", "zepto-engineering", "groww-engineering"}
+    assert {row["id"] for row in pack} == validated
+    for row in pack:
+        source = promoted[row["id"]]
+        assert source.url == row["url"] and source.region == "India" and source.kind == "engineering"
+        assert source.require_english and source.enabled

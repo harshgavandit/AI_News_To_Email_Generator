@@ -756,3 +756,20 @@ def test_seed_link_checker_classifies_without_live_requests():
     results = {row["id"]: row["result"] for row in links.check_seeds(seeds, workers=2, session=Session())}
     assert results == {"fine": "ok", "gone": "broken", "refuses-head": "ok"}
     assert "**broken** `gone`" in links.summary(links.check_seeds(seeds, workers=1, session=Session()))
+
+
+def test_round_eleven_adds_india_scale_and_app_performance_stories():
+    from app import curiosity
+
+    india = ["zerodha-scaling-common-sense", "phonepe-technology-journey", "flipkart-tidb-active-passive",
+             "swiggy-serviceability-platform", "dream11-ipl-2023-concurrency", "meesho-rollout-service"]
+    apps = ["airbnb-sunsetting-react-native", "shopify-react-native-future", "discord-ios-react-native-performance",
+            "netflix-faster-website", "slack-rebuilding-desktop", "pinterest-pwa-retrospective", "uber-rider-app-architecture"]
+    for ident in india + apps:
+        card = curiosity._card(curiosity.SEEDS_BY_ID[ident], {})
+        assert set(card["breakdown"]) == {"problem", "approach", "result"} and card["problems"], ident
+    lists = {ident: cards for ident, _, _, cards, _ in curiosity.COLLECTIONS}
+    assert set(india) <= set(lists["engineering-at-india-scale"]) and "hotstar-scaling-for-50m" in lists["engineering-at-india-scale"]
+    assert {"netflix-faster-website", "pinterest-pwa-retrospective"} <= set(lists["making-apps-fast"])
+    assert lists["cross-platform-mobile-bets"][:2] == ("airbnb-sunsetting-react-native", "shopify-react-native-future")
+    assert curiosity.SEEDS_BY_ID["swiggy-serviceability-platform"]["source_id"] == "swiggy-bytes"
