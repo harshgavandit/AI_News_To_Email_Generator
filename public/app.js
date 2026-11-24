@@ -1282,7 +1282,7 @@ async function checkForUpdates() {
   const controller = new AbortController();
   state.updateCheck = controller;
   try {
-    const data = await request(`/api/news?${params}`, { signal: controller.signal });
+    const data = await request(`/api/news?${params}${state.sources.length ? "&catalog=0" : ""}`, { signal: controller.signal });
     if (controller.signal.aborted || state.view === "saved" || state.feedKey !== newsParams().toString()) return;
     if ($("source-popover").hidden) renderHealth(data.freshness, data.sources);
     const visible = new Set(state.articles.map((story) => story.id));
@@ -1597,7 +1597,7 @@ async function loadNews(append = false, force = false) {
   try {
     if (append && state.cursor) params.set("cursor", state.cursor);
     if (force) params.set("force", "true");
-    const data = await request(`/api/news?${params}`, {
+    const data = await request(`/api/news?${params}${state.sources.length ? "&catalog=0" : ""}`, {
       signal: controller.signal,
     });
     if (state.controller !== controller || state.view === "saved") return;

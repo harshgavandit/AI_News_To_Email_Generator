@@ -1,0 +1,35 @@
+name: Prepare weekly recap
+# Builds last week's "This week in tech" snapshot early each day (Monday's run creates it before the
+# 08:00 IST morning brief; later runs finish a partial week and otherwise return in seconds).
+# Its own schedule: it never fetches feeds or sends mail.
+on:
+  schedule:
+    - cron: '47 0 * * *'  # 06:17 IST
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: weekly-recap
+  cancel-in-progress: false
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+    steps:
+      - name: Build last week's recap
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$FEED_REFRESH_SECRET" ]]; then
+            echo '::error::FEED_REFRESH_SECRET is missing. See docs/LAUNCH.md.'
+            exit 1
+          fi
+          result=$(curl --silent --show-error --fail --max-time 290 \
+            --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/recap' \
+            <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
+          jq '{recap_status, week, seconds}' <<< "$result" | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -e '.recap_status | IN("ready", "current", "partial", "unavailable")' <<< "$result" > /dev/null
+          if [[ $(jq -r '.recap_status' <<< "$result") == unavailable ]]; then
+            echo "::warning::No recap could be built for $(jq -r '.week' <<< "$result") (no stored coverage for that week)."
+          fi

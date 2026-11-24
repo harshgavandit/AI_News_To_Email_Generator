@@ -60,6 +60,38 @@ def usage_section(days, store_factory=None):
     return "\n".join(lines) + "\n"
 
 
+def feedback_section(days, store_factory=None):
+    """Reader feedback counts only: messages may hold personal details, so they stay behind /api/admin/feedback."""
+    if store_factory is None and not os.getenv("NEWS_DATABASE_URL"):
+        return ""
+    try:
+        from datetime import UTC, datetime, timedelta
+        from app import feedback
+        if store_factory is None:
+            from app.launch_store import get_store as store_factory
+        store = store_factory()
+        if not store:
+            return ""
+        rows = feedback.summary(store, (datetime.now(UTC) - timedelta(days=days)).date().isoformat())
+    except Exception as error:
+        logger.warning("curiosity_upkeep_feedback_failed error_type=%s", type(error).__name__)
+        return ""
+    if not rows:
+        return f"## Reader feedback\n\nNo feedback in the last {days} days.\n"
+    totals = {}
+    for row in rows:
+        totals[row["kind"]] = totals.get(row["kind"], 0) + row["count"]
+    useful = {row["page"]: [0, 0] for row in rows if row["kind"] in {"useful", "not_useful"}}
+    for row in rows:
+        if row["kind"] in {"useful", "not_useful"}:
+            useful[row["page"]][row["kind"] == "not_useful"] += row["count"]
+    lines = ["## Reader feedback", "", f"Last {days} days. Read the messages at `GET /api/admin/feedback` with the owner key.", ""]
+    lines += [f"- {kind}: {count}" for kind, count in sorted(totals.items())]
+    if useful:
+        lines += ["", "Was this page useful? (yes / no)", ""] + [f"- `{page}`: {yes} / {no}" for page, (yes, no) in sorted(useful.items())]
+    return "\n".join(lines) + "\n"
+
+
 def build_report(link_results, queue_section, usage=""):
     return "\n".join([
         "# Curiosity Cards upkeep", "",
@@ -79,7 +111,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     results = check_seeds()
     days = max(1, min(args.days, 180))
-    report = build_report(results, review_queue_section(days, max(1, min(args.limit, 200))), usage_section(days))
+    report = build_report(results, review_queue_section(days, max(1, min(args.limit, 200))),
+                          usage_section(days) + feedback_section(days))
     print(report)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

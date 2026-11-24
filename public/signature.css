@@ -380,8 +380,8 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
     radial-gradient(circle at 15% 85%, transparent 72%, currentColor 73%, currentColor 85%, transparent 86%); }
 
 /* Trackers (trackers.html) */
-.tracker-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6rem 0 1rem; border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
-.tracker-tabs [role="tab"] { font: inherit; font-weight: 600; padding: .65rem 1.05rem; border: 0; border-bottom: 3px solid transparent;
+.tracker-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: .4rem; margin: 1.6rem 0 1rem; border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.tracker-tabs [role="tab"] { flex: none; font: inherit; font-weight: 600; padding: .65rem 1.05rem; border: 0; border-bottom: 3px solid transparent;
   background: none; color: inherit; opacity: .72; cursor: pointer; margin-bottom: -1px; }
 .tracker-tabs [role="tab"][aria-selected="true"] { opacity: 1; border-bottom-color: var(--accent, #1d5bd8); }
 .tracker-tabs [role="tab"]:focus-visible { outline: 3px solid var(--accent, #1d5bd8); outline-offset: 2px; border-radius: 6px; }
@@ -434,3 +434,28 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 /* Grouped coverage facts on story cards, the compare dialog and development pages */
 .coverage-summary { margin: .55rem 0 0; font-size: .86rem; line-height: 1.5; opacity: .88; }
 .coverage-summary-link { font-weight: 600; white-space: nowrap; }
+
+/* Feedback dialog and "Was this useful?" (feedback.js) */
+.feedback-dialog { width: min(34rem, calc(100vw - 2rem)); border: 0; border-radius: 18px; padding: 0;
+  background: Canvas; color: CanvasText; box-shadow: 0 24px 60px rgb(15 23 42 / 28%); }
+.feedback-dialog::backdrop { background: rgb(8 15 30 / 45%); }
+.feedback-form { display: grid; gap: .6rem; padding: 1.3rem 1.4rem 1.2rem; }
+.feedback-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.feedback-head h2 { margin: 0; font-size: 1.3rem; }
+.feedback-form p { margin: 0; }
+.feedback-kinds { display: flex; flex-wrap: wrap; gap: .4rem 1rem; border: 0; padding: 0; margin: 0; }
+.feedback-kinds legend { font-weight: 600; margin-bottom: .3rem; padding: 0; }
+.feedback-kinds label { display: inline-flex; align-items: center; gap: .3rem; margin: 0; }
+.feedback-form textarea, .feedback-form input[type=email] { width: 100%; box-sizing: border-box; font: inherit; }
+.feedback-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.feedback-actions { display: flex; justify-content: flex-end; }
+.feedback-trigger { font: inherit; }
+.useful-box { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; margin: 2rem 0 0; padding: 1rem 1.1rem;
+  border-radius: 14px; border: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.useful-question { font-weight: 600; }
+.useful-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+.feed-list a, .feed-link-rss { display: inline-block; padding-block: .2rem; }
+.feedback-head .dialog-close { position: static; flex: none; width: 2.25rem; height: 2.25rem; padding: 0; line-height: 1;
+  border-radius: 50%; font-size: 1.6rem; color: inherit; }
+.feedback-head .dialog-close:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.feedback-actions .button { width: auto; min-width: 8rem; }

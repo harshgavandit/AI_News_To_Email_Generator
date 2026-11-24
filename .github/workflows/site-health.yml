@@ -1,0 +1,59 @@
+name: Site health
+# Daily check of the public pages and APIs readers depend on. Read-only: it never fetches feeds,
+# sends mail or changes data, and it runs on its own schedule, separate from the feed sweeps.
+on:
+  schedule:
+    - cron: '41 23 * * *'  # 05:11 IST
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: site-health
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE: https://getinformdaily.com
+    steps:
+      - name: Check pages, APIs and feeds
+        shell: bash
+        run: |
+          set -uo pipefail
+          failures=0
+          check() {  # name, path, jq test (empty for non-JSON), minimum bytes
+            local name="$1" path="$2" test="$3" min="${4:-200}" body status
+            body=$(mktemp)
+            status=$(curl --silent --show-error --location --max-time 60 --output "$body" --write-out '%{http_code}' "$SITE$path" || echo 000)
+            size=$(wc -c < "$body")
+            if [[ "$status" != 200 || "$size" -lt "$min" ]]; then
+              echo "::error::$name ($path) answered $status with $size bytes"; failures=$((failures + 1)); return
+            fi
+            if [[ -n "$test" ]] && ! jq -e "$test" "$body" > /dev/null; then
+              echo "::error::$name ($path) returned unexpected content"; failures=$((failures + 1)); return
+            fi
+            echo "ok  $name ($status, $size bytes)" | tee -a "$GITHUB_STEP_SUMMARY"
+          }
+          check "Home page" / "" 5000
+          check "Health" /api/health '.status != null' 10
+          check "Latest stories" '/api/news?hours=24&limit=12' '.articles | length > 0'
+          check "Developing stories" /api/headlines '.articles != null' 50
+          check "Curiosity Cards" '/api/curiosity/cards?limit=6' '.cards | length > 0'
+          check "Trackers: releases" /api/trackers/releases '.items | length > 0'
+          check "Trackers: security" /api/trackers/security '.items.cves != null'
+          check "Alerts config" /api/push/config '.enabled != null' 10
+          check "RSS: latest" /feeds/latest.xml "" 500
+          check "RSS: Curiosity" /feeds/curiosity.xml "" 500
+          check "Sitemap" /sitemap.xml "" 200
+          check "Service worker" /sw.js "" 200
+          recap=$(curl --silent --max-time 60 --output /dev/null --write-out '%{http_code}' "$SITE/api/recap" || echo 000)
+          if [[ "$recap" != 200 ]]; then
+            echo "::warning::No weekly recap is published yet ($recap). Run the 'Prepare weekly recap' workflow."
+          else
+            echo "ok  Weekly recap (200)" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ $(curl --silent --max-time 30 "$SITE/api/push/config" | jq -r '.enabled') != true ]]; then
+            echo "::warning::Device alerts are off: set NEWS_PUSH_VAPID_PRIVATE_KEY in Vercel (docs/PUSH-ALERTS.md)."
+          fi
+          exit $(( failures > 0 ))

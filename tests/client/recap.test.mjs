@@ -47,7 +47,7 @@ test('the recap page renders the week, switches weeks and keeps links safe', asy
     assert.deepEqual(calls, ['/api/recap', '/api/recap/2026-W46']);
     dom.window.history.replaceState(null, '', '/recap.html?week=2026-W40');
     await startRecap({ fetcher, win: dom.window });
-    assert.match(doc.getElementById('recap-status').textContent, /no recap for that week/);
+    assert.match(doc.getElementById('recap-status').textContent, /isn't ready yet/);
   } finally {
     for (const key of ['document', 'location']) delete globalThis[key];
     dom.window.close();

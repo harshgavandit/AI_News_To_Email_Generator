@@ -111,7 +111,13 @@ jobs:
           result=$(curl --silent --show-error --fail --max-time 80 \
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/intelligence' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-          jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status, ai_issue}' <<< "$result"
+          jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status, ai_issue,
+              push_status, push_sent}' <<< "$result"
+          for part in push_status; do
+            if [[ $(jq -r ".$part // empty" <<< "$result") == failed ]]; then
+              echo "::warning::$part failed in the intelligence job; see the Vercel function logs. Feeds and mail are unaffected."
+            fi
+          done
           issue=$(jq -r '.ai_issue // empty' <<< "$result")
           case "$issue" in
             authentication) echo '::error::OpenAI rejected OPENAI_API_KEY (401). Create a new key and update OPENAI_API_KEY in Vercel production, then redeploy. See docs/LAUNCH.md.' ;;

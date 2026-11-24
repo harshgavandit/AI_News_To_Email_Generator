@@ -194,14 +194,17 @@
           element.style.removeProperty("--sys-ri");
         }, 1400);
       });
-    }, { rootMargin: "0px 0px -6% 0px", threshold: .08 });
+    }, { rootMargin: "0px 0px -6% 0px", threshold: 0 });
     const scan = frame(() => {
       if (!motionAllowed()) return;
       for (const element of document.querySelectorAll(REVEAL)) {
         if (element.dataset.sysRevealSeen !== undefined || element.closest("dialog, [hidden]")) continue;
         element.dataset.sysRevealSeen = "";
         // Only content that starts below the viewport is hidden; nothing visible ever blinks.
-        if (element.getBoundingClientRect().top < innerHeight * .92) continue;
+        // Tall panels (long lists) are never hidden: a fraction of them may never fit the viewport,
+        // and their tilted start position would widen the page on phones.
+        const box = element.getBoundingClientRect();
+        if (box.top < innerHeight * .92 || box.height > innerHeight * 1.2) continue;
         element.dataset.sysReveal = "pending";
         reveal.observe(element);
       }

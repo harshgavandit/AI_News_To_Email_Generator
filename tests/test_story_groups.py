@@ -73,3 +73,11 @@ def test_annotation_survives_missing_event_tables(client, monkeypatch):
     monkeypatch.setattr(event_intelligence, "ready", lambda store: False)
     rows = [{"id": "x", "title": "t"}]
     assert story_groups.annotate_articles(store, rows) == [{"id": "x", "title": "t"}]
+
+
+def test_news_can_leave_out_the_source_catalog(client):
+    http, _ = client
+    full = http.get("/api/news", params={"hours": 24, "limit": 12}).json()
+    light = http.get("/api/news", params={"hours": 24, "limit": 12, "catalog": 0}).json()
+    assert full["sources"] and "sources" not in light
+    assert {key for key in full if key != "sources"} == set(light)

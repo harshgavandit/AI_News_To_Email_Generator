@@ -215,7 +215,7 @@ def weekly_recap_for(store, moment=None, timezone_str=None):
     if local.weekday() != 0:
         return None
     try:
-        return weekly_recap.latest(store, moment)
+        return weekly_recap.load(store, weekly_recap.last_complete_week(moment))
     except Exception as error:  # noqa: BLE001 - the brief goes out without it
         logger.warning("weekly_recap_unavailable error_type=%s", type(error).__name__)
         return None

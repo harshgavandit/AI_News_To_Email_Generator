@@ -237,10 +237,6 @@ def curiosity_feed(request: Request):
 def recap_items():
     from app import weekly_recap
     store = archive()
-    try:
-        weekly_recap.latest(store)  # make sure last week's snapshot exists
-    except Exception as error:  # noqa: BLE001 - older recaps can still be listed
-        logger.warning("recap_feed_build_failed error_type=%s", type(error).__name__)
     items = []
     for entry in weekly_recap.available(store, limit=12):
         payload = weekly_recap.load(store, entry["week"])

@@ -14,14 +14,13 @@ import time
 from fastapi import APIRouter, HTTPException, Path, Response
 from sqlalchemy import Column, Float, String, Table, Text, inspect, select
 
-from app.cache import Cache
 from app.coverage import TOPICS, public_article
 from app.feeds import latin_headline
 from app.launch_store import articles, get_store, schema
+from app.sources import BY_ID
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-_partial_cache = Cache("weekly-recap-partial-v2")
 
 weekly_recaps = Table("brief_weekly_recaps", schema,
     Column("week", String(10), primary_key=True), Column("payload", Text, nullable=False),
@@ -59,40 +58,44 @@ def ensure(store):
     store._recap_ready = True
 
 
-def week_stories(store, start, end):
+def _family(row):
+    source = BY_ID.get(row["source_id"])
+    return source.publisher_family if source else row["publisher"]
+
+
+def _story(ident, material, topic):
+    """Detail for one ranked development; publisher text is cleaned only for the rows shown."""
+    rows = sorted(material, key=lambda row: (row["published_at"], row["id"]))
+    shown = [public_article(dict(row)) for row in [rows[-1], *rows[-2::-1][:2]]]
+    lead = shown[0]
+    first = rows[0]
+    return {"id": ident, "title": lead["title"], "topic": topic, "topic_label": TOPICS.get(topic, "Technology"),
+            "outlets": len({_family(row) for row in rows}), "articles": len(rows), "first_reported": first["published_at"],
+            "first_publisher": (BY_ID[first["source_id"]].label if first["source_id"] in BY_ID else first["publisher"]),
+            "summary": (lead.get("cleanSummary") or "")[:280], "url": f"/development.html?id={ident}",
+            "sources": [{"title": row["title"], "url": row.get("original_url") or row["sourceUrl"],
+                         "publisher": row["sourceName"]} for row in shown]}
+
+
+def week_stories(store, start, end, limit=80):
     """Developments that gained coverage this week, ranked by how many publishers covered them that week."""
     from app import event_intelligence
     if not event_intelligence.ready(store):
-        return []
+        return [], 0
     events, items = event_intelligence.events, event_intelligence.event_items
     with store.engine.connect() as conn:
         statement = (store.query(int((datetime.now(UTC) - start).total_seconds() // 3600) + 1)
-                     .join(items, items.c.article_id == articles.c.id).add_columns(items.c.event_id, events.c.topic)
+                     .join(items, items.c.article_id == articles.c.id).add_columns(items.c.event_id, events.c.topic.label("event_topic"))
                      .join(events, events.c.id == items.c.event_id)
                      .where(articles.c.published_at >= start.isoformat(), articles.c.published_at < end.isoformat()))
         rows = conn.execute(statement).mappings().all()
     groups = {}
     for row in rows:
-        groups.setdefault(row["event_id"], []).append(dict(row))
-    stories = []
-    for ident, material in groups.items():
-        cleaned = [public_article(row) for row in material]
-        english = [row for row in cleaned if latin_headline(row["title"])]
-        if not english:
-            continue
-        english.sort(key=lambda row: (row["publishedAt"], row["id"]))
-        publishers = {row.get("publisher_family") or row["sourceName"] for row in english}
-        lead = english[-1]
-        stories.append({"id": ident, "title": lead["title"], "topic": material[0]["topic"],
-                        "topic_label": TOPICS.get(material[0]["topic"], "Technology"),
-                        "outlets": len(publishers), "articles": len(english), "first_reported": english[0]["publishedAt"],
-                        "first_publisher": english[0]["sourceName"],
-                        "summary": (lead.get("cleanSummary") or "")[:280],
-                        "url": f"/development.html?id={ident}",
-                        "sources": [{"title": row["title"], "url": row.get("original_url") or row["sourceUrl"],
-                                     "publisher": row["sourceName"]} for row in english[::-1][:3]]})
-    stories.sort(key=lambda story: (story["outlets"], story["articles"], story["first_reported"]), reverse=True)
-    return stories
+        if latin_headline(row["title"]):
+            groups.setdefault(row["event_id"], []).append(row)
+    ranked = sorted(groups.items(), key=lambda pair: (len({_family(row) for row in pair[1]}), len(pair[1]),
+                                                      min(row["published_at"] for row in pair[1])), reverse=True)
+    return [_story(ident, material, material[0]["event_topic"]) for ident, material in ranked[:limit]], len(groups)
 
 
 def headline_stories(store, start, end, exclude=(), limit=TOP_STORIES):
@@ -101,19 +104,20 @@ def headline_stories(store, start, end, exclude=(), limit=TOP_STORIES):
     statement = (store.query(7 * 24, coverage="reporting", now=end).where(articles.c.published_at >= start.isoformat())
                  .order_by(articles.c.published_at.desc()).limit(3000))
     with store.engine.connect() as conn:
-        rows = [public_article(dict(row)) for row in conn.execute(statement).mappings()]
+        rows = conn.execute(statement).mappings().all()
     seen_titles, picks, per_signal, per_publisher = set(exclude), [], {}, {}
-    for row in sorted(rows, key=lambda row: (impact_score(row), row["publishedAt"]), reverse=True):
-        key = " ".join(row["title"].casefold().split()[:6])
-        signal = (story_signals(row) or [{"id": "other"}])[0]["id"]
-        publisher = row.get("publisher_family") or row["sourceName"]
+    for raw in sorted(rows, key=lambda row: (impact_score(row), row["published_at"]), reverse=True):
+        key = " ".join(raw["title"].casefold().split()[:6])
+        signal = (story_signals(raw) or [{"id": "other"}])[0]["id"]
+        publisher = _family(raw)
         # Spread picks across kinds of news and publishers rather than ten outage headlines.
-        if (key in seen_titles or not latin_headline(row["title"]) or impact_score(row) <= 0
+        if (key in seen_titles or not latin_headline(raw["title"]) or impact_score(raw) <= 0
                 or per_signal.get(signal, 0) >= 2 or per_publisher.get(publisher, 0) >= 2):
             continue
         seen_titles.add(key)
         per_signal[signal] = per_signal.get(signal, 0) + 1
         per_publisher[publisher] = per_publisher.get(publisher, 0) + 1
+        row = public_article(dict(raw))
         link = row.get("original_url") or row["sourceUrl"]
         picks.append({"id": row["id"], "title": row["title"], "topic": row["category"], "topic_label": TOPICS.get(row["category"], "Technology"),
                       "outlets": 1, "articles": 1, "first_reported": row["publishedAt"], "first_publisher": row["sourceName"],
@@ -127,7 +131,7 @@ def headline_stories(store, start, end, exclude=(), limit=TOP_STORIES):
 def build(store, ident):
     from app import trackers
     start, end = week_bounds(ident)
-    stories = week_stories(store, start, end)
+    stories, developments = week_stories(store, start, end)
     grouped = [story for story in stories if story["outlets"] >= 2]
     if len(grouped) < TOP_STORIES:
         known = {" ".join(story["title"].casefold().split()[:6]) for story in grouped}
@@ -155,7 +159,7 @@ def build(store, ident):
         "title": f"This week in tech: {start:%b} {start.day} – {(end - timedelta(days=1)):%b} {(end - timedelta(days=1)).day}, "
                  f"{(end - timedelta(days=1)).year}",
         "complete": len(grouped) >= 5,
-        "stats": {"developments": len(stories), "models": len(models), "providers_with_incidents": len(incidents["providers"]),
+        "stats": {"developments": developments, "models": len(models), "providers_with_incidents": len(incidents["providers"]),
                   "cves": len(security["cves"]), "exploited": sum(item["exploited"] for item in security["cves"]),
                   "releases": len(releases)},
         "top_stories": top, "topics": topics,
@@ -174,45 +178,55 @@ def build(store, ident):
     }
 
 
-def load(store, ident):
+REBUILD_PARTIAL_SECONDS = 6 * 3600
+
+
+def _saved(store, ident):
     ensure(store)
     with store.engine.connect() as conn:
-        row = conn.execute(select(weekly_recaps.c.payload).where(weekly_recaps.c.week == ident)).first()
-    payload = json.loads(row.payload) if row else None
-    return payload if payload and payload.get("top_stories") else None  # an empty snapshot is rebuilt
+        row = conn.execute(select(weekly_recaps.c.payload, weekly_recaps.c.created).where(weekly_recaps.c.week == ident)).first()
+    if not row:
+        return None, 0.0
+    payload = json.loads(row.payload)
+    return (payload if payload.get("top_stories") else None), row.created
+
+
+def load(store, ident):
+    """A saved recap for the week, or None. Requests only ever read snapshots; the recap job builds them."""
+    return _saved(store, ident)[0]
 
 
 def save(store, ident, payload):
+    """Insert, or replace a snapshot that was empty or partial. A complete snapshot is never replaced."""
     ensure(store)
     with store.engine.begin() as conn:
         found = conn.execute(select(weekly_recaps.c.payload).where(weekly_recaps.c.week == ident)).first()
         if found is None:
             conn.execute(weekly_recaps.insert().values(week=ident, payload=json.dumps(payload), created=time.time()))
-        elif not json.loads(found.payload).get("top_stories"):
+            return
+        existing = json.loads(found.payload)
+        if not existing.get("top_stories") or existing.get("complete") is False:
             conn.execute(weekly_recaps.update().where(weekly_recaps.c.week == ident)
                          .values(payload=json.dumps(payload), created=time.time()))
 
 
-def recap(store, ident, *, now=None):
-    """A finished week's recap, built and saved on first use. Returns None for weeks that cannot be built."""
-    saved = load(store, ident)
-    if saved:
-        return saved
-    start, end = week_bounds(ident)
+def prepare(store, ident=None, *, now=None):
+    """Build and save a finished week's recap (the recap job). Returns ready, partial, current or unavailable."""
     now = now or datetime.now(UTC)
+    ident = ident or last_complete_week(now)
+    saved, created = _saved(store, ident)
+    if saved and saved.get("complete", True):
+        return "current"
+    if saved and time.time() - created < REBUILD_PARTIAL_SECONDS:
+        return "partial"
+    start, end = week_bounds(ident)
     if end > now or now - end > timedelta(weeks=BUILDABLE_WEEKS):
-        return None
-    cached, _ = _partial_cache.get(ident)
-    if cached:
-        return cached
+        return "unavailable"
     payload = build(store, ident)
-    if payload["complete"]:
-        save(store, ident, payload)
-    else:
-        # Too little grouped coverage to freeze (for example right after the archive started): serve it,
-        # and try again later.
-        _partial_cache.put(ident, payload, ttl=1800, stale=0)
-    return payload
+    if not payload["top_stories"]:
+        return "unavailable"
+    save(store, ident, payload)
+    return "ready" if payload["complete"] else "partial"
 
 
 def available(store, limit=26):
@@ -225,7 +239,9 @@ def available(store, limit=26):
 
 
 def latest(store, now=None):
-    return recap(store, last_complete_week(now), now=now)
+    """The newest saved recap: last week's once it is prepared, otherwise the week before."""
+    weeks = available(store, limit=1)
+    return load(store, weeks[0]["week"]) if weeks else None
 
 
 def archive():
@@ -237,7 +253,7 @@ def archive():
 
 def respond(response, payload, store):
     if payload is None:
-        raise HTTPException(404, "No recap for that week.")
+        raise HTTPException(404, "That week's recap isn't ready yet. Recaps are prepared early each Monday (UTC).")
     response.headers["Cache-Control"] = "public, max-age=600"
     response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=1800, stale-while-revalidate=86400"
     return {**payload, "weeks": available(store)}
@@ -252,7 +268,7 @@ def latest_recap(response: Response):
 @router.get("/api/recap/{ident}")
 def week_recap(response: Response, ident: str = Path(pattern=WEEK_ID.pattern)):
     store = archive()
-    return respond(response, recap(store, ident), store)
+    return respond(response, load(store, ident), store)
 
 
 # --- Monday email section -------------------------------------------------------------------------

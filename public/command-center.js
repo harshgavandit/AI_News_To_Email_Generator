@@ -267,7 +267,7 @@ export function mountCommandDeck(doc = document) {
 
   async function load() {
     try {
-      const response = await fetch("/api/news?hours=24&limit=50&sort=latest", { headers: { accept: "application/json" } });
+      const response = await fetch("/api/news?hours=24&limit=50&sort=latest&catalog=0", { headers: { accept: "application/json" } });
       if (!response.ok) return;
       const data = await response.json();
       setStat("stories", Number(data.total));

@@ -80,7 +80,7 @@ export async function startRecap({ fetcher = globalThis.fetch, win = window } = 
     status.textContent = "Loading…";
     try {
       const response = await fetcher(week ? `/api/recap/${encodeURIComponent(week)}` : "/api/recap");
-      if (response.status === 404) { status.textContent = "There's no recap for that week yet. Recaps start after a full week of coverage."; return; }
+      if (response.status === 404) { status.textContent = "That week's recap isn't ready yet. Recaps are prepared early each Monday."; return; }
       if (!response.ok) throw new Error(String(response.status));
       const data = await response.json();
       renderRecap(data);

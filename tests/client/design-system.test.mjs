@@ -115,3 +115,9 @@ test('the depth layer removes its motion under reduced motion and forced colours
   for (const selector of ['body::before', '.desk-masthead::before', '.research-header::before', '[data-sys-reveal]', '.dossier-drawer[open]'])
     assert.ok(reduced.includes(selector), `${selector} must be disabled under reduced motion`);
 });
+
+test('reveal animation never hides tall panels or waits for a fraction of a long list', () => {
+  const script = readFileSync(new URL('system.js', root), 'utf8');
+  assert.match(script, /threshold: 0 \}/);
+  assert.match(script, /box\.height > innerHeight \* 1\.2/);
+});

@@ -68,7 +68,7 @@ from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
 from app import research_projects
-from app import curiosity_api, curiosity_pages, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
+from app import curiosity_api, curiosity_pages, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
 from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
@@ -88,6 +88,7 @@ app.include_router(push_api.router)
 app.include_router(feeds.router)
 app.include_router(trackers.router)
 app.include_router(weekly_recap.router)
+app.include_router(feedback.router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -933,7 +934,7 @@ def run_intelligence_check(store):
         except SQLAlchemyError as error:
             logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
         result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief,
-                  **send_push_alerts(store), "recap_status": prepare_weekly_recap(store)}
+                  **send_push_alerts(store)}
         if issue := research_service.take_provider_issue():
             # A coarse category only; provider messages can echo request details.
             result["ai_issue"] = issue
@@ -944,15 +945,6 @@ def run_intelligence_check(store):
         return result
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
-
-
-def prepare_weekly_recap(store):
-    # Last week's recap is saved once, early on Monday, so the morning brief and the page read a snapshot.
-    try:
-        return "ready" if weekly_recap.latest(store) else "unavailable"
-    except Exception as error:  # noqa: BLE001
-        logger.warning("weekly_recap_failed error_type=%s", type(error).__name__)
-        return "failed"
 
 
 def send_push_alerts(store):
@@ -982,6 +974,16 @@ def run_monitoring_check(store, *, scheduled=False):
 def check_monitoring(authorization: str | None = Header(default=None)):
     require_owner(authorization, detail="Enter a valid owner access key to check monitoring.")
     return run_monitoring_check(source_store())
+
+
+@app.get("/api/jobs/recap")
+def weekly_recap_job(authorization: str | None = Header(default=None)):
+    """Prepare last week's recap snapshot. Run daily by .github/workflows/weekly-recap.yml; a finished week is built once."""
+    require_job_secret(authorization)
+    store = source_store()
+    started = time.monotonic()
+    status = weekly_recap.prepare(store)
+    return {"recap_status": status, "week": weekly_recap.last_complete_week(), "seconds": round(time.monotonic() - started, 1)}
 
 
 @app.get("/api/jobs/morning")
@@ -1259,7 +1261,16 @@ def news(request: Request, response: Response, background: BackgroundTasks,
          sort: SortOrder = "latest", coverage: Annotated[str, Query(max_length=24)] = "",
          language: Annotated[str, Query(max_length=16)] = "",
          subject: Annotated[str, Query(max_length=24)] = "",
-         limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None):
+         limit: Annotated[int, Query(ge=1, le=50)] = 24, cursor: Annotated[str | None, Query(max_length=320)] = None,
+         catalog: bool = True):
+    result = news_page(request, response, background, hours, source, force, region, q, kind, publisher, topic, sort,
+                       coverage, language, subject, limit, cursor)
+    # The source catalog is ~1 MB; readers that already have it ask for stories only.
+    return result if catalog or not isinstance(result, dict) else {key: value for key, value in result.items() if key != "sources"}
+
+
+def news_page(request, response, background, hours, source, force, region, q, kind, publisher, topic, sort, coverage,
+              language, subject, limit, cursor):
     if (source not in ("all", *GROUPS) and source not in BY_ID) or kind not in KINDS or (publisher and publisher not in BY_ID):
         raise HTTPException(422, "Choose a supported source or content type.")
     if topic != "all" and topic not in TOPICS:
