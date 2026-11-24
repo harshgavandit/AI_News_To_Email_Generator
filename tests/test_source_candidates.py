@@ -120,10 +120,12 @@ def test_second_wave_pack_is_new_valid_and_never_reproposes():
     known_urls = {source.url.rstrip("/") for source in DEFAULT_SOURCES}
     assert len(wave) >= 150
     assert len({row["id"] for row in wave}) == len(wave) and len({row["url"] for row in wave}) == len(wave)
+    retried = retried_in_round_nine()
     for row in wave:
         assert row["id"] not in tried and row["url"].rstrip("/") not in tried
         # Once promoted, a candidate keeps its id and URL; anything else must be new.
-        assert promoted.get(row["id"], row["url"]) == row["url"]
+        # Round nine retried a few with corrected URLs.
+        assert row["id"] in retried or promoted.get(row["id"], row["url"]) == row["url"]
         if row["id"] not in promoted:
             assert row["url"].rstrip("/") not in known_urls
         assert row["language"] == "en" and row["url"].startswith("https://")
@@ -216,7 +218,14 @@ def retried_in_round_three():
     for name in ("round3", "round7"):
         with open(f"docs/research/source-candidates-2026-11-24-{name}.json", encoding="utf-8") as handle:
             ids |= {row["id"] for row in json.load(handle)}
-    return ids
+    return ids | retried_in_round_nine()
+
+
+def retried_in_round_nine():
+    """Ids from earlier rounds proposed again in round nine (real-world engineering, 2026-11-24),
+    sometimes with a corrected feed URL. Round nine's own test decides whether they were promoted."""
+    with open("docs/research/source-candidates-2026-11-24-round9-real-world.json", encoding="utf-8") as handle:
+        return {row["id"] for row in json.load(handle)}
 
 
 def test_round_three_pack_2026_11_24_promotes_exactly_the_validated_feeds():
@@ -226,7 +235,10 @@ def test_round_three_pack_2026_11_24_promotes_exactly_the_validated_feeds():
     # Validation run #10: active or quiet with English confirmed (retries keep their id and URL).
     validated = set("""blablacar-tech,nyt-open,zerodha-tech,9to5linux,analytics-vidhya,cio-dive,linuxiac,canary-media,postman-blog,omg-ubuntu,bolt-labs,quintoandar-tech,thumbtack-engineering,wise-engineering,cio-com,ibm-research-blog,hubspot-product-blog,finextra,cleantechnica,appleinsider,daring-fireball,doctolib-engineering,six-colors,brex-engineering,coursera-engineering,ft-product-technology,ifood-engineering,intuit-engineering,khan-academy-engineering,mercado-libre-tech,sharechat-techbyte,vimeo-engineering""".split(","))
     assert len(validated) == 32
+    retried = retried_in_round_nine()
     for row in pack:
+        if row["id"] in retried:
+            continue  # Judged by the round nine check below.
         assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
@@ -318,3 +330,18 @@ def test_round_eight_pack_2026_11_24_promotes_exactly_the_validated_feeds():
         if row["id"] in promoted:
             assert promoted[row["id"]] == row["url"]
             assert row["kind"] in {"video", "podcast"}
+
+
+def test_round_nine_real_world_pack_promotes_exactly_the_validated_feeds():
+    with open("docs/research/source-candidates-2026-11-24-round9-real-world.json", encoding="utf-8") as handle:
+        pack = json.load(handle)
+    promoted = {source.id: source.url for source in DEFAULT_SOURCES}
+    # Local validation (scripts.check_source_pack): active or quiet with English confirmed. Monzo's
+    # feed stopped in 2019 and was dropped; incident.io and Nubank URLs were corrected for a re-check.
+    validated = set("""github-availability,cloudflare-postmortems,doordash-engineering,heroku-engineering,zendesk-engineering,faire-craft,skyscanner-engineering,adyen-tech,deliveroo-engineering,mercari-engineering,cred-engineering""".split(","))
+    assert len(validated) == 11
+    assert all(row["collection"] == "Real-world engineering" and row["kind"] == "engineering" for row in pack)
+    for row in pack:
+        assert (row["id"] in validated) == (row["id"] in promoted), row["id"]
+        if row["id"] in promoted:
+            assert promoted[row["id"]] == row["url"]

@@ -224,6 +224,7 @@ def test_scheduled_brief_includes_saved_curiosity_cards_and_removal_stops_future
 def test_morning_suggestions_change_daily_without_repeats_and_skip_saved_cards(mail):
     from datetime import UTC, datetime, timedelta
     from app import mail_schedule
+    from app.web_digest import safe_href
 
     store, _, _ = mail
     mailbox = public_mail.digest_key('mailbox:reader@example.org')
@@ -239,4 +240,5 @@ def test_morning_suggestions_change_daily_without_repeats_and_skip_saved_cards(m
     brief = mail_schedule.append_curiosity_section({'markdown': 'Brief', 'html': '<p>Brief</p>'}, saved, days[0])
     assert brief['markdown'].count(saved[0]['url']) == 1, 'a saved card is not suggested again'
     for card in days[0]:
-        assert card['url'] in brief['html'] and 'Read the original source' in brief['html']
+        # Links are canonicalized for email (for example, without a trailing slash).
+        assert safe_href(card['url']) in brief['html'] and 'Read the original source' in brief['html']
