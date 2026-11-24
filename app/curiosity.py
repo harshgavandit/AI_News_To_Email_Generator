@@ -2360,6 +2360,13 @@ RELATED_PER_CARD = 2
 
 
 @lru_cache(maxsize=None)
+def _seed_traits(ident):
+    """Problems, themes and quality of a reviewed seed, computed once (they never change at runtime)."""
+    seed = SEEDS_BY_ID[ident]
+    return frozenset(card_problems(seed)), frozenset(card_themes(seed)), quality_score(seed)
+
+
+@lru_cache(maxsize=None)
 def _related_ids(ident):
     """Reviewed cards to read after this one: the next stop on its reading list, then the closest match."""
     seed = SEEDS_BY_ID[ident]
@@ -2371,16 +2378,17 @@ def _related_ids(ident):
             if follow and follow in SEEDS_BY_ID and follow not in chosen:
                 chosen.append(follow)
             break
-    problems, themes = set(card_problems(seed)), set(card_themes(seed))
+    problems, themes, _ = _seed_traits(ident)
     company = seed.get("company")
 
     def closeness(other):
-        return (2 * len(problems & set(card_problems(other))) + len(themes & set(card_themes(other)))
+        other_problems, other_themes, _ = _seed_traits(other["id"])
+        return (2 * len(problems & other_problems) + len(themes & other_themes)
                 + (1 if company and other.get("company") == company else 0))
 
     others = [other for other in CURATED_CURIOSITY if other["id"] != ident and other["id"] not in chosen]
     others.sort(key=lambda other: other["id"])
-    others.sort(key=quality_score, reverse=True)
+    others.sort(key=lambda other: _seed_traits(other["id"])[2], reverse=True)
     others.sort(key=closeness, reverse=True)
     for other in others:
         if len(chosen) >= RELATED_PER_CARD or closeness(other) < 2:

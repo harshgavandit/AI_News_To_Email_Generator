@@ -148,6 +148,35 @@ def append_curiosity_section(brief, cards, suggestions=(), weekly=None):
 SUGGESTIONS_PER_DAY = 3
 
 
+_LIBRARY_TTL = 300
+
+
+def _evergreen_cards():
+    """Reviewed seed cards, built once per process: a morning run asks for them once per reader."""
+    global _EVERGREEN
+    if _EVERGREEN is None:
+        from copy import deepcopy
+        from app.curiosity import _card, featured_seeds
+        _EVERGREEN = tuple(_card(deepcopy(article), {}) for article in featured_seeds())
+    return _EVERGREEN
+
+
+_EVERGREEN = None
+
+
+def _library(store):
+    """Saved discovery cards, shared by every reader in a run for a few minutes instead of one query each."""
+    cached = getattr(store, "_morning_library", None)
+    if cached and time.monotonic() - cached[0] < _LIBRARY_TTL:
+        return cached[1]
+    cards = tuple(store.curiosity_library(120))
+    try:
+        store._morning_library = (time.monotonic(), cards)
+    except AttributeError:  # test doubles without attributes
+        pass
+    return cards
+
+
 def curiosity_suggestions(store, mailbox, moment=None, count=SUGGESTIONS_PER_DAY):
     """Daily Curiosity Card picks: a fresh discovery plus evergreen deep dives, new each morning.
 
@@ -155,18 +184,16 @@ def curiosity_suggestions(store, mailbox, moment=None, count=SUGGESTIONS_PER_DAY
     do not repeat until the shelf has been read through. No model call is made here.
     """
     import hashlib
-    from copy import deepcopy
-    from app.curiosity import _card, featured_seeds
     moment = moment or datetime.now(UTC)
     day = int(moment.timestamp() // 86400)
     order = lambda card: hashlib.sha256(f"{mailbox}:{card['id']}".encode()).hexdigest()  # noqa: E731
     try:
-        evergreen = sorted((_card(deepcopy(article), {}) for article in featured_seeds()), key=order)
+        evergreen = sorted(_evergreen_cards(), key=order)
     except Exception as error:
         logger.warning("curiosity_suggestions_unavailable error_type=%s", type(error).__name__)
         evergreen = []
     try:
-        discoveries = sorted((card for card in store.curiosity_library(120) if card.get("url")), key=order)
+        discoveries = sorted((card for card in _library(store) if card.get("url")), key=order)
     except Exception as error:
         logger.warning("curiosity_library_unavailable error_type=%s", type(error).__name__)
         discoveries = []
@@ -184,7 +211,7 @@ def curiosity_suggestions(store, mailbox, moment=None, count=SUGGESTIONS_PER_DAY
     for card in take(discoveries, count):  # Top up if there are few evergreen cards.
         if len(picks) < count and card["id"] not in {pick["id"] for pick in picks}:
             picks.append(card)
-    return picks
+    return [dict(card) for card in picks]
 
 
 def weekly_postmortem_for(moment=None, timezone_str=None):
@@ -215,7 +242,16 @@ def weekly_recap_for(store, moment=None, timezone_str=None):
     if local.weekday() != 0:
         return None
     try:
-        return weekly_recap.load(store, weekly_recap.last_complete_week(moment))
+        week = weekly_recap.last_complete_week(moment)
+        cached = getattr(store, "_morning_recap", None)
+        if cached and cached[0] == week:
+            return cached[1]
+        payload = weekly_recap.load(store, week)
+        try:
+            store._morning_recap = (week, payload)  # one read per run, not one per reader
+        except AttributeError:
+            pass
+        return payload
     except Exception as error:  # noqa: BLE001 - the brief goes out without it
         logger.warning("weekly_recap_unavailable error_type=%s", type(error).__name__)
         return None
