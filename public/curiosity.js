@@ -153,13 +153,15 @@ export function filterCuriosityCards(cards, filter = {}) {
   return result;
 }
 
-function renderFilters(document, all, filter, onFilter) {
+function renderFilters(document, all, filter, onFilter, facets = null) {
   const bar = element(document, "div", "curiosity-filters");
   bar.setAttribute("role", "group");
   bar.setAttribute("aria-label", "Filter Curiosity Cards");
   const origins = element(document, "div", "curiosity-origin-chips");
   for (const [value, label] of ORIGINS) {
-    const count = filterCuriosityCards(all, { origin: value }).length;
+    // Server facets count the whole collection; without them, count the cards on hand.
+    const count = facets ? Number({ all: facets.total, fresh: facets.fresh, classic: facets.classic }[value]) || 0
+      : filterCuriosityCards(all, { origin: value }).length;
     if (value !== "all" && !count) continue;
     const chip = element(document, "button", "curiosity-chip", `${label} · ${count}`);
     chip.type = "button";
@@ -170,7 +172,8 @@ function renderFilters(document, all, filter, onFilter) {
   }
   bar.append(origins);
   const selects = element(document, "div", "curiosity-filter-selects");
-  const themes = Object.keys(CURIOSITY_THEMES).filter((theme) => all.some((card) => cardThemes(card).includes(theme)));
+  const themes = Object.keys(CURIOSITY_THEMES).filter((theme) => (facets
+    ? Number(facets.themes?.[theme]) > 0 : all.some((card) => cardThemes(card).includes(theme))));
   if (themes.length > 1) {
     const label = element(document, "label", "curiosity-company-filter");
     label.append(element(document, "span", "", "Theme"));
@@ -183,7 +186,9 @@ function renderFilters(document, all, filter, onFilter) {
     label.append(select);
     selects.append(label);
   }
-  const companies = curiosityCompanies(all);
+  const companies = facets && Array.isArray(facets.companies)
+    ? facets.companies.map((entry) => (Array.isArray(entry) ? entry[0] : entry)).filter((name) => typeof name === "string")
+    : curiosityCompanies(all);
   if (companies.length > 1) {
     const label = element(document, "label", "curiosity-company-filter");
     label.append(element(document, "span", "", "Company"));
@@ -267,6 +272,7 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
       const entry = element(document, "li");
       const link = element(document, "a", "curiosity-related-link", item.title);
       link.href = sourceHref(item.url);
+      if (typeof item.id === "string") link.dataset.related = item.id;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       if (item.company) link.setAttribute("aria-label", `${item.title}, ${item.company} (opens the original source)`);
@@ -301,6 +307,14 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   footer.append(link);
+  if (typeof options.onShare === "function") {
+    const share = element(document, "button", "text-button curiosity-share", "Share");
+    share.type = "button";
+    share.dataset.curiosityShare = "";
+    share.setAttribute("aria-label", `Share ${card.title}`);
+    share.addEventListener("click", () => options.onShare(card));
+    footer.append(share);
+  }
   article.append(footer);
 
   if (options.actions === false) return article;
@@ -334,13 +348,18 @@ export function renderCuriosityCards(container, cards, options = {}) {
   const pinnedIds = new Set(options.pinnedIds || []);
   const scheduledIds = new Set(options.scheduledIds || []);
   const list = element(document, "div", "curiosity-grid");
-  const all = Array.isArray(cards) ? cards.slice(0, MAX_CURIOSITY_CARDS) : [];
+  // "prefiltered" cards come from the server already filtered, searched and paged; facets count the whole collection.
+  const prefiltered = Boolean(options.prefiltered);
+  const facets = options.facets && typeof options.facets === "object" ? options.facets : null;
+  const all = Array.isArray(cards) ? (prefiltered ? cards : cards.slice(0, MAX_CURIOSITY_CARDS)) : [];
   const filter = options.filter || {};
-  const eligible = filterCuriosityCards(all, filter);
+  const eligible = prefiltered ? all : filterCuriosityCards(all, filter);
   const visibleCount = Math.max(1, Math.min(eligible.length, Number(options.visibleCount) || eligible.length));
-  const filters = all.length > 1 && options.filters !== false ? [renderFilters(document, all, filter, options.onFilter)] : [];
+  const total = prefiltered && Number.isFinite(Number(options.total)) ? Math.max(Number(options.total), eligible.length) : eligible.length;
+  const collectionSize = facets ? Number(facets.total) || 0 : all.length;
+  const filters = collectionSize > 1 && options.filters !== false ? [renderFilters(document, all, filter, options.onFilter, facets)] : [];
 
-  if (!all.length) {
+  if (!all.length && !(prefiltered && collectionSize)) {
     const empty = element(document, "p", "curiosity-empty", options.message ||
       "No Curiosity Cards are available right now. The collection will update with the next content sync.");
     container.replaceChildren(empty);
@@ -363,10 +382,11 @@ export function renderCuriosityCards(container, cards, options = {}) {
     return;
   }
   const content = [...filters, list];
-  if (visibleCount < eligible.length) {
+  if (visibleCount < total) {
     const step = Math.max(1, Number(options.step) || 4);
     const more = element(document, "button", "text-button curiosity-show-more",
-      `Show ${Math.min(step, eligible.length - visibleCount)} more Curiosity Cards`);
+      options.loadingMore ? "Loading more Curiosity Cards…" : `Show ${Math.min(step, total - visibleCount)} more Curiosity Cards`);
+    if (options.loadingMore) more.disabled = true;
     more.type = "button";
     more.dataset.curiosityShowMore = "";
     more.addEventListener("click", () => options.onShowMore?.());
@@ -374,3 +394,19 @@ export function renderCuriosityCards(container, cards, options = {}) {
   }
   container.replaceChildren(...content);
 }
+
+// Query string for /api/curiosity/cards. Only non-default values are sent, so equal filters share a cache entry.
+export function curiosityCardsQuery(filter = {}, { limit = 24, cursor = "" } = {}) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  for (const key of ["theme", "problem", "format", "level", "company", "origin"]) {
+    const value = filter[key];
+    if (typeof value === "string" && value && value !== "all") params.set(key, value);
+  }
+  if (filter.sort === "newest") params.set("sort", "newest");
+  const query = String(filter.query || "").trim().slice(0, 80);
+  if (query) params.set("q", query);
+  if (cursor) params.set("cursor", cursor);
+  return params.toString();
+}
+

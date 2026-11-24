@@ -129,6 +129,12 @@ mail_curiosity = Table("brief_mail_curiosity", schema,
 curiosity_library = Table("brief_curiosity_library", schema,
     Column("id", String(64), primary_key=True), Column("payload", Text, nullable=False),
     Column("score", Integer, nullable=False), Column("saved", Float, nullable=False))
+# Anonymous daily counts of what readers open in Curiosity Cards. No user, IP or device data: one row per
+# day, event, card or list, and surface, holding only a count.
+curiosity_events = Table("brief_curiosity_events", schema,
+    Column("day", String(10), primary_key=True), Column("event", String(24), primary_key=True),
+    Column("card_id", String(96), primary_key=True), Column("list_id", String(96), primary_key=True),
+    Column("surface", String(16), primary_key=True), Column("count", Integer, nullable=False))
 mail_batches = Table("brief_mail_batches", schema,
     Column("id", String(64), primary_key=True),
     Column("created", Float, nullable=False), Column("retry_at", Float, nullable=False),
@@ -706,7 +712,8 @@ class Store:
         if self._curiosity_schema_ready:
             return
         with self._schema_lock, self.engine.begin() as conn:
-            missing = [table for table in (mail_curiosity, curiosity_library) if not inspect(conn).has_table(table.name)]
+            missing = [table for table in (mail_curiosity, curiosity_library, curiosity_events)
+                       if not inspect(conn).has_table(table.name)]
             if missing:
                 if self.engine.dialect.name == "postgresql":
                     conn.exec_driver_sql("SET LOCAL lock_timeout = '5s'")
@@ -744,6 +751,35 @@ class Store:
                 if isinstance(card, dict) and isinstance(card.get("id"), str):
                     cards.append(card)
             return cards
+
+    def record_curiosity_events(self, rows):
+        """Add one to each (day, event, card, list, surface) count. Rows carry no reader identifiers."""
+        if not rows:
+            return
+        self.ensure_curiosity_schema()
+        totals = {}
+        for row in rows:
+            totals[row] = totals.get(row, 0) + 1
+        with self.engine.begin() as conn:
+            for (day, event, card_id, list_id, surface), count in sorted(totals.items()):
+                stmt = self.insert(curiosity_events).values(day=day, event=event, card_id=card_id, list_id=list_id,
+                                                            surface=surface, count=count)
+                conn.execute(stmt.on_conflict_do_update(
+                    index_elements=[curiosity_events.c.day, curiosity_events.c.event, curiosity_events.c.card_id,
+                                    curiosity_events.c.list_id, curiosity_events.c.surface],
+                    set_={"count": curiosity_events.c.count + stmt.excluded.count}))
+
+    def curiosity_event_totals(self, since_day, *, group="card_id", events=None, limit=20):
+        """Summed counts since a day (YYYY-MM-DD), grouped by card or list, highest first."""
+        self.ensure_curiosity_schema()
+        column = curiosity_events.c[group]
+        stmt = (select(column.label("id"), func.sum(curiosity_events.c.count).label("count"))
+                .where(curiosity_events.c.day >= since_day, column != "")
+                .group_by(column).order_by(func.sum(curiosity_events.c.count).desc(), column).limit(max(1, min(limit, 200))))
+        if events:
+            stmt = stmt.where(curiosity_events.c.event.in_(tuple(events)))
+        with self.engine.connect() as conn:
+            return [{"id": row.id, "count": int(row.count)} for row in conn.execute(stmt)]
 
     def curiosity_saved_card(self, ident):
         self.ensure_curiosity_schema()

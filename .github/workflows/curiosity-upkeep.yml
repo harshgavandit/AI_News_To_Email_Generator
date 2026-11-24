@@ -1,0 +1,39 @@
+name: Curiosity Cards monthly upkeep
+# On the 1st of each month: broken seed links plus new incident write-ups worth reviewing, in one report.
+# Reads the archive only; it never fetches feeds, so the twice-daily feed schedule is unchanged.
+on:
+  schedule:
+    - cron: '41 3 1 * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: curiosity-upkeep
+  cancel-in-progress: true
+jobs:
+  upkeep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv
+          uv sync --frozen
+      - name: Build the upkeep report
+        env:
+          NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
+        run: uv run python -m scripts.curiosity_upkeep --days 35 --report reports/curiosity-upkeep.md | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
+      - name: Retain the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: curiosity-upkeep
+          path: reports/curiosity-upkeep.md
+          retention-days: 90

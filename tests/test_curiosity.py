@@ -773,3 +773,263 @@ def test_round_eleven_adds_india_scale_and_app_performance_stories():
     assert {"netflix-faster-website", "pinterest-pwa-retrospective"} <= set(lists["making-apps-fast"])
     assert lists["cross-platform-mobile-bets"][:2] == ("airbnb-sunsetting-react-native", "shopify-react-native-future")
     assert curiosity.SEEDS_BY_ID["swiggy-serviceability-platform"]["source_id"] == "swiggy-bytes"
+
+
+def test_monthly_upkeep_report_combines_links_and_queue_without_a_live_archive(monkeypatch):
+    from scripts import curiosity_upkeep as upkeep
+
+    monkeypatch.delenv("NEWS_DATABASE_URL", raising=False)
+    assert "Skipped: NEWS_DATABASE_URL is not set" in upkeep.review_queue_section(35, 10)
+
+    def broken_store():
+        raise ConnectionError("down")
+
+    assert "Could not read the archive (ConnectionError)" in upkeep.review_queue_section(35, 10, broken_store)
+    assert "0 incident write-ups" in upkeep.review_queue_section(35, 10, lambda: None)
+    links = [{"id": "gone", "url": "https://a.com/x", "status": 404, "final_url": "https://a.com/x", "result": "broken"},
+             {"id": "fine", "url": "https://a.com/y", "status": 200, "final_url": "https://a.com/y", "result": "ok"}]
+    report = upkeep.build_report(links, "## Postmortem review queue\n\nnothing\n")
+    assert report.startswith("# Curiosity Cards upkeep") and "## Seed links: 2 checked" in report
+    assert "**broken** `gone`" in report and "## Postmortem review queue" in report
+
+
+def test_round_twelve_fills_data_observability_and_security_gaps():
+    from app import curiosity
+
+    lists = {ident: cards for ident, _, _, cards, _ in curiosity.COLLECTIONS}
+    for ident in ("data-and-ml-platforms", "observability-in-practice", "security-engineering-foundations"):
+        assert 4 <= len(lists[ident]) <= 10 and set(lists[ident]) <= set(curiosity.SEEDS_BY_ID), ident
+    security = [ident for ident, seed in curiosity.SEEDS_BY_ID.items() if "security" in curiosity.card_themes(seed)]
+    assert len(security) >= 18
+    for ident in ("uber-michelangelo", "datadog-husky-event-store", "cloudflare-phishing-hardware-keys", "google-beyondcorp"):
+        assert curiosity._card(curiosity.SEEDS_BY_ID[ident], {})["breakdown"], ident
+
+
+@pytest.fixture
+def cards_api(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import curiosity_api, server
+
+    monkeypatch.setattr(curiosity_api, "get_store", lambda: None)
+    curiosity_api._shelf_cache.clear()
+    yield TestClient(server.app), curiosity_api
+    curiosity_api._shelf_cache.clear()
+
+
+def test_cards_api_pages_the_whole_collection_with_a_cursor_and_no_repeats(cards_api):
+    from app import curiosity
+
+    client, _ = cards_api
+    seen, cursor, pages = [], "", 0
+    while True:
+        response = client.get("/api/curiosity/cards", params={"limit": 48, **({"cursor": cursor} if cursor else {})})
+        assert response.status_code == 200
+        payload = response.json()
+        seen += [card["id"] for card in payload["cards"]]
+        pages += 1
+        cursor = payload["next_cursor"]
+        if not cursor:
+            break
+    assert len(seen) == len(set(seen)) == payload["total"] == len(curiosity.CURATED_CURIOSITY), "every reviewed card, once"
+    assert pages == -(-len(seen) // 48)
+    facets = payload["facets"]
+    assert facets["total"] == len(seen) and facets["themes"]["security"] >= 18
+    assert all(isinstance(pair, list) and len(pair) == 3 for pair in facets["theme_pairs"])
+    assert "Kubernetes" in facets["technologies"] or facets["technologies"]
+
+
+def test_cards_api_filters_searches_and_sorts_on_the_server(cards_api):
+    client, _ = cards_api
+    security = client.get("/api/curiosity/cards", params={"theme": "security", "limit": 48}).json()
+    assert security["total"] >= 18 and all("security" in card["themes"] for card in security["cards"])
+    kafka = client.get("/api/curiosity/cards", params={"q": "  KAFKA  "}).json()
+    assert kafka["filters"]["q"] == "KAFKA" and any(card["id"] == "linkedin-kafka-benchmark" for card in kafka["cards"])
+    newest = client.get("/api/curiosity/cards", params={"sort": "newest", "limit": 10}).json()["cards"]
+    dates = [card.get("published_at") or str(card.get("year")) for card in newest]
+    assert dates == sorted(dates, reverse=True)
+    india = client.get("/api/curiosity/cards", params={"company": "Swiggy"}).json()
+    assert [card["id"] for card in india["cards"]] == ["swiggy-serviceability-platform"]
+    assert client.get("/api/curiosity/cards", params={"q": "zzzz-no-such-story"}).json()["total"] == 0
+
+
+def test_cards_api_rejects_bad_input_and_stale_cursors_and_supports_conditional_requests(cards_api):
+    client, api = cards_api
+    assert client.get("/api/curiosity/cards", params={"theme": "bogus"}).status_code == 422
+    assert client.get("/api/curiosity/cards", params={"limit": 500}).status_code == 422
+    assert client.get("/api/curiosity/cards", params={"cursor": "not-a-cursor"}).status_code == 400
+    assert client.get("/api/curiosity/cards", params={"cursor": api.encode_cursor("0" * 16, 24)}).status_code == 409
+    assert client.get("/api/curiosity/cards", params={"q": "x" * 81}).status_code == 422
+    first = client.get("/api/curiosity/cards", params={"limit": 5})
+    assert first.headers["cache-control"].startswith("public, max-age=60") and first.headers["etag"].startswith('W/"')
+    again = client.get("/api/curiosity/cards", params={"limit": 5}, headers={"If-None-Match": first.headers["etag"]})
+    assert again.status_code == 304 and not again.content
+
+
+def test_single_card_endpoint_serves_seeds_and_404s_unknown_ids(cards_api):
+    client, _ = cards_api
+    card = client.get("/api/curiosity/cards/dropbox-password-storage")
+    assert card.status_code == 200 and card.json()["card"]["breakdown"]["approach"].startswith("Three layers")
+    assert client.get("/api/curiosity/cards/no-such-card").status_code == 404
+    assert client.get("/api/curiosity/cards/..%2Fetc").status_code in {404, 422}
+
+
+@pytest.fixture
+def events_api(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from app import curiosity_api, server
+
+    store = Store(f"sqlite:///{(tmp_path / 'events.sqlite').as_posix()}")
+    store.migrate()
+    monkeypatch.setattr(curiosity_api, "get_store", lambda: store)
+    curiosity_api._shelf_cache.clear()
+    curiosity_api._popular_cache.clear()
+    server._limits.clear()
+    yield TestClient(server.app), store, curiosity_api
+    curiosity_api._shelf_cache.clear()
+    curiosity_api._popular_cache.clear()
+
+
+def test_usage_events_store_anonymous_daily_counts_for_known_cards_only(events_api):
+    from sqlalchemy import inspect, select
+    from app.launch_store import curiosity_events
+
+    client, store, _ = events_api
+    body = {"events": [
+        {"type": "open_source", "surface": "collection", "card_id": "dropbox-password-storage"},
+        {"type": "open_source", "surface": "collection", "card_id": "dropbox-password-storage"},
+        {"type": "read_next", "surface": "card_page", "card_id": "google-beyondcorp"},
+        {"type": "list_open", "surface": "collection", "list_id": "security-engineering-foundations"},
+        {"type": "open_source", "surface": "collection", "card_id": "not-a-real-card"},
+        {"type": "list_open", "surface": "collection", "list_id": "not-a-list"},
+        {"type": "share", "surface": "home", "card_id": "<script>"},
+    ]}
+    response = client.post("/api/curiosity/events", json=body)
+    assert response.status_code == 204 and not response.content
+    with store.engine.connect() as conn:
+        rows = sorted(tuple(row) for row in conn.execute(select(curiosity_events.c.event, curiosity_events.c.card_id,
+                                                                curiosity_events.c.list_id, curiosity_events.c.count)))
+    assert rows == [("list_open", "", "security-engineering-foundations", 1), ("open_source", "dropbox-password-storage", "", 2),
+                    ("read_next", "google-beyondcorp", "", 1)], "unknown cards and lists are dropped"
+    columns = {column["name"] for column in inspect(store.engine).get_columns("brief_curiosity_events")}
+    assert columns == {"day", "event", "card_id", "list_id", "surface", "count"}, "no reader identifiers are stored"
+    # A second batch adds to the same daily counter.
+    client.post("/api/curiosity/events", json={"events": body["events"][:1]})
+    assert store.curiosity_event_totals("2000-01-01", events=("open_source",))[0] == {"id": "dropbox-password-storage", "count": 3}
+
+
+def test_usage_events_honour_privacy_signals_and_reject_malformed_batches(events_api):
+    client, store, _ = events_api
+    event = {"type": "open_source", "surface": "collection", "card_id": "dropbox-password-storage"}
+    assert client.post("/api/curiosity/events", json={"events": [event]}, headers={"Sec-GPC": "1"}).status_code == 204
+    assert client.post("/api/curiosity/events", json={"events": [event]}, headers={"DNT": "1"}).status_code == 204
+    assert store.curiosity_event_totals("2000-01-01") == [], "Global Privacy Control and Do Not Track are never counted"
+    assert client.post("/api/curiosity/events", json={"events": []}).status_code == 422
+    assert client.post("/api/curiosity/events", json={"events": [event] * 21}).status_code == 422
+    assert client.post("/api/curiosity/events", json={"events": [{**event, "ip": "1.2.3.4"}]}).status_code == 422
+    assert client.post("/api/curiosity/events", json={"events": [{**event, "type": "purchase"}]}).status_code == 422
+    statuses = [client.post("/api/curiosity/events", json={"events": [event]}).status_code for _ in range(61)]
+    assert statuses[-1] == 429, "each client is rate limited"
+
+
+def test_popular_cards_need_enough_anonymous_counts(events_api):
+    client, store, api = events_api
+    assert client.get("/api/curiosity/popular").json()["cards"] == []
+    today = __import__("datetime").datetime.now(UTC).date().isoformat()
+    store.record_curiosity_events([(today, "open_source", "dropbox-password-storage", "", "collection")] * 15
+                                  + [(today, "card_view", "google-beyondcorp", "", "card_page")] * 6
+                                  + [(today, "read_next", "uber-m3-metrics", "", "collection")] * 2)
+    api._popular_cache.clear()
+    payload = client.get("/api/curiosity/popular").json()
+    assert [card["id"] for card in payload["cards"]] == ["dropbox-password-storage", "google-beyondcorp"], \
+        "ranked by opens; cards below the minimum are left out"
+    assert "count" not in payload["cards"][0], "counts are not published"
+
+
+def test_card_pages_are_server_rendered_escaped_and_listed_in_the_cards_sitemap(cards_api):
+    import json as _json
+    from app import curiosity
+
+    client, _ = cards_api
+    page = client.get("/cards/dream11-ipl-2023-concurrency")
+    assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
+    html = page.text
+    assert '<link rel="canonical" href="https://getinformdaily.com/cards/dream11-ipl-2023-concurrency" />' in html
+    assert 'property="og:title"' in html and "10.56 million concurrent users" in html
+    assert 'href="https://tech.dream11.in/blog/ipl-fever' in html and 'rel="noopener noreferrer"' in html
+    ld = html.split('<script type="application/ld+json">')[1].split("</script>")[0]
+    assert _json.loads(ld)["@type"] == "Article"
+    sheets = [line.split('href="/')[1].split('"')[0] for line in html.splitlines() if 'rel="stylesheet"' in line]
+    assert sheets[-4:] == ["system.css", "command.css", "orbital.css", "signature.css"]
+    missing = client.get("/cards/no-such-card")
+    assert missing.status_code == 404 and 'content="noindex"' in missing.text
+    sitemap = client.get("/sitemap-cards.xml")
+    assert sitemap.headers["content-type"].startswith("application/xml")
+    assert sitemap.text.count("<loc>") == len(curiosity.CURATED_CURIOSITY)
+
+
+def test_card_page_escapes_hostile_card_text(monkeypatch):
+    from app import curiosity_pages
+
+    hostile = {"id": "x", "title": "</title><script>alert(1)</script>", "summary": '"><img src=x onerror=alert(1)>',
+               "url": "javascript:alert(1)", "company": "<b>Co</b>", "themes": [], "problems": [],
+               "breakdown": {"problem": "<i>p</i>", "approach": "a", "result": "r"},
+               "related": [{"id": "y", "title": "</a><script>", "company": "c"}]}
+    html = curiosity_pages.render_card_page(hostile)
+    assert "<script>alert(1)</script>" not in html and "<img src=x" not in html and "<b>Co</b>" not in html
+    assert "javascript:alert" not in html, "only https source links are rendered"
+    ld = html.split('<script type="application/ld+json">')[1].split("</script>")[0]
+    assert "</" not in ld
+
+
+def test_upkeep_report_lists_what_readers_opened(tmp_path):
+    from scripts import curiosity_upkeep as upkeep
+
+    store = Store(f"sqlite:///{(tmp_path / 'usage.sqlite').as_posix()}")
+    store.migrate()
+    assert "No anonymous counts yet" in upkeep.usage_section(35, lambda: store)
+    today = datetime.now(UTC).date().isoformat()
+    store.record_curiosity_events([(today, "open_source", "dropbox-password-storage", "", "collection")] * 4
+                                  + [(today, "list_open", "", "observability-in-practice", "collection")])
+    section = upkeep.usage_section(35, lambda: store)
+    assert "`dropbox-password-storage` — 4 opens" in section and "`observability-in-practice` — 1 opens" in section
+
+
+def test_a_large_shelf_never_asks_for_more_model_summarised_fresh_cards(monkeypatch):
+    from app import curiosity
+
+    asked = []
+    monkeypatch.setattr(curiosity, "_fresh_discoveries", lambda store, limit: asked.append(limit) or [])
+    curiosity.build_curiosity_cards(None, limit=curiosity.MAX_CURIOSITY_CARDS)
+    assert asked == [curiosity.MAX_FRESH_CARDS], "fresh cards are capped however large the shelf is"
+
+
+def test_a_stale_shelf_is_served_at_once_and_rebuilt_in_the_background(monkeypatch):
+    import threading
+    from app import curiosity_api
+
+    curiosity_api._shelf_cache.clear()
+    builds = []
+    rebuilt = threading.Event()
+
+    def build(store, limit):
+        builds.append(limit)
+        if len(builds) > 1:
+            rebuilt.set()
+        return [{"id": f"card-{len(builds)}", "title": "t", "themes": [], "problems": [], "seed": True}]
+
+    monkeypatch.setattr(curiosity_api, "build_curiosity_cards", build)
+    monkeypatch.setattr(curiosity_api, "get_store", lambda: None)
+    first = curiosity_api.curiosity_shelf()
+    assert [card["id"] for card in first["cards"]] == ["card-1"] and len(builds) == 1, "a cold start builds once"
+    assert curiosity_api.curiosity_shelf() is first or curiosity_api.curiosity_shelf()["version"] == first["version"]
+    entry = curiosity_api._shelf_cache.entries["shelf"]
+    entry["fresh_until"] = 0  # Past its fresh window, still inside the stale window.
+    served = curiosity_api.curiosity_shelf()
+    assert served["version"] == first["version"], "the stale shelf is served immediately"
+    assert rebuilt.wait(5), "and a new one is built in the background"
+    for _ in range(50):
+        if curiosity_api._shelf_cache.entries["shelf"]["value"]["cards"][0]["id"] == "card-2":
+            break
+        threading.Event().wait(0.02)
+    assert curiosity_api.curiosity_shelf()["cards"][0]["id"] == "card-2"
+    curiosity_api._shelf_cache.clear()

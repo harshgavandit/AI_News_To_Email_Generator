@@ -19,7 +19,8 @@ import { createCoverageDialog } from "./coverage-dialog.js";
 import { createVisitCatchup } from "./visit-catchup.js";
 import { catchupCard } from "./catchup-cards.js";
 import { openVisit } from "./visit-history.js";
-import { renderCuriosityCards } from "./curiosity.js";
+import { curiosityCardsQuery, renderCuriosityCards } from "./curiosity.js";
+import { bindCardTracking } from "./curiosity-events.js";
 import { createSearchSuggestions } from "./search-suggest.js";
 
 const $ = (id) => document.getElementById(id);
@@ -63,6 +64,8 @@ const state = {
   curiosityCards: [],
   curiosityVisibleCount: 4,
   curiosityFilter: { origin: "all", company: "all", theme: "all" },
+  curiosityFacets: null,
+  curiosityTotal: 0,
   curiosityPendingScheduledId: "",
 };
 const windows = { 12: "12h", 24: "24h", 168: "7d", 720: "30d", 2160: "90d" };
@@ -375,11 +378,20 @@ function renderCuriosity() {
     scheduledEnabled: Boolean(state.mail?.scheduled_enabled),
     visibleCount: state.curiosityVisibleCount,
     filter: state.curiosityFilter,
-    onFilter: (filter) => {
+    // The server filters the collection; facets keep the counts for the whole collection.
+    prefiltered: Boolean(state.curiosityFacets),
+    facets: state.curiosityFacets,
+    total: Math.min(state.curiosityTotal, state.curiosityCards.length),
+    onFilter: async (filter) => {
       const companyChanged = filter.company !== state.curiosityFilter.company;
       const themeChanged = (filter.theme || "all") !== (state.curiosityFilter.theme || "all");
       state.curiosityFilter = filter;
       state.curiosityVisibleCount = 4;
+      try {
+        await fetchCuriosity();
+      } catch {
+        status("curiosity-status", "Curiosity Cards could not load for that filter. Try again.", true);
+      }
       renderCuriosity();
       container.querySelector(themeChanged ? "[data-curiosity-theme]" : companyChanged
         ? "[data-curiosity-company]" : `[data-curiosity-origin="${filter.origin}"]`)?.focus();
@@ -410,15 +422,25 @@ function renderCuriosity() {
       : "Selections are saved privately. Enable scheduled delivery when you send a brief to receive them.";
 }
 
+// The homepage shelf shows a few cards at a time, so one server page of the current filter is enough.
+const CURIOSITY_SHELF_PAGE = 48;
+let curiosityRequest = 0;
+
+async function fetchCuriosity() {
+  const ticket = ++curiosityRequest;
+  const payload = await request(`/api/curiosity/cards?${curiosityCardsQuery(state.curiosityFilter, { limit: CURIOSITY_SHELF_PAGE })}`);
+  if (ticket !== curiosityRequest) return;  // A newer filter change won.
+  state.curiosityCards = Array.isArray(payload.cards) ? payload.cards : [];
+  state.curiosityFacets = payload.facets || null;
+  state.curiosityTotal = Number(payload.total) || state.curiosityCards.length;
+}
+
 async function loadCuriosity() {
   const container = $("curiosity-cards");
+  bindCardTracking(container, "home");
   container.setAttribute("aria-busy", "true");
-  const [collection, mailbox] = await Promise.allSettled([
-    request("/api/curiosity?limit=240"),
-    request("/api/mail/config"),
-  ]);
-  if (collection.status === "fulfilled") state.curiosityCards = collection.value.cards || [];
-  else status("curiosity-status", "Curiosity Cards could not load. Try refreshing the page.", true);
+  const [collection, mailbox] = await Promise.allSettled([fetchCuriosity(), request("/api/mail/config")]);
+  if (collection.status === "rejected") status("curiosity-status", "Curiosity Cards could not load. Try refreshing the page.", true);
   if (mailbox.status === "fulfilled") state.mail = mailbox.value;
   container.setAttribute("aria-busy", "false");
   renderCuriosity();

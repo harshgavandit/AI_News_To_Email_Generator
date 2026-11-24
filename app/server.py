@@ -68,6 +68,7 @@ from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
 from app import research_projects
+from app import curiosity_api, curiosity_pages
 from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
@@ -81,6 +82,8 @@ app.include_router(monitoring.router)
 app.include_router(insight_router)
 app.include_router(research_projects.router)
 app.include_router(research_projects.public_router)
+app.include_router(curiosity_api.router)
+app.include_router(curiosity_pages.router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000

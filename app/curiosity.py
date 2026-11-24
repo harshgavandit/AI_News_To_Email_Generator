@@ -1191,6 +1191,106 @@ CURATED_CURIOSITY = (
           authors="Vivian Tran · Yixin Zhu", publisher_detail="Uber engineering blog",
           why="What a mobile architecture needs when thousands of engineers work in one app.",
           question="Why did Uber rebuild its rider app from scratch?", themes=("engineering-practice", "reliability")),
+    # --- Round 12: data and ML platforms, observability, and security engineering -----------------------------
+    _seed("uber-michelangelo", "Meet Michelangelo: Uber’s Machine Learning Platform",
+          "https://www.uber.com/blog/michelangelo-machine-learning-platform/", "Uber Blog", "Uber", 2017,
+          "Before Michelangelo, Uber had no reliable way to build training data, models could not outgrow a data scientist’s desktop, experiments were not tracked, and every team built its own serving path. Michelangelo standardised the whole workflow, from managing data to training, deploying and monitoring predictions.",
+          ("Machine learning", "ML platform", "Feature store"), 15, "uber-engineering", published="2017-09-05",
+          publisher_detail="Uber engineering blog",
+          why="The platform that made ‘ML-as-a-service’ inside a company a common pattern.",
+          question="What does it take to let every team ship machine learning?", themes=("ai", "distributed-systems")),
+    _seed("doordash-feature-store-redis", "Building a Gigascale ML Feature Store with Redis, Binary Serialization, String Hashing, and Compression",
+          "https://careersatdoordash.com/blog/building-a-gigascale-ml-feature-store-with-redis/", "DoorDash Engineering",
+          "DoorDash", 2020,
+          "DoorDash’s Redis feature store, holding billions of records for model inference, was close to running out of capacity. After benchmarking five key-value stores, the team kept Redis and changed how features are stored, with string hashing, protocol buffers and Snappy compression, tripling capacity and cutting Redis latency by 38%.",
+          ("Redis", "Feature store", "Machine learning", "Compression"), 14, "doordash-engineering", published="2020-11-19",
+          authors="Arbaz Khan · Zohaib Sibte Hassan", publisher_detail="DoorDash engineering blog",
+          why="A data-layout fix that beat a database migration.",
+          question="How do you fit billions of ML features in Redis?", themes=("databases", "ai", "performance")),
+    _seed("linkedin-kafka-benchmark", "Benchmarking Apache Kafka: 2 Million Writes Per Second (On Three Cheap Machines)",
+          "https://engineering.linkedin.com/kafka/benchmarking-apache-kafka-2-million-writes-second-three-cheap-machines",
+          "LinkedIn Engineering", "LinkedIn", 2014,
+          "Jay Kreps benchmarks Kafka, LinkedIn’s central log for integrating data, stream processing and Hadoop ingestion, and shows two million writes a second on three modest machines. He explains why a persistent, partitioned log shared by every consumer makes that throughput possible.",
+          ("Kafka", "Logs", "Benchmarks", "Stream processing"), 12, None, published="2014-04-27",
+          authors="Jay Kreps", publisher_detail="LinkedIn engineering blog",
+          why="Why a simple append-only log became the backbone of data infrastructure.",
+          question="How can three cheap machines take two million writes a second?",
+          themes=("distributed-systems", "performance")),
+    _seed("netflix-personalization-architecture", "System Architectures for Personalization and Recommendation",
+          "https://netflixtechblog.com/system-architectures-for-personalization-and-recommendation-e081aa94b5d8",
+          "Netflix TechBlog", "Netflix", 2013,
+          "Netflix splits recommendation work into offline batch jobs, nearline computation that reacts to events without serving in real time, and online computation that answers requests as they happen. The post explains the trade-offs of each and how signals and models move between them.",
+          ("Recommendations", "Machine learning", "Hadoop", "Architecture"), 11, "netflix-techblog", published="2013-03-27",
+          authors="Xavier Amatriain · Justin Basilico", publisher_detail="Netflix TechBlog", read_time_basis="publisher",
+          why="The offline, nearline and online split that still shapes recommendation systems.",
+          question="How does Netflix compute recommendations at different speeds?", themes=("ai", "distributed-systems")),
+    _seed("google-sre-monitoring", "Monitoring Distributed Systems",
+          "https://sre.google/sre-book/monitoring-distributed-systems/", "Site Reliability Engineering (Google)", "Google",
+          2016,
+          "Chapter 6 of Google’s SRE book: the four golden signals, white-box versus black-box monitoring, symptoms versus causes, and why the parts of monitoring that page a human must be very simple and robust.",
+          ("Monitoring", "Alerting", "SRE", "On-call"), 25, None,
+          authors="Rob Ewaschuk", publisher_detail="O’Reilly book, free online edition",
+          why="The chapter most monitoring and alerting practices still trace back to.",
+          question="What should actually page an engineer?", themes=("reliability",)),
+    _seed("netflix-observability-lessons", "Lessons from Building Observability Tools at Netflix",
+          "https://netflixtechblog.com/lessons-from-building-observability-tools-at-netflix-7cfafed6ab17",
+          "Netflix TechBlog", "Netflix", 2018,
+          "As Netflix grew, storing every device and server log stopped scaling, so it streamed logs through Mantis and kept only what matched a query. Netflix also found request tracing was not enough without application context, and that anomaly detection and metric correlation beat plain threshold alerts.",
+          ("Observability", "Logging", "Tracing", "Alerting"), 9, "netflix-techblog", published="2018-06-04",
+          publisher_detail="Netflix TechBlog", read_time_basis="publisher",
+          why="Three hard-won lessons about logs, traces and alerts at scale.",
+          question="What happens when you can no longer afford to keep every log?", themes=("reliability", "cloud")),
+    _seed("slack-tracing-causal-graphs", "Tracing at Slack: Thinking in Causal Graphs",
+          "https://slack.engineering/tracing-at-slack-thinking-in-causal-graphs/", "Engineering at Slack", "Slack", 2020,
+          "“Why is it slow?” is the hardest question in a distributed system. Existing tracing tools did not suit Slack’s clients and scripts and kept traces locked in a UI, so Slack models traces as causal graphs of SpanEvents that engineers can also query with SQL.",
+          ("Distributed tracing", "Observability", "SQL"), 19, "engineering-slack", published="2020-08-28",
+          authors="Suman Karumuri", publisher_detail="Engineering at Slack", read_time_basis="publisher",
+          why="Treating traces as data to query, not just pictures to look at.",
+          question="How do you find out why a request was slow?", themes=("reliability", "distributed-systems")),
+    _seed("datadog-husky-event-store", "Introducing Husky, Datadog’s third-generation event store",
+          "https://www.datadoghq.com/blog/engineering/introducing-husky/", "Datadog Blog", "Datadog", 2022,
+          "Logs keep every event with its context, which metrics databases avoid by pre-aggregating. To store that volume, Datadog built Husky, a columnar event store that separates compute from storage: stateless writers, compactors and readers on top of blob storage, with FoundationDB holding the metadata.",
+          ("Storage", "Columnar", "Object storage", "Logs"), 14, "datadog-blog", published="2022-05-17",
+          authors="Richard Artoul · Cecilia Watt", publisher_detail="Datadog engineering blog", read_time_basis="publisher",
+          why="How an observability company stores logs at scale by separating compute from storage.",
+          question="Where do all the logs go?", themes=("databases", "distributed-systems")),
+    _seed("uber-m3-metrics", "M3: Uber’s Open Source, Large-scale Metrics Platform for Prometheus",
+          "https://www.uber.com/blog/m3/", "Uber Blog", "Uber", 2018,
+          "Uber stores billions of metrics, beyond what a single Prometheus node can handle. It built M3, open sourced as a remote storage backend for Prometheus, with M3DB as a distributed time series store and M3 Coordinator for global queries, downsampling and retention rules.",
+          ("Metrics", "Prometheus", "Time series"), 12, "uber-engineering", published="2018-08-07",
+          authors="Rob Skillington", publisher_detail="Uber engineering blog",
+          why="What metrics infrastructure looks like once one Prometheus server is not enough.",
+          question="How do you store billions of metrics?", themes=("databases", "reliability")),
+    _seed("cloudflare-phishing-hardware-keys", "The mechanics of a sophisticated phishing scam and how we stopped it",
+          "https://blog.cloudflare.com/2022-07-sms-phishing-attacks/", "Cloudflare Blog", "Cloudflare", 2022,
+          "In under a minute, at least 76 Cloudflare employees received texts linking to a fake Okta login that relayed credentials to attackers in real time. Some employees fell for it, but the attack failed because every employee must use a physical security key to reach company applications.",
+          ("Phishing", "Security keys", "FIDO2", "Zero trust"), 11, "cloudflare-blog", published="2022-08-09",
+          authors="Matthew Prince · Daniel Stinson-Diess · Sourov Zaman", publisher_detail="Cloudflare Blog",
+          read_time_basis="publisher",
+          why="A clear case that hardware keys stop phishing even when people click.",
+          question="Why didn’t a successful phishing attack get in?", themes=("security",)),
+    _seed("google-slsa-supply-chain", "Introducing SLSA, an End-to-End Framework for Supply Chain Integrity",
+          "https://security.googleblog.com/2021/06/introducing-slsa-end-to-end-framework.html", "Google Online Security Blog",
+          "Google", 2021,
+          "After attacks like SolarWinds and Codecov, Google proposed SLSA, levels of assurance for how software is built, inspired by its internal Binary Authorization for Borg, used for over eight years on all production workloads. Each threat in the supply chain is mapped to the control that would have stopped it.",
+          ("Supply chain", "Provenance", "Build systems"), 8, "google-security", published="2021-06-16",
+          authors="Kim Lewandowski · Mark Lodato", publisher_detail="Google Online Security Blog",
+          why="A practical map of where software can be tampered with between commit and production.",
+          question="How do you prove a binary came from the code you reviewed?", themes=("security", "engineering-practice")),
+    _seed("dropbox-password-storage", "How Dropbox securely stores your passwords",
+          "https://dropbox.tech/security/how-dropbox-securely-stores-your-passwords", "Dropbox Tech", "Dropbox", 2016,
+          "Dropbox protects passwords in three layers: SHA512 first, then bcrypt with a cost of 10 and a per-user salt, then AES256 encryption with a separately stored key, the pepper. The post explains what each layer defends against.",
+          ("Passwords", "Cryptography", "bcrypt"), 6, "engineering-dropbox", published="2016-09-21",
+          authors="Devdatta Akhawe", publisher_detail="Dropbox Tech Blog",
+          why="A short, precise answer to a question every product team faces.",
+          question="How should you store passwords?", themes=("security",)),
+    _seed("google-beyondcorp", "BeyondCorp: A New Approach to Enterprise Security",
+          "https://research.google/pubs/beyondcorp-a-new-approach-to-enterprise-security/", "Google Research", "Google", 2014,
+          "Firewalls protect a perimeter, and once that perimeter is breached an attacker reaches the whole intranet. Google instead removed the privileged intranet and moved its corporate applications to the Internet.",
+          ("Zero trust", "Network security", "Identity"), 12, "google-research",
+          authors="Rory Ward · Betsy Beyer", publisher_detail=";login: magazine paper",
+          why="An early, influential account of dropping the trusted corporate network.",
+          question="What if there were no trusted internal network?", themes=("security", "cloud")),
 )
 # Reviewed themes where keyword evidence alone would mislabel a classic.
 for _ident, _themes in {
@@ -1452,6 +1552,46 @@ REVIEWED_BREAKDOWNS = {
         "Uber’s MVC rider app could not give the core ride flow 99.99% availability while many teams built on it.",
         "Uber rewrote the app on Riblets, a VIPER-derived architecture shared by iOS and Android.",
         "A new rider app built for reliability and safe experimentation by hundreds of teams."),
+    "uber-michelangelo": (
+        "Uber had no standard way to build training data, train beyond a laptop, track experiments or serve models.",
+        "Michelangelo standardised the end-to-end workflow: data, training, evaluation, deployment, prediction and monitoring.",
+        "It became the default ML system for Uber’s engineers and data scientists, with dozens of teams on it."),
+    "doordash-feature-store-redis": (
+        "DoorDash’s Redis feature store, with billions of records, was close to running out of capacity.",
+        "After benchmarking five key-value stores, it kept Redis and changed storage: string hashing, protobufs, Snappy.",
+        "Three times the capacity and 38% lower Redis latency."),
+    "netflix-observability-lessons": (
+        "Storing every device and server log made costs balloon and queries slow.",
+        "Netflix streamed logs through Mantis, kept only matching events, and enriched traces with application context.",
+        "Scalable log analysis, and alerts based on anomalies and correlations rather than fixed thresholds."),
+    "slack-tracing-causal-graphs": (
+        "Existing tracing tools did not suit Slack’s clients and scripts and kept traces inside a UI.",
+        "Slack models traces as causal graphs of a new data structure, the SpanEvent.",
+        "Traces engineers can view and also query with SQL."),
+    "datadog-husky-event-store": (
+        "Datadog’s log storage could not scale ingestion, storage and queries independently.",
+        "Husky separates compute from storage: stateless writers, compactors and readers over blob storage and FoundationDB.",
+        "A third-generation event store for logs and other event products."),
+    "uber-m3-metrics": (
+        "Uber needed to store billions of metrics; a single Prometheus node could not.",
+        "It built M3, with M3DB for distributed time series storage and M3 Coordinator for queries and retention.",
+        "M3 runs Uber’s metrics and is open source as a Prometheus storage backend."),
+    "cloudflare-phishing-hardware-keys": (
+        "At least 76 employees received texts linking to a fake Okta page that relayed logins in real time.",
+        "Every employee must use a physical security key to access company applications.",
+        "Some employees entered credentials, but the attackers could not get in."),
+    "google-slsa-supply-chain": (
+        "Supply chain attacks such as SolarWinds tampered with software between source and release.",
+        "Google proposed SLSA, levels of build integrity modelled on its internal Binary Authorization for Borg.",
+        "An open framework that maps each supply chain threat to a control."),
+    "dropbox-password-storage": (
+        "Stored passwords must survive a database leak.",
+        "Three layers: SHA512, then bcrypt with a per-user salt, then AES256 with a separately stored pepper.",
+        "Each layer covers a weakness of the others."),
+    "google-beyondcorp": (
+        "Perimeter firewalls give an attacker easy access to the intranet once breached.",
+        "Google removed the privileged intranet and moved corporate applications to the Internet.",
+        "Corporate applications that no longer rely on a trusted internal network."),
 }
 REVIEWED_PROBLEMS = {
     "gitlab-database-outage-2017": ("outages", "data-integrity"), "atlassian-outage-2022": ("outages", "data-integrity"),
@@ -1486,6 +1626,13 @@ REVIEWED_PROBLEMS = {
     "discord-ios-react-native-performance": ("performance",), "netflix-faster-website": ("performance",),
     "slack-rebuilding-desktop": ("migrations", "performance"), "pinterest-pwa-retrospective": ("performance",),
     "uber-rider-app-architecture": ("migrations",),
+    "uber-michelangelo": ("dev-productivity",), "doordash-feature-store-redis": ("scaling-data", "cost"),
+    "linkedin-kafka-benchmark": ("performance", "scaling-data"), "netflix-personalization-architecture": ("performance",),
+    "google-sre-monitoring": ("outages",), "netflix-observability-lessons": ("cost", "scaling-data"),
+    "slack-tracing-causal-graphs": ("performance",), "datadog-husky-event-store": ("scaling-data", "cost"),
+    "uber-m3-metrics": ("scaling-data",), "cloudflare-phishing-hardware-keys": ("security-incidents",),
+    "google-slsa-supply-chain": ("security-incidents",), "dropbox-password-storage": ("security-incidents", "data-integrity"),
+    "google-beyondcorp": ("security-incidents",),
 }
 for _seed_card in CURATED_CURIOSITY:
     if _seed_card["id"] in REVIEWED_BREAKDOWNS:
@@ -1933,7 +2080,7 @@ def _card(article, summaries):
     }
 
 
-MAX_CURIOSITY_CARDS = 240
+MAX_CURIOSITY_CARDS = 400
 # Fresh archive discoveries get a reserved share so evergreen seeds never crowd them out.
 FRESH_SLOT_SHARE = 3
 MAX_FRESH_CARDS = 40
@@ -2001,7 +2148,8 @@ def build_curiosity_cards(store, *, limit=24):
     """Blend verified evergreen seeds with high-signal records in the archive."""
     limit = max(1, min(int(limit), MAX_CURIOSITY_CARDS))
     reserve = min(MAX_FRESH_CARDS, max(1, limit // FRESH_SLOT_SHARE)) if limit > 1 else 0
-    fresh = _fresh_discoveries(store, max(reserve, limit - len(CURATED_CURIOSITY)))
+    # Fresh cards are summarised by a model, so their number is capped however large the shelf is.
+    fresh = _fresh_discoveries(store, min(MAX_FRESH_CARDS, max(reserve, limit - len(CURATED_CURIOSITY))))
     seed_count = min(len(CURATED_CURIOSITY), limit - min(len(fresh), reserve))
     fresh = fresh[:limit - seed_count]
     selected = _interleave([deepcopy(article) for article in featured_seeds()[:seed_count]], fresh)
@@ -2171,6 +2319,21 @@ COLLECTIONS = (
      "and Uber rewrote its rider app for thousands of engineers.",
      ("airbnb-sunsetting-react-native", "shopify-react-native-future", "discord-ios-react-native-performance",
       "uber-rider-app-architecture"), ("migrations", "dev-productivity")),
+    ("data-and-ml-platforms", "Data and machine learning platforms",
+     "The infrastructure under data products: Kafka as a shared log, Netflix’s offline, nearline and online split, "
+     "Uber’s Michelangelo for every team’s models, and DoorDash fitting billions of ML features in Redis.",
+     ("linkedin-kafka-benchmark", "netflix-personalization-architecture", "uber-michelangelo",
+      "doordash-feature-store-redis", "uber-big-data-platform"), ("scaling-data",)),
+    ("observability-in-practice", "Observability in practice",
+     "Knowing what is wrong and why: Google’s monitoring principles, Netflix’s lessons on logs and alerts, Slack’s "
+     "queryable traces, and the storage systems Uber and Datadog built to hold it all.",
+     ("google-sre-monitoring", "netflix-observability-lessons", "slack-tracing-causal-graphs", "uber-m3-metrics",
+      "datadog-husky-event-store", "google-dapper"), ("outages", "performance")),
+    ("security-engineering-foundations", "Security engineering foundations",
+     "The defences that held: zero trust instead of a perimeter, hardware keys that defeated a working phishing "
+     "attack, layered password storage, and supply chain integrity after SolarWinds.",
+     ("google-beyondcorp", "cloudflare-phishing-hardware-keys", "dropbox-password-storage", "google-slsa-supply-chain",
+      "xz-utils-backdoor-2024"), ("security-incidents",)),
 )
 
 
@@ -2344,3 +2507,95 @@ def postmortem_review_queue(store, *, days=30, limit=40):
                       "problems": card_problems(article), "score": quality_score(article)})
     queue.sort(key=lambda item: (item["published_at"], item["score"]), reverse=True)
     return queue[:limit]
+
+
+# --- Server-side browsing: filters, search and facets (mirrors public/curiosity.js) ------------------------
+ORIGINS = ("all", "fresh", "classic")
+SORTS = ("featured", "newest")
+
+
+def _card_company(card):
+    return card.get("company") or card.get("publisher") or ""
+
+
+def card_search_text(card):
+    """Everything a reader can search on a card, lower-cased: the same fields the browser search uses."""
+    breakdown = card.get("breakdown") if isinstance(card.get("breakdown"), dict) else {}
+    parts = [card.get("title"), card.get("question"), _card_company(card), card.get("publisher"), LEVELS.get(card.get("level")),
+             card.get("publisher_detail"), card.get("author"), card.get("summary"), card.get("why_read"),
+             *(card.get("technologies") or []), *(card.get("tags") or []),
+             *(THEME_LABELS.get(theme, theme) for theme in card.get("themes") or []),
+             *(PROBLEM_LABELS.get(problem, problem) for problem in card.get("problems") or []), *breakdown.values()]
+    return " ".join(part for part in parts if isinstance(part, str)).casefold()
+
+
+def _date_key(card):
+    published = str(card.get("published_at") or "")
+    if re.match(r"\d{4}-\d{2}-\d{2}", published):
+        return published[:10]
+    return str(card.get("year") or "")
+
+
+def filter_cards(cards, *, theme="all", problem="all", format="all", level="all", company="all", origin="all",
+                 query="", sort="featured"):
+    """Filter and order cards exactly as the collection page does, so paging never changes the result set."""
+    terms = [term for term in str(query or "").casefold().split() if term]
+    result = []
+    for card in cards:
+        if origin == "fresh" and card.get("seed") or origin == "classic" and not card.get("seed"):
+            continue
+        if company != "all" and _card_company(card) != company:
+            continue
+        if theme != "all" and theme not in (card.get("themes") or []):
+            continue
+        if format != "all" and card.get("format") != format:
+            continue
+        if level != "all" and card.get("level") != level:
+            continue
+        if problem != "all" and problem not in (card.get("problems") or []):
+            continue
+        if terms:
+            text = card_search_text(card)
+            if not all(term in text for term in terms):
+                continue
+        result.append(card)
+    if sort == "newest":
+        # Stable: equal dates keep the featured order.
+        result = sorted(result, key=_date_key, reverse=True)
+    return result
+
+
+def curiosity_facets(cards):
+    """Counts over the whole shelf for tabs, selects and the theme constellation."""
+    themes, problems, formats, levels, companies, pairs, technologies = {}, {}, {}, {}, {}, {}, {}
+    fresh = 0
+    for card in cards:
+        card_themes_ = list(dict.fromkeys(theme for theme in card.get("themes") or [] if theme in THEME_LABELS))
+        for theme in card_themes_:
+            themes[theme] = themes.get(theme, 0) + 1
+        for index, first in enumerate(card_themes_):
+            for second in card_themes_[index + 1:]:
+                key = tuple(sorted((first, second)))
+                pairs[key] = pairs.get(key, 0) + 1
+        for problem in card.get("problems") or []:
+            if problem in PROBLEM_LABELS:
+                problems[problem] = problems.get(problem, 0) + 1
+        if card.get("format") in FORMATS:
+            formats[card["format"]] = formats.get(card["format"], 0) + 1
+        if card.get("level") in LEVELS:
+            levels[card["level"]] = levels.get(card["level"], 0) + 1
+        name = _card_company(card)
+        if name:
+            companies[name] = companies.get(name, 0) + 1
+        for label in dict.fromkeys(str(label) for label in card.get("technologies") or [] if len(str(label)) <= 24):
+            technologies[label] = technologies.get(label, 0) + 1
+        fresh += 0 if card.get("seed") else 1
+    return {
+        "total": len(cards), "fresh": fresh, "classic": len(cards) - fresh,
+        "themes": themes, "problems": problems, "formats": formats, "levels": levels,
+        "companies": sorted(([name, count] for name, count in companies.items()), key=lambda item: item[0].casefold()),
+        "theme_pairs": [[first, second, count] for (first, second), count in sorted(pairs.items())],
+        # Technologies named on at least three cards, most common first: one-tap searches.
+        "technologies": [label for label, count in sorted(technologies.items(), key=lambda item: (-item[1], item[0]))
+                         if count >= 3][:8],
+    }

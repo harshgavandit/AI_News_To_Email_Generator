@@ -25,6 +25,17 @@ export function themeGraph(cards, labels) {
   return { nodes, links };
 }
 
+// The same graph from server facets: theme counts and co-occurrence across the whole collection.
+export function themeGraphFromFacets(facets, labels) {
+  const counts = facets?.themes && typeof facets.themes === "object" ? facets.themes : {};
+  const nodes = Object.keys(labels).filter((id) => Number(counts[id]) > 0).map((id) => ({ id, label: labels[id], count: Number(counts[id]) }));
+  const known = new Set(nodes.map((node) => node.id));
+  const links = (Array.isArray(facets?.theme_pairs) ? facets.theme_pairs : [])
+    .filter((pair) => Array.isArray(pair) && known.has(pair[0]) && known.has(pair[1]) && Number(pair[2]) > 0)
+    .map(([a, b, weight]) => ({ a, b, weight: Number(weight) }));
+  return { nodes, links };
+}
+
 // Seed positions on a circle so the layout is the same on every visit.
 export function seedLayout(graph, width, height) {
   const count = graph.nodes.length || 1;
