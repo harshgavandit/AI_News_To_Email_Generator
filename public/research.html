@@ -9,6 +9,9 @@
     <title>Research Desk · Informa AI</title>
     <link rel="canonical" href="https://getinformdaily.com/research.html" />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/pwa.js"></script>
     <script src="/theme.js"></script>
     <script defer src="/analytics.js" data-performance-only></script>
     <script defer src="/botid-client.js"></script>
@@ -37,6 +40,7 @@
         <nav class="site-nav research-nav" aria-label="Main navigation">
           <a href="/#reading-room">Reading Room</a>
           <a href="/research.html" aria-current="page">Research Desk</a>
+          <a href="/trackers.html">Trackers</a>
           <a href="/technology.html">Technologies</a>
           <a href="/projects.html">Projects</a>
           <a href="/inbox.html">Inbox</a>
@@ -128,6 +132,10 @@
             </form>
             <p id="radar-status" class="research-status" role="status" aria-live="polite"></p>
             <div id="radar-results"></div>
+            <details class="radar-event" id="radar-device-alerts">
+              <summary>Alerts on this device</summary>
+              <div class="alert-panel" data-alert-panel></div>
+            </details>
             <details class="radar-event" id="impact-settings">
               <summary>Personal impact settings</summary>
               <p>Saved in this browser. An impact check sends these selections to Informa AI and checks package versions with OSV.</p>
@@ -227,8 +235,8 @@
     <footer class="site-footer wrap">
       <a class="footer-brand" href="/">Informa AI</a>
       <nav class="footer-nav" aria-label="Footer">
-        <a href="/research.html">Research Desk</a>
-        <a href="/about.html">About</a><a href="/trust.html">Source standards</a><a href="/privacy.html">Privacy &amp; controls</a>
+        <a href="/research.html">Research Desk</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
+        <a href="/about.html">About</a><a href="/trust.html">Source standards</a><a href="/privacy.html">Privacy &amp; controls</a><a href="/feeds.html">RSS feeds</a>
       </nav>
     </footer>
   </body>

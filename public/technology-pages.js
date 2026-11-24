@@ -162,6 +162,15 @@ requestJSON("/api/intelligence/technologies").then(({ technologies }) => {
   document.title = `${active.name} · Informa AI`;
   byId("technology-home").href = active.homepage;
   byId("technology-watch-link").href = `/research.html?watch-tech=${encodeURIComponent(active.id)}#watch-title`;
+  const feed = `/feeds/technology/${encodeURIComponent(active.id)}.xml`;
+  byId("technology-feed-link").href = feed;
+  let alternate = document.querySelector('link[rel="alternate"][data-technology-feed]');
+  if (!alternate) {
+    alternate = Object.assign(document.createElement("link"), { rel: "alternate", type: "application/rss+xml" });
+    alternate.dataset.technologyFeed = "";
+    document.head.append(alternate);
+  }
+  Object.assign(alternate, { href: feed, title: `Informa AI — ${active.name}` });
   byId("technology-content").hidden = false;
   status.textContent = "";
   setFollowLabel();

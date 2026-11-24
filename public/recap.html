@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f3f7fc" />
+    <meta name="description" content="This week in tech: the biggest technology stories of the week, AI model launches, incidents, exploited vulnerabilities and notable releases, with links to every source." />
+    <title>This week in tech | Informa AI</title>
+    <link rel="canonical" href="https://getinformdaily.com/recap.html" />
+    <meta property="og:title" content="This week in tech | Informa AI" />
+    <meta property="og:description" content="This week in tech: the biggest technology stories of the week, AI model launches, incidents, exploited vulnerabilities and notable releases, with links to every source." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="alternate" type="application/rss+xml" title="Informa AI — This week in tech" href="/feeds/recap.xml" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/pwa.js"></script>
+    <script src="/theme.js"></script>
+    <script defer src="/analytics.js"></script>
+    <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/information.css" />
+    <link rel="stylesheet" href="/polish.css" />
+    <link rel="stylesheet" href="/system.css" />
+    <link rel="stylesheet" href="/command.css" />
+    <link rel="stylesheet" href="/orbital.css" />
+    <link rel="stylesheet" href="/signature.css" />
+  <script defer src="/system.js"></script>
+  <script defer src="/ambient.js"></script>
+  <script defer src="/orbital.js"></script>
+  <script type="module" src="/recap-page.js"></script>
+</head>
+  <body class="information-page">
+    <a class="skip" href="#information-main">Skip to content</a>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a>
+          <a href="/curiosity.html">Curiosity Cards</a><a href="/research.html">Research Desk</a>
+          <a href="/trackers.html">Trackers</a><a href="/sources.html">Sources</a><a href="/contribute.html">For authors</a>
+        </nav>
+        <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="light">Light</option><option value="dark">Dark</option></select><a class="button primary" href="/#reading-room">Explore stories</a>
+        </div>
+      </div>
+    </header>
+    <main id="information-main" class="wrap information-main recap-main" tabindex="-1">
+      <header class="information-hero recap-hero">
+        <div>
+          <p class="eyebrow">Weekly recap</p>
+          <h1 id="recap-title">This week in tech</h1>
+          <p id="recap-range" class="information-lead">The week's biggest technology stories, ranked by how many publishers covered them.</p>
+          <div class="recap-actions">
+            <label for="recap-week">Week</label>
+            <select id="recap-week"></select>
+            <a class="text-button feed-link-rss" href="/feeds/recap.xml">Follow by RSS</a>
+          </div>
+        </div>
+      </header>
+      <p id="recap-status" class="status" role="status" aria-live="polite">Loading…</p>
+      <dl id="recap-stats" class="recap-stats" hidden></dl>
+      <section class="information-section" aria-labelledby="recap-top-title">
+        <div class="section-heading"><h2 id="recap-top-title">Biggest stories</h2></div>
+        <ol id="recap-top" class="recap-stories"></ol>
+      </section>
+      <div class="recap-columns">
+        <section class="information-section" aria-labelledby="recap-models-title">
+          <div class="section-heading"><h2 id="recap-models-title">AI model launches</h2></div>
+          <ul id="recap-models" class="recap-list"></ul>
+        </section>
+        <section class="information-section" aria-labelledby="recap-security-title">
+          <div class="section-heading"><h2 id="recap-security-title">Exploited vulnerabilities</h2></div>
+          <ul id="recap-security" class="recap-list"></ul>
+        </section>
+        <section class="information-section" aria-labelledby="recap-incidents-title">
+          <div class="section-heading"><h2 id="recap-incidents-title">Incidents</h2></div>
+          <ul id="recap-incidents" class="recap-list"></ul>
+        </section>
+        <section class="information-section" aria-labelledby="recap-releases-title">
+          <div class="section-heading"><h2 id="recap-releases-title">Notable releases</h2></div>
+          <ul id="recap-releases" class="recap-list"></ul>
+        </section>
+      </div>
+      <section class="information-section" aria-labelledby="recap-topics-title">
+        <div class="section-heading"><h2 id="recap-topics-title">More by topic</h2></div>
+        <div id="recap-topics" class="recap-topics"></div>
+      </section>
+      <section id="recap-postmortem-section" class="information-section" aria-labelledby="recap-postmortem-title" hidden>
+        <div class="section-heading"><h2 id="recap-postmortem-title">Postmortem of the week</h2></div>
+        <p id="recap-postmortem"></p>
+      </section>
+      <p id="recap-notice" class="small muted"></p>
+    </main>
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col"><a class="footer-brand" href="/">Informa AI</a>
+        <p class="footer-pillars">Made by <a href="/about.html#creator">Harsh Gavand</a>
+        </p>
+      </div>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="/research.html">Research Desk</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
+        <a href="/curiosity.html">Curiosity Cards</a><a href="/#reading-room">Reading Room</a><a href="/sources.html">Source directory</a><a href="/feeds.html">RSS feeds</a><a href="/contribute.html">For authors</a><a href="/about.html">About</a><a href="/privacy.html">Privacy &amp; controls</a><a href="/trust.html">Source standards</a><a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+      </nav>
+    </footer>
+  </body>
+</html>

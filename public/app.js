@@ -16,6 +16,7 @@ import { developmentLink } from "./development-link.js";
 import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
 import { markDevelopmentsSeen } from "./development-seen.js";
 import { createCoverageDialog } from "./coverage-dialog.js";
+import { coverageSummaryNode, firstReportedText } from "./coverage-summary.js";
 import { createVisitCatchup } from "./visit-catchup.js";
 import { catchupCard } from "./catchup-cards.js";
 import { openVisit } from "./visit-history.js";
@@ -934,7 +935,7 @@ function renderStories() {
     if (article.coverage_count > 1) {
       const coverage = node("button", "coverage-count", `${article.coverage_count} ${article.coverage_count === 1 ? "publisher" : "publishers"}`);
       coverage.type = "button";
-      coverage.title = (article.coverage_publishers || []).join(" · ");
+      coverage.title = [firstReportedText(article.coverage_summary), (article.coverage_publishers || []).join(" · ")].filter(Boolean).join("\n");
       coverage.addEventListener("click", () => openDossier(article, coverage));
       badges.append(coverage);
     }
@@ -1058,6 +1059,15 @@ function renderStories() {
       paragraph.dir = excerptDirection;
       if (article.language && article.has_excerpt) paragraph.lang = article.language;
       main.append(paragraph);
+    }
+    const coverageLine = coverageSummaryNode(article.coverage_summary);
+    if (coverageLine) {
+      if (/^[a-f0-9]{32}$/.test(article.development_id || "")) {
+        const compare = node("a", "coverage-summary-link", "See how it was covered →");
+        compare.href = `/development.html?id=${article.development_id}`;
+        coverageLine.append(" ", compare);
+      }
+      main.append(coverageLine);
     }
     if (permittedImage(article.thumbnail_url)) {
       const image = node("img", "story-thumbnail");

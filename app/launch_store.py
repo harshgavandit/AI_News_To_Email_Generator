@@ -224,7 +224,7 @@ def install_search_index(conn):
 class Store:
     def __init__(self, url):
         # Register additive intelligence tables before creating a local archive.
-        from app import event_intelligence, radar_store, research_projects, watch_rules  # noqa: F401
+        from app import event_intelligence, push_alerts, radar_store, research_projects, watch_rules  # noqa: F401
         if url.startswith(("postgres://", "postgresql://")):
             url = "postgresql+psycopg://" + url.split("://", 1)[1]
         self.engine = create_engine(url, pool_pre_ping=True, **(
@@ -247,6 +247,7 @@ class Store:
             self._event_tables_ready = True
             self._radar_tables_ready = True
             self._curiosity_schema_ready = True
+            self._push_ready = True
 
     def ensure_discovery_schema(self):
         # Existing deployments can upgrade in place. Old code can still write during rollout.

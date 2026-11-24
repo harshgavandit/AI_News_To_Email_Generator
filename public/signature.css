@@ -355,3 +355,82 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
     -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
   }
 }
+
+/* Device alerts and app install (push-alerts.js, pwa.js) */
+.alert-panel { display: grid; gap: .6rem; padding-top: .6rem; }
+.alert-panel .alert-state { margin: 0; font-weight: 550; }
+.alert-panel .alert-follows { margin: 0; }
+.alert-options, .alert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.2rem; }
+.alert-options label { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: .45rem; white-space: nowrap; margin: 0; }
+.alert-options select { width: auto; min-width: 4.5rem; flex: none; }
+.alert-panel [hidden] { display: none !important; }
+.install-app[hidden] { display: none !important; }
+
+/* RSS feed directory (feeds.html) */
+.feed-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .55rem; }
+.feed-grid { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.feed-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: .35rem .6rem; }
+.feeds-search { display: flex; flex-wrap: wrap; align-items: end; gap: .6rem; max-width: 36rem; }
+.feeds-search label { flex-basis: 100%; margin: 0; }
+.feeds-search input { flex: 1 1 14rem; }
+.feeds-result { overflow-wrap: anywhere; }
+.feed-link-rss::before { content: ""; display: inline-block; width: .7em; height: .7em; margin-right: .35em; border-radius: 2px;
+  background: radial-gradient(circle at 15% 85%, currentColor 18%, transparent 19%),
+    radial-gradient(circle at 15% 85%, transparent 42%, currentColor 43%, currentColor 55%, transparent 56%),
+    radial-gradient(circle at 15% 85%, transparent 72%, currentColor 73%, currentColor 85%, transparent 86%); }
+
+/* Trackers (trackers.html) */
+.tracker-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6rem 0 1rem; border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.tracker-tabs [role="tab"] { font: inherit; font-weight: 600; padding: .65rem 1.05rem; border: 0; border-bottom: 3px solid transparent;
+  background: none; color: inherit; opacity: .72; cursor: pointer; margin-bottom: -1px; }
+.tracker-tabs [role="tab"][aria-selected="true"] { opacity: 1; border-bottom-color: var(--accent, #1d5bd8); }
+.tracker-tabs [role="tab"]:focus-visible { outline: 3px solid var(--accent, #1d5bd8); outline-offset: 2px; border-radius: 6px; }
+.tracker-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .6rem 1rem; margin-bottom: 1rem; }
+.tracker-summary { margin: 0; font-weight: 550; }
+.tracker-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.tracker-toggle { display: inline-flex; align-items: center; gap: .4rem; margin: 0; white-space: nowrap; }
+.tracker-search { min-width: 12rem; }
+.tracker-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+.tracker-card { padding: 1rem 1.1rem; border-radius: 14px; background: color-mix(in srgb, Canvas 86%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent); box-shadow: 0 1px 2px rgb(15 23 42 / 6%); min-width: 0; }
+.tracker-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; margin-bottom: .55rem; }
+.tracker-card-head h3 { margin: 0 .35rem 0 0; font-size: 1.08rem; overflow-wrap: anywhere; }
+.tracker-chip { display: inline-block; padding: .08rem .5rem; border-radius: 999px; font-size: .76rem; font-weight: 600; line-height: 1.5;
+  background: color-mix(in srgb, currentColor 9%, transparent); white-space: nowrap; }
+.tracker-chip.official { background: color-mix(in srgb, #1d5bd8 16%, transparent); color: color-mix(in srgb, #1d5bd8 80%, currentColor); }
+.tracker-chip.alert { background: color-mix(in srgb, #d6455d 16%, transparent); color: color-mix(in srgb, #c0304a 82%, currentColor); }
+.tracker-chip.ok { background: color-mix(in srgb, #1f9d6b 16%, transparent); color: color-mix(in srgb, #157a52 82%, currentColor); }
+.tracker-chip.quiet { font-weight: 500; opacity: .85; }
+.tracker-sources { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+.tracker-source { line-height: 1.45; overflow-wrap: anywhere; }
+.tracker-meta { font-size: .84rem; opacity: .78; }
+.tracker-releases { grid-column: 1 / -1; list-style: none; padding: 0; margin: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: .45rem 1.2rem; }
+.tracker-release { display: flex; align-items: baseline; flex-wrap: wrap; gap: .35rem .55rem; padding: .45rem 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+.tracker-release-name { font-weight: 600; overflow-wrap: anywhere; }
+.tracker-empty, .tracker-notice { grid-column: 1 / -1; }
+.tracker-notice { margin-top: 1.4rem; }
+@media (prefers-reduced-motion: reduce) { .tracker-card { transition: none; } }
+
+/* Weekly recap (recap.html) */
+.recap-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; margin-top: 1rem; }
+.recap-actions label { margin: 0; font-weight: 600; }
+.recap-actions select { width: auto; min-width: 14rem; }
+.recap-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .8rem; margin: 1.4rem 0 0; }
+.recap-stats div { padding: .9rem 1rem; border-radius: 14px; background: color-mix(in srgb, Canvas 86%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.recap-stats dt { font-size: .82rem; opacity: .75; margin: 0; }
+.recap-stats dd { margin: .15rem 0 0; font-size: 1.6rem; font-weight: 650; }
+.recap-stories { margin: .4rem 0 0; padding-left: 1.4rem; display: grid; gap: 1rem; }
+.recap-story-title { font-weight: 650; font-size: 1.05rem; }
+.recap-meta { font-size: .85rem; opacity: .78; margin: .15rem 0 0; }
+.recap-summary { margin: .3rem 0 0; max-width: 70ch; }
+.recap-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 0 2rem; }
+.recap-list { list-style: none; padding: 0; margin: .3rem 0 0; display: grid; gap: .55rem; overflow-wrap: anywhere; }
+.recap-topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem 2rem; }
+.recap-topic h3 { margin: 0 0 .3rem; font-size: 1rem; }
+
+/* Grouped coverage facts on story cards, the compare dialog and development pages */
+.coverage-summary { margin: .55rem 0 0; font-size: .86rem; line-height: 1.5; opacity: .88; }
+.coverage-summary-link { font-weight: 600; white-space: nowrap; }

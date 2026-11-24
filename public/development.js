@@ -3,6 +3,7 @@ import { developmentLink } from "./development-link.js";
 import { impactPanel } from "./personal-impact.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
 import { freshnessNotice } from "./reader-freshness.js";
+import { coverageSummaryNode } from "./coverage-summary.js";
 
 const id = new URLSearchParams(location.search).get("id");
 const status = document.getElementById("development-page-status");
@@ -49,6 +50,9 @@ function render(data) {
   });
   actions.append(follow, share);
   content.append(actions);
+  const coverage = coverageSummaryNode(data.coverage_summary);
+  if (coverage) content.append(panel("How it was covered", coverage,
+    node("p", "Publishers are counted once per publisher group. Grouping matching reports does not mean they agree.", "research-meta")));
   const freshness = freshnessNotice(data.coverage_freshness);
   if (freshness) content.append(freshness);
   const latest = data.latest_material || data.entries[0];

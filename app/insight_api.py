@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app import (
     ai_insights, event_intelligence, monitoring, personal_impact, public_mail, radar_store,
-    reader_freshness, research, stack_intelligence, technology, visit_catchup, watch_rules,
+    reader_freshness, research, stack_intelligence, story_groups, technology, visit_catchup, watch_rules,
 )
 from app.coverage import TOPICS, public_article
 from app.provenance import source_history
@@ -172,7 +172,10 @@ def development(event_id: Annotated[str, Path(pattern=r"^[a-f0-9]{32}$")], respo
         raise HTTPException(404, "This development is no longer in the retained archive.")
     response.headers["Cache-Control"] = "no-store"
     source_ids = {item["source"].get("source_id") for item in result["entries"]}
-    return {**result, "coverage_freshness": reader_freshness.coverage_snapshot(store, source_ids=source_ids, linked_only=True)}
+    summary = story_groups.coverage_summary([{**item["source"], "published_at": item["source"].get("publishedAt") or item.get("published_at")}
+                                             for item in result["entries"]])
+    return {**result, "coverage_summary": summary,
+            "coverage_freshness": reader_freshness.coverage_snapshot(store, source_ids=source_ids, linked_only=True)}
 
 
 @router.post("/api/intelligence/explain")

@@ -57,6 +57,8 @@ def _head(title, description, url, *, card=None, robots="index, follow"):
         f'<meta property="og:image" content="{PUBLIC_SITE}/edition-city.jpg" />',
         '<meta name="twitter:card" content="summary_large_image" />',
         '<script defer src="/analytics.js"></script>', '<link rel="icon" href="/informa-ai-icon.png" type="image/png" />',
+        '<link rel="manifest" href="/manifest.webmanifest" />', '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />',
+        '<script type="module" src="/pwa.js"></script>',
         '<script src="/theme.js"></script>',
         *(f'<link rel="stylesheet" href="/{sheet}" />' for sheet in STYLESHEETS),
         '<script type="module" src="/curiosity-card.js"></script>',
@@ -75,6 +77,7 @@ HEADER = """<a class="skip" href="#card">Skip to the story</a>
           <a href="/#reading-room">Reading Room</a>
           <a href="/curiosity.html" aria-current="page">Curiosity Cards</a>
           <a href="/research.html">Research Desk</a>
+          <a href="/trackers.html">Trackers</a>
           <a href="/sources.html">Sources</a>
         </nav>
         <div class="site-tools"><a class="button primary" href="/#composer">Build a brief</a></div>
@@ -84,7 +87,7 @@ HEADER = """<a class="skip" href="#card">Skip to the story</a>
 FOOTER = """<footer class="site-footer wrap">
       <div class="footer-brand-col"><a class="footer-brand" href="/">Informa AI</a></div>
       <nav class="footer-nav" aria-label="Footer">
-        <a href="/curiosity.html">Curiosity Cards</a><a href="/research.html">Research Desk</a>
+        <a href="/curiosity.html">Curiosity Cards</a><a href="/research.html">Research Desk</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
         <a href="/sources.html">Source Directory</a><a href="/privacy.html">Privacy &amp; controls</a><a href="/trust.html">Source standards</a>
       </nav>
     </footer>"""

@@ -15,6 +15,10 @@
     <meta property="og:image" content="https://getinformdaily.com/edition-city.jpg" />
     <script defer src="/analytics.js"></script>
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="alternate" type="application/rss+xml" title="Informa AI — Curiosity Cards" href="/feeds/curiosity.xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/pwa.js"></script>
     <script src="/theme.js"></script>
     <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -45,6 +49,7 @@
           <a href="/#reading-room">Reading Room</a>
           <a href="/curiosity.html" aria-current="page">Curiosity Cards</a>
           <a href="/research.html">Research Desk</a>
+          <a href="/trackers.html">Trackers</a>
           <a href="/sources.html">Sources</a>
         </nav>
         <div class="site-tools">
@@ -60,6 +65,7 @@
       <header class="curiosity-hero">
         <p class="eyebrow">Engineering deep dives</p>
         <h1>Curiosity Cards</h1>
+        <p class="curiosity-hero-feed"><a class="feed-link-rss" href="/feeds/curiosity.xml">Follow new cards by RSS</a></p>
         <p class="curiosity-hero-lede">How the world's most impressive software actually works. Netcode and rendering from game studios, the infrastructure behind AI, databases that serve millions of reads a second, and honest postmortems, written by the engineers who built them.</p>
         <div class="curiosity-constellation" aria-hidden="true" hidden>
           <canvas id="curiosity-constellation"></canvas>
@@ -150,10 +156,10 @@
         <p class="footer-maker">Made by <a href="/about.html#creator">Harsh Gavand</a></p>
       </div>
       <nav class="footer-nav" aria-label="Footer">
-        <a href="/research.html">Research Desk</a>
+        <a href="/research.html">Research Desk</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
         <a href="/#reading-room">Reading Room</a>
         <a href="/curiosity.html" aria-current="page">Curiosity Cards</a>
-        <a href="/sources.html">Source Directory</a>
+        <a href="/sources.html">Source Directory</a><a href="/feeds.html">RSS feeds</a>
         <a href="/#composer">Brief Builder</a>
         <a href="/about.html">About</a>
         <a href="/privacy.html">Privacy &amp; controls</a>

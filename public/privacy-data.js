@@ -12,7 +12,7 @@ export const readingGroups = Object.freeze({
   inbox: { label: "Developments marked seen", key: "informa-inbox-seen-v1" },
 });
 const exportKeys = [...Object.values(readingGroups).map(({ key }) => key), VISIT_HISTORY_KEY,
-  "informa-theme", "informa-story-layout", "informa-hide-read", "informa-analytics-consent", "informa-performance-consent"];
+  "informa-push-v1", "informa-theme", "informa-story-layout", "informa-hide-read", "informa-analytics-consent", "informa-performance-consent"];
 
 export function readBrowserData(storage) {
   return Object.fromEntries(exportKeys.flatMap((key) => {

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f3f7fc" />
+    <meta name="description" content="Follow Informa AI in any feed reader: latest technology news, topics, technologies, any search, and Curiosity Cards as RSS." />
+    <title>RSS feeds | Informa AI</title>
+    <link rel="canonical" href="https://getinformdaily.com/feeds.html" />
+    <meta property="og:title" content="RSS feeds | Informa AI" />
+    <meta property="og:description" content="Follow Informa AI in any feed reader: latest technology news, topics, technologies, any search, and Curiosity Cards as RSS." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="alternate" type="application/rss+xml" title="Informa AI — Latest technology news" href="/feeds/latest.xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/pwa.js"></script>
+    <script src="/theme.js"></script>
+    <script defer src="/analytics.js"></script>
+    <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/workspace.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/information.css" />
+    <link rel="stylesheet" href="/polish.css" />
+    <link rel="stylesheet" href="/system.css" />
+    <link rel="stylesheet" href="/command.css" />
+    <link rel="stylesheet" href="/orbital.css" />
+    <link rel="stylesheet" href="/signature.css" />
+  <script defer src="/system.js"></script>
+  <script defer src="/ambient.js"></script>
+  <script defer src="/orbital.js"></script>
+  <script type="module" src="/feeds-page.js"></script>
+</head>
+  <body class="information-page">
+    <a class="skip" href="#information-main">Skip to content</a>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/" aria-label="Informa AI home"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav" aria-label="Main navigation"><a href="/#reading-room">Reading Room</a>
+          <a href="/curiosity.html">Curiosity Cards</a><a href="/research.html">Research Desk</a>
+          <a href="/trackers.html">Trackers</a><a href="/sources.html">Sources</a><a href="/contribute.html">For authors</a>
+        </nav>
+        <div class="site-tools"><select id="site-theme" class="theme-select" aria-label="Color theme" disabled><option value="light">Light</option><option value="dark">Dark</option></select><a class="button primary" href="/#reading-room">Explore stories</a>
+        </div>
+      </div>
+    </header>
+    <main id="information-main" class="wrap information-main" tabindex="-1">
+      <header class="information-hero feeds-hero">
+        <div>
+          <p class="eyebrow">RSS feeds</p>
+          <h1>Read Informa AI in your feed reader.</h1>
+          <p class="information-lead">Every feed carries the headline, a short excerpt and a link to the original publisher, refreshed about every 15 minutes. Copy a link into Feedly, Inoreader, NetNewsWire, Thunderbird or any RSS reader. Story feeds are in English; add <code>?language=all</code> to a link to include every language.</p>
+        </div>
+      </header>
+      <section class="information-section" aria-labelledby="feeds-main-title">
+        <div class="section-heading"><h2 id="feeds-main-title">Start here</h2></div>
+        <ul class="feed-list" id="feeds-main">
+          <li><a href="/feeds/latest.xml">Latest technology news</a> <span class="muted">— newest stories from every reviewed publisher</span></li>
+          <li><a href="/feeds/recap.xml">This week in tech</a> <span class="muted">— one weekly recap, every Monday</span></li>
+          <li><a href="/feeds/curiosity.xml">Curiosity Cards</a> <span class="muted">— engineering case studies, postmortems and research</span></li>
+        </ul>
+      </section>
+      <section class="information-section" aria-labelledby="feeds-search-title">
+        <div class="section-heading"><h2 id="feeds-search-title">A feed for any search</h2></div>
+        <p>Follow a company, product or phrase. The feed lists the newest matching stories from the past week.</p>
+        <form id="feeds-search-form" class="feeds-search">
+          <label for="feeds-search-input">Search terms</label>
+          <input id="feeds-search-input" name="q" minlength="2" maxlength="80" required placeholder="Nvidia, Rust, OpenAI…" />
+          <button class="button primary" type="submit">Make feed</button>
+        </form>
+        <p id="feeds-search-result" class="feeds-result" role="status" aria-live="polite"></p>
+      </section>
+      <section class="information-section" aria-labelledby="feeds-topics-title">
+        <div class="section-heading"><h2 id="feeds-topics-title">Topics</h2></div>
+        <ul class="feed-list feed-grid" id="feeds-topics"></ul>
+      </section>
+      <section class="information-section" aria-labelledby="feeds-tech-title">
+        <div class="section-heading"><h2 id="feeds-tech-title">Technologies</h2></div>
+        <p>Releases, security advisories, incidents and news from each project's official channels and reviewed publishers.</p>
+        <ul class="feed-list feed-grid" id="feeds-technologies"></ul>
+      </section>
+      <p id="feeds-status" class="status" role="status"></p>
+    </main>
+    <footer class="site-footer wrap">
+      <div class="footer-brand-col"><a class="footer-brand" href="/">Informa AI</a>
+        <p class="footer-pillars">Made by <a href="/about.html#creator">Harsh Gavand</a>
+        </p>
+      </div>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="/research.html">Research Desk</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
+        <a href="/curiosity.html">Curiosity Cards</a><a href="/#reading-room">Reading Room</a><a href="/sources.html">Source directory</a><a href="/feeds.html">RSS feeds</a><a href="/contribute.html">For authors</a><a href="/about.html">About</a><a href="/privacy.html">Privacy &amp; controls</a><a href="/trust.html">Source standards</a><a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+      </nav>
+    </footer>
+  </body>
+</html>

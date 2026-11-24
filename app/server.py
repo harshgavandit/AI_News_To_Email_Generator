@@ -68,7 +68,7 @@ from app.discovery_health import router as discovery_router
 from app import research as research_service
 from app import monitoring
 from app import research_projects
-from app import curiosity_api, curiosity_pages
+from app import curiosity_api, curiosity_pages, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
 from app import ai_insights, event_intelligence
 from app.insight_api import router as insight_router
 
@@ -84,6 +84,10 @@ app.include_router(research_projects.router)
 app.include_router(research_projects.public_router)
 app.include_router(curiosity_api.router)
 app.include_router(curiosity_pages.router)
+app.include_router(push_api.router)
+app.include_router(feeds.router)
+app.include_router(trackers.router)
+app.include_router(weekly_recap.router)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -92,7 +96,7 @@ _limits = OrderedDict()
 _limit_lock = threading.Lock()
 _generation_lock = threading.Lock()
 _digest_cache = Cache("digest-v11")
-_news_cache = Cache("news-v17")
+_news_cache = Cache("news-v18")  # v18: stories carry grouped coverage facts
 _headline_cache = Cache("headlines-v8")
 _signals_cache = Cache("signals-v1")
 _trending_cache = Cache("trending-v7")
@@ -928,7 +932,8 @@ def run_intelligence_check(store):
             ai_insights.prepare_recent_changes(store)
         except SQLAlchemyError as error:
             logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
-        result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief}
+        result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief,
+                  **send_push_alerts(store), "recap_status": prepare_weekly_recap(store)}
         if issue := research_service.take_provider_issue():
             # A coarse category only; provider messages can echo request details.
             result["ai_issue"] = issue
@@ -939,6 +944,24 @@ def run_intelligence_check(store):
         return result
     finally:
         store.finish_refresh(lease, cooldown=240, scope=lease_scope)
+
+
+def prepare_weekly_recap(store):
+    # Last week's recap is saved once, early on Monday, so the morning brief and the page read a snapshot.
+    try:
+        return "ready" if weekly_recap.latest(store) else "unavailable"
+    except Exception as error:  # noqa: BLE001
+        logger.warning("weekly_recap_failed error_type=%s", type(error).__name__)
+        return "failed"
+
+
+def send_push_alerts(store):
+    # Device alerts follow the hourly event update; a failure here never fails the intelligence job.
+    try:
+        return push_alerts.dispatch(store)
+    except Exception as error:  # noqa: BLE001
+        logger.warning("push_dispatch_failed error_type=%s", type(error).__name__)
+        return {"push_status": "failed"}
 
 
 def run_monitoring_check(store, *, scheduled=False):
@@ -1340,7 +1363,8 @@ def load_archive_page(store, filters):
     page = store.page(**filters)
     freshness = feed_freshness(catalog, **{name: filters[name] for name in FEED_FILTERS})
     active = [item for item in catalog if item["enabled"]]
-    return dict(page, **discovery_options(), articles=[public_article(article) for article in page["articles"]], sources=catalog,
+    stories = story_groups.annotate_articles(store, [public_article(article) for article in page["articles"]])
+    return dict(page, **discovery_options(), articles=stories, sources=catalog,
                 freshness=freshness,
                 fetched_at=max((item["checked_at"] or "" for item in active), default="") or None,
                 last_success=max((item["last_success"] or "" for item in active), default="") or None)

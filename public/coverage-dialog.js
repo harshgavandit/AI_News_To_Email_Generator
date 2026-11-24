@@ -1,4 +1,5 @@
 import { coverageLabels } from "./catalog.js";
+import { firstReportedText, regionsText } from "./coverage-summary.js";
 
 function element(tag, className, text) {
   const item = document.createElement(tag);
@@ -31,6 +32,7 @@ export function createCoverageDialog(dialog, { externalLink, readableTime }) {
       if (Object.hasOwn(coverageLabels, source.coverage)) {
         metadata.append(element("span", "meta-pill", coverageLabels[source.coverage]));
       }
+      if (source.region_label) metadata.append(element("span", "meta-pill region-pill", source.region_label.replace(" publishers", "")));
       if (Number.isFinite(Date.parse(source.published_at))) {
         const dateText = source.date_precision === "day" ?
           new Date(source.published_at).toLocaleDateString(undefined, { dateStyle: "medium", timeZone: "UTC" }) :
@@ -80,7 +82,9 @@ export function createCoverageDialog(dialog, { externalLink, readableTime }) {
     const count = story.source_count || story.sources.length;
     const countText = count > story.sources.length ? `Showing ${story.sources.length} of ${count} matched publisher groups.` :
       `${count} matched publisher groups.`;
-    note.textContent = `${countText} Headline matches are drawn from the recent archive.`;
+    const facts = [firstReportedText(story.coverage_summary), regionsText(story.coverage_summary) &&
+      `By region: ${regionsText(story.coverage_summary)}`].filter(Boolean);
+    note.textContent = `${facts.length ? `${facts.join(" · ")}. ` : ""}${countText} Headline matches are drawn from the recent archive.`;
     const query = story.query || story.title.slice(0, 150);
     archive.href = `/?${new URLSearchParams({ q: query, window: "7d", sort: "relevance" })}#reading-room`;
     render(false);

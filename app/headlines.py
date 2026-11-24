@@ -3,11 +3,12 @@ from datetime import UTC, datetime, timedelta
 
 from app.article_metadata import restore_metadata
 from app.article_language import article_language
-from app.coverage import public_article
+from app.coverage import REGION_LABELS, public_article
 from app.intelligence import story_identity
 from app.selection import words
 from app.sources import BY_ID
 from app.story_coverage import coverage_match, headline
+from app.story_groups import coverage_summary
 from app.news_signals import COMMERCE, news_score, impact_score
 
 HEADLINE_HOURS = 72
@@ -48,13 +49,15 @@ def developing_coverage(rows, prepared):
                     "article_id": row["id"], "published_at": row["published_at"],
                     "date_precision": row.get("publication_date_precision"),
                     "coverage": row["coverage"], "language": row["language"],
-                    "publisher_family": row["publisher_family"], "excerpt": row["cleanSummary"]}
+                    "publisher_family": row["publisher_family"], "excerpt": row["cleanSummary"],
+                    "region": row["region_id"], "region_label": REGION_LABELS.get(row["region_id"], "Global publishers")}
                    for row in shown]
         result.append({"id": anchor["id"], "article_id": anchor["id"], "title": anchor["title"],
             "topic": public["topic_label"],
             "summary": public["cleanSummary"], "updated_at": max(row["published_at"] for row in matches),
             "query": anchor["title"][:150], "sources": sources, "source_count": len(matched_sources),
-            "source_count_basis": "distinct_publisher_families_in_sample", "basis": "matching_publisher_headlines"})
+            "source_count_basis": "distinct_publisher_families_in_sample", "basis": "matching_publisher_headlines",
+            "coverage_summary": coverage_summary([{**row, "source_id": row["source_id"]} for row in matched_sources])})
         represented.append(current)
         if len(result) == 2:
             break

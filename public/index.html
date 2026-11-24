@@ -31,6 +31,10 @@
     <meta name="twitter:title" content="Informa AI — Global Technology News &amp; Intelligence" />
     <meta name="twitter:description" content="Follow global tech reporting, research, and developer releases. Read the sources or get a brief in your inbox." />
     <link rel="icon" href="/informa-ai-icon.png" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="alternate" type="application/rss+xml" title="Informa AI — Latest technology news" href="/feeds/latest.xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/pwa.js"></script>
     <script src="/theme.js"></script>
     <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -70,6 +74,7 @@
           <a href="#reading-room" aria-current="page">Reading Room</a>
           <a href="/curiosity.html">Curiosity Cards</a>
           <a href="/research.html">Research Desk</a>
+          <a href="/trackers.html">Trackers</a>
           <a href="/sources.html">Sources</a>
           <a href="/contribute.html">For authors</a>
         </nav>
@@ -98,6 +103,8 @@
         <div class="sidebar-section">
           <a class="sidebar-secondary" href="/inbox.html">Inbox ↗</a>
           <a class="sidebar-secondary" href="/research.html">Research Desk ↗</a>
+          <a class="sidebar-secondary" href="/trackers.html">Trackers ↗</a>
+          <a class="sidebar-secondary" href="/recap.html">This week in tech ↗</a>
           <a class="sidebar-secondary" href="/technology.html">Technology pages ↗</a>
           <a class="sidebar-secondary" href="/projects.html">Research projects ↗</a>
           <h2>Explore topics</h2>
@@ -110,9 +117,11 @@
         </div>
         <div class="sidebar-footer">
           <a href="/sources.html">Source directory <span aria-hidden="true">↗</span></a>
+          <a href="/feeds.html">RSS feeds <span aria-hidden="true">↗</span></a>
           <a href="/contribute.html">For authors <span aria-hidden="true">↗</span></a>
           <a href="/privacy.html">Privacy &amp; controls <span aria-hidden="true">↗</span></a>
           <a href="/about.html">About Informa AI <span aria-hidden="true">↗</span></a>
+          <button type="button" class="sidebar-secondary install-app" data-install-app hidden>Install the app</button>
         </div>
       </aside>
       <div class="workspace-content">
@@ -214,6 +223,10 @@
                 <div class="preference-actions"><button class="button primary" type="submit">Update recommendations</button><button class="text-button" type="button" data-clear-preferences>Reset interests</button></div>
                 <p class="status" role="status" aria-live="polite">Your interests stay in this browser. Selected preferences are sent to rank stories when you open For You.</p>
               </form>
+            </details>
+            <details id="device-alerts">
+              <summary>Alerts on this device</summary>
+              <div class="alert-panel" data-alert-panel></div>
             </details>
             <details>
               <summary>Manage recommendation feedback</summary>
@@ -813,12 +826,12 @@
       <nav class="footer-nav" aria-label="Footer">
         <a href="#reading-room">Reading Room</a>
         <a href="/curiosity.html">Curiosity Cards</a>
-        <a href="/sources.html">Source Directory</a>
+        <a href="/sources.html">Source Directory</a><a href="/feeds.html">RSS feeds</a>
         <a href="#composer">Brief Builder</a>
         <a href="https://github.com/harshgavandit/AI_News_To_Email_Generator" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         <a href="/about.html">About</a>
         <a href="/privacy.html">Privacy &amp; controls</a>
-        <a href="/trust.html">Source standards</a>
+        <a href="/trust.html">Source standards</a><a href="/trackers.html">Trackers</a><a href="/recap.html">Weekly recap</a>
       </nav>
     </footer>
     <dialog id="mail-dialog" aria-labelledby="mail-title" aria-describedby="mail-explanation">

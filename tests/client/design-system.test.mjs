@@ -4,7 +4,8 @@ import test from 'node:test';
 import { JSDOM } from 'jsdom';
 
 const root = new URL('../../public/', import.meta.url);
-const pages = readdirSync(root).filter(name => name.endsWith('.html'));
+// offline.html is the service worker's standalone fallback and deliberately loads no site stylesheets.
+const pages = readdirSync(root).filter(name => name.endsWith('.html') && name !== 'offline.html');
 
 test('every page loads the design-system layer after the legacy stylesheets', () => {
   assert.ok(pages.length >= 11);

@@ -76,7 +76,10 @@ def test_developing_story_exposes_comparison_metadata_and_sampled_source_count(t
     assert reporting == {"publisher": rows[2]["publisher"], "label": title, "url": rows[2]["url"],
                          "article_id": rows[2]["id"], "published_at": rows[2]["published_at"], "date_precision": None,
                          "coverage": "reporting", "language": "en", "publisher_family": "bbc-tech",
-                         "excerpt": "A short publisher-supplied excerpt."}
+                         "excerpt": "A short publisher-supplied excerpt.", "region": "Global",
+                         "region_label": "Global publishers"}
+    assert feature["coverage_summary"]["publishers"] == 7
+    assert feature["coverage_summary"]["first_reported_by"] in {row["publisher"] for row in rows}
     store.engine.dispose()
 
 

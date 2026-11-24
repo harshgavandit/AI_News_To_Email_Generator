@@ -204,9 +204,28 @@ def weekly_postmortem_for(moment=None, timezone_str=None):
         return None
 
 
+def weekly_recap_for(store, moment=None, timezone_str=None):
+    """Last week's recap, only on the reader's local Monday."""
+    from app import weekly_recap
+    moment = moment or datetime.now(UTC)
+    try:
+        local = moment.astimezone(zoneinfo.ZoneInfo(timezone_str or "UTC"))
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        local = moment.astimezone(UTC)
+    if local.weekday() != 0:
+        return None
+    try:
+        return weekly_recap.latest(store, moment)
+    except Exception as error:  # noqa: BLE001 - the brief goes out without it
+        logger.warning("weekly_recap_unavailable error_type=%s", type(error).__name__)
+        return None
+
+
 def morning_curiosity(store, mailbox, brief, moment=None, timezone_str=None):
-    return append_curiosity_section(brief, store.curiosity_selection(mailbox), curiosity_suggestions(store, mailbox, moment),
-                                    weekly_postmortem_for(moment, timezone_str))
+    from app import weekly_recap
+    brief = append_curiosity_section(brief, store.curiosity_selection(mailbox), curiosity_suggestions(store, mailbox, moment),
+                                     weekly_postmortem_for(moment, timezone_str))
+    return weekly_recap.append_to_brief(brief, weekly_recap_for(store, moment, timezone_str), public_site())
 
 
 def personalized_morning_brief(store, mailbox, fallback, load_events):
