@@ -205,7 +205,7 @@ test('collection page keeps filters in the URL and renders the API payload', asy
   for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
   const page = await import('../../public/curiosity-page.js');
   assert.deepEqual(page.readCuriosityState('?theme=bogus&format=talk&sort=newest&q=gpu'),
-    { theme: 'all', format: 'talk', level: 'all', company: 'all', sort: 'newest', query: 'gpu' });
+    { theme: 'all', format: 'talk', level: 'all', problem: 'all', company: 'all', sort: 'newest', query: 'gpu' });
   assert.equal(page.readCuriosityState('?level=advanced').level, 'advanced');
   assert.equal(page.writeCuriosityState({ theme: 'ai', format: 'all', company: 'all', sort: 'featured', query: '' }), '?theme=ai');
   const urls = [];
@@ -225,4 +225,40 @@ test('collection page keeps filters in the URL and renders the API payload', asy
   window.document.querySelector('[data-theme="all"]').click();
   assert.equal(replaced.at(-1), '/curiosity.html?q=netcode');
   for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+});
+
+
+test('real-world problems: filter, label, URL state and the reviewed three-line breakdown', async () => {
+  const curiosity = await import('../../public/curiosity.js');
+  const outage = { ...rich, id: 'gitlab', title: 'Postmortem of database outage', company: 'GitLab', seed: true,
+    problems: ['outages', 'data-integrity'],
+    breakdown: { problem: 'Data was removed from the primary.', approach: 'Restored from an LVM snapshot.', result: 'About six hours of changes were lost.' } };
+  const fresh = { ...rich, id: 'fresh', title: 'Scaling ML inference', company: 'CRED', seed: false, problems: ['performance'] };
+  const cards = [rich, outage, fresh];
+  assert.deepEqual(curiosity.filterCuriosityCards(cards, { problem: 'outages' }).map((card) => card.id), ['gitlab']);
+  assert.deepEqual(curiosity.filterCuriosityCards(cards, { problem: 'performance' }).map((card) => card.id), ['fresh']);
+  assert.deepEqual(curiosity.filterCuriosityCards(cards, { query: 'lvm snapshot' }).map((card) => card.id), ['gitlab'],
+    'search covers the breakdown lines');
+  assert.deepEqual(curiosity.filterCuriosityCards(cards, { query: 'data loss' }).map((card) => card.id), ['gitlab'],
+    'search covers problem labels');
+
+  const document = new JSDOM('<section id="cards"></section>').window.document;
+  const container = document.querySelector('#cards');
+  curiosity.renderCuriosityCards(container, cards, { filters: false });
+  const card = container.querySelector('[data-curiosity-id="gitlab"]');
+  assert.equal(card.querySelector('.curiosity-problem').textContent, 'Outages & incidents');
+  const rows = [...card.querySelectorAll('.curiosity-breakdown div')].map((row) => [row.querySelector('dt').textContent, row.querySelector('dd').textContent]);
+  assert.deepEqual(rows, [['The problem', 'Data was removed from the primary.'], ['What they did', 'Restored from an LVM snapshot.'],
+    ['The result', 'About six hours of changes were lost.']]);
+  assert.equal(container.querySelector('[data-curiosity-id="fresh"] .curiosity-breakdown'), null, 'no breakdown without reviewed lines');
+  curiosity.renderCuriosityCards(container, [{ ...outage, breakdown: { problem: 'x', approach: '', result: 'y' } }], { filters: false });
+  assert.equal(container.querySelector('.curiosity-breakdown'), null, 'incomplete breakdowns are not shown');
+  curiosity.renderCuriosityCards(container, [{ ...outage, breakdown: { problem: '<img src=x onerror=alert(1)>', approach: 'a', result: 'b' } }], { filters: false });
+  assert.equal(container.querySelector('img'), null, 'breakdown text is never parsed as markup');
+
+  const page = await import('../../public/curiosity-page.js');
+  assert.equal(page.readCuriosityState('?problem=outages').problem, 'outages');
+  assert.equal(page.readCuriosityState('?problem=bogus').problem, 'all');
+  assert.equal(page.writeCuriosityState({ theme: 'all', problem: 'migrations', format: 'all', company: 'all', sort: 'featured', query: '' }),
+    '?problem=migrations');
 });

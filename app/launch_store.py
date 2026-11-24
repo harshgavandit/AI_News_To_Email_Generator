@@ -681,15 +681,26 @@ class Store:
                 return list({r["id"]: dict(r) for r in [*recent, *ranked]}.values())
             return [dict(r) for r in recent]
 
-    def curiosity_candidates(self, source_ids, *, hours=90 * 24, limit=200):
-        """Return a bounded set of archived engineering/research excerpts, without refreshing feeds."""
+    def curiosity_candidates(self, source_ids, *, hours=90 * 24, limit=200, per_source=None):
+        """Return a bounded set of archived engineering/research excerpts, without refreshing feeds.
+
+        With ``per_source``, each publisher contributes at most that many of its newest posts, so a few
+        busy feeds cannot crowd quieter engineering blogs (and their postmortems) out of the window.
+        """
         if not source_ids:
             return []
         stmt = self.query(hours).where(articles.c.source_id.in_(tuple(source_ids)))
+        limit = max(1, min(limit, 2000))
+        if per_source:
+            rank = func.row_number().over(partition_by=articles.c.source_id,
+                                          order_by=(articles.c.published_at.desc(), articles.c.id.desc()))
+            ranked = stmt.add_columns(rank.label("source_rank")).subquery()
+            stmt = select(*(ranked.c[column.name] for column in articles.columns)).where(
+                ranked.c.source_rank <= per_source).order_by(ranked.c.published_at.desc(), ranked.c.id.desc())
+        else:
+            stmt = stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc())
         with self.engine.connect() as conn:
-            return [dict(row) for row in conn.execute(
-                stmt.order_by(articles.c.published_at.desc(), articles.c.id.desc()).limit(max(1, min(limit, 500)))
-            ).mappings()]
+            return [dict(row) for row in conn.execute(stmt.limit(limit)).mappings()]
 
     def ensure_curiosity_schema(self):
         if self._curiosity_schema_ready:

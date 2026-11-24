@@ -494,3 +494,79 @@ def test_agentic_and_ai_native_engineering_are_first_class_themes():
     assert curiosity.card_themes(article)[0] == "agents"
     assert curiosity.card_themes({"title": "Our background coding agents opened 2,000 pull requests",
                                   "description": "Lessons from AI-generated code review and test generation. " * 3})[0] == "ai-engineering"
+
+
+def test_real_world_problems_are_labelled_and_reviewed_breakdowns_are_complete():
+    from app import curiosity
+
+    seeds = {seed["id"]: seed for seed in curiosity.CURATED_CURIOSITY}
+    assert set(curiosity.REVIEWED_BREAKDOWNS) <= set(seeds)
+    assert set(curiosity.REVIEWED_PROBLEMS) <= set(seeds)
+    for ident in curiosity.REVIEWED_BREAKDOWNS:
+        card = curiosity._card(seeds[ident], {})
+        assert set(card["breakdown"]) == {"problem", "approach", "result"}, ident
+        assert all(20 <= len(line) <= 320 for line in card["breakdown"].values()), ident
+        assert card["problems"] and set(card["problems"]) <= set(curiosity.PROBLEM_LABELS), ident
+    postmortems = [ident for ident, seed in seeds.items() if curiosity.card_format(seed) == "postmortem"]
+    assert len(postmortems) >= 15
+    assert all("outages" in curiosity.card_problems(seeds[ident]) for ident in postmortems), \
+        [ident for ident in postmortems if "outages" not in curiosity.card_problems(seeds[ident])]
+    # Fresh archive cards never carry an editorial breakdown, even if a row claims one.
+    fresh = {"id": "x", "title": "How we migrated our Postgres fleet to sharded clusters", "url": "https://github.blog/x",
+             "source_id": "github-engineering", "publisher": "GitHub", "breakdown": {"problem": "a", "approach": "b", "result": "c"},
+             "description": "We moved from one primary to 32 shards and cut p99 latency by 40%."}
+    card = curiosity._card(fresh, {})
+    assert card["breakdown"] is None
+    assert set(card["problems"]) == {"migrations", "scaling-data"}
+    assert curiosity.card_problems({"title": "Our new design system", "description": "Colours and type."}) == []
+
+
+def test_problem_stories_outrank_feature_tours_among_fresh_posts():
+    from app.curiosity import quality_score
+
+    description = ("The team explains the architecture of its Kubernetes platform, the database replication design "
+                   "and the deployment pipeline used across services.")
+    tour = {"title": "A tour of our Kubernetes platform", "description": description}
+    report = {"title": "GitHub availability report: September 2026",
+              "description": "In September, we experienced two incidents that resulted in degraded performance. " + description}
+    postmortem = {"title": "What went wrong: the root cause of our Kubernetes outage", "description": description}
+    assert quality_score(postmortem) > quality_score(tour)
+    assert quality_score(report) > quality_score(tour)
+
+
+def test_candidate_sampling_gives_every_publisher_a_share(research_database):
+    from app.sources import BY_ID
+
+    store = Store(research_database)
+    store.migrate()
+    now = datetime.now(UTC)
+
+    def post(source_id, index, hours):
+        source = BY_ID[source_id]
+        return {"id": f"{source_id}-{index}", "title": f"Post {index} from {source.label}", "url": f"https://{source.hosts[0]}/p{index}",
+                "description": f"The engineering team explains how service {index} handles database replication, deployment and reliability in production.", "source": source.group, "source_id": source_id, "publisher": source.label,
+                "kind": source.kind, "category": "software", "published_at": (now - timedelta(hours=hours)).isoformat()}
+
+    store.ingest("github-engineering", [post("github-engineering", i, i) for i in range(30)], True)
+    store.ingest("cloudflare-postmortems", [post("cloudflare-postmortems", i, 200 + i) for i in range(3)], True)
+    ids = ["github-engineering", "cloudflare-postmortems"]
+    newest = store.curiosity_candidates(ids, limit=10)
+    assert {row["source_id"] for row in newest} == {"github-engineering"}, "without sampling the busy feed fills the window"
+    sampled = store.curiosity_candidates(ids, limit=10, per_source=4)
+    by_source = {}
+    for row in sampled:
+        by_source.setdefault(row["source_id"], []).append(row["id"])
+    assert by_source == {"github-engineering": [f"github-engineering-{i}" for i in range(4)],
+                         "cloudflare-postmortems": [f"cloudflare-postmortems-{i}" for i in range(3)]}
+    assert "source_rank" not in sampled[0] and {"title", "url", "published_at"} <= set(sampled[0])
+
+
+def test_curiosity_api_lists_problem_labels(monkeypatch):
+    from app import server
+
+    monkeypatch.setattr(server, "build_curiosity_cards", lambda store, limit: [])
+    monkeypatch.setattr(server, "get_store", lambda: None)
+    server._curiosity_cache.clear() if hasattr(server._curiosity_cache, "clear") else None
+    payload = server.curiosity(limit=3)
+    assert {"id": "outages", "label": "Outages & incidents"} in payload["problems"]
+    assert len(payload["problems"]) == 9

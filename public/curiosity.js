@@ -39,6 +39,23 @@ export const CURIOSITY_FORMATS = {
   "deep-dive": "Deep dive",
 };
 
+// Real-world problems a story is about (mirrors PROBLEMS in app/curiosity.py; the API sends labels too).
+export const CURIOSITY_PROBLEMS = {
+  outages: "Outages & incidents",
+  "scaling-data": "Scaling databases & storage",
+  migrations: "Migrations & rewrites",
+  performance: "Latency & performance",
+  "scaling-traffic": "Scaling traffic & real-time",
+  "data-integrity": "Data loss & consistency",
+  cost: "Cost & efficiency",
+  "security-incidents": "Security incidents",
+  "dev-productivity": "Developer productivity",
+};
+
+export function cardProblems(card) {
+  return Array.isArray(card?.problems) ? card.problems.filter((id) => typeof id === "string") : [];
+}
+
 export const CURIOSITY_LEVELS = {
   introductory: "Introductory",
   intermediate: "Intermediate",
@@ -66,7 +83,9 @@ export function cardThemes(card) {
 function searchable(card) {
   return [card.title, card.question, companyOf(card), card.publisher, CURIOSITY_LEVELS[card.level], card.publisher_detail, card.author, card.summary, card.why_read,
     ...(Array.isArray(card.technologies) ? card.technologies : []), ...(Array.isArray(card.tags) ? card.tags : []),
-    ...cardThemes(card).map((theme) => CURIOSITY_THEMES[theme] || theme)]
+    ...cardThemes(card).map((theme) => CURIOSITY_THEMES[theme] || theme),
+    ...cardProblems(card).map((problem) => CURIOSITY_PROBLEMS[problem] || problem),
+    ...Object.values(card.breakdown && typeof card.breakdown === "object" ? card.breakdown : {})]
     .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
 }
 
@@ -93,6 +112,7 @@ export function filterCuriosityCards(cards, filter = {}) {
   const theme = filter.theme || "all";
   const format = filter.format || "all";
   const level = filter.level || "all";
+  const problem = filter.problem || "all";
   const terms = String(filter.query || "").toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const result = (Array.isArray(cards) ? cards : []).filter((card) => {
     if (!card) return false;
@@ -102,6 +122,7 @@ export function filterCuriosityCards(cards, filter = {}) {
     if (theme !== "all" && !cardThemes(card).includes(theme)) return false;
     if (format !== "all" && card.format !== format) return false;
     if (level !== "all" && card.level !== level) return false;
+    if (problem !== "all" && !cardProblems(card).includes(problem)) return false;
     if (terms.length) {
       const text = searchable(card);
       if (!terms.every((term) => text.includes(term))) return false;
@@ -184,6 +205,8 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
   if (CURIOSITY_FORMATS[card.format]) meta.append(element(document, "span", "curiosity-format", CURIOSITY_FORMATS[card.format]));
   if (CURIOSITY_THEMES[themes[0]]) meta.append(element(document, "span", "curiosity-theme", CURIOSITY_THEMES[themes[0]]));
   if (CURIOSITY_LEVELS[card.level]) meta.append(element(document, "span", `curiosity-level curiosity-level-${card.level}`, CURIOSITY_LEVELS[card.level]));
+  const problem = cardProblems(card).find((id) => CURIOSITY_PROBLEMS[id]);
+  if (problem) meta.append(element(document, "span", "curiosity-problem", CURIOSITY_PROBLEMS[problem]));
   if (meta.childElementCount) article.append(meta);
 
   article.append(element(document, "h3", "curiosity-card-title", card.title));
@@ -200,6 +223,17 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
   article.append(element(document, "span", "curiosity-summary-basis", basis));
   article.append(element(document, "p", "curiosity-summary", card.summary || card.description ||
     "Open the original source for the publisher’s technical context."));
+  // Reviewed cards say what went wrong, what the team did and how it turned out, in one line each.
+  const steps = card.breakdown && typeof card.breakdown === "object" ? card.breakdown : null;
+  if (steps && ["problem", "approach", "result"].every((key) => typeof steps[key] === "string" && steps[key].trim())) {
+    const list = element(document, "dl", "curiosity-breakdown");
+    for (const [key, label] of [["problem", "The problem"], ["approach", "What they did"], ["result", "The result"]]) {
+      const row = element(document, "div", `curiosity-breakdown-row curiosity-breakdown-${key}`);
+      row.append(element(document, "dt", "", label), element(document, "dd", "", steps[key].trim()));
+      list.append(row);
+    }
+    article.append(list);
+  }
   if (typeof card.why_read === "string" && card.why_read.trim()) {
     const why = element(document, "p", "curiosity-why");
     why.append(element(document, "strong", "", "Why read it "), document.createTextNode(card.why_read.trim()));

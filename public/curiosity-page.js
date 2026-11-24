@@ -1,5 +1,5 @@
-import { CURIOSITY_FORMATS, CURIOSITY_LEVELS, CURIOSITY_THEMES, MAX_CURIOSITY_CARDS, cardThemes, curiosityCompanies,
-  filterCuriosityCards, renderCuriosityCards } from "./curiosity.js";
+import { CURIOSITY_FORMATS, CURIOSITY_LEVELS, CURIOSITY_PROBLEMS, CURIOSITY_THEMES, MAX_CURIOSITY_CARDS, cardProblems,
+  cardThemes, curiosityCompanies, filterCuriosityCards, renderCuriosityCards } from "./curiosity.js";
 
 import { mountConstellation, themeGraph } from "./curiosity-constellation.js";
 
@@ -14,6 +14,7 @@ export function readCuriosityState(search) {
     theme: pick("theme", Object.keys(CURIOSITY_THEMES)),
     format: pick("format", Object.keys(CURIOSITY_FORMATS)),
     level: pick("level", Object.keys(CURIOSITY_LEVELS)),
+    problem: pick("problem", Object.keys(CURIOSITY_PROBLEMS)),
     company: (params.get("company") || "all").slice(0, 80),
     sort: params.get("sort") === "newest" ? "newest" : "featured",
     query: (params.get("q") || "").slice(0, 80),
@@ -22,7 +23,7 @@ export function readCuriosityState(search) {
 
 export function writeCuriosityState(state) {
   const params = new URLSearchParams();
-  for (const key of ["theme", "format", "level", "company"]) if (state[key] && state[key] !== "all") params.set(key, state[key]);
+  for (const key of ["theme", "problem", "format", "level", "company"]) if (state[key] && state[key] !== "all") params.set(key, state[key]);
   if (state.sort === "newest") params.set("sort", "newest");
   if (state.query) params.set("q", state.query);
   const text = params.toString();
@@ -48,6 +49,7 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
   const query = byId("curiosity-query");
   const format = byId("curiosity-format");
   const level = byId("curiosity-level");
+  const problem = byId("curiosity-problem");
   const company = byId("curiosity-company");
   const sort = byId("curiosity-sort");
   const status = byId("curiosity-result-status");
@@ -88,10 +90,11 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     persist();
     renderThemes();
     constellation?.setActive(state.theme);
-    const filter = { theme: state.theme, format: state.format, level: state.level, company: state.company, sort: state.sort, query: state.query };
+    const filter = { theme: state.theme, problem: state.problem, format: state.format, level: state.level, company: state.company,
+      sort: state.sort, query: state.query };
     const matches = filterCuriosityCards(state.cards, filter);
     status.textContent = state.cards.length
-      ? `${number.format(matches.length)} ${matches.length === 1 ? "story" : "stories"}${state.theme !== "all" ? ` in ${CURIOSITY_THEMES[state.theme]}` : ""}`
+      ? `${number.format(matches.length)} ${matches.length === 1 ? "story" : "stories"}${state.theme !== "all" ? ` in ${CURIOSITY_THEMES[state.theme]}` : ""}${state.problem !== "all" ? ` about ${CURIOSITY_PROBLEMS[state.problem].toLocaleLowerCase()}` : ""}`
       : "";
     renderCuriosityCards(collection, state.cards, {
       filter, filters: false, actions: false, step: PAGE, visibleCount: state.visible,
@@ -117,7 +120,7 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     }, 150);
   });
   byId("curiosity-controls").addEventListener("submit", (event) => event.preventDefault());
-  for (const [select, key] of [[format, "format"], [level, "level"], [company, "company"], [sort, "sort"]]) {
+  for (const [select, key] of [[problem, "problem"], [format, "format"], [level, "level"], [company, "company"], [sort, "sort"]]) {
     select.addEventListener("change", () => {
       state[key] = select.value;
       state.visible = PAGE;
@@ -133,6 +136,10 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     .then((payload) => {
       state.cards = Array.isArray(payload.cards) ? payload.cards : [];
       for (const item of payload.themes || []) if (item?.id && item?.label) CURIOSITY_THEMES[item.id] ??= item.label;
+      for (const item of payload.problems || []) if (item?.id && item?.label) CURIOSITY_PROBLEMS[item.id] ??= item.label;
+      const problems = new Set(state.cards.flatMap(cardProblems));
+      fill(problem, Object.entries(CURIOSITY_PROBLEMS).filter(([id]) => problems.has(id)), state.problem);
+      state.problem = problem.value;
       fill(format, Object.entries(CURIOSITY_FORMATS).filter(([id]) => state.cards.some((card) => card.format === id)), state.format);
       fill(company, curiosityCompanies(state.cards).map((name) => [name, name]), state.company);
       fill(level, Object.entries(CURIOSITY_LEVELS).filter(([id]) => state.cards.some((card) => card.level === id)), state.level);

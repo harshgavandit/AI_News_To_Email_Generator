@@ -15,7 +15,7 @@ from app.sources import BY_ID, DEFAULT_SOURCES
 
 def _seed(ident, title, url, publisher, company, year, description, tags, read_minutes, source_id, *,
           authors="", publisher_detail="", read_time_basis="estimate", published="", why="", themes=(),
-          kind="engineering", question=""):
+          kind="engineering", question="", problems=(), breakdown=None):
     """A manually reviewed card. ``source_id`` is None for talks and posts outside the feed catalog."""
     source = BY_ID[source_id] if source_id else None
     kind = source.kind if source else kind
@@ -33,6 +33,8 @@ def _seed(ident, title, url, publisher, company, year, description, tags, read_m
         "why_read": why,
         "question": question,
         "themes": list(themes),
+        "problems": list(problems),
+        "breakdown": dict(zip(("problem", "approach", "result"), breakdown)) if breakdown else None,
         "tags": list(tags),
         "read_minutes": read_minutes,
         "read_time_basis": read_time_basis,
@@ -868,6 +870,98 @@ for _ident, _themes in {
 }.items():
     next(article for article in CURATED_CURIOSITY if article["id"] == _ident)["themes"] = list(_themes)
 
+# Reviewed problem → approach → result lines for postmortems and case studies, written from each source.
+REVIEWED_BREAKDOWNS = {
+    "gitlab-database-outage-2017": (
+        "Data was removed from GitLab.com’s only primary database, and the daily pg_dump backups were missing.",
+        "The team restored from an LVM snapshot that had been taken hours earlier for staging.",
+        "About six hours of database changes were lost, and GitLab committed to fixing its backup and recovery procedures."),
+    "atlassian-outage-2022": (
+        "A cleanup script received whole-site IDs instead of app IDs, and the deletion API accepted them.",
+        "Engineers restored the deleted sites progressively between April 8 and April 18.",
+        "775 customers lost access to their Atlassian products, some for up to 14 days."),
+    "aws-s3-outage-2017": (
+        "A mistyped input removed far more S3 servers than intended, including the index and placement subsystems.",
+        "Both subsystems had to be restarted from scratch while dependent services waited.",
+        "The tool now removes capacity slowly and will not take a subsystem below its minimum."),
+    "aws-us-east-1-2021": (
+        "An automated scaling activity caused a surge of connections that overwhelmed AWS’s internal network devices.",
+        "Operators worked with little monitoring data, because the congestion hid it, while clients failed to back off.",
+        "Latency and errors lasted for hours across services in the region."),
+    "meta-outage-2021": (
+        "A backbone maintenance command disconnected every Facebook data center, and an audit-tool bug failed to stop it.",
+        "DNS servers withdrew their BGP routes as designed; engineers had to reach data centers in person to restore them.",
+        "Facebook and its apps were unreachable from the whole internet until engineers restored the backbone."),
+    "github-october-2018-incident": (
+        "A 43-second network partition made Orchestrator fail MySQL primaries over to the West Coast.",
+        "GitHub chose data integrity over availability, holding back webhooks and Pages builds while it reconciled writes.",
+        "24 hours and 11 minutes of degraded service; no user data was lost."),
+    "cloudflare-outage-june-2022": (
+        "A network change in Cloudflare’s resilience project broke routing in its 19 busiest data centers.",
+        "Engineers reverted the change, bringing locations back between 06:58 and 07:42 UTC.",
+        "About 75 minutes of outage in 19 locations that carry a large share of Cloudflare’s traffic."),
+    "cloudflare-control-plane-2023": (
+        "A power failure at one Oregon data center took down part of the three-site control plane cluster.",
+        "Cloudflare brought most of the control plane up at its disaster recovery facility within about six hours.",
+        "Network traffic was unaffected, but some control plane and logging services were down until November 4."),
+    "fastly-outage-june-2021": (
+        "A bug shipped in May was triggered by one customer’s valid configuration change.",
+        "Fastly identified and disabled the configuration, then deployed a permanent fix.",
+        "85% of the network returned errors; 95% recovered within 49 minutes."),
+    "datadog-outage-march-2023": (
+        "An automatic systemd update deleted the Cilium routes containers use to talk to each other.",
+        "Hundreds of responders brought services back over more than a day, then backfilled historical data.",
+        "Five regions were affected; Datadog disabled the automatic update that triggered it."),
+    "slack-incident-2-22-22": (
+        "Cache tier problems pushed load onto the databases that client boot depends on.",
+        "The team throttled client boot requests so already-connected users kept working, then raised the limit step by step.",
+        "Service recovered gradually; the write-up explains how scatter queries and retries kept the system overloaded."),
+    "crowdstrike-falcon-pir-2024": (
+        "A bug in the Content Validator let a faulty content update reach Windows sensors.",
+        "CrowdStrike reverted the faulty update 78 minutes after releasing it.",
+        "Commitments to more testing and staggered, canary-first rollouts for content updates."),
+    "notion-sharding-postgres": (
+        "Notion’s single Postgres database was approaching its limits as usage grew.",
+        "The team sharded data into 480 logical shards on 32 databases, double-writing and backfilling before switching.",
+        "The switchover took five minutes of scheduled downtime and made Notion noticeably faster."),
+    "uber-postgres-to-mysql": (
+        "Postgres caused write amplification, replication and upgrade problems at Uber’s scale.",
+        "Uber built Schemaless, a sharding layer, on MySQL’s InnoDB instead.",
+        "Many Postgres workloads moved to MySQL-based storage."),
+    "github-partitioning-mysql": (
+        "Most of GitHub’s core data lived in a single MySQL cluster, mysql1.",
+        "Tables were grouped into schema domains, boundaries enforced with SQL linters, then moved to new clusters.",
+        "50% less load on the hosts that held mysql1 data, and fewer database incidents."),
+    "slack-vitess-migration": (
+        "Slack’s active-active MySQL clusters were hard to scale for new features.",
+        "Slack migrated workloads to Vitess, a horizontal sharding system for MySQL, over three years.",
+        "Vitess serves 99% of the query load at 2.3 million queries per second at peak."),
+    "segment-goodbye-microservices": (
+        "More than 140 per-destination microservices and queues had become unmanageable.",
+        "Segment merged them into one service in a monorepo, with Centrifuge and Traffic Recorder.",
+        "Faster, more reliable tests and far less operational overhead, at the cost of some isolation."),
+    "dropbox-magic-pocket": (
+        "Dropbox needed its own system to store exabytes of file content durably.",
+        "It built Magic Pocket, which splits files into blocks replicated across regions.",
+        "An in-house storage system holding Dropbox’s file content."),
+}
+REVIEWED_PROBLEMS = {
+    "gitlab-database-outage-2017": ("outages", "data-integrity"), "atlassian-outage-2022": ("outages", "data-integrity"),
+    "aws-s3-outage-2017": ("outages",), "aws-us-east-1-2021": ("outages", "scaling-traffic"),
+    "meta-outage-2021": ("outages",), "github-october-2018-incident": ("outages", "data-integrity"),
+    "cloudflare-outage-june-2022": ("outages",), "cloudflare-control-plane-2023": ("outages",),
+    "fastly-outage-june-2021": ("outages",), "datadog-outage-march-2023": ("outages",),
+    "slack-incident-2-22-22": ("outages", "performance"), "crowdstrike-falcon-pir-2024": ("outages", "security-incidents"),
+    "notion-sharding-postgres": ("scaling-data", "migrations"), "uber-postgres-to-mysql": ("migrations", "scaling-data"),
+    "github-partitioning-mysql": ("scaling-data", "migrations"), "slack-vitess-migration": ("scaling-data", "migrations"),
+    "segment-goodbye-microservices": ("migrations", "dev-productivity"), "dropbox-magic-pocket": ("scaling-data",),
+}
+for _seed_card in CURATED_CURIOSITY:
+    if _seed_card["id"] in REVIEWED_BREAKDOWNS:
+        _seed_card["breakdown"] = dict(zip(("problem", "approach", "result"), REVIEWED_BREAKDOWNS[_seed_card["id"]]))
+    if _seed_card["id"] in REVIEWED_PROBLEMS:
+        _seed_card["problems"] = list(REVIEWED_PROBLEMS[_seed_card["id"]])
+del _seed_card
 SEEDS_BY_ID = {article["id"]: article for article in CURATED_CURIOSITY}
 
 _technical_signals = {
@@ -955,6 +1049,64 @@ FORMATS = {
     "talk": "Conference talk",
     "deep-dive": "Deep dive",
 }
+# Real-world problems a story is about. Like themes, they are read only from the title, excerpt and
+# reviewed tags; reviewed seeds can name them explicitly.
+PROBLEMS = (
+    ("outages", "Outages & incidents", re.compile(
+        r"\b(?:postmortems?|post-mortems?|outages?|incidents?|downtime|degraded|availability reports?|root cause|"
+        r"return to service|went down|service disruption|post-incident|what went wrong)\b", re.I)),
+    ("scaling-data", "Scaling databases & storage", re.compile(
+        r"\b(?:shard\w*|partition\w*|vitess|read replicas?|database (?:scal\w*|growth|fleet)|scal\w* "
+        r"(?:postgres\w*|mysql|databases?|storage)|exabytes?|petabytes?|storage systems?|data stores?|"
+        r"trillions? of (?:messages|rows|records))\b", re.I)),
+    ("migrations", "Migrations & rewrites", re.compile(
+        r"\b(?:migrat\w*|rewr(?:ite|ote|iting)\w*|switch(?:ed|ing)? from|moved? (?:from|off)|re-?platform\w*|"
+        r"moderni[sz]\w*|monoliths?|from \w+ to \w+|deprecat\w*|cut ?over)\b", re.I)),
+    ("performance", "Latency & performance", re.compile(
+        r"\b(?:latency|p9[59]|tail latency|throughput|faster|speed(?:ed)? ?up|performance|optimi[sz]\w*|"
+        r"bottlenecks?|slow\w*)\b", re.I)),
+    ("scaling-traffic", "Scaling traffic & real-time", re.compile(
+        r"\b(?:concurrent (?:users|connections|players)|traffic|load balanc\w*|rate limit\w*|"
+        r"(?:millions?|billions?) of (?:users|requests|connections|events)|requests per second|qps|rps|"
+        r"real-time|peak load|autoscal\w*)\b", re.I)),
+    ("data-integrity", "Data loss & consistency", re.compile(
+        r"\b(?:data loss|lost (?:data|writes)|consisten\w*|corrupt\w*|backups?|restor\w*|reconcil\w*|"
+        r"split[- ]brain|durab\w*|idempoten\w*|exactly[- ]once|deleted)\b", re.I)),
+    ("cost", "Cost & efficiency", re.compile(
+        r"\b(?:costs?|cheaper|spend\w*|savings?|saved|efficien\w*|(?:cut|reduc\w*) (?:our )?(?:bill|spend|costs?))\b",
+        re.I)),
+    ("security-incidents", "Security incidents", re.compile(
+        r"\b(?:breach\w*|vulnerabilit\w*|exploit\w*|attacks?|leak\w*|compromis\w*|zero[- ]day|cves?|"
+        r"memory leak|incident response)\b", re.I)),
+    ("dev-productivity", "Developer productivity", re.compile(
+        r"\b(?:developer productivity|build times?|ci(?:/cd)?|test suites?|flaky|merge queues?|code review|"
+        r"monorepos?|deploy\w* (?:faster|safely|reliably)|release process|developer experience)\b", re.I)),
+)
+PROBLEM_LABELS = {ident: label for ident, label, _ in PROBLEMS}
+# Language that marks a story about a real problem and how it was handled, rather than a feature tour.
+_problem_signal = re.compile(
+    r"\b(?:postmortems?|post-mortems?|outages?|incidents?|root cause|what went wrong|lessons learned|"
+    r"availability reports?|we (?:migrated|moved|rebuilt|rewrote|reduced|cut|fixed|scaled|eliminated|replaced)|"
+    r"how we (?:migrated|scaled|fixed|reduced|cut|survived|debugged|handled|tackled|solved)|bottlenecks?|"
+    r"debugg\w*|from \d[\d,.]*\s?\w* to \d|\d+\s?% (?:faster|fewer|less|lower|reduction|cheaper))\b", re.I)
+
+
+def card_problems(article, limit=2):
+    """Problems a story deals with, ranked by evidence (a title match counts three times)."""
+    reviewed = [problem for problem in article.get("problems") or () if problem in PROBLEM_LABELS]
+    if reviewed:
+        return reviewed[:limit]
+    title = str(article.get("title", ""))
+    body = f"{article.get('description') or article.get('cleanSummary') or ''} " \
+           f"{' '.join(str(tag) for tag in article.get('tags') or ())}"
+    scored = []
+    for order, (ident, _, matcher) in enumerate(PROBLEMS):
+        score = 3 * len(matcher.findall(title)) + len(matcher.findall(body))
+        if score >= 2 or matcher.search(title):
+            scored.append((-score, order, ident))
+    return [ident for _, _, ident in sorted(scored)[:limit]]
+
+
 _postmortem = re.compile(r"\b(?:postmortem|post-mortem|outage|incident report|return to service|root cause)\b", re.I)
 _case_study = re.compile(
     r"\bhow (?:we|[\w.&'’-]+(?: [\w.&'’-]+)?) (?:built|build|scaled|scale|migrated|rebuilt|rewrote|redesigned|"
@@ -1091,6 +1243,8 @@ def quality_score(article):
     score += min(2, len(card_technologies(article)) // 2)
     if any(matcher.search(title) for ident, _, matcher in THEMES if ident in _PRIORITY_THEMES):
         score += 1  # Game engineering, agents and AI-native engineering are rare in feeds; give them a little room.
+    # Real problems and how they were handled lead the shelf: postmortems, migrations, measured fixes.
+    score += min(3, 2 * bool(_problem_signal.search(title)) + bool(_problem_signal.search(description)))
     if _announcement.search(title):
         score -= 4
     return score
@@ -1198,6 +1352,15 @@ def _estimated_read_minutes(article):
     return 8, "estimate"
 
 
+def _breakdown(article):
+    """The reviewed problem → approach → result lines, only for cards an editor has checked."""
+    value = article.get("breakdown") if article.get("curiosity_seed") else None
+    if not isinstance(value, dict):
+        return None
+    lines = {key: sanitize_text(value.get(key), 320) for key in ("problem", "approach", "result")}
+    return lines if all(lines.values()) else None
+
+
 def _card(article, summaries):
     source = BY_ID.get(article.get("source_id"))
     public = public_article(article)
@@ -1222,6 +1385,8 @@ def _card(article, summaries):
         "themes": themes,
         "theme": themes[0],
         "format": card_format(article),
+        "problems": card_problems(article),
+        "breakdown": _breakdown(article),
         "level": card_level(article),
         "technologies": card_technologies(article),
         "why_read": sanitize_text(article.get("why_read") or summary.get("whyItMatters"), 300),
@@ -1245,7 +1410,9 @@ MAX_FRESH_CARDS = 40
 def _fresh_discoveries(store, limit):
     if not store or limit <= 0:
         return []
-    candidates = store.curiosity_candidates(_candidate_sources(), hours=90 * 24, limit=200)
+    # Up to four recent posts from every engineering and research publisher, so quieter blogs with
+    # postmortems are considered alongside the busiest feeds.
+    candidates = store.curiosity_candidates(_candidate_sources(), hours=90 * 24, limit=1500, per_source=4)
     eligible = [restore_metadata(article) for article in candidates if is_curiosity_candidate(article)]
     # Stable tie-breaks: higher technical signal, then newer publication, then ID.
     eligible.sort(key=lambda item: str(item.get("id", "")))
