@@ -18,6 +18,7 @@ export function readCuriosityState(search) {
     company: (params.get("company") || "all").slice(0, 80),
     sort: params.get("sort") === "newest" ? "newest" : "featured",
     query: (params.get("q") || "").slice(0, 80),
+    list: /^[a-z0-9-]{1,80}$/.test(params.get("list") || "") ? params.get("list") : "",
   };
 }
 
@@ -26,8 +27,40 @@ export function writeCuriosityState(state) {
   for (const key of ["theme", "problem", "format", "level", "company"]) if (state[key] && state[key] !== "all") params.set(key, state[key]);
   if (state.sort === "newest") params.set("sort", "newest");
   if (state.query) params.set("q", state.query);
+  if (state.list) params.set("list", state.list);
   const text = params.toString();
   return text ? `?${text}` : "";
+}
+
+export function renderReadingLists(grid, collections, onOpen) {
+  const doc = grid.ownerDocument;
+  const make = (tag, className, text) => {
+    const node = doc.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  grid.replaceChildren(...collections.map((list) => {
+    const item = make("article", "curiosity-list-card");
+    item.dataset.list = list.id;
+    item.append(make("h3", "", list.title), make("p", "curiosity-list-summary", list.summary));
+    const count = Array.isArray(list.cards) ? list.cards.length : 0;
+    const companies = Array.isArray(list.companies) ? list.companies.slice(0, 4).join(", ") : "";
+    item.append(make("p", "curiosity-list-meta",
+      [`${count} ${count === 1 ? "story" : "stories"}`, Number(list.read_minutes) > 0 ? `${list.read_minutes} min` : "", companies]
+        .filter(Boolean).join(" · ")));
+    const actions = make("div", "curiosity-list-actions");
+    const open = make("button", "button secondary", "Read the list");
+    open.type = "button";
+    open.setAttribute("aria-label", `Read the list: ${list.title}`);
+    open.addEventListener("click", () => onOpen(list.id));
+    const brief = make("a", "text-button curiosity-list-brief", "Add all to a brief");
+    brief.href = `/?brief-list=${encodeURIComponent(list.id)}#composer`;
+    brief.setAttribute("aria-label", `Add all ${count} stories in ${list.title} to a brief`);
+    actions.append(open, brief);
+    item.append(actions);
+    return item;
+  }));
 }
 
 export function themeCounts(cards) {
@@ -43,7 +76,7 @@ function fill(select, entries, value) {
 }
 
 export function startCuriosityPage({ fetcher = fetch, history = window.history, location = window.location } = {}) {
-  const state = { ...readCuriosityState(location.search), cards: [], visible: PAGE };
+  const state = { ...readCuriosityState(location.search), cards: [], collections: [], visible: PAGE };
   const collection = byId("curiosity-collection");
   const themes = byId("curiosity-themes");
   const query = byId("curiosity-query");
@@ -54,6 +87,10 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
   const sort = byId("curiosity-sort");
   const status = byId("curiosity-result-status");
   const sky = byId("curiosity-constellation");
+  const lists = byId("curiosity-lists");
+  const listGrid = byId("curiosity-list-grid");
+  const banner = byId("curiosity-list-banner");
+  const controls = byId("curiosity-controls");
   let constellation = null;
 
   function persist() {
@@ -86,8 +123,27 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     }));
   }
 
+  function openList(id) {
+    state.list = id;
+    state.visible = PAGE;
+    update();
+    byId("curiosity-browser")?.scrollIntoView?.({ block: "start" });
+    byId("curiosity-list-clear")?.focus({ preventScroll: true });
+  }
+
   function update() {
     persist();
+    const list = state.collections.find((item) => item.id === state.list);
+    banner.hidden = !list;
+    themes.hidden = controls.hidden = Boolean(list);
+    if (list) {
+      // A reading list is shown whole and in reading order; theme and filter controls step aside.
+      byId("curiosity-list-name").textContent = list.title;
+      byId("curiosity-list-brief").href = `/?brief-list=${encodeURIComponent(list.id)}#composer`;
+      status.textContent = `${number.format(list.cards.length)} stories in reading order`;
+      renderCuriosityCards(collection, list.cards, { filters: false, actions: false, step: PAGE, visibleCount: list.cards.length });
+      return;
+    }
     renderThemes();
     constellation?.setActive(state.theme);
     const filter = { theme: state.theme, problem: state.problem, format: state.format, level: state.level, company: state.company,
@@ -120,6 +176,23 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     }, 150);
   });
   byId("curiosity-controls").addEventListener("submit", (event) => event.preventDefault());
+  byId("curiosity-list-clear").addEventListener("click", () => {
+    const id = state.list;
+    state.list = "";
+    update();
+    listGrid.querySelector(`[data-list="${id}"] button`)?.focus();
+  });
+  // Reading lists load alongside the collection; the page works without them.
+  const listsLoaded = Promise.resolve()
+    .then(() => fetcher("/api/curiosity/collections", { headers: { Accept: "application/json" } }))
+    .then((response) => (response?.ok ? response.json() : { collections: [] }))
+    .then((payload) => {
+      state.collections = (Array.isArray(payload?.collections) ? payload.collections : [])
+        .filter((list) => list && typeof list.id === "string" && Array.isArray(list.cards) && list.cards.length);
+      renderReadingLists(listGrid, state.collections, openList);
+      lists.hidden = !state.collections.length;
+    })
+    .catch(() => { state.collections = []; });
   for (const [select, key] of [[problem, "problem"], [format, "format"], [level, "level"], [company, "company"], [sort, "sort"]]) {
     select.addEventListener("change", () => {
       state[key] = select.value;
@@ -128,7 +201,7 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     });
   }
 
-  return fetcher(`/api/curiosity?limit=${MAX_CURIOSITY_CARDS}`, { headers: { Accept: "application/json" } })
+  const collectionLoaded = fetcher(`/api/curiosity?limit=${MAX_CURIOSITY_CARDS}`, { headers: { Accept: "application/json" } })
     .then((response) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
@@ -160,12 +233,16 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
         });
         sky.parentElement.hidden = !constellation;
       }
-      update();
     })
     .catch(() => {
+      state.failed = true;
       collection.setAttribute("aria-busy", "false");
       renderCuriosityCards(collection, [], { message: "Curiosity Cards could not load. Refresh the page to try again." });
     });
+  return Promise.all([collectionLoaded, listsLoaded]).then(() => {
+    if (state.list && !state.collections.some((item) => item.id === state.list)) state.list = "";
+    if (!state.failed || state.list) update();
+  });
 }
 
 if (typeof window !== "undefined" && window.document?.getElementById("curiosity-collection")) startCuriosityPage();

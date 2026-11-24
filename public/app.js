@@ -2677,6 +2677,44 @@ initSavedViews($("saved-views"), {
   },
 });
 setTab("build");
+// Curiosity Cards reading lists hand off with ?brief-list=<id>#composer: pin the whole list, then open the builder.
+async function addReadingListToBrief(id) {
+  const params = new URLSearchParams(location.search);
+  params.delete("brief-list");
+  const rest = params.toString();
+  history.replaceState(history.state, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
+  if (!/^[a-z0-9-]{1,80}$/.test(id)) return;
+  try {
+    const { collections = [] } = await request("/api/curiosity/collections");
+    const list = collections.find((item) => item?.id === id);
+    if (!list) {
+      status("pin-status", "That reading list is no longer available.", true);
+      return;
+    }
+    let added = 0;
+    let skipped = 0;
+    for (const card of Array.isArray(list.cards) ? list.cards : []) {
+      const key = String(card?.id || "");
+      if (!key || state.pins.has(key)) continue;
+      if (state.pins.size >= 10) { skipped += 1; continue; }
+      state.pins.set(key, card);
+      added += 1;
+    }
+    if (state.pins.size > Number($("article-count").value))
+      $("article-count").value = state.pins.size <= 5 ? "5" : "10";
+    renderPins();
+    renderStories();
+    renderCuriosity();
+    openBuilder("build", $("nav-builder"));
+    status("pin-status", skipped
+      ? `Added ${added} ${added === 1 ? "story" : "stories"} from “${list.title}”. ${skipped} did not fit: a brief holds up to 10.`
+      : `Added ${added} ${added === 1 ? "story" : "stories"} from “${list.title}” to your brief.`);
+  } catch {
+    status("pin-status", "The reading list could not load. Try again from Curiosity Cards.", true);
+  }
+}
+const briefList = new URLSearchParams(location.search).get("brief-list");
+if (briefList) window.addEventListener("load", () => void addReadingListToBrief(briefList), { once: true });
 if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
 loadNews().then(() => openLinkedArticle());

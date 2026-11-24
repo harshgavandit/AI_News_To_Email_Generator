@@ -205,7 +205,7 @@ test('collection page keeps filters in the URL and renders the API payload', asy
   for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
   const page = await import('../../public/curiosity-page.js');
   assert.deepEqual(page.readCuriosityState('?theme=bogus&format=talk&sort=newest&q=gpu'),
-    { theme: 'all', format: 'talk', level: 'all', problem: 'all', company: 'all', sort: 'newest', query: 'gpu' });
+    { theme: 'all', format: 'talk', level: 'all', problem: 'all', company: 'all', sort: 'newest', query: 'gpu', list: '' });
   assert.equal(page.readCuriosityState('?level=advanced').level, 'advanced');
   assert.equal(page.writeCuriosityState({ theme: 'ai', format: 'all', company: 'all', sort: 'featured', query: '' }), '?theme=ai');
   const urls = [];
@@ -215,7 +215,7 @@ test('collection page keeps filters in the URL and renders the API payload', asy
     history: { replaceState: (_, __, url) => replaced.push(url) },
     location: window.location,
   });
-  assert.deepEqual(urls, ['/api/curiosity?limit=160']);
+  assert.deepEqual(urls.sort(), ['/api/curiosity/collections', '/api/curiosity?limit=160']);
   const articles = [...window.document.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId);
   assert.deepEqual(articles, ['riot-valorant-netcode']);
   assert.equal(window.document.querySelector('[data-theme="game-engineering"]').getAttribute('aria-pressed'), 'true');
@@ -261,4 +261,73 @@ test('real-world problems: filter, label, URL state and the reviewed three-line 
   assert.equal(page.readCuriosityState('?problem=bogus').problem, 'all');
   assert.equal(page.writeCuriosityState({ theme: 'all', problem: 'migrations', format: 'all', company: 'all', sort: 'featured', query: '' }),
     '?problem=migrations');
+});
+
+
+test('reading lists: rendered from the API, shown whole in reading order, and handed to the Brief Builder', async () => {
+  const html = (await import('node:fs')).readFileSync(new URL('../../public/curiosity.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://getinformdaily.com/curiosity.html?list=anatomy&theme=ai' });
+  const { window } = dom;
+  for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
+  try {
+    const page = await import(`../../public/curiosity-page.js?lists=${Date.now()}`);
+    assert.equal(page.readCuriosityState('?list=anatomy').list, 'anatomy');
+    assert.equal(page.readCuriosityState('?list=<script>').list, '', 'list ids are slugs');
+    assert.equal(page.writeCuriosityState({ theme: 'all', problem: 'all', format: 'all', company: 'all', sort: 'featured', query: '', list: 'anatomy' }),
+      '?list=anatomy');
+    const second = { ...rich, id: 'second', title: 'Second in the list', company: 'Meta' };
+    const lists = { collections: [
+      { id: 'anatomy', title: 'Anatomy of a global outage', summary: 'How outages unfold.', read_minutes: 30,
+        companies: ['Riot Games', 'Meta'], cards: [second, rich] },
+      { id: 'empty', title: 'Nothing here', summary: 'x', cards: [] },
+    ] };
+    const replaced = [];
+    await page.startCuriosityPage({
+      fetcher: async (url) => ({ ok: true, json: async () => (url === '/api/curiosity/collections' ? lists : { cards: [rich] }) }),
+      history: { replaceState: (_, __, url) => replaced.push(url) },
+      location: window.location,
+    });
+    const doc = window.document;
+    assert.equal(doc.getElementById('curiosity-lists').hidden, false);
+    const listCards = [...doc.querySelectorAll('#curiosity-list-grid article')];
+    assert.deepEqual(listCards.map((node) => node.dataset.list), ['anatomy'], 'empty lists are not shown');
+    assert.match(listCards[0].textContent, /2 stories · 30 min · Riot Games, Meta/);
+    assert.equal(listCards[0].querySelector('a').getAttribute('href'), '/?brief-list=anatomy#composer');
+    // The ?list= link opens the list whole, in reading order, and hides the theme and filter controls.
+    assert.deepEqual([...doc.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId), ['second', 'riot-valorant-netcode']);
+    assert.equal(doc.getElementById('curiosity-list-banner').hidden, false);
+    assert.equal(doc.getElementById('curiosity-list-name').textContent, 'Anatomy of a global outage');
+    assert.equal(doc.getElementById('curiosity-controls').hidden, true);
+    assert.match(doc.getElementById('curiosity-result-status').textContent, /2 stories in reading order/);
+    assert.match(replaced.at(-1), /list=anatomy/);
+    doc.getElementById('curiosity-list-clear').click();
+    assert.equal(doc.getElementById('curiosity-list-banner').hidden, true);
+    assert.equal(doc.getElementById('curiosity-controls').hidden, false);
+    assert.doesNotMatch(replaced.at(-1), /list=/);
+    listCards[0].querySelector('button').click();
+    assert.equal(doc.getElementById('curiosity-list-banner').hidden, false);
+  } finally {
+    for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+    window.close();
+  }
+});
+
+test('the collection page still works when reading lists cannot load', async () => {
+  const html = (await import('node:fs')).readFileSync(new URL('../../public/curiosity.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://getinformdaily.com/curiosity.html?list=gone' });
+  const { window } = dom;
+  for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
+  try {
+    const page = await import(`../../public/curiosity-page.js?nolists=${Date.now()}`);
+    await page.startCuriosityPage({
+      fetcher: async (url) => (url === '/api/curiosity/collections' ? { ok: false } : { ok: true, json: async () => ({ cards: [rich] }) }),
+      history: { replaceState() {} }, location: window.location,
+    });
+    assert.equal(window.document.getElementById('curiosity-lists').hidden, true);
+    assert.equal(window.document.getElementById('curiosity-list-banner').hidden, true, 'an unknown ?list= falls back to the collection');
+    assert.equal(window.document.querySelectorAll('#curiosity-collection article').length, 1);
+  } finally {
+    for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+    window.close();
+  }
 });

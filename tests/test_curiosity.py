@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+import re
+
 import pytest
 from app.launch_store import Store
 
@@ -570,3 +572,41 @@ def test_curiosity_api_lists_problem_labels(monkeypatch):
     payload = server.curiosity(limit=3)
     assert {"id": "outages", "label": "Outages & incidents"} in payload["problems"]
     assert len(payload["problems"]) == 9
+
+
+def test_reading_lists_use_reviewed_cards_and_fit_in_one_brief():
+    from starlette.responses import Response
+    from app import curiosity, server
+
+    assert len(curiosity.COLLECTIONS) >= 6
+    ids = [ident for ident, *_ in curiosity.COLLECTIONS]
+    assert len(set(ids)) == len(ids) and all(re.fullmatch(r"[a-z0-9-]{1,80}", ident) for ident in ids)
+    for ident, title, summary, card_ids, problems in curiosity.COLLECTIONS:
+        assert set(card_ids) <= set(curiosity.SEEDS_BY_ID), ident
+        assert 4 <= len(card_ids) <= 10 and len(set(card_ids)) == len(card_ids), ident
+        assert title and 60 <= len(summary) <= 400 and set(problems) <= set(curiosity.PROBLEM_LABELS), ident
+    response = Response()
+    payload = server.curiosity_reading_lists(response)
+    assert response.headers["Cache-Control"] == "public, max-age=3600"
+    first = payload["collections"][0]
+    assert first["card_ids"] == [card["id"] for card in first["cards"]] == list(curiosity.COLLECTIONS[0][3])
+    assert first["read_minutes"] == sum(card["read_minutes"] for card in first["cards"])
+    assert all(card["seed"] and card["url"].startswith("https://") for list_ in payload["collections"] for card in list_["cards"])
+
+
+def test_a_whole_reading_list_can_be_pinned_into_a_brief(monkeypatch, tmp_path):
+    from app import curiosity, server
+
+    store = Store(f"sqlite:///{(tmp_path / 'list-brief.sqlite').as_posix()}")
+    card_ids = list(curiosity.COLLECTIONS[0][3])
+    observed = {}
+
+    def capture(articles, name, focus, **kwargs):
+        observed["pinned"] = kwargs["pinned_ids"]
+        return {"articles": [{"title": item["title"], "summary": item["description"], "url": item["url"]} for item in articles]}
+
+    monkeypatch.setattr(server, "select_candidates", lambda pool, focus, count, sources: [])
+    monkeypatch.setattr(server, "build_digest", capture)
+    digest = server.prepare_digest(server.DigestRequest(pinned_ids=card_ids, top_n=10), store, "Reader", "", False, None)
+    assert observed["pinned"] == card_ids
+    assert [item["url"] for item in digest["articles"]] == [curiosity.SEEDS_BY_ID[ident]["url"] for ident in card_ids]

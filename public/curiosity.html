@@ -71,9 +71,21 @@
         </dl>
       </header>
 
+      <section id="curiosity-lists" class="curiosity-lists" aria-labelledby="curiosity-lists-title" hidden>
+        <div class="curiosity-lists-heading">
+          <h2 id="curiosity-lists-title">Reading lists</h2>
+          <p>Hand-picked paths through real incidents and hard engineering problems, in reading order. Each list fits in one brief.</p>
+        </div>
+        <div id="curiosity-list-grid" class="curiosity-list-grid"></div>
+      </section>
       <section id="curiosity-browser" class="curiosity-browser" aria-labelledby="curiosity-browser-title" tabindex="-1">
         <h2 id="curiosity-browser-title" class="sr-only">Browse the collection</h2>
-        <nav id="curiosity-themes" class="curiosity-theme-nav" aria-label="Themes"></nav>
+        <div id="curiosity-list-banner" class="curiosity-list-banner" role="status" hidden>
+          <p><span>Reading list</span> <strong id="curiosity-list-name"></strong></p>
+          <a id="curiosity-list-brief" class="button primary" href="/">Add all to a brief</a>
+          <button id="curiosity-list-clear" type="button" class="text-button">Show all stories</button>
+        </div>
+                <nav id="curiosity-themes" class="curiosity-theme-nav" aria-label="Themes"></nav>
         <form id="curiosity-controls" class="curiosity-controls" role="search" aria-label="Search and filter Curiosity Cards">
           <label class="curiosity-search">
             <span class="sr-only">Search Curiosity Cards</span>

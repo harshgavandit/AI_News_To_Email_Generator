@@ -1557,5 +1557,63 @@ def resolve_curiosity_cards(store, ids):
     return [by_id[ident] for ident in requested if ident in by_id]
 
 
+# --- Reading lists ------------------------------------------------------------------------------------
+# Ordered paths through reviewed cards only, so every list links to pages an editor has read. Ten is the
+# Brief Builder's pin limit, so a whole list always fits in one brief.
+COLLECTIONS = (
+    ("anatomy-of-a-global-outage", "Anatomy of a global outage",
+     "How one command, one config change or one update took down services millions rely on, and what each "
+     "company changed afterwards. Read in order: a mistyped command, a backbone change, an overloaded internal "
+     "network, one regular expression, a dormant bug and a content update.",
+     ("aws-s3-outage-2017", "meta-outage-2021", "aws-us-east-1-2021", "cloudflare-outage-2019",
+      "fastly-outage-june-2021", "crowdstrike-falcon-pir-2024"), ("outages",)),
+    ("when-backups-and-failover-fail", "When backups and failover fail",
+     "Safety nets that did not catch the fall: missing backups, an automated failover that split writes across "
+     "two coasts, a deletion script, a data center that took the ‘redundant’ control plane with it, and a "
+     "multi-day outage.",
+     ("gitlab-database-outage-2017", "github-october-2018-incident", "atlassian-outage-2022",
+      "cloudflare-control-plane-2023", "roblox-return-to-service"), ("outages", "data-integrity")),
+    ("retries-overload-and-cascading-failures", "Retries, overload and cascading failures",
+     "Why systems under stress make themselves worse, and the patterns that stop it: timeouts with jitter, "
+     "rate limiters, tail-latency tricks, and two Slack incidents where load fed on itself.",
+     ("aws-timeouts-retries-jitter", "stripe-rate-limiters", "google-tail-at-scale", "slack-outage-2021",
+      "slack-incident-2-22-22", "aws-us-east-1-2021"), ("outages", "scaling-traffic")),
+    ("scaling-postgres-and-mysql", "Scaling Postgres and MySQL in production",
+     "How fast-growing companies kept relational databases alive: sharding, partitioning, Vitess, and one famous "
+     "decision to leave Postgres, from Pinterest in 2012 to ChatGPT today.",
+     ("pinterest-mysql-sharding", "notion-sharding-postgres", "figma-database-scaling", "github-partitioning-mysql",
+      "slack-vitess-migration", "openai-postgres-chatgpt", "uber-postgres-to-mysql"), ("scaling-data",)),
+    ("migrations-without-downtime", "Migrations without downtime",
+     "Moving data and rewriting critical systems while customers keep using them: dual writes, backfills, "
+     "careful cutovers and rewrites of core systems that shipped safely.",
+     ("stripe-online-migrations", "stripe-docdb-zero-downtime-migrations", "notion-sharding-postgres",
+      "discord-trillions-messages", "dropbox-sync-engine", "discord-go-to-rust"), ("migrations",)),
+    ("monoliths-microservices-and-back", "Monoliths, microservices and back again",
+     "The architecture debate told by teams who lived it: when microservices helped, when they hurt, and how "
+     "Shopify, Uber, Netflix and Segment drew their boundaries.",
+     ("shopify-deconstructing-monolith", "uber-domain-microservices", "netflix-video-pipeline-microservices",
+      "segment-goodbye-microservices"), ("migrations", "dev-productivity")),
+    ("real-time-at-massive-scale", "Real-time at massive scale",
+     "Millions of live connections, voice calls and collaborative cursors: how WhatsApp, Discord, Figma and Meta "
+     "built systems where every millisecond shows.",
+     ("whatsapp-2-million-connections", "discord-elixir-5m-concurrent", "discord-webrtc-voice", "figma-multiplayer",
+      "meta-threads-infrastructure"), ("scaling-traffic", "performance")),
+)
+
+
+def curiosity_collections():
+    """Reading lists with their reviewed cards, in reading order. Static: built from seeds only."""
+    result = []
+    for ident, title, summary, card_ids, problems in COLLECTIONS:
+        cards = [_card(deepcopy(SEEDS_BY_ID[card_id]), {}) for card_id in card_ids if card_id in SEEDS_BY_ID]
+        result.append({
+            "id": ident, "title": title, "summary": summary, "problems": list(problems),
+            "card_ids": [card["id"] for card in cards], "cards": cards,
+            "read_minutes": sum(card["read_minutes"] for card in cards),
+            "companies": list(dict.fromkeys(card["company"] for card in cards)),
+        })
+    return result
+
+
 def seed_article_ids():
     return set(SEEDS_BY_ID)

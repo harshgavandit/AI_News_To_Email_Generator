@@ -386,14 +386,27 @@ def locate_quote(quote, text, *, minimum=12, maximum=360):
     return text[origin[position]:origin[position + len(needle) - 1] + 1].strip()
 
 
+def publication_date_tokens(rows):
+    """Day, month and year numbers of each row's publication date, as a claim might write them."""
+    tokens = set()
+    for row in rows:
+        match = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(row.get("published_at") or ""))
+        if match:
+            year, month, day = match.groups()
+            tokens |= {year, month, day, str(int(month)), str(int(day))}
+    return tokens
+
+
 def supported_claim(claim, by_id, allow_technology_titles):
     """Validate one claim. Returns (claim with exact source quotes, None) or (None, rejection reason)."""
     ids = claim.source_ids
     if not safe_prose(claim.text, 540) or not 1 <= len(ids) <= 4 or len(set(ids)) != len(ids) or not set(ids) <= by_id.keys():
         return None, "Unsupported claim or citation"
     cited = " ".join(f'{by_id[ident]["title"]} {by_id[ident]["excerpt"]}' for ident in ids)
-    if not numeric_tokens(claim.text) <= numeric_tokens(cited):
-        return None, "New numerical claim"
+    # A claim may state when a cited report was published (for example "on November 24, 2026"), so the
+    # day, month and year of each cited publication date count as supported numbers too.
+    if new_numbers := numeric_tokens(claim.text) - numeric_tokens(cited) - publication_date_tokens(by_id[ident] for ident in ids):
+        return None, f"New numerical claim {sorted(new_numbers)[:5]}"
     exact = None
     if hasattr(claim, "quotes"):
         if len(claim.quotes) != len(ids):
@@ -514,7 +527,10 @@ Supply one short verbatim quote in the original language per cited excerpt, in t
         reason = str(error).splitlines()[0][:100]
         logger.warning("research_answer_rejected type=%s issue=%s reason=%s", type(error).__name__,
                        note_provider_error(error), reason)
-        return dict(empty, status="unavailable", limitations="A cited answer could not be generated. Review the source evidence below.")
+        limitations = "A cited answer could not be generated. Review the source evidence below."
+        if not os.getenv("VERCEL"):
+            limitations += f" (local diagnostic: {type(error).__name__}: {reason})"
+        return dict(empty, status="unavailable", limitations=limitations)
     if cacheable:
         store.save_summary(cache_key, answer)
     elif ephemeral:

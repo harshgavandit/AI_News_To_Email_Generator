@@ -393,6 +393,45 @@ def test_one_unverifiable_quote_drops_only_that_claim():
         research.validate_answer(only_bad, evidence)
 
 
+
+def test_a_claim_may_state_the_cited_publication_date_but_no_other_new_number():
+    evidence = [{"id": "a", "title": "Inspien to acquire 80% stake in Raon Security",
+                 "excerpt": "Inspien plans to buy an 80% stake, with an option on the remaining 20%.",
+                 "publisher": "TheElec", "published_at": "2026-11-24T03:10:00+00:00"},
+                {"id": "b", "title": "Other", "excerpt": "Regulators opened a review of the export rules.",
+                 "publisher": "Other", "published_at": "2026-11-22T09:00:00+00:00"}]
+    schema = research.answer_schema(evidence, quoted=True)
+    quote = "Inspien plans to buy an 80% stake"
+    dated = {"text": "TheElec reported on Nov. 24, 2026 that Inspien planned to buy an 80% stake.",
+             "kind": "fact", "source_ids": ["a"], "quotes": [quote]}
+    result = research.validate_answer(schema(status="answered", limitations="Excerpts only.", claims=[dated]), evidence)
+    assert result["claims"][0]["text"].startswith("TheElec reported on Nov. 24")
+    # Another source's date, or an invented figure, is still rejected.
+    wrong_date = dict(dated, text="TheElec reported on Nov. 22 that Inspien planned to buy an 80% stake.")
+    invented = dict(dated, text="TheElec reported that Inspien planned to buy a 90% stake.")
+    for claim in (wrong_date, invented):
+        with pytest.raises(ValueError, match="New numerical claim"):
+            research.validate_answer(schema(status="answered", limitations="Excerpts only.", claims=[claim]), evidence)
+    assert research.publication_date_tokens([{"published_at": "2026-01-05T00:00:00Z"}, {"published_at": ""}]) == \
+        {"2026", "01", "05", "1", "5"}
+
+
+def test_local_development_names_the_reason_an_ai_answer_failed(monkeypatch):
+    evidence = [{"id": "a", "title": "Chip news", "excerpt": "The firm’s chip ships in 2027 after delays.",
+                 "publisher": "Example", "published_at": "2026-11-24T03:10:00+00:00"}]
+    monkeypatch.setattr(research, "ai_enabled", lambda: True)
+    monkeypatch.setattr(research, "reserve", lambda *args, **kwargs: True)
+    monkeypatch.setattr(research, "generate_response", lambda *args, **kwargs: json.dumps({
+        "status": "answered", "limitations": "Excerpts only.",
+        "claims": [{"text": "The chip ships in 2029.", "kind": "fact", "source_ids": ["a"],
+                    "quotes": ["The firm’s chip ships in 2027 after delays."]}]}))
+    monkeypatch.delenv("VERCEL", raising=False)
+    local = research.synthesize(None, "visit_catchup", "Catch up", evidence)
+    assert local["status"] == "unavailable" and "local diagnostic: ValueError: New numerical claim ['2029']" in local["limitations"]
+    monkeypatch.setenv("VERCEL", "1")
+    production = research.synthesize(None, "visit_catchup", "Catch up", evidence)
+    assert production["limitations"] == "A cited answer could not be generated. Review the source evidence below."
+
 def index_with(store, monkeypatch, semantic_ids):
     """Index the archive with deterministic vectors: semantic_ids share one direction, the rest another."""
     monkeypatch.setattr(research, "embed", lambda texts: [mock_embedding(semantic=False) for _ in texts])

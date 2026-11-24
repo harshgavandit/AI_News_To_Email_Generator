@@ -25,6 +25,34 @@
 .curiosity-stats dt { color: #9bb0cc; font: 650 10px/1.4 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
 .curiosity-stats dd { margin: 0; color: #ffffff; font: 500 26px/1.1 var(--serif); font-variant-numeric: tabular-nums; }
 
+/* Reading lists: ordered paths through reviewed incidents and engineering problems. */
+.curiosity-lists { display: grid; gap: 12px; }
+.curiosity-lists[hidden] { display: none; }
+.curiosity-lists-heading h2 { margin: 0; color: var(--ink); font: 500 clamp(22px, 2.6vw, 28px)/1.2 var(--serif); }
+.curiosity-lists-heading p { max-width: 70ch; margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.curiosity-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 12px; }
+.curiosity-list-card {
+  display: grid; grid-template-rows: auto 1fr auto auto; gap: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 14px;
+  background: linear-gradient(160deg, var(--paper), var(--surface-bottom, var(--paper)));
+  box-shadow: var(--sys-e1, none), inset 0 1px 0 var(--edge-highlight, transparent);
+  border-top: 3px solid color-mix(in srgb, var(--sys-signal, var(--green)) 70%, var(--line));
+}
+.curiosity-list-card h3 { margin: 0; color: var(--ink); font: 520 18px/1.25 var(--serif); }
+.curiosity-list-summary { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.curiosity-list-meta { margin: 0; color: var(--muted); font: 600 10.5px/1.5 var(--font-ui); letter-spacing: .04em; }
+.curiosity-list-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.curiosity-list-actions .button { min-height: 36px; padding: 6px 12px; font-size: 12px; }
+.curiosity-list-brief { font-size: 12px; font-weight: 650; }
+.curiosity-list-banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border: 1px solid var(--line);
+  border-left: 3px solid var(--sys-signal, var(--green)); border-radius: 12px; background: var(--wash);
+}
+.curiosity-list-banner[hidden] { display: none; }
+.curiosity-list-banner p { margin: 0 auto 0 0; color: var(--ink); font-size: 14px; }
+.curiosity-list-banner p span { margin-right: 6px; color: var(--green); font: 700 10px/1.4 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+.curiosity-list-banner .button { min-height: 36px; padding: 6px 12px; font-size: 12px; }
+.curiosity-controls[hidden], .curiosity-theme-nav[hidden] { display: none; }
+
 .curiosity-browser { display: grid; gap: 14px; }
 .curiosity-browser:focus { outline: none; }
 .curiosity-theme-nav { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; scroll-snap-type: x proximity; }
