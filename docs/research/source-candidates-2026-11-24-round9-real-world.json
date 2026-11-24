@@ -1,0 +1,642 @@
+[
+  {
+    "id": "danluu",
+    "group": "danluu",
+    "label": "Dan Luu",
+    "url": "https://danluu.com/atom.xml",
+    "hosts": [
+      "danluu.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "incident-io-blog",
+    "group": "incident-io-blog",
+    "label": "incident.io Blog",
+    "url": "https://incident.io/blog.xml",
+    "hosts": [
+      "incident.io"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "github-availability",
+    "group": "github-availability",
+    "label": "GitHub Availability Reports",
+    "url": "https://github.blog/tag/github-availability-report/feed/",
+    "hosts": [
+      "github.blog"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cloudflare-postmortems",
+    "group": "cloudflare-postmortems",
+    "label": "Cloudflare Blog — Post-mortems",
+    "url": "https://blog.cloudflare.com/tag/post-mortem/rss/",
+    "hosts": [
+      "blog.cloudflare.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "usenix-login",
+    "group": "usenix-login",
+    "label": "USENIX ;login: online",
+    "url": "https://www.usenix.org/publications/loginonline/rss.xml",
+    "hosts": [
+      "www.usenix.org",
+      "usenix.org"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "architecture-notes",
+    "group": "architecture-notes",
+    "label": "Architecture Notes",
+    "url": "https://architecturenotes.co/rss/",
+    "hosts": [
+      "architecturenotes.co"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "quastor",
+    "group": "quastor",
+    "label": "Quastor",
+    "url": "https://blog.quastor.org/feed",
+    "hosts": [
+      "blog.quastor.org"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "linkedin-engineering",
+    "group": "linkedin-engineering",
+    "label": "LinkedIn Engineering",
+    "url": "https://engineering.linkedin.com/blog.rss.html",
+    "hosts": [
+      "engineering.linkedin.com",
+      "www.linkedin.com",
+      "linkedin.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "doordash-engineering",
+    "group": "doordash-engineering",
+    "label": "DoorDash Engineering",
+    "url": "https://careersatdoordash.com/blog/category/engineering/feed/",
+    "hosts": [
+      "careersatdoordash.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "instagram-engineering",
+    "group": "instagram-engineering",
+    "label": "Instagram Engineering",
+    "url": "https://instagram-engineering.com/feed",
+    "hosts": [
+      "instagram-engineering.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "x-engineering",
+    "group": "x-engineering",
+    "label": "X Engineering",
+    "url": "https://blog.x.com/engineering/en_us/blog.rss",
+    "hosts": [
+      "blog.x.com",
+      "blog.twitter.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "heroku-engineering",
+    "group": "heroku-engineering",
+    "label": "Heroku Engineering",
+    "url": "https://www.heroku.com/blog/category/engineering/feed/",
+    "hosts": [
+      "www.heroku.com",
+      "blog.heroku.com",
+      "heroku.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "cash-app-code",
+    "group": "cash-app-code",
+    "label": "Cash App Code Blog",
+    "url": "https://code.cash.app/index.xml",
+    "hosts": [
+      "code.cash.app"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "coinbase-engineering",
+    "group": "coinbase-engineering",
+    "label": "Coinbase Engineering",
+    "url": "https://www.coinbase.com/blog/landing/engineering/rss",
+    "hosts": [
+      "www.coinbase.com",
+      "blog.coinbase.com",
+      "coinbase.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "robinhood-engineering",
+    "group": "robinhood-engineering",
+    "label": "Robinhood Engineering",
+    "url": "https://robinhood.engineering/feed",
+    "hosts": [
+      "robinhood.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "zendesk-engineering",
+    "group": "zendesk-engineering",
+    "label": "Zendesk Engineering",
+    "url": "https://zendesk.engineering/feed",
+    "hosts": [
+      "zendesk.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "asana-engineering",
+    "group": "asana-engineering",
+    "label": "Asana Engineering",
+    "url": "https://blog.asana.com/category/eng/feed/",
+    "hosts": [
+      "blog.asana.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "replit-blog",
+    "group": "replit-blog",
+    "label": "Replit Blog",
+    "url": "https://blog.replit.com/feed.xml",
+    "hosts": [
+      "blog.replit.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "grubhub-bytes",
+    "group": "grubhub-bytes",
+    "label": "Grubhub Bytes",
+    "url": "https://bytes.grubhub.com/feed",
+    "hosts": [
+      "bytes.grubhub.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "faire-craft",
+    "group": "faire-craft",
+    "label": "Faire — The Craft",
+    "url": "https://craft.faire.com/feed",
+    "hosts": [
+      "craft.faire.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "riot-games-tech",
+    "group": "riot-games-tech",
+    "label": "Riot Games Technology",
+    "url": "https://technology.riotgames.com/rss.xml",
+    "hosts": [
+      "technology.riotgames.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "segment-engineering",
+    "group": "segment-engineering",
+    "label": "Twilio Segment Engineering",
+    "url": "https://segment.com/blog/rss.xml",
+    "hosts": [
+      "segment.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "new-relic-blog",
+    "group": "new-relic-blog",
+    "label": "New Relic Blog",
+    "url": "https://newrelic.com/blog/rss.xml",
+    "hosts": [
+      "newrelic.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "godaddy-engineering",
+    "group": "godaddy-engineering",
+    "label": "GoDaddy Engineering",
+    "url": "https://www.godaddy.com/resources/news/category/engineering/feed",
+    "hosts": [
+      "www.godaddy.com",
+      "godaddy.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global"
+  },
+  {
+    "id": "skyscanner-engineering",
+    "group": "skyscanner-engineering",
+    "label": "Skyscanner Engineering",
+    "url": "https://medium.com/feed/@SkyscannerEng",
+    "hosts": [
+      "medium.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe"
+  },
+  {
+    "id": "adyen-tech",
+    "group": "adyen-tech",
+    "label": "Adyen Tech",
+    "url": "https://medium.com/feed/adyen",
+    "hosts": [
+      "medium.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe"
+  },
+  {
+    "id": "deliveroo-engineering",
+    "group": "deliveroo-engineering",
+    "label": "Deliveroo Engineering",
+    "url": "https://deliveroo.engineering/feed.xml",
+    "hosts": [
+      "deliveroo.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe"
+  },
+  {
+    "id": "vinted-engineering",
+    "group": "vinted-engineering",
+    "label": "Vinted Engineering",
+    "url": "https://vinted.engineering/feed.xml",
+    "hosts": [
+      "vinted.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe"
+  },
+  {
+    "id": "otto-tech",
+    "group": "otto-tech",
+    "label": "OTTO Tech Blog",
+    "url": "https://www.otto.de/jobs/en/technology/techblog/rss.xml",
+    "hosts": [
+      "www.otto.de",
+      "otto.de"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe"
+  },
+  {
+    "id": "nubank-engineering",
+    "group": "nubank-engineering",
+    "label": "Building Nubank",
+    "url": "https://building.nu.com/feed/",
+    "hosts": [
+      "building.nu.com",
+      "building.nubank.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Latin America"
+  },
+  {
+    "id": "mercari-engineering",
+    "group": "mercari-engineering",
+    "label": "Mercari Engineering",
+    "url": "https://engineering.mercari.com/en/blog/feed.xml",
+    "hosts": [
+      "engineering.mercari.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Asia"
+  },
+  {
+    "id": "rakuten-tech",
+    "group": "rakuten-tech",
+    "label": "Rakuten Today — Tech",
+    "url": "https://rakuten.today/category/tech-innovation/feed",
+    "hosts": [
+      "rakuten.today"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Asia"
+  },
+  {
+    "id": "swiggy-bytes",
+    "group": "swiggy-bytes",
+    "label": "Swiggy Bytes",
+    "url": "https://bytes.swiggy.com/feed",
+    "hosts": [
+      "bytes.swiggy.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India"
+  },
+  {
+    "id": "zomato-blog",
+    "group": "zomato-blog",
+    "label": "Zomato Blog",
+    "url": "https://blog.zomato.com/feed",
+    "hosts": [
+      "blog.zomato.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India"
+  },
+  {
+    "id": "cred-engineering",
+    "group": "cred-engineering",
+    "label": "CRED Engineering",
+    "url": "https://engineering.cred.club/feed",
+    "hosts": [
+      "engineering.cred.club"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India"
+  },
+  {
+    "id": "zepto-engineering",
+    "group": "zepto-engineering",
+    "label": "Zepto Engineering",
+    "url": "https://blog.zeptonow.com/feed",
+    "hosts": [
+      "blog.zeptonow.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India"
+  },
+  {
+    "id": "paytm-engineering",
+    "group": "paytm-engineering",
+    "label": "Paytm Engineering",
+    "url": "https://medium.com/feed/paytm-engineering",
+    "hosts": [
+      "medium.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India"
+  }
+]

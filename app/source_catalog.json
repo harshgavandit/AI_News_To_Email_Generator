@@ -21945,5 +21945,216 @@
     "language": "en",
     "region": "Global",
     "reviewed_at": "2026-11-23"
+  },
+  {
+    "id": "github-availability",
+    "group": "github-availability",
+    "label": "GitHub Availability Reports",
+    "url": "https://github.blog/tag/github-availability-report/feed/",
+    "hosts": [
+      "github.blog"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "cloudflare-postmortems",
+    "group": "cloudflare-postmortems",
+    "label": "Cloudflare Blog — Post-mortems",
+    "url": "https://blog.cloudflare.com/tag/post-mortem/rss/",
+    "hosts": [
+      "blog.cloudflare.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "doordash-engineering",
+    "group": "doordash-engineering",
+    "label": "DoorDash Engineering",
+    "url": "https://careersatdoordash.com/blog/category/engineering/feed/",
+    "hosts": [
+      "careersatdoordash.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "heroku-engineering",
+    "group": "heroku-engineering",
+    "label": "Heroku Engineering",
+    "url": "https://www.heroku.com/blog/category/engineering/feed/",
+    "hosts": [
+      "www.heroku.com",
+      "blog.heroku.com",
+      "heroku.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "zendesk-engineering",
+    "group": "zendesk-engineering",
+    "label": "Zendesk Engineering",
+    "url": "https://zendesk.engineering/feed",
+    "hosts": [
+      "zendesk.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "faire-craft",
+    "group": "faire-craft",
+    "label": "Faire — The Craft",
+    "url": "https://craft.faire.com/feed",
+    "hosts": [
+      "craft.faire.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Global",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "skyscanner-engineering",
+    "group": "skyscanner-engineering",
+    "label": "Skyscanner Engineering",
+    "url": "https://medium.com/feed/@SkyscannerEng",
+    "hosts": [
+      "medium.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "adyen-tech",
+    "group": "adyen-tech",
+    "label": "Adyen Tech",
+    "url": "https://medium.com/feed/adyen",
+    "hosts": [
+      "medium.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "deliveroo-engineering",
+    "group": "deliveroo-engineering",
+    "label": "Deliveroo Engineering",
+    "url": "https://deliveroo.engineering/feed.xml",
+    "hosts": [
+      "deliveroo.engineering"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Europe",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "mercari-engineering",
+    "group": "mercari-engineering",
+    "label": "Mercari Engineering",
+    "url": "https://engineering.mercari.com/en/blog/feed.xml",
+    "hosts": [
+      "engineering.mercari.com"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "Asia",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
+  },
+  {
+    "id": "cred-engineering",
+    "group": "cred-engineering",
+    "label": "CRED Engineering",
+    "url": "https://engineering.cred.club/feed",
+    "hosts": [
+      "engineering.cred.club"
+    ],
+    "topic": "software",
+    "format": "blog",
+    "coverage": "publisher",
+    "kind": "engineering",
+    "refresh_minutes": 360,
+    "collection": "Real-world engineering",
+    "language": "en",
+    "region": "India",
+    "reviewed_at": "2026-11-24",
+    "require_english": true
   }
 ]

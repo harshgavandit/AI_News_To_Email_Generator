@@ -110,3 +110,6 @@ app/google-service-account.json
 
 # Keep the safe template publishable after Vercel CLI ignore rules.
 !.env.example
+
+# Local scratch output from Claude sessions (screenshots, archives, .env backups)
+Claude outputs/
