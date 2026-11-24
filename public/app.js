@@ -2707,8 +2707,12 @@ async function addReadingListToBrief(id) {
   history.replaceState(history.state, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
   if (!/^[a-z0-9-]{1,80}$/.test(id)) return;
   try {
-    const { collections = [], lessons = [] } = await request("/api/curiosity/collections");
-    const list = [...collections, ...lessons].find((item) => item?.id === id);
+    let list = null;
+    try {
+      ({ list } = await request(`/api/curiosity/collections/${encodeURIComponent(id)}`));
+    } catch (error) {
+      if (error?.status !== 404) throw error;  // Network and server errors get the retry message below.
+    }
     if (!list) {
       status("pin-status", "That reading list is no longer available.", true);
       return;

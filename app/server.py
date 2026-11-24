@@ -52,7 +52,7 @@ from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, 
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
-from app.curiosity import curiosity_collections, curiosity_lessons, FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, PROBLEM_LABELS as CURIOSITY_PROBLEMS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
+from app.curiosity import FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, PROBLEM_LABELS as CURIOSITY_PROBLEMS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
 from app.search_suggest import suggest as suggest_scopes
 from app.query_understanding import understand as understand_query
 from app.story_coverage import compare_coverage
@@ -449,18 +449,6 @@ def collect_news():
 def discovery_options():
     return {"topics": TOPICS, "subjects": SUBJECTS, "regions": REGION_LABELS,
             "coverage_types": COVERAGE_TYPES, "languages": LANGUAGES}
-
-
-@app.get("/api/curiosity/collections")
-def curiosity_reading_lists(response: Response):
-    """Reviewed reading lists (ordered Curiosity Cards) that fit in one brief. Static between deploys."""
-    response.headers["Cache-Control"] = "public, max-age=3600"
-    return _curiosity_collections_payload()
-
-
-@lru_cache(maxsize=1)
-def _curiosity_collections_payload():
-    return {"collections": curiosity_collections(), "lessons": curiosity_lessons()}
 
 
 @app.get("/api/curiosity")

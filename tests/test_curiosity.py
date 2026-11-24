@@ -585,13 +585,19 @@ def test_reading_lists_use_reviewed_cards_and_fit_in_one_brief():
         assert set(card_ids) <= set(curiosity.SEEDS_BY_ID), ident
         assert 4 <= len(card_ids) <= 10 and len(set(card_ids)) == len(card_ids), ident
         assert title and 60 <= len(summary) <= 400 and set(problems) <= set(curiosity.PROBLEM_LABELS), ident
-    response = Response()
-    payload = server.curiosity_reading_lists(response)
-    assert response.headers["Cache-Control"] == "public, max-age=3600"
-    first = payload["collections"][0]
-    assert first["card_ids"] == [card["id"] for card in first["cards"]] == list(curiosity.COLLECTIONS[0][3])
-    assert first["read_minutes"] == sum(card["read_minutes"] for card in first["cards"])
-    assert all(card["seed"] and card["url"].startswith("https://") for list_ in payload["collections"] for card in list_["cards"])
+    from fastapi.testclient import TestClient
+    client = TestClient(server.app)
+    index = client.get("/api/curiosity/collections")
+    assert index.headers["cache-control"].startswith("public, max-age=3600") and index.headers["etag"].startswith('W/"')
+    first = index.json()["collections"][0]
+    assert "cards" not in first, "the index never carries the cards"
+    assert first["card_ids"] == list(curiosity.COLLECTIONS[0][3]) and first["card_count"] == len(first["card_ids"])
+    detail = client.get(f"/api/curiosity/collections/{first['id']}").json()["list"]
+    assert [card["id"] for card in detail["cards"]] == first["card_ids"]
+    assert detail["read_minutes"] == first["read_minutes"] == sum(card["read_minutes"] for card in detail["cards"])
+    for item in index.json()["collections"]:
+        cards = client.get(f"/api/curiosity/collections/{item['id']}").json()["list"]["cards"]
+        assert all(card["seed"] and card["url"].startswith("https://") for card in cards), item["id"]
 
 
 def test_a_whole_reading_list_can_be_pinned_into_a_brief(monkeypatch, tmp_path):
@@ -672,11 +678,15 @@ def test_lessons_group_reviewed_cards_and_ship_with_reading_lists():
     for ident, title, summary, card_ids in curiosity.LESSONS:
         assert re.fullmatch(r"[a-z0-9-]{1,72}", ident) and title and 60 <= len(summary) <= 400, ident
         assert set(card_ids) <= set(curiosity.SEEDS_BY_ID) and 2 <= len(card_ids) <= 10, ident
-    payload = server.curiosity_reading_lists(Response())
+    from fastapi.testclient import TestClient
+    client = TestClient(server.app)
+    payload = client.get("/api/curiosity/collections").json()
     lessons = payload["lessons"]
     assert [lesson["id"] for lesson in lessons] == [f"lesson-{ident}" for ident in ids]
-    assert all(lesson["kind"] == "lesson" and lesson["cards"] for lesson in lessons)
+    assert all(lesson["kind"] == "lesson" and lesson["card_count"] >= 2 for lesson in lessons)
     assert not {lesson["id"] for lesson in lessons} & {item["id"] for item in payload["collections"]}
+    lesson = client.get(f"/api/curiosity/collections/{lessons[0]['id']}").json()["list"]
+    assert lesson["kind"] == "lesson" and len(lesson["cards"]) == lessons[0]["card_count"]
 
 
 def test_postmortem_of_the_week_changes_on_mondays_and_cycles_every_postmortem():
@@ -1033,3 +1043,21 @@ def test_a_stale_shelf_is_served_at_once_and_rebuilt_in_the_background(monkeypat
         threading.Event().wait(0.02)
     assert curiosity_api.curiosity_shelf()["cards"][0]["id"] == "card-2"
     curiosity_api._shelf_cache.clear()
+
+
+def test_reading_list_index_is_small_and_list_ids_are_validated():
+    import json as _json
+    from fastapi.testclient import TestClient
+    from app import server
+
+    client = TestClient(server.app)
+    index = client.get("/api/curiosity/collections")
+    assert len(index.content) < 40_000, f"index is {len(index.content)} bytes; it must not carry the cards"
+    full = sum(len(_json.dumps(client.get(f"/api/curiosity/collections/{item['id']}").json()))
+               for group in index.json().values() for item in group)
+    assert full > 4 * len(index.content)
+    assert client.get("/api/curiosity/collections/no-such-list").status_code == 404
+    assert client.get("/api/curiosity/collections/Bad_ID").status_code == 422
+    again = client.get("/api/curiosity/collections", headers={"If-None-Match": index.headers["etag"]})
+    assert again.status_code == 304
+

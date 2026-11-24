@@ -6,6 +6,7 @@ names the shelf version it was issued for; when the shelf is rebuilt the cursor 
 client restarts from the first page instead of silently skipping or repeating cards.
 """
 import base64
+from functools import lru_cache
 from copy import deepcopy
 import hashlib
 import json
@@ -20,7 +21,7 @@ from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.cache import Cache
-from app.curiosity import (COLLECTIONS, LESSONS, FORMATS, LEVELS, MAX_CURIOSITY_CARDS, ORIGINS, PROBLEM_LABELS, SEEDS_BY_ID, SORTS, THEME_LABELS,
+from app.curiosity import (COLLECTIONS, LESSONS, FORMATS, curiosity_collections, curiosity_lessons, LEVELS, MAX_CURIOSITY_CARDS, ORIGINS, PROBLEM_LABELS, SEEDS_BY_ID, SORTS, THEME_LABELS,
                            _card, build_curiosity_cards, curiosity_facets, filter_cards, saved_curiosity_article)
 from app.launch_store import get_store
 
@@ -169,6 +170,38 @@ def curiosity_card(request: Request, response: Response,
     if not card:
         raise HTTPException(404, "That Curiosity Card is no longer in the collection.")
     return _conditional(request, response, {"card": card}, max_age=300)
+
+
+# --- Reading lists and lessons ---------------------------------------------------------------------------
+# The index carries what the list grid shows (title, summary, counts, companies), not the cards. A list's
+# cards load when a reader opens it or adds it to a brief, so the Curiosity page stays light.
+LIST_ID = r"^[a-z0-9][a-z0-9-]{0,95}$"
+
+
+@lru_cache(maxsize=1)
+def _lists():
+    """Every reading list and lesson with its cards. Built from reviewed seeds only, so static per deploy."""
+    full = {"collections": curiosity_collections(), "lessons": curiosity_lessons()}
+    by_id = {item["id"]: item for group in full.values() for item in group}
+    index = {group: [{key: value for key, value in item.items() if key != "cards"} | {"card_count": len(item["cards"])}
+                     for item in items] for group, items in full.items()}
+    return index, by_id
+
+
+@router.get("/api/curiosity/collections")
+def curiosity_reading_lists(request: Request, response: Response):
+    """Reading lists and lessons without their cards; fetch one list's cards from /api/curiosity/collections/{id}."""
+    return _conditional(request, response, _lists()[0], max_age=3600)
+
+
+@router.get("/api/curiosity/collections/{list_id}")
+def curiosity_reading_list(request: Request, response: Response,
+                           list_id: Annotated[str, Path(max_length=96, pattern=LIST_ID)]):
+    """One reading list or lesson with its cards, in reading order."""
+    item = _lists()[1].get(list_id)
+    if not item:
+        raise HTTPException(404, "That reading list is no longer available.")
+    return _conditional(request, response, {"list": item}, max_age=3600)
 
 
 # --- Anonymous usage counts -------------------------------------------------------------------------------

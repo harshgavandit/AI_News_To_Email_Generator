@@ -46,7 +46,7 @@ export function renderReadingLists(grid, collections, onOpen, { action = "Read t
     const item = make("article", "curiosity-list-card");
     item.dataset.list = list.id;
     item.append(make("h3", "", list.title), make("p", "curiosity-list-summary", list.summary));
-    const count = Array.isArray(list.cards) ? list.cards.length : 0;
+    const count = Number.isInteger(list.card_count) ? list.card_count : Array.isArray(list.cards) ? list.cards.length : 0;
     const companies = Array.isArray(list.companies) ? list.companies.slice(0, 4).join(", ") : "";
     item.append(make("p", "curiosity-list-meta",
       [`${count} ${count === 1 ? "story" : "stories"}`, Number(list.read_minutes) > 0 ? `${list.read_minutes} min` : "", companies]
@@ -137,6 +137,27 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     update();
     byId("curiosity-browser")?.scrollIntoView?.({ block: "start" });
     byId("curiosity-list-clear")?.focus({ preventScroll: true });
+    return loadListCards(id);
+  }
+
+  // A list's cards load the first time it is opened, then stay in memory for this visit.
+  async function loadListCards(id) {
+    const list = state.collections.find((item) => item.id === id);
+    if (!list || Array.isArray(list.cards) || list.loading) return;
+    list.loading = true;
+    list.failed = false;
+    update();
+    try {
+      const response = await fetcher(`/api/curiosity/collections/${encodeURIComponent(id)}`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      list.cards = Array.isArray(payload?.list?.cards) ? payload.list.cards : [];
+    } catch {
+      list.failed = true;
+    } finally {
+      list.loading = false;
+    }
+    if (state.list === id) update();
   }
 
   function update() {
@@ -150,6 +171,28 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
       byId("curiosity-list-kind").textContent = list.kind === "lesson" ? "Lesson" : "Reading list";
       byId("curiosity-list-name").textContent = list.title;
       byId("curiosity-list-brief").href = `/?brief-list=${encodeURIComponent(list.id)}#composer`;
+      if (!Array.isArray(list.cards)) {
+        collection.setAttribute("aria-busy", String(Boolean(list.loading)));
+        status.textContent = list.failed ? "" : `Loading ${number.format(list.card_count || 0)} stories…`;
+        if (list.failed) {
+          const message = document.createElement("p");
+          message.className = "curiosity-empty";
+          message.textContent = "This list could not load. Check your connection and try again.";
+          const retry = document.createElement("button");
+          retry.type = "button";
+          retry.className = "button secondary";
+          retry.textContent = "Try again";
+          retry.addEventListener("click", () => void loadListCards(list.id));
+          collection.replaceChildren(message, retry);
+        } else {
+          const message = document.createElement("p");
+          message.className = "curiosity-empty";
+          message.textContent = "Loading the stories in this list…";
+          collection.replaceChildren(message);
+        }
+        return;
+      }
+      collection.setAttribute("aria-busy", "false");
       status.textContent = `${number.format(list.cards.length)} stories in reading order`;
       renderCuriosityCards(collection, list.cards, { filters: false, actions: false, step: PAGE, visibleCount: list.cards.length, onShare });
       return;
@@ -337,7 +380,8 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     .then((response) => (response?.ok ? response.json() : { collections: [] }))
     .then((payload) => {
       const usable = (items) => (Array.isArray(items) ? items : [])
-        .filter((list) => list && typeof list.id === "string" && Array.isArray(list.cards) && list.cards.length);
+        .filter((list) => list && typeof list.id === "string"
+          && (Number(list.card_count) > 0 || (Array.isArray(list.cards) && list.cards.length > 0)));
       const readingLists = usable(payload?.collections);
       const lessonLists = usable(payload?.lessons).map((list) => ({ ...list, kind: "lesson" }));
       state.collections = [...readingLists, ...lessonLists];
@@ -347,6 +391,12 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
         renderReadingLists(lessonGrid, lessonLists, openList, { action: "See the stories" });
         lessons.hidden = !lessonLists.length;
       }
+      // A shared ?list= link opens as soon as the index arrives, without waiting for the whole collection.
+      if (state.list && state.collections.some((item) => item.id === state.list)) {
+        update();
+        return loadListCards(state.list);
+      }
+      return undefined;
     })
     .catch(() => { state.collections = []; });
   for (const [select, key] of [[problem, "problem"], [format, "format"], [level, "level"], [company, "company"], [sort, "sort"]]) {

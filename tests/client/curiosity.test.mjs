@@ -532,3 +532,89 @@ test('share uses the system sheet, falls back to copying, and points at the card
   assert.match(share.shareMessage({ outcome: 'manual', url: 'u' }), /Copy this link/);
 });
 
+
+test('reading lists load as a light index and fetch a list\'s cards only when it is opened', async () => {
+  const html = (await import('node:fs')).readFileSync(new URL('../../public/curiosity.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://getinformdaily.com/curiosity.html?list=anatomy' });
+  const { window } = dom;
+  for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
+  try {
+    const page = await import(`../../public/curiosity-page.js?lazy=${Date.now()}`);
+    const second = { ...rich, id: 'second', title: 'Second in the list', company: 'Meta' };
+    const index = { collections: [
+      { id: 'anatomy', title: 'Anatomy of a global outage', summary: 'How outages unfold.', read_minutes: 30, companies: ['Meta'], card_count: 2 },
+      { id: 'retries', title: 'Retries and overload', summary: 'Load feeds on itself.', read_minutes: 20, companies: ['AWS'], card_count: 1 },
+    ], lessons: [] };
+    const urls = [];
+    let failRetries = true;
+    await page.startCuriosityPage({
+      fetcher: async (url) => {
+        urls.push(url);
+        if (url === '/api/curiosity/collections') return { ok: true, status: 200, json: async () => index };
+        if (url === '/api/curiosity/collections/anatomy') return { ok: true, status: 200, json: async () => ({ list: { ...index.collections[0], cards: [second, rich] } }) };
+        if (url === '/api/curiosity/collections/retries') {
+          if (failRetries) return { ok: false, status: 503, json: async () => ({}) };
+          return { ok: true, status: 200, json: async () => ({ list: { ...index.collections[1], cards: [rich] } }) };
+        }
+        return { ok: true, status: 200, json: async () => cardsApi([rich], url) };
+      },
+      history: { replaceState() {} }, location: window.location,
+    });
+    const doc = window.document;
+    const ids = () => [...doc.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId);
+    assert.match(doc.querySelector('#curiosity-list-grid article').textContent, /2 stories · 30 min · Meta/, 'counts come from the index');
+    assert.deepEqual(ids(), ['second', 'riot-valorant-netcode'], 'a shared ?list= link opens with its cards');
+    assert.equal(urls.filter((url) => url === '/api/curiosity/collections/anatomy').length, 1);
+
+    doc.getElementById('curiosity-list-clear').click();
+    doc.querySelector('[data-list="retries"] button').click();
+    await settle();
+    const retry = [...doc.querySelectorAll('#curiosity-collection button')].find((button) => button.textContent === 'Try again');
+    assert.ok(retry, 'a list that fails to load offers a retry');
+    failRetries = false;
+    retry.click();
+    await settle();
+    assert.deepEqual(ids(), ['riot-valorant-netcode']);
+    assert.match(doc.getElementById('curiosity-result-status').textContent, /1 stories in reading order|1 story/);
+
+    doc.getElementById('curiosity-list-clear').click();
+    doc.querySelector('[data-list="anatomy"] button').click();
+    await settle();
+    assert.equal(urls.filter((url) => url === '/api/curiosity/collections/anatomy').length, 1, 'opened lists are not fetched again');
+  } finally {
+    for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+    window.close();
+  }
+});
+
+test('a shared reading-list link opens before the rest of the collection has loaded', async () => {
+  const html = (await import('node:fs')).readFileSync(new URL('../../public/curiosity.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://getinformdaily.com/curiosity.html?list=anatomy' });
+  const { window } = dom;
+  for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
+  let releaseCards;
+  try {
+    const page = await import(`../../public/curiosity-page.js?early=${Date.now()}`);
+    const index = { collections: [{ id: 'anatomy', title: 'Anatomy', summary: 'x', read_minutes: 5, companies: [], card_count: 1 }], lessons: [] };
+    const cardsPending = new Promise((resolve) => { releaseCards = resolve; });
+    const started = page.startCuriosityPage({
+      fetcher: async (url) => {
+        if (url === '/api/curiosity/collections') return { ok: true, status: 200, json: async () => index };
+        if (url === '/api/curiosity/collections/anatomy') return { ok: true, status: 200, json: async () => ({ list: { ...index.collections[0], cards: [rich] } }) };
+        if (url.startsWith('/api/curiosity/cards')) { await cardsPending; return { ok: true, status: 200, json: async () => cardsApi([rich], url) }; }
+        return { ok: true, status: 200, json: async () => ({ cards: [] }) };
+      },
+      history: { replaceState() {} }, location: window.location,
+    });
+    await settle();
+    assert.deepEqual([...window.document.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId),
+      ['riot-valorant-netcode'], 'the list shows while the collection is still loading');
+    releaseCards();
+    await started;
+    assert.equal(window.document.getElementById('curiosity-list-name').textContent, 'Anatomy');
+  } finally {
+    releaseCards?.();
+    for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+    window.close();
+  }
+});
