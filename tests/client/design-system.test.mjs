@@ -11,7 +11,8 @@ test('every page loads the design-system layer after the legacy stylesheets', ()
   for (const page of pages) {
     const html = readFileSync(new URL(page, root), 'utf8');
     const sheets = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
-    assert.deepEqual(sheets.slice(-3), ['/system.css', '/command.css', '/orbital.css'], `${page} must load system.css, command.css then orbital.css last`);
+    assert.deepEqual(sheets.slice(-4), ['/system.css', '/command.css', '/orbital.css', '/signature.css'],
+      `${page} must load system.css, command.css, orbital.css, then the signature finishing layer last`);
     assert.match(html, /<script defer src="\/system\.js"><\/script>/, `${page} must load system.js`);
     assert.match(html, /<script defer src="\/ambient\.js"><\/script>/, `${page} must load ambient.js`);
     assert.ok(html.indexOf('/ambient.js') < html.indexOf('/orbital.js'), `${page} must load orbital.js after ambient.js`);
@@ -19,7 +20,7 @@ test('every page loads the design-system layer after the legacy stylesheets', ()
 });
 
 test('the design-system stylesheets gate motion and avoid external resources', () => {
-  for (const sheet of ['system.css', 'command.css', 'orbital.css']) {
+  for (const sheet of ['system.css', 'command.css', 'orbital.css', 'signature.css']) {
     const css = readFileSync(new URL(sheet, root), 'utf8');
     assert.match(css, /prefers-reduced-motion: reduce/);
     assert.match(css, /forced-colors: active/);

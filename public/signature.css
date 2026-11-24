@@ -1,0 +1,357 @@
+/*
+ * Informa AI — "Signature" finishing layer.
+ *
+ * Loaded after every other stylesheet on every page. It does not change markup or behaviour; it
+ * tightens the system the earlier layers built: one type scale, one card anatomy, one focus ring,
+ * calmer motion, and fixes for overflow and spacing found in a full-page audit.
+ *
+ * Direction: an editorial instrument panel. Serif display type for what you read, a precise sans for
+ * what you operate, hairline structure, and colour used for meaning (signal, state) rather than
+ * decoration. Every effect is gated by reduced motion, the motion switch and forced colours.
+ */
+
+/* ---------- Tokens ---------- */
+:root {
+  --sig-radius-lg: 18px;
+  --sig-radius: 14px;
+  --sig-radius-sm: 10px;
+  --sig-hair: color-mix(in srgb, var(--line) 82%, transparent);
+  --sig-hair-strong: color-mix(in srgb, var(--green) 22%, var(--line));
+  --sig-ink-soft: color-mix(in srgb, var(--ink) 78%, var(--muted));
+  --sig-focus: 0 0 0 2px var(--paper), 0 0 0 4px color-mix(in srgb, var(--focus) 85%, transparent);
+  --sig-lift: 0 1px 0 var(--edge-highlight, #fff8) inset, 0 1px 2px #0a1a3308, 0 12px 28px -16px #0a2a5c38;
+  --sig-lift-hover: 0 1px 0 var(--edge-highlight, #fff8) inset, 0 2px 4px #0a1a330c, 0 22px 44px -22px #0a2a5c55;
+  --sig-ease: cubic-bezier(.2, .8, .2, 1);
+  --sig-fast: 160ms;
+  --sig-mid: 260ms;
+  --sig-display: var(--serif, "Instrument Serif", Georgia, serif);
+  --sig-ui: var(--font-ui, "Instrument Sans", "Segoe UI", system-ui, sans-serif);
+}
+:root[data-theme="dark"] {
+  --sig-hair: color-mix(in srgb, var(--line) 90%, transparent);
+  --sig-lift: 0 1px 0 #ffffff0d inset, 0 1px 2px #0006, 0 14px 30px -18px #000c;
+  --sig-lift-hover: 0 1px 0 #ffffff14 inset, 0 2px 6px #0007, 0 26px 50px -24px #000e;
+}
+
+/* ---------- Canvas and text ---------- */
+html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; scrollbar-gutter: stable; }
+body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: color-mix(in srgb, var(--sys-signal, #0891b2) 28%, transparent); color: var(--ink); }
+:where(h1, h2, h3) { text-wrap: balance; }
+:where(p, li, dd) { text-wrap: pretty; }
+:where(time, .nav-count, .curiosity-theme-count, dd, .desk-stat strong) { font-variant-numeric: tabular-nums; }
+
+/* Quiet, precise scrollbars that match the surface. */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 99px; background: color-mix(in srgb, var(--muted) 38%, transparent) padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* One focus ring everywhere, visible on light, dark and image backgrounds. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: none; box-shadow: var(--sig-focus); border-radius: max(6px, var(--focus-radius, 0px));
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px);
+  border-bottom: 1px solid var(--sig-hair);
+}
+.site-header .brand-name { letter-spacing: -.01em; }
+.site-header :is(.site-nav, .research-nav) a { font: 600 13px/1 var(--sig-ui); letter-spacing: .005em; color: var(--sig-ink-soft); }
+.site-header :is(.site-nav, .research-nav) a[aria-current="page"] { color: var(--green); }
+.site-header .button.primary { letter-spacing: .01em; }
+
+/* Small screens: the page links scroll sideways instead of pushing the page wider than the screen. */
+@media (max-width: 760px) {
+  .site-header :is(.site-nav, .research-nav) {
+    max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    justify-content: flex-start !important; gap: 18px !important; padding-inline: 2px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 24px), transparent);
+  }
+  .site-header :is(.site-nav, .research-nav)::-webkit-scrollbar { display: none; }
+  .site-header :is(.site-nav, .research-nav) > a { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* ---------- Buttons and controls ---------- */
+.button { font-family: var(--sig-ui); letter-spacing: .005em; transition: background-color var(--sig-fast), border-color var(--sig-fast), color var(--sig-fast), box-shadow var(--sig-mid) var(--sig-ease), transform var(--sig-fast) var(--sig-ease); }
+.button.primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--green) 88%, #fff) 0%, var(--green) 52%, var(--action-bottom, var(--green)) 100%);
+  border-color: color-mix(in srgb, var(--green) 70%, #000);
+  box-shadow: inset 0 1px 0 #ffffff38, 0 1px 2px #0a1a3326, 0 8px 18px -10px color-mix(in srgb, var(--green) 70%, transparent);
+}
+.button.primary:hover { box-shadow: inset 0 1px 0 #ffffff45, 0 2px 4px #0a1a3326, 0 14px 26px -12px color-mix(in srgb, var(--green) 75%, transparent); }
+.button:active, .button.primary:active { transform: translateY(1px); }
+.button.secondary, .button:not(.primary) { box-shadow: inset 0 1px 0 var(--edge-highlight, #fff), 0 1px 2px #0a1a330d; }
+:root[data-theme="dark"] .button.secondary, :root[data-theme="dark"] .button:not(.primary) { box-shadow: inset 0 1px 0 #ffffff0f, 0 1px 2px #0005; }
+
+:where(input[type="search"], input[type="text"], input[type="email"], input[type="url"], input:not([type]), select, textarea) {
+  border-radius: var(--sig-radius-sm);
+  transition: border-color var(--sig-fast), box-shadow var(--sig-mid) var(--sig-ease), background-color var(--sig-fast);
+}
+:where(input[type="search"], input[type="text"], input[type="email"], input[type="url"], input:not([type]), select, textarea):hover {
+  border-color: var(--sig-hair-strong);
+}
+:where(input[type="search"], input[type="text"], input[type="email"], input[type="url"], input:not([type]), select, textarea):focus-visible {
+  border-color: color-mix(in srgb, var(--focus) 70%, var(--line));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.text-button, a.text-button { text-underline-offset: .22em; text-decoration-thickness: 1px; }
+
+/* ---------- Section rhythm ---------- */
+.eyebrow, .research-eyebrow, .section-eyebrow {
+  font-family: var(--sig-ui); font-weight: 700; letter-spacing: .14em;
+}
+/* Close the empty band under "Get the daily brief" on the reading desk. */
+.workspace-content > .desk-layout { padding-bottom: 14px; }
+.workspace-content > .desk-layout > .reading { margin-bottom: 0; }
+
+/* ---------- Story cards ---------- */
+#stories:not(.story-list) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 18px; }
+.reading .story, #stories .story {
+  border: 1px solid var(--sig-hair); border-radius: var(--sig-radius);
+  background: var(--sys-card, var(--paper)); box-shadow: var(--sig-lift);
+  transition: box-shadow var(--sig-mid) var(--sig-ease), border-color var(--sig-fast), transform var(--sig-mid) var(--sig-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-motion="off"]) #stories .story:hover {
+    border-color: var(--sig-hair-strong); box-shadow: var(--sig-lift-hover);
+  }
+}
+/* A thin signal rule along the top edge marks unread cards; read cards settle back. */
+#stories:not(.story-list) .story { position: relative; overflow: hidden; }
+#stories:not(.story-list) .story.is-unread::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, var(--green), var(--sys-signal, #0891b2) 60%, transparent);
+  opacity: .85;
+}
+#stories .story-top { flex-wrap: wrap; row-gap: 6px; }
+#stories .story-top time { white-space: nowrap; font: 600 11.5px/1.3 var(--sig-ui); color: var(--muted); letter-spacing: .01em; }
+#stories .story-meta-badges { flex-wrap: wrap; gap: 5px; }
+#stories .story-meta-badges > span { border-radius: 999px; font-weight: 650; }
+#stories .story h3 { margin-block: 12px 10px; }
+#stories .story h3 a { text-decoration: none; background-image: linear-gradient(currentColor, currentColor); background-size: 0 1px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size var(--sig-mid) var(--sig-ease), color var(--sig-fast); }
+#stories .story h3 a:hover { background-size: 100% 1px; color: var(--ink); }
+#stories .story-summary { color: var(--summary); }
+#stories .story-bottom { border-top-color: var(--sig-hair); }
+#stories .source-mark { border-radius: 8px; font-weight: 750; background: linear-gradient(160deg, var(--sage), color-mix(in srgb, var(--sage) 60%, var(--paper))); }
+#stories .story-attribution strong { font-weight: 700; color: var(--ink); }
+#stories .story-actions :is(button, a) { border-radius: 999px; font-weight: 650; }
+#stories .story-actions button { border: 1px solid var(--sig-hair); background: color-mix(in srgb, var(--paper) 70%, transparent); }
+#stories .story-actions button:hover { border-color: var(--sig-hair-strong); color: var(--green); }
+#stories .story.is-read { opacity: .78; }
+#stories .story.is-read:hover { opacity: 1; }
+
+/* ---------- Intelligence rail ---------- */
+.intelligence-rail > section, .intelligence-rail > aside { border-radius: var(--sig-radius-lg); }
+
+/* Curiosity Cards in the home rail: a compact reading list, not full cards. */
+.intelligence-rail .curiosity-card { padding: 14px 14px 12px; gap: 8px; }
+.intelligence-rail .curiosity-card :is(.curiosity-tags, .curiosity-why, .curiosity-summary-basis, .curiosity-related, .curiosity-question) { display: none; }
+.intelligence-rail .curiosity-card .curiosity-summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; }
+.intelligence-rail .curiosity-card .curiosity-card-title { font-size: 19px; line-height: 1.2; }
+.intelligence-rail .curiosity-card .curiosity-card-meta { flex-wrap: wrap; }
+.intelligence-rail .curiosity-card .curiosity-card-meta > :nth-child(n + 3) { display: none; }
+.intelligence-rail .curiosity-card .curiosity-card-actions { gap: 8px; }
+
+/* Developing stories and "On the radar": clearer hierarchy, consistent hit areas. */
+.intelligence-rail .headline-item, .intelligence-rail .headlines li { border-radius: var(--sig-radius-sm); }
+
+/* ---------- Curiosity Cards (collection page) ---------- */
+.curiosity-card {
+  border-radius: var(--sig-radius); border-color: var(--sig-hair); box-shadow: var(--sig-lift);
+  transition: box-shadow var(--sig-mid) var(--sig-ease), border-color var(--sig-fast), transform var(--sig-mid) var(--sig-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-motion="off"]) .curiosity-card:hover { border-color: var(--sig-hair-strong); box-shadow: var(--sig-lift-hover); }
+}
+.curiosity-card-title { letter-spacing: -.012em; }
+.curiosity-list-card { border-radius: var(--sig-radius); box-shadow: var(--sig-lift); transition: box-shadow var(--sig-mid) var(--sig-ease), transform var(--sig-mid) var(--sig-ease); }
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-motion="off"]) .curiosity-list-card:hover { box-shadow: var(--sig-lift-hover); transform: translateY(-2px); }
+}
+.curiosity-list-card h3 { letter-spacing: -.01em; }
+/* Theme tabs scroll inside their row on phones instead of widening the page. */
+.curiosity-theme-nav { max-width: 100%; min-width: 0; }
+
+/* ---------- Panels shared by Research Desk, Sources, Technology, Inbox ---------- */
+:is(.research-panel, .information-card, .source-filters, .sources-controls, .technology-panel, .inbox-panel) {
+  border-radius: var(--sig-radius-lg);
+}
+.source-row { transition: background-color var(--sig-fast); }
+@media (hover: hover) { .source-row:hover { background: color-mix(in srgb, var(--sage) 45%, transparent); } }
+
+/* ---------- Footer ---------- */
+.site-footer { border-top: 1px solid var(--sig-hair); }
+.site-footer .footer-nav a { color: var(--sig-ink-soft); text-underline-offset: .22em; }
+.site-footer .footer-nav a:hover { color: var(--green); }
+
+/* ---------- Page transitions ---------- */
+/* Moving between pages cross-fades the content while the header stays put (supporting browsers only). */
+@view-transition { navigation: auto; }
+.site-header { view-transition-name: site-header; }
+::view-transition-old(site-header), ::view-transition-new(site-header) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { animation: sig-out 180ms var(--sig-ease) both; }
+::view-transition-new(root) { animation: sig-in 320ms var(--sig-ease) both; }
+@keyframes sig-out { to { opacity: 0; transform: translateY(-4px); } }
+@keyframes sig-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* ---------- Motion, contrast and print ---------- */
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+  .button, .curiosity-card, .curiosity-list-card, #stories .story, #stories .story h3 a { transition: none !important; }
+}
+:root[data-motion="off"] :is(.curiosity-list-card, #stories .story) { transform: none !important; }
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
+  #stories:not(.story-list) .story.is-unread::before { background: Highlight; }
+  .button.primary { background: ButtonText; color: ButtonFace; border-color: ButtonText; }
+}
+@media print {
+  .site-header { position: static; backdrop-filter: none; background: none; }
+  #stories .story { box-shadow: none; break-inside: avoid; }
+}
+
+/* Readability pass for the workspace sidebar and the Priority signals rail.
+   Part of the finishing layer, so these sizes and weights win over earlier ones.
+   Colours come from the theme variables, so light and dark themes both keep their contrast. */
+
+/* ---------- Sidebar ---------- */
+.workspace-sidebar { padding-inline-end: 14px; }
+
+/* Main workspace views: larger, darker and bolder, with clear icons. */
+.workspace-sidebar > nav.workspace-links { gap: 6px; }
+.workspace-sidebar > nav.workspace-links :is(button, .workspace-nav-link) {
+  min-height: 46px; padding: 10px 14px; gap: 12px;
+  color: var(--ink); font: 600 15px/1.3 var(--font-ui); letter-spacing: -.005em;
+}
+.workspace-sidebar > nav.workspace-links :is(button, .workspace-nav-link) > span:has(svg) { flex-basis: 20px; }
+.workspace-sidebar > nav.workspace-links svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.workspace-sidebar > nav.workspace-links :is(button, .workspace-nav-link):hover { color: var(--green); }
+.workspace-sidebar > nav.workspace-links button:is([aria-current="page"], [aria-pressed="true"]) {
+  color: var(--green); font-weight: 750;
+  background: var(--paper);
+  border-color: color-mix(in srgb, var(--green) 28%, var(--line));
+  box-shadow: inset 4px 0 0 var(--green), 0 6px 16px -10px color-mix(in srgb, var(--green) 55%, transparent);
+}
+.workspace-sidebar .nav-count { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* Section headings ("Explore topics", "Monitoring views"). */
+.workspace-sidebar .sidebar-section { margin-top: 22px; padding-top: 20px; }
+.workspace-sidebar .sidebar-section h2 {
+  margin: 0 14px 10px; color: var(--ink); opacity: .78;
+  font: 800 12px/1.4 var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
+}
+.workspace-sidebar .sidebar-section > a.sidebar-secondary + h2 { margin-top: 20px; }
+
+/* Links to other pages (Inbox, Research Desk…). */
+.workspace-sidebar .sidebar-section > a.sidebar-secondary {
+  display: flex; align-items: center; min-height: 40px; padding: 8px 14px;
+  color: var(--green); font: 700 14px/1.35 var(--font-ui); text-decoration: none;
+}
+.workspace-sidebar .sidebar-section > a.sidebar-secondary:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Topic and saved-view buttons: readable, not greyed out. */
+.workspace-sidebar .sidebar-section .workspace-links :is(button, a) {
+  min-height: 42px; padding: 9px 14px; color: var(--ink); opacity: 1;
+  font: 550 14px/1.35 var(--font-ui);
+}
+.workspace-sidebar .sidebar-section .workspace-links :is(button, a):hover { color: var(--green); }
+.workspace-sidebar .sidebar-section .workspace-links button:is([aria-current="page"], [aria-pressed="true"]) { font-weight: 750; }
+.workspace-sidebar button.sidebar-secondary { font: 650 13.5px/1.35 var(--font-ui); }
+
+/* ---------- Priority signals ---------- */
+.priority-signals { padding: 20px 20px 16px; }
+.priority-signals h2#signals-title {
+  margin: 2px 0 0; color: var(--ink);
+  font: 800 20px/1.25 var(--font-ui); letter-spacing: -.015em;
+}
+.priority-signals > .muted { margin: 4px 0 6px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+.priority-signals .priority-signal {
+  display: grid; gap: 6px; margin: 0; padding: 14px 0;
+  background: none; box-shadow: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
+}
+.priority-signals .priority-signal:last-child { border-bottom: 0; }
+.priority-signals .priority-signal:hover { background: none; }
+.priority-signal .signal-type {
+  justify-self: start; margin: 0; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 11%, transparent); color: var(--green);
+  font: 750 11px/1.4 var(--font-ui); letter-spacing: .04em; text-transform: uppercase;
+}
+.priority-signal button {
+  padding: 0; color: var(--ink);
+  font: 750 17px/1.38 var(--font-ui); letter-spacing: -.01em; text-wrap: pretty;
+}
+.priority-signal button:hover { color: var(--green); }
+.priority-signal button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 4px; }
+.priority-signal p.muted { margin: 0; color: var(--muted); font-size: 12.5px; font-weight: 550; line-height: 1.45; }
+.priority-signals .signal-notice { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; }
+
+@media (max-width: 760px) {
+  .priority-signal button { font-size: 16px; }
+  .workspace-sidebar > nav.workspace-links :is(button, .workspace-nav-link) { font-size: 15px; }
+}
+@media (forced-colors: active) {
+  .priority-signal .signal-type { border: 1px solid CanvasText; }
+  .workspace-sidebar > nav.workspace-links button:is([aria-current="page"], [aria-pressed="true"]) { border-color: Highlight; }
+}
+
+/* Card footers stack: who published it, then what you can do with it. */
+#stories:not(.story-list) .story-bottom { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+#stories:not(.story-list) .story-byline { flex: initial; }
+#stories:not(.story-list) .story-actions { justify-content: flex-end; margin-left: 0; }
+#stories:not(.story-list) .story-actions .card-original-link { margin-inline-end: auto; }
+
+/* ---------- Research and Technology headers: an instrument dial instead of a glass sphere ---------- */
+/* Meridian rings, a bezel of minute ticks and a live centre point: the Atlas globe, seen from above. */
+@media (min-width: 900px) {
+  .research-header::before {
+    width: clamp(118px, 10vw, 150px);
+    border-radius: 50%;
+    background:
+      radial-gradient(circle closest-side, color-mix(in srgb, var(--sys-signal) 95%, #fff) 0 3.4%, color-mix(in srgb, var(--sys-signal) 35%, transparent) 4.4%, transparent 14%),
+      radial-gradient(circle closest-side, transparent 0 23.4%, color-mix(in srgb, var(--green) 30%, transparent) 24% 25%, transparent 25.6% 47.4%,
+        color-mix(in srgb, var(--green) 26%, transparent) 48% 49%, transparent 49.6% 72.4%, color-mix(in srgb, var(--green) 38%, transparent) 73% 74.5%, transparent 75%),
+      linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in srgb, var(--green) 16%, transparent) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)),
+      linear-gradient(0deg, transparent calc(50% - .5px), color-mix(in srgb, var(--green) 16%, transparent) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)),
+      radial-gradient(circle closest-side, color-mix(in srgb, var(--paper) 86%, var(--sage)) 0 80%, transparent 80.5%),
+      repeating-conic-gradient(from -.4deg, color-mix(in srgb, var(--green) 40%, transparent) 0 .8deg, transparent .8deg 6deg),
+      radial-gradient(circle closest-side, transparent 0 80%, color-mix(in srgb, var(--green) 8%, var(--paper)) 80.5% 99%, transparent 99.6%);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--green) 22%, transparent),
+      0 0 0 8px color-mix(in srgb, var(--paper) 55%, transparent),
+      0 0 0 9px color-mix(in srgb, var(--green) 10%, transparent),
+      0 28px 48px -26px rgb(var(--sys-green-glow, 8 145 178) / .55);
+    animation: sig-dial 60s linear infinite;
+  }
+  :root[data-theme="dark"] .research-header::before { opacity: 1; }
+}
+@keyframes sig-dial { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .research-header::before { animation: none !important; } }
+:root[data-motion="off"] .research-header::before { animation: none !important; }
+
+/* Eyebrows share one voice on every page. */
+:is(.directory-intro, .information-hero, .contribution-intro, .research-header, .technology-header) .eyebrow {
+  font: 700 11px/1.4 var(--sig-ui); letter-spacing: .14em; text-transform: uppercase;
+}
+
+/* Floating controls on phones: the motion switch joins "back to top" in one corner, as quiet glass. */
+@media (max-width: 760px) {
+  .motion-toggle.is-floating {
+    left: auto; right: 16px; width: 40px; height: 40px;
+    background: color-mix(in srgb, var(--paper) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+    border: 1px solid var(--sig-hair);
+  }
+  .sys-top {
+    right: 14px;
+    background: color-mix(in srgb, var(--paper) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+  }
+}
