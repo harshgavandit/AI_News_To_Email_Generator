@@ -238,7 +238,7 @@ def test_morning_suggestions_change_daily_without_repeats_and_skip_saved_cards(m
     assert [c['id'] for c in mail_schedule.curiosity_suggestions(store, other, morning)] != [c['id'] for c in days[0]]
     saved = days[0][:1]
     brief = mail_schedule.append_curiosity_section({'markdown': 'Brief', 'html': '<p>Brief</p>'}, saved, days[0])
-    assert brief['markdown'].count(saved[0]['url']) == 1, 'a saved card is not suggested again'
+    assert brief['markdown'].count(safe_href(saved[0]['url'])) == 1, 'a saved card is not suggested again'
     for card in days[0]:
         # Links are canonicalized for email (for example, without a trailing slash).
         assert safe_href(card['url']) in brief['html'] and 'Read the original source' in brief['html']

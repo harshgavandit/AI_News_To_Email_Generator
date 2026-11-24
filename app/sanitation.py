@@ -51,6 +51,24 @@ SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[^\W_])|(?<=[。！？])\s*(?=\w)")
 DIRECTIONAL = "👇👉🔗✅👆➡️⬇️🏼🏻🏽🏾🏿 \t"
 
 
+EDGE_CHARS = DIRECTIONAL + "|•–—*[]:;\"'"
+
+
+def _trim_edges(sentence):
+    """Strip stray punctuation, but keep a parenthesis that closes one opened in the sentence."""
+    while True:
+        trimmed = sentence.strip(EDGE_CHARS)
+        if trimmed.endswith(")") and trimmed.count(")") > trimmed.count("("):
+            trimmed = trimmed[:-1]
+        elif trimmed.startswith("(") and trimmed.count("(") > trimmed.count(")"):
+            trimmed = trimmed[1:]
+        elif trimmed.startswith("(") and trimmed.endswith(")") and trimmed.count("(") == 1 == trimmed.count(")"):
+            trimmed = trimmed[1:-1]
+        if trimmed == sentence:
+            return sentence
+        sentence = trimmed
+
+
 def sanitize_text(value, limit=4000, *, strip_timestamps=False):
     """Keep editorial sentences; drop promotional lines, social links, sponsor pitches, and embedded URLs."""
     text = str(value or "")[:32000]
@@ -76,7 +94,7 @@ def sanitize_text(value, limit=4000, *, strip_timestamps=False):
                 sentence = TIMESTAMP.sub(" ", sentence)
             sentence = HASHTAG.sub("", URL.sub("", sentence))
             sentence = re.sub(r"(?<!\w)@[\w.-]+", "", sentence)
-            sentence = " ".join(sentence.split()).strip(DIRECTIONAL + "|•–—*[]():;\"'")
+            sentence = _trim_edges(" ".join(sentence.split()))
             if any(char.isalpha() for char in sentence):
                 kept.append(sentence)
 

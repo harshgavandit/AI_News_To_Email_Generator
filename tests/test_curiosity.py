@@ -610,3 +610,37 @@ def test_a_whole_reading_list_can_be_pinned_into_a_brief(monkeypatch, tmp_path):
     digest = server.prepare_digest(server.DigestRequest(pinned_ids=card_ids, top_n=10), store, "Reader", "", False, None)
     assert observed["pinned"] == card_ids
     assert [item["url"] for item in digest["articles"]] == [curiosity.SEEDS_BY_ID[ident]["url"] for ident in card_ids]
+
+
+ROUND_TEN_SEEDS = (
+    "aws-dynamodb-dns-2025", "cloudflare-outage-november-2025", "google-cloud-service-control-2025",
+    "openai-december-2024-incident", "github-ddos-2018", "cloudflare-leap-second-2017", "letsencrypt-caa-rechecking-bug",
+    "knight-capital-sec-2013", "xz-utils-backdoor-2024", "circleci-security-incident-2023", "cloudflare-thanksgiving-2023",
+    "okta-support-system-rca-2023", "cloudflare-log4j-cve-2021-44228", "37signals-left-the-cloud",
+    "stack-overflow-architecture-2016", "discord-indexing-trillions", "github-rails-upgrade-2018",
+    "figma-webassembly-load-time", "canva-counting-billions", "khan-academy-goliath", "stripe-sorbet", "uber-querygpt",
+    "linkedin-genai-product-musings", "github-copilot-llms", "shopify-bfcm-scale-testing",
+)
+
+
+def test_round_ten_seeds_are_reviewed_and_grouped_into_new_reading_lists():
+    from app import curiosity
+
+    assert len(curiosity.CURATED_CURIOSITY) >= 151
+    for ident in ROUND_TEN_SEEDS:
+        card = curiosity._card(curiosity.SEEDS_BY_ID[ident], {})
+        assert card["problems"] and card["why_read"] and card["url"].startswith("https://"), ident
+        # Every new seed except the Copilot history and Stack Overflow tour carries a reviewed breakdown.
+        if ident not in {"github-copilot-llms", "stack-overflow-architecture-2016"}:
+            assert set(card["breakdown"]) == {"problem", "approach", "result"}, ident
+    security = {card["id"] for card in curiosity.CURATED_CURIOSITY if "security-incidents" in curiosity.card_problems(card)}
+    assert {"xz-utils-backdoor-2024", "circleci-security-incident-2023", "okta-support-system-rca-2023",
+            "cloudflare-thanksgiving-2023", "cloudflare-log4j-cve-2021-44228"} <= security
+    lists = {ident: cards for ident, _, _, cards, _ in curiosity.COLLECTIONS}
+    assert {"security-incidents-up-close", "leaving-the-cloud-and-running-lean", "recent-outages-2024-2025",
+            "building-ai-products-in-production"} <= set(lists)
+    assert "37signals-left-the-cloud" in lists["leaving-the-cloud-and-running-lean"]
+    assert "cost" in curiosity.card_problems(curiosity.SEEDS_BY_ID["37signals-left-the-cloud"])
+    # A closing parenthesis that balances one in the title is kept.
+    log4j = curiosity._card(curiosity.SEEDS_BY_ID["cloudflare-log4j-cve-2021-44228"], {})
+    assert log4j["title"] == "Inside the Log4j2 vulnerability (CVE-2021-44228)"
