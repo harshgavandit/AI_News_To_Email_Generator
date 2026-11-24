@@ -1,5 +1,7 @@
 """Source-grounded engineering stories for the Curiosity Cards collection."""
 from copy import deepcopy
+from functools import lru_cache
+from math import gcd
 from datetime import UTC, datetime, timedelta
 import re
 from urllib.parse import urlsplit
@@ -1038,6 +1040,37 @@ CURATED_CURIOSITY = (
           authors="Jordan Neufeld", publisher_detail="Shopify engineering blog",
           why="Rehearsing the busiest weekend of the year on production.",
           question="How does Shopify make sure Black Friday doesn’t take it down?", themes=("performance", "reliability")),
+    _seed("hotstar-scaling-for-50m", "Scaling the Hotstar Platform for 50M",
+          "https://blog.hotstar.com/scaling-the-hotstar-platform-for-50m-a7f96a019add", "JioHotstar Tech Blog", "Hotstar",
+          2019,
+          "After serving 25 million concurrent cricket viewers, Hotstar prepared for 50 million. Autoscaling had not worked for it in 2018, so it stepped capacity up and down static ‘ladders’, tuned layers doing generic processing it did not need, and ran harsh traffic simulations that exposed a cascading failure.",
+          ("Load testing", "Capacity planning", "Live streaming", "CDN"), 6, "hotstar-tech", published="2019-10-01",
+          authors="Akash Saxena", publisher_detail="Hotstar engineering blog", read_time_basis="publisher",
+          why="Why autoscaling was not the answer for the biggest live-streaming peaks.",
+          question="How do you get ready for 50 million people watching one match?",
+          themes=("performance", "cloud", "reliability")),
+    _seed("spotify-tech-migrations", "Tech Migrations, the Spotify Way",
+          "https://engineering.atspotify.com/2020/6/tech-migrations-the-spotify-way", "Spotify Engineering", "Spotify", 2020,
+          "Migrations at Spotify started fast and stalled in a long tail of systems on old versions. The platform team’s answer had three parts: one prioritised, company-wide migrations map, treating migrations as products, and automating as much of the work as possible, with progress shown in Backstage.",
+          ("Migrations", "Backstage", "Platform engineering"), 8, "spotify-engineering",
+          authors="Saunak “Jai” Chakrabarti · Jenni Lee", publisher_detail="Spotify engineering blog",
+          why="The organisational side of migrations, which is usually what makes them drag on.",
+          question="Why do migrations stall in a long tail, and how do you finish them?",
+          themes=("engineering-practice",)),
+    _seed("airbnb-great-migration-soa", "The Great Migration: from Monolith to Service-Oriented",
+          "https://www.infoq.com/presentations/airbnb-soa-migration/", "InfoQ", "Airbnb", 2018,
+          "Jessica Tai explains why Airbnb moved off Monorail, its Ruby on Rails monolith, to services: the design tenets it set, its layers of data, derived data, middle-tier and presentation services, and the lessons and practices from the migration.",
+          ("Microservices", "Ruby on Rails", "Monolith", "SOA"), 45, None, published="2018-12-05",
+          authors="Jessica Tai", publisher_detail="QCon San Francisco 2018 talk",
+          why="A layered service design and the lessons from moving a large Rails app onto it.",
+          question="How did Airbnb break up its Rails monolith?", themes=("distributed-systems", "engineering-practice")),
+    _seed("honeycomb-hard-stuff-llms", "All the Hard Stuff Nobody Talks About when Building Products with LLMs",
+          "https://www.honeycomb.io/blog/hard-stuff-nobody-talks-about-llm", "Honeycomb Blog", "Honeycomb", 2024,
+          "Phillip Carter on shipping Query Assistant, which turns natural language into Honeycomb queries: schemas with over 5,000 fields that will not fit in a context window, latency of two to 15+ seconds that rules out chaining calls, and queries that must be both correct and helpful.",
+          ("LLMs", "Prompt engineering", "Context windows"), 15, "honeycomb-blog",
+          authors="Phillip Carter", publisher_detail="Honeycomb blog",
+          why="The practical problems a demo never shows, from a team that shipped an LLM feature.",
+          question="What makes an LLM feature hard to ship?", themes=("ai",)),
 )
 # Reviewed themes where keyword evidence alone would mislabel a classic.
 for _ident, _themes in {
@@ -1223,6 +1256,22 @@ REVIEWED_BREAKDOWNS = {
         "Shopify’s platform has to handle the traffic peak of Black Friday Cyber Monday.",
         "The team scales up and stacks browsing, checkout and flash-sale load tests to target request rates.",
         "Findings drive performance fixes, and the test is repeated several times a year."),
+    "hotstar-scaling-for-50m": (
+        "Hotstar needed to serve far more concurrent cricket viewers than its record 25 million.",
+        "Static capacity ‘ladders’ instead of autoscaling, tuning of over-generic processing layers, and harsh traffic simulations.",
+        "Simulations exposed a hot spot that triggered a cascading failure before a real match could."),
+    "spotify-tech-migrations": (
+        "Spotify’s migrations stalled in a long tail of systems left on old versions.",
+        "A prioritised company-wide migrations map, migrations run like products, and automation, tracked in Backstage.",
+        "Engineering teams see scheduled migrations and their progress in one place instead of a flood of emails."),
+    "airbnb-great-migration-soa": (
+        "Airbnb set out to move off Monorail, its Ruby on Rails monolith, onto services.",
+        "It defined service tenets and layers: data, derived data, middle-tier and presentation services.",
+        "A migration to services with documented lessons and best practices."),
+    "honeycomb-hard-stuff-llms": (
+        "Turning natural language into a valid Honeycomb query is hard with huge schemas and slow models.",
+        "Query Assistant sends one prompt with the schema, examples and instructions, then parses and corrects the output.",
+        "A shipped feature, and a list of problems that had no complete solution."),
 }
 REVIEWED_PROBLEMS = {
     "gitlab-database-outage-2017": ("outages", "data-integrity"), "atlassian-outage-2022": ("outages", "data-integrity"),
@@ -1247,6 +1296,8 @@ REVIEWED_PROBLEMS = {
     "stripe-sorbet": ("dev-productivity",), "uber-querygpt": ("dev-productivity",),
     "linkedin-genai-product-musings": ("dev-productivity",), "github-copilot-llms": ("dev-productivity",),
     "shopify-bfcm-scale-testing": ("scaling-traffic", "performance"),
+    "hotstar-scaling-for-50m": ("scaling-traffic", "performance"), "spotify-tech-migrations": ("migrations",),
+    "airbnb-great-migration-soa": ("migrations",), "honeycomb-hard-stuff-llms": ("performance", "dev-productivity"),
 }
 for _seed_card in CURATED_CURIOSITY:
     if _seed_card["id"] in REVIEWED_BREAKDOWNS:
@@ -1690,10 +1741,11 @@ def _card(article, summaries):
         "kind": source.kind if source else article.get("kind", "engineering"),
         "description": article.get("description", ""),
         "seed": bool(article.get("curiosity_seed")),
+        "related": related_seeds(article["id"]) if article.get("curiosity_seed") and article["id"] in SEEDS_BY_ID else [],
     }
 
 
-MAX_CURIOSITY_CARDS = 160
+MAX_CURIOSITY_CARDS = 240
 # Fresh archive discoveries get a reserved share so evergreen seeds never crowd them out.
 FRESH_SLOT_SHARE = 3
 MAX_FRESH_CARDS = 40
@@ -1882,14 +1934,14 @@ COLLECTIONS = (
       "discord-trillions-messages", "dropbox-sync-engine", "discord-go-to-rust"), ("migrations",)),
     ("monoliths-microservices-and-back", "Monoliths, microservices and back again",
      "The architecture debate told by teams who lived it: when microservices helped, when they hurt, and how "
-     "Shopify, Uber, Netflix and Segment drew their boundaries.",
+     "Shopify, Uber, Netflix, Segment, Airbnb and Khan Academy drew their boundaries.",
      ("shopify-deconstructing-monolith", "uber-domain-microservices", "netflix-video-pipeline-microservices",
-      "segment-goodbye-microservices"), ("migrations", "dev-productivity")),
+      "segment-goodbye-microservices", "airbnb-great-migration-soa", "khan-academy-goliath"), ("migrations", "dev-productivity")),
     ("real-time-at-massive-scale", "Real-time at massive scale",
      "Millions of live connections, voice calls and collaborative cursors: how WhatsApp, Discord, Figma and Meta "
      "built systems where every millisecond shows.",
      ("whatsapp-2-million-connections", "discord-elixir-5m-concurrent", "discord-webrtc-voice", "figma-multiplayer",
-      "meta-threads-infrastructure"), ("scaling-traffic", "performance")),
+      "meta-threads-infrastructure", "hotstar-scaling-for-50m"), ("scaling-traffic", "performance")),
     ("security-incidents-up-close", "Security incidents up close",
      "How real attacks and vulnerabilities played out, told by the teams that handled them: a backdoor found by "
      "chance, a logging library that ran code, a stolen session cookie, a saved password, unrotated credentials and "
@@ -1912,7 +1964,7 @@ COLLECTIONS = (
      "What it takes to ship LLM features people rely on: GitHub Copilot’s early prompt work, LinkedIn’s hard last "
      "20%, Uber’s text-to-SQL, and Anthropic’s patterns for agents.",
      ("github-copilot-llms", "linkedin-genai-product-musings", "uber-querygpt", "anthropic-building-effective-agents",
-      "anthropic-multi-agent-research"), ("dev-productivity",)),
+      "anthropic-multi-agent-research", "honeycomb-hard-stuff-llms"), ("dev-productivity",)),
 )
 
 
@@ -1932,3 +1984,156 @@ def curiosity_collections():
 
 def seed_article_ids():
     return set(SEEDS_BY_ID)
+
+
+# --- Read next -----------------------------------------------------------------------------------------
+RELATED_PER_CARD = 2
+
+
+@lru_cache(maxsize=None)
+def _related_ids(ident):
+    """Reviewed cards to read after this one: the next stop on its reading list, then the closest match."""
+    seed = SEEDS_BY_ID[ident]
+    chosen = []
+    for _, _, _, card_ids, _ in COLLECTIONS:
+        if ident in card_ids:
+            index = card_ids.index(ident)
+            follow = card_ids[index + 1] if index + 1 < len(card_ids) else card_ids[index - 1] if index else None
+            if follow and follow in SEEDS_BY_ID and follow not in chosen:
+                chosen.append(follow)
+            break
+    problems, themes = set(card_problems(seed)), set(card_themes(seed))
+    company = seed.get("company")
+
+    def closeness(other):
+        return (2 * len(problems & set(card_problems(other))) + len(themes & set(card_themes(other)))
+                + (1 if company and other.get("company") == company else 0))
+
+    others = [other for other in CURATED_CURIOSITY if other["id"] != ident and other["id"] not in chosen]
+    others.sort(key=lambda other: other["id"])
+    others.sort(key=quality_score, reverse=True)
+    others.sort(key=closeness, reverse=True)
+    for other in others:
+        if len(chosen) >= RELATED_PER_CARD or closeness(other) < 2:
+            break
+        chosen.append(other["id"])
+    return tuple(chosen[:RELATED_PER_CARD])
+
+
+def related_seeds(ident):
+    return [{"id": other, "title": SEEDS_BY_ID[other]["title"], "company": SEEDS_BY_ID[other]["company"],
+             "url": SEEDS_BY_ID[other]["url"]} for other in _related_ids(ident)]
+
+
+# --- Lessons --------------------------------------------------------------------------------------------
+# Recurring lessons, each grouping reviewed cards whose own write-ups make that point.
+LESSONS = (
+    ("stage-every-rollout", "Roll out every change in stages",
+     "A content update, a telemetry service, a generated config file, a network change and a trading deployment each "
+     "reached many machines at once. Releasing to a small slice first, and widening only after watching it, limits "
+     "how far one bad change can spread.",
+     ("crowdstrike-falcon-pir-2024", "openai-december-2024-incident", "cloudflare-outage-november-2025",
+      "cloudflare-outage-june-2022", "knight-capital-sec-2013")),
+    ("guard-new-code-paths", "Guard new code against unexpected input",
+     "A blank policy field, a negative time value, a doubled config file and one regular expression: each crashed "
+     "production code that had never seen that input. Feature flags, limits and error handling contain the damage.",
+     ("google-cloud-service-control-2025", "cloudflare-leap-second-2017", "cloudflare-outage-november-2025",
+      "cloudflare-outage-2019")),
+    ("rotate-credentials-after-a-breach", "Rotate credentials after any breach, even someone else’s",
+     "A stolen session, a password saved in a personal browser profile and credentials left unrotated after another "
+     "company’s breach opened the door in these incidents. Treat any exposed secret or session as compromised.",
+     ("cloudflare-thanksgiving-2023", "okta-support-system-rca-2023", "circleci-security-incident-2023")),
+    ("test-backups-and-failover", "Test backups and failover before you need them",
+     "Backups that were missing, an automatic failover that split writes, deleted sites that took days to restore "
+     "and a ‘redundant’ control plane in one data center: recovery only works if it has been rehearsed.",
+     ("gitlab-database-outage-2017", "github-october-2018-incident", "atlassian-outage-2022",
+      "cloudflare-control-plane-2023")),
+    ("rehearse-peak-load", "Rehearse peak load before the real event",
+     "Shopify and Hotstar both simulate their biggest day ahead of time, on purpose, so failures show up in a test "
+     "rather than during Black Friday or a cricket final.",
+     ("shopify-bfcm-scale-testing", "hotstar-scaling-for-50m")),
+    ("migrate-in-small-reversible-steps", "Migrate in small, reversible steps",
+     "Dual booting, dual writes, backfills and a migrations map: large moves succeed when each step ships on its "
+     "own and can be checked or rolled back.",
+     ("github-rails-upgrade-2018", "stripe-online-migrations", "notion-sharding-postgres", "slack-vitess-migration",
+      "spotify-tech-migrations")),
+    ("back-off-under-load", "Back off instead of retrying harder",
+     "Retries without limits turn a slowdown into an outage. Jittered backoff, rate limits and throttling keep "
+     "overloaded systems able to recover.",
+     ("aws-timeouts-retries-jitter", "stripe-rate-limiters", "slack-incident-2-22-22", "aws-us-east-1-2021")),
+)
+
+
+def curiosity_lessons():
+    result = []
+    for ident, title, summary, card_ids in LESSONS:
+        cards = [_card(deepcopy(SEEDS_BY_ID[card_id]), {}) for card_id in card_ids if card_id in SEEDS_BY_ID]
+        result.append({"id": f"lesson-{ident}", "title": title, "summary": summary, "kind": "lesson",
+                       "card_ids": [card["id"] for card in cards], "cards": cards,
+                       "read_minutes": sum(card["read_minutes"] for card in cards),
+                       "companies": list(dict.fromkeys(card["company"] for card in cards))})
+    return result
+
+
+# --- Postmortem of the week -----------------------------------------------------------------------------
+WEEK_SECONDS = 7 * 86400
+# Weeks counted from Monday 1970-01-05, so a new pick starts each Monday.
+_FIRST_MONDAY = 4 * 86400
+
+
+def weekly_postmortems():
+    return sorted(ident for ident, article in SEEDS_BY_ID.items()
+                  if card_format(article) == "postmortem" and article.get("breakdown"))
+
+
+def postmortem_of_the_week(moment=None):
+    moment = moment or datetime.now(UTC)
+    candidates = weekly_postmortems()
+    if not candidates:
+        return None
+    week = int((moment.timestamp() - _FIRST_MONDAY) // WEEK_SECONDS)
+    # A fixed shuffle so consecutive weeks jump between companies rather than walking the alphabet.
+    step = next(step for step in range(7, 7 + len(candidates) + 1) if gcd(step, len(candidates)) == 1)
+    ident = candidates[(week * step) % len(candidates)]
+    return _card(deepcopy(SEEDS_BY_ID[ident]), {})
+
+
+
+# --- Postmortem review queue ----------------------------------------------------------------------------
+# Publishers whose feeds regularly carry incident write-ups. Status pages post many short updates, so only
+# items that read like a write-up (root cause, post-incident review, postmortem) are queued.
+INCIDENT_SOURCES = ("cloudflare-postmortems", "cloudflare-blog", "github-availability", "github-engineering",
+                    "aws-health", "google-cloud-status", "openai-status", "azure-status", "cloudflare-status",
+                    "github-status", "slack-status", "atlassian-status", "vercel-status", "engineering-slack",
+                    "datadog-blog", "fastly-blog", "gitlab-blog")
+_write_up = re.compile(
+    r"\b(?:postmortems?|post-mortems?|post[- ]incident (?:review|report|analysis)|incident reports?|root cause|"
+    r"rca|what (?:went wrong|happened)|availability reports?|outage (?:on|of|report)|lessons learned)\b", re.I)
+
+
+def postmortem_review_queue(store, *, days=30, limit=40):
+    """Recent incident write-ups that are not yet reviewed cards, newest first, for an editor to approve.
+
+    Reads the archive only. Nothing here is published: an approved item becomes a card only after its
+    page is read and a reviewed seed is written.
+    """
+    if not store:
+        return []
+    sources = tuple(source for source in INCIDENT_SOURCES if source in BY_ID)
+    rows = store.curiosity_candidates(sources, hours=days * 24, limit=600, per_source=25)
+    seen, queue = list(CURATED_CURIOSITY), []
+    for row in rows:
+        article = restore_metadata(row)
+        text = f"{article.get('title', '')} {article.get('description', '')}"
+        if not _write_up.search(text) or not is_english_article(article) or _is_duplicate(article, seen):
+            continue
+        seen.append(article)
+        source = BY_ID.get(article.get("source_id"))
+        queue.append({"id": article.get("id"), "title": sanitize_text(article.get("title"), 300),
+                      "url": article.get("url"), "source_id": article.get("source_id"),
+                      "publisher": source.label if source else article.get("source_id"),
+                      "published_at": str(article.get("published_at") or "")[:10],
+                      "excerpt": sanitize_text(article.get("description"), 400),
+                      "problems": card_problems(article), "score": quality_score(article)})
+    queue.sort(key=lambda item: (item["published_at"], item["score"]), reverse=True)
+    return queue[:limit]

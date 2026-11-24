@@ -14,7 +14,7 @@ function sourceHref(value) {
   }
 }
 
-export const MAX_CURIOSITY_CARDS = 160;
+export const MAX_CURIOSITY_CARDS = 240;
 const ORIGINS = [["all", "All"], ["fresh", "Fresh"], ["classic", "Classics"]];
 
 // Labels mirror app/curiosity.py; the API also returns them so new themes appear without a client change.
@@ -87,6 +87,22 @@ function searchable(card) {
     ...cardProblems(card).map((problem) => CURIOSITY_PROBLEMS[problem] || problem),
     ...Object.values(card.breakdown && typeof card.breakdown === "object" ? card.breakdown : {})]
     .filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
+}
+
+// The technologies most cards mention, offered as one-tap searches.
+export function popularSearches(cards, limit = 8) {
+  const counts = new Map();
+  for (const card of Array.isArray(cards) ? cards : []) {
+    const seen = new Set();
+    for (const label of Array.isArray(card?.technologies) ? card.technologies : []) {
+      const key = String(label).trim();
+      if (!key || key.length > 24 || seen.has(key.toLowerCase())) continue;
+      seen.add(key.toLowerCase());
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  return [...counts.entries()].filter(([, count]) => count >= 3)
+    .sort(([a, x], [b, y]) => y - x || a.localeCompare(b)).slice(0, limit).map(([label]) => label);
 }
 
 export function curiosityDate(card) {
@@ -238,6 +254,28 @@ function renderCard(document, card, options, pinnedIds, scheduledIds) {
     const why = element(document, "p", "curiosity-why");
     why.append(element(document, "strong", "", "Why read it "), document.createTextNode(card.why_read.trim()));
     article.append(why);
+  }
+
+  // Reviewed cards suggest what to read next: the next stop on a reading list, then the closest match.
+  const related = (Array.isArray(card.related) ? card.related : [])
+    .filter((item) => item && typeof item.title === "string" && sourceHref(item.url)).slice(0, 2);
+  if (related.length) {
+    const next = element(document, "div", "curiosity-related");
+    next.append(element(document, "p", "curiosity-related-label", "Read next"));
+    const items = element(document, "ul", "curiosity-related-list");
+    for (const item of related) {
+      const entry = element(document, "li");
+      const link = element(document, "a", "curiosity-related-link", item.title);
+      link.href = sourceHref(item.url);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      if (item.company) link.setAttribute("aria-label", `${item.title}, ${item.company} (opens the original source)`);
+      entry.append(link);
+      if (item.company) entry.append(element(document, "span", "curiosity-related-company", ` · ${item.company}`));
+      items.append(entry);
+    }
+    next.append(items);
+    article.append(next);
   }
 
   // Named technologies first, then the reviewed topic tags, without repeating a label.

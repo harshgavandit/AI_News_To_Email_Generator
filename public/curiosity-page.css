@@ -118,3 +118,9 @@
 }
 @media (max-width: 899px) { .curiosity-constellation { display: none; } }
 .curiosity-constellation[hidden] { display: none; }
+
+/* Lessons: the same reviewed cards grouped by what they teach. */
+.curiosity-lessons .curiosity-list-card { border-top-color: color-mix(in srgb, var(--amber, #d97706) 70%, var(--line)); }
+.curiosity-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -4px; }
+.curiosity-suggestions[hidden] { display: none; }
+.curiosity-suggestions::before { content: "Popular:"; margin-right: 2px; color: var(--muted); font: 650 11px/1.4 var(--font-ui); }

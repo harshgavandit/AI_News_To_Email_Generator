@@ -102,7 +102,7 @@ test('filters narrow cards by origin and company and report the selection', asyn
     { ...article, id: 'seed-stripe', company: 'Stripe', publisher: 'Stripe', seed: true },
     { ...article, id: 'fresh-stripe', company: 'Stripe', publisher: 'Stripe', seed: false },
   ];
-  assert.equal(MAX_CURIOSITY_CARDS, 160);
+  assert.equal(MAX_CURIOSITY_CARDS, 240);
   assert.deepEqual(curiosityCompanies(cards), ['Google', 'Stripe']);
   assert.deepEqual(filterCuriosityCards(cards, { origin: 'fresh' }).map((c) => c.id), ['fresh-stripe']);
   assert.deepEqual(filterCuriosityCards(cards, { origin: 'classic', company: 'Stripe' }).map((c) => c.id), ['seed-stripe']);
@@ -126,12 +126,12 @@ test('filters narrow cards by origin and company and report the selection', asyn
   assert.ok(container.querySelector('[data-curiosity-origin]'), 'filters stay available on an empty result');
 });
 
-test('collection renders up to 160 cards with show-more paging', () => {
+test('collection renders up to 240 cards with show-more paging', () => {
   const document = new JSDOM('<section id="cards"></section>').window.document;
   const container = document.querySelector('#cards');
-  const cards = Array.from({ length: 170 }, (_, i) => ({ ...article, id: `card-${i}`, seed: true }));
-  renderCuriosityCards(container, cards, { visibleCount: 200 });
-  assert.equal(container.querySelectorAll('article').length, 160);
+  const cards = Array.from({ length: 250 }, (_, i) => ({ ...article, id: `card-${i}`, seed: true }));
+  renderCuriosityCards(container, cards, { visibleCount: 300 });
+  assert.equal(container.querySelectorAll('article').length, 240);
   renderCuriosityCards(container, cards, { visibleCount: 4 });
   assert.match(container.querySelector('[data-curiosity-show-more]').textContent, /Show 4 more/);
 });
@@ -215,7 +215,7 @@ test('collection page keeps filters in the URL and renders the API payload', asy
     history: { replaceState: (_, __, url) => replaced.push(url) },
     location: window.location,
   });
-  assert.deepEqual(urls.sort(), ['/api/curiosity/collections', '/api/curiosity?limit=160']);
+  assert.deepEqual(urls.sort(), ['/api/curiosity/collections', '/api/curiosity?limit=240']);
   const articles = [...window.document.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId);
   assert.deepEqual(articles, ['riot-valorant-netcode']);
   assert.equal(window.document.querySelector('[data-theme="game-engineering"]').getAttribute('aria-pressed'), 'true');
@@ -326,6 +326,56 @@ test('the collection page still works when reading lists cannot load', async () 
     assert.equal(window.document.getElementById('curiosity-lists').hidden, true);
     assert.equal(window.document.getElementById('curiosity-list-banner').hidden, true, 'an unknown ?list= falls back to the collection');
     assert.equal(window.document.querySelectorAll('#curiosity-collection article').length, 1);
+  } finally {
+    for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
+    window.close();
+  }
+});
+
+test('read next links, popular searches and lessons on the collection page', async () => {
+  const { popularSearches } = await import('../../public/curiosity.js');
+  const withRelated = { ...rich, id: 'with-related', related: [
+    { id: 'next-one', title: 'The next story', company: 'Meta', url: 'https://engineering.fb.com/next/' },
+    { id: 'bad', title: 'Unsafe', company: 'X', url: 'javascript:alert(1)' },
+  ] };
+  const plain = new JSDOM('<section id="cards"></section>').window.document;
+  renderCuriosityCards(plain.querySelector('#cards'), [withRelated], { actions: false });
+  const related = [...plain.querySelectorAll('.curiosity-related-link')];
+  assert.deepEqual(related.map((link) => link.textContent), ['The next story'], 'only safe https links are offered');
+  assert.equal(related[0].target, '_blank');
+  assert.match(plain.querySelector('.curiosity-related').textContent, /Read next.*Meta/s);
+
+  const tech = (id, technologies) => ({ ...rich, id, technologies });
+  assert.deepEqual(popularSearches([tech('a', ['Postgres', 'DNS']), tech('b', ['Postgres', 'DNS']), tech('c', ['Postgres', 'DNS', 'Rust']),
+    tech('d', ['Postgres'])]), ['Postgres', 'DNS'], 'technologies named on at least three cards, most common first');
+
+  const html = (await import('node:fs')).readFileSync(new URL('../../public/curiosity.html', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://getinformdaily.com/curiosity.html' });
+  const { window } = dom;
+  for (const key of ['document', 'Option', 'Event']) globalThis[key] = window[key];
+  try {
+    const page = await import(`../../public/curiosity-page.js?lessons=${Date.now()}`);
+    const cards = ['a', 'b', 'c'].map((id) => tech(id, ['Kubernetes']));
+    const payload = { collections: [], lessons: [
+      { id: 'lesson-stage-every-rollout', title: 'Roll out every change in stages', summary: 'Small slices first.', kind: 'lesson',
+        read_minutes: 20, companies: ['Riot Games'], cards: [cards[1], cards[0]] }] };
+    await page.startCuriosityPage({
+      fetcher: async (url) => ({ ok: true, json: async () => (url === '/api/curiosity/collections' ? payload : { cards }) }),
+      history: { replaceState() {} }, location: window.location,
+    });
+    const doc = window.document;
+    assert.equal(doc.getElementById('curiosity-lists').hidden, true, 'no reading lists in this payload');
+    assert.equal(doc.getElementById('curiosity-lessons').hidden, false);
+    const lesson = doc.querySelector('#curiosity-lesson-grid article');
+    assert.equal(lesson.querySelector('a').getAttribute('href'), '/?brief-list=lesson-stage-every-rollout#composer');
+    const chips = [...doc.querySelectorAll('#curiosity-suggestions button')];
+    assert.deepEqual(chips.map((chip) => chip.textContent), ['Kubernetes']);
+    chips[0].click();
+    assert.equal(doc.getElementById('curiosity-query').value, 'Kubernetes');
+    lesson.querySelector('button').click();
+    assert.equal(doc.getElementById('curiosity-list-kind').textContent, 'Lesson');
+    assert.deepEqual([...doc.querySelectorAll('#curiosity-collection article')].map((node) => node.dataset.curiosityId), ['b', 'a']);
+    assert.equal(doc.getElementById('curiosity-suggestions').hidden, true, 'search suggestions step aside with the filters');
   } finally {
     for (const key of ['document', 'Option', 'Event']) delete globalThis[key];
     window.close();

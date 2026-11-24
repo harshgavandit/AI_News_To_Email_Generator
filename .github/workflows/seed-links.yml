@@ -1,0 +1,36 @@
+name: Check Curiosity Card links
+# Weekly, on its own schedule: separate from the twice-daily feed fetches, and it never fetches feeds.
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: seed-links
+  cancel-in-progress: true
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv
+          uv sync --frozen
+      - name: Check every reviewed seed link
+        run: uv run python -m scripts.check_seed_links --report reports/seed-links.json | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
+      - name: Retain the link report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: seed-links
+          path: reports/seed-links.json
+          retention-days: 30

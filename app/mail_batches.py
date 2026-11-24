@@ -103,7 +103,7 @@ def run_batch_worker(store, generate_fn, *, maximum=MAX_BATCHES_PER_TICK):
                         return None, next_run
                     history = content.get("_catchup")
                     content = with_unsubscribe(content, url, scheduled=True)
-                    content = morning_curiosity(store, subscription["mailbox"], content, moment)
+                    content = morning_curiosity(store, subscription["mailbox"], content, moment, subscription["timezone"])
                     message = {"from": sender, "to": [subscription["email"]], "subject": DAILY_SUBJECT,
                             "text": content["markdown"], "html": content["html"], "headers": {
                                 "List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

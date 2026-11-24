@@ -1,5 +1,5 @@
 import { CURIOSITY_FORMATS, CURIOSITY_LEVELS, CURIOSITY_PROBLEMS, CURIOSITY_THEMES, MAX_CURIOSITY_CARDS, cardProblems,
-  cardThemes, curiosityCompanies, filterCuriosityCards, renderCuriosityCards } from "./curiosity.js";
+  cardThemes, curiosityCompanies, filterCuriosityCards, popularSearches, renderCuriosityCards } from "./curiosity.js";
 
 import { mountConstellation, themeGraph } from "./curiosity-constellation.js";
 
@@ -32,7 +32,7 @@ export function writeCuriosityState(state) {
   return text ? `?${text}` : "";
 }
 
-export function renderReadingLists(grid, collections, onOpen) {
+export function renderReadingLists(grid, collections, onOpen, { action = "Read the list" } = {}) {
   const doc = grid.ownerDocument;
   const make = (tag, className, text) => {
     const node = doc.createElement(tag);
@@ -50,9 +50,9 @@ export function renderReadingLists(grid, collections, onOpen) {
       [`${count} ${count === 1 ? "story" : "stories"}`, Number(list.read_minutes) > 0 ? `${list.read_minutes} min` : "", companies]
         .filter(Boolean).join(" · ")));
     const actions = make("div", "curiosity-list-actions");
-    const open = make("button", "button secondary", "Read the list");
+    const open = make("button", "button secondary", action);
     open.type = "button";
-    open.setAttribute("aria-label", `Read the list: ${list.title}`);
+    open.setAttribute("aria-label", `${action}: ${list.title}`);
     open.addEventListener("click", () => onOpen(list.id));
     const brief = make("a", "text-button curiosity-list-brief", "Add all to a brief");
     brief.href = `/?brief-list=${encodeURIComponent(list.id)}#composer`;
@@ -90,6 +90,9 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
   const lists = byId("curiosity-lists");
   const listGrid = byId("curiosity-list-grid");
   const banner = byId("curiosity-list-banner");
+  const lessons = byId("curiosity-lessons");
+  const lessonGrid = byId("curiosity-lesson-grid");
+  const suggestions = byId("curiosity-suggestions");
   const controls = byId("curiosity-controls");
   let constellation = null;
 
@@ -136,8 +139,10 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     const list = state.collections.find((item) => item.id === state.list);
     banner.hidden = !list;
     themes.hidden = controls.hidden = Boolean(list);
+    if (suggestions) suggestions.hidden = Boolean(list) || !suggestions.childElementCount;
     if (list) {
-      // A reading list is shown whole and in reading order; theme and filter controls step aside.
+      // A reading list or lesson is shown whole and in order; theme and filter controls step aside.
+      byId("curiosity-list-kind").textContent = list.kind === "lesson" ? "Lesson" : "Reading list";
       byId("curiosity-list-name").textContent = list.title;
       byId("curiosity-list-brief").href = `/?brief-list=${encodeURIComponent(list.id)}#composer`;
       status.textContent = `${number.format(list.cards.length)} stories in reading order`;
@@ -187,10 +192,17 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     .then(() => fetcher("/api/curiosity/collections", { headers: { Accept: "application/json" } }))
     .then((response) => (response?.ok ? response.json() : { collections: [] }))
     .then((payload) => {
-      state.collections = (Array.isArray(payload?.collections) ? payload.collections : [])
+      const usable = (items) => (Array.isArray(items) ? items : [])
         .filter((list) => list && typeof list.id === "string" && Array.isArray(list.cards) && list.cards.length);
-      renderReadingLists(listGrid, state.collections, openList);
-      lists.hidden = !state.collections.length;
+      const readingLists = usable(payload?.collections);
+      const lessonLists = usable(payload?.lessons).map((list) => ({ ...list, kind: "lesson" }));
+      state.collections = [...readingLists, ...lessonLists];
+      renderReadingLists(listGrid, readingLists, openList);
+      lists.hidden = !readingLists.length;
+      if (lessons && lessonGrid) {
+        renderReadingLists(lessonGrid, lessonLists, openList, { action: "See the stories" });
+        lessons.hidden = !lessonLists.length;
+      }
     })
     .catch(() => { state.collections = []; });
   for (const [select, key] of [[problem, "problem"], [format, "format"], [level, "level"], [company, "company"], [sort, "sort"]]) {
@@ -208,6 +220,22 @@ export function startCuriosityPage({ fetcher = fetch, history = window.history, 
     })
     .then((payload) => {
       state.cards = Array.isArray(payload.cards) ? payload.cards : [];
+      if (suggestions) {
+        suggestions.replaceChildren(...popularSearches(state.cards).map((label) => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "curiosity-chip";
+          chip.textContent = label;
+          chip.setAttribute("aria-label", `Search for ${label}`);
+          chip.addEventListener("click", () => {
+            query.value = state.query = label;
+            state.visible = PAGE;
+            update();
+          });
+          return chip;
+        }));
+        suggestions.hidden = !suggestions.childElementCount;
+      }
       for (const item of payload.themes || []) if (item?.id && item?.label) CURIOSITY_THEMES[item.id] ??= item.label;
       for (const item of payload.problems || []) if (item?.id && item?.label) CURIOSITY_PROBLEMS[item.id] ??= item.label;
       const problems = new Set(state.cards.flatMap(cardProblems));

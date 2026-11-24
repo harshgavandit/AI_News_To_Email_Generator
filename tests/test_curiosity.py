@@ -644,3 +644,115 @@ def test_round_ten_seeds_are_reviewed_and_grouped_into_new_reading_lists():
     # A closing parenthesis that balances one in the title is kept.
     log4j = curiosity._card(curiosity.SEEDS_BY_ID["cloudflare-log4j-cve-2021-44228"], {})
     assert log4j["title"] == "Inside the Log4j2 vulnerability (CVE-2021-44228)"
+
+
+def test_every_reviewed_card_suggests_what_to_read_next():
+    from app import curiosity
+
+    for ident in curiosity.SEEDS_BY_ID:
+        related = curiosity._related_ids(ident)
+        assert ident not in related and len(set(related)) == len(related) <= 2, ident
+        assert set(related) <= set(curiosity.SEEDS_BY_ID), ident
+    # The next stop on a reading list comes first.
+    assert curiosity._related_ids("aws-s3-outage-2017")[0] == "meta-outage-2021"
+    card = curiosity._card(curiosity.SEEDS_BY_ID["aws-s3-outage-2017"], {})
+    assert card["related"][0] == {"id": "meta-outage-2021", "title": curiosity.SEEDS_BY_ID["meta-outage-2021"]["title"],
+                                  "company": "Meta", "url": curiosity.SEEDS_BY_ID["meta-outage-2021"]["url"]}
+    fresh = curiosity._card({"id": "x", "title": "How we cut p99 latency", "url": "https://github.blog/x",
+                             "source_id": "github-engineering", "description": "A long enough excerpt about latency work."}, {})
+    assert fresh["related"] == []
+
+
+def test_lessons_group_reviewed_cards_and_ship_with_reading_lists():
+    from starlette.responses import Response
+    from app import curiosity, server
+
+    ids = [ident for ident, *_ in curiosity.LESSONS]
+    assert len(ids) >= 6 and len(set(ids)) == len(ids)
+    for ident, title, summary, card_ids in curiosity.LESSONS:
+        assert re.fullmatch(r"[a-z0-9-]{1,72}", ident) and title and 60 <= len(summary) <= 400, ident
+        assert set(card_ids) <= set(curiosity.SEEDS_BY_ID) and 2 <= len(card_ids) <= 10, ident
+    payload = server.curiosity_reading_lists(Response())
+    lessons = payload["lessons"]
+    assert [lesson["id"] for lesson in lessons] == [f"lesson-{ident}" for ident in ids]
+    assert all(lesson["kind"] == "lesson" and lesson["cards"] for lesson in lessons)
+    assert not {lesson["id"] for lesson in lessons} & {item["id"] for item in payload["collections"]}
+
+
+def test_postmortem_of_the_week_changes_on_mondays_and_cycles_every_postmortem():
+    from app import curiosity
+
+    monday = datetime(2026, 11, 23, 2, 30, tzinfo=UTC)
+    picks = [curiosity.postmortem_of_the_week(monday + timedelta(weeks=week))["id"]
+             for week in range(len(curiosity.weekly_postmortems()))]
+    assert sorted(picks) == curiosity.weekly_postmortems(), "every reviewed postmortem comes round once"
+    assert curiosity.postmortem_of_the_week(monday + timedelta(days=6, hours=20))["id"] == picks[0], "stable all week"
+    card = curiosity.postmortem_of_the_week(monday)
+    assert card["format"] == "postmortem" and set(card["breakdown"]) == {"problem", "approach", "result"}
+
+
+def test_postmortem_review_queue_lists_unreviewed_write_ups_only(research_database):
+    from app import curiosity
+    from app.sources import BY_ID
+
+    store = Store(research_database)
+    store.migrate()
+    now = datetime.now(UTC)
+
+    def post(source_id, ident, title, description, hours=5):
+        source = BY_ID[source_id]
+        return {"id": ident, "title": title, "url": f"https://{source.hosts[0]}/{ident}", "description": description,
+                "source": source.group, "source_id": source_id, "publisher": source.label, "kind": source.kind,
+                "category": "software", "published_at": (now - timedelta(hours=hours)).isoformat()}
+
+    store.ingest("cloudflare-postmortems", [
+        post("cloudflare-postmortems", "pm-1", "Post-incident review of the outage that broke DNS lookups for our customers",
+             "This post explains the root cause of the incident, which was a configuration change to our resolver fleet "
+             "that removed a record set, and describes the steps we are taking so that it does not happen again."),
+        post("cloudflare-postmortems", "promo", "Introducing faster Workers builds",
+             "Our new build pipeline makes deploys quicker for every developer on the platform, and this post "
+             "describes how the engineering team designed it and what it means for your projects."),
+        post("cloudflare-postmortems", "old-seed", "Details of the Cloudflare outage on July 2, 2019",
+             "The root cause of the outage was a regular expression in a firewall rule that used all of the "
+             "available processing power on machines across the world, and this is the full story of that day."),
+    ], True)
+    queue = curiosity.postmortem_review_queue(store, days=30)
+    assert [item["id"] for item in queue] == ["pm-1"], "feature posts and already-reviewed cards are left out"
+    assert queue[0]["url"].startswith("https://") and "outages" in queue[0]["problems"]
+    assert curiosity.postmortem_review_queue(None) == []
+
+    from scripts.postmortem_review_queue import render_markdown
+    text = render_markdown(queue, 30)
+    assert "1 incident write-ups" in text and "Post-incident review of the outage that broke DNS" in text
+
+
+def test_seed_link_checker_classifies_without_live_requests():
+    from scripts import check_seed_links as links
+
+    assert links.classify("https://a.com/x", 200, "https://www.a.com/x/") == "ok"
+    assert links.classify("https://a.com/x", 200, "https://b.com/x") == "moved"
+    assert links.classify("https://a.com/x", 403, "https://a.com/x") == "blocked"
+    assert links.classify("https://a.com/x", 404, "https://a.com/x") == "broken"
+    assert links.classify("https://a.com/x", None, "", "ConnectionError") == "unreachable"
+
+    class Reply:
+        def __init__(self, status, url):
+            self.status_code, self.url = status, url
+
+        def close(self):
+            pass
+
+    class Session:
+        headers = {}
+
+        def head(self, url, **_):
+            return Reply(405 if "head-refused" in url else 404 if "gone" in url else 200, url)
+
+        def get(self, url, **_):
+            return Reply(200, url)
+
+    seeds = [{"id": "fine", "url": "https://a.com/fine"}, {"id": "gone", "url": "https://a.com/gone"},
+             {"id": "refuses-head", "url": "https://a.com/head-refused"}]
+    results = {row["id"]: row["result"] for row in links.check_seeds(seeds, workers=2, session=Session())}
+    assert results == {"fine": "ok", "gone": "broken", "refuses-head": "ok"}
+    assert "**broken** `gone`" in links.summary(links.check_seeds(seeds, workers=1, session=Session()))

@@ -87,12 +87,41 @@ def _curiosity_rows(cards):
     return rows_html, rows_markdown, ids
 
 
-def append_curiosity_section(brief, cards, suggestions=()):
-    """Append the reader's saved cards, then today's suggestions, as source-linked snapshots."""
+def _weekly_postmortem_block(card):
+    """One reviewed postmortem with its problem, response and outcome, linked to the original write-up."""
+    steps = card.get("breakdown") if isinstance(card.get("breakdown"), dict) else {}
+    rows = [(label, str(steps.get(key) or "").strip()[:320]) for key, label in
+            (("problem", "The problem"), ("approach", "What they did"), ("result", "The result"))]
+    title = str(card.get("title", ""))[:500]
+    url = safe_href(card.get("url"))
+    if not title or url == "#" or not all(text for _, text in rows):
+        return "", ""
+    company = str(card.get("company") or card.get("publisher") or "")[:140]
+    safe_url = escape(url, quote=True)
+    html = ('<h2 style="font:600 20px/1.3 Georgia,serif;color:#0b1f3a;margin:0 0 6px;">Postmortem of the week</h2>'
+            '<p style="font-size:12px;color:#5b6b80;margin:0 0 12px;">One real incident, what went wrong and how the team '
+            'handled it. A new one every Monday.</p>'
+            f'<h3 style="font:600 16px/1.4 Arial,sans-serif;margin:0 0 5px;"><a href="{safe_url}" style="color:#0b3a78;">'
+            f'{escape(title)}</a></h3>'
+            f'<p style="font-size:12px;color:#5b6b80;margin:0 0 8px;">{escape(company)}</p>'
+            + "".join(f'<p style="font-size:13px;line-height:1.6;margin:0 0 6px;"><strong>{escape(label)}:</strong> '
+                      f'{escape(text)}</p>' for label, text in rows)
+            + f'<a href="{safe_url}" style="font-size:12px;color:#0b3a78;">Read the full postmortem →</a>')
+    markdown = ("## Postmortem of the week\n\n"
+                f"**{markdown_text(title)}** — {markdown_text(company)}\n\n"
+                + "\n".join(f"- {label}: {markdown_text(text)}" for label, text in rows)
+                + f"\n\nOriginal source: {url}")
+    return html, markdown
+
+
+def append_curiosity_section(brief, cards, suggestions=(), weekly=None):
+    """Append the reader's saved cards, today's suggestions and, on Mondays, the postmortem of the week."""
     saved_html, saved_markdown, saved_ids = _curiosity_rows(list(cards)[:5])
-    picks = [card for card in suggestions if card.get("id") not in saved_ids][:max(0, 5 - len(saved_ids))]
+    weekly_html, weekly_markdown = _weekly_postmortem_block(weekly) if weekly and weekly.get("id") not in saved_ids else ("", "")
+    shown = {*saved_ids, *([weekly.get("id")] if weekly_html else [])}
+    picks = [card for card in suggestions if card.get("id") not in shown][:max(0, 5 - len(saved_ids))]
     suggested_html, suggested_markdown, _ = _curiosity_rows(picks)
-    if not saved_html and not suggested_html:
+    if not saved_html and not suggested_html and not weekly_html:
         return brief
     blocks_html, blocks_markdown = [], []
     if saved_html:
@@ -106,6 +135,9 @@ def append_curiosity_section(brief, cards, suggestions=()):
                            f'<ul style="list-style:none;padding:0;margin:0;">{"".join(suggested_html)}</ul>')
         blocks_markdown.append("## Worth your curiosity today\n\nEngineering deep dives picked from Curiosity Cards.\n\n"
                                + "\n\n".join(suggested_markdown))
+    if weekly_html:
+        blocks_html.append(f'<div style="margin:16px 0 0;padding:16px;border-radius:8px;background:#f3f7fc;">{weekly_html}</div>')
+        blocks_markdown.append(weekly_markdown)
     section_html = ('<section style="margin:28px 0 0;padding:20px 0 0;border-top:2px solid #d6e4f5;">'
                     + "".join(blocks_html) + "</section>")
     return dict(brief, markdown=f'{brief["markdown"]}\n\n' + "\n\n".join(blocks_markdown),
@@ -155,8 +187,26 @@ def curiosity_suggestions(store, mailbox, moment=None, count=SUGGESTIONS_PER_DAY
     return picks
 
 
-def morning_curiosity(store, mailbox, brief, moment=None):
-    return append_curiosity_section(brief, store.curiosity_selection(mailbox), curiosity_suggestions(store, mailbox, moment))
+def weekly_postmortem_for(moment=None, timezone_str=None):
+    """The postmortem of the week, only on the reader's local Monday so it arrives once a week."""
+    from app.curiosity import postmortem_of_the_week
+    moment = moment or datetime.now(UTC)
+    try:
+        local = moment.astimezone(zoneinfo.ZoneInfo(timezone_str or "UTC"))
+    except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+        local = moment.astimezone(UTC)
+    if local.weekday() != 0:
+        return None
+    try:
+        return postmortem_of_the_week(local)
+    except Exception as error:
+        logger.warning("weekly_postmortem_unavailable error_type=%s", type(error).__name__)
+        return None
+
+
+def morning_curiosity(store, mailbox, brief, moment=None, timezone_str=None):
+    return append_curiosity_section(brief, store.curiosity_selection(mailbox), curiosity_suggestions(store, mailbox, moment),
+                                    weekly_postmortem_for(moment, timezone_str))
 
 
 def personalized_morning_brief(store, mailbox, fallback, load_events):
@@ -240,7 +290,7 @@ def run_due_subscriptions(generate_fn):
         if not store.subscription(mailbox)["enabled"]:
             continue
         message = with_unsubscribe(content, unsub_url, scheduled=True)
-        message = morning_curiosity(store, mailbox, message)
+        message = morning_curiosity(store, mailbox, message, timezone_str=tz_str)
         try:
             accepted = public_mail.send_message(
                 email,

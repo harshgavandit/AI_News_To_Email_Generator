@@ -52,7 +52,7 @@ from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, 
 from app.headlines import HEADLINE_HOURS, build_headlines
 from app.briefing import build_briefing
 from app.article_summary import article_summary
-from app.curiosity import curiosity_collections, FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, PROBLEM_LABELS as CURIOSITY_PROBLEMS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
+from app.curiosity import curiosity_collections, curiosity_lessons, FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, PROBLEM_LABELS as CURIOSITY_PROBLEMS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
 from app.search_suggest import suggest as suggest_scopes
 from app.query_understanding import understand as understand_query
 from app.story_coverage import compare_coverage
@@ -94,7 +94,7 @@ _headline_cache = Cache("headlines-v8")
 _signals_cache = Cache("signals-v1")
 _trending_cache = Cache("trending-v7")
 _briefing_cache = Cache("briefing-v2")
-_curiosity_cache = Cache("curiosity-v3")
+_curiosity_cache = Cache("curiosity-v4")
 _suggest_cache = Cache("suggest-authors-v1")
 _mail_history = OrderedDict()
 NEWS_PAGE_TTL = 60
@@ -452,12 +452,12 @@ def discovery_options():
 def curiosity_reading_lists(response: Response):
     """Reviewed reading lists (ordered Curiosity Cards) that fit in one brief. Static between deploys."""
     response.headers["Cache-Control"] = "public, max-age=3600"
-    return {"collections": _curiosity_collections_payload()}
+    return _curiosity_collections_payload()
 
 
 @lru_cache(maxsize=1)
 def _curiosity_collections_payload():
-    return curiosity_collections()
+    return {"collections": curiosity_collections(), "lessons": curiosity_lessons()}
 
 
 @app.get("/api/curiosity")

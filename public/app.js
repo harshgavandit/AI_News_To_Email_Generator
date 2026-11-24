@@ -414,7 +414,7 @@ async function loadCuriosity() {
   const container = $("curiosity-cards");
   container.setAttribute("aria-busy", "true");
   const [collection, mailbox] = await Promise.allSettled([
-    request("/api/curiosity?limit=160"),
+    request("/api/curiosity?limit=240"),
     request("/api/mail/config"),
   ]);
   if (collection.status === "fulfilled") state.curiosityCards = collection.value.cards || [];
@@ -2685,8 +2685,8 @@ async function addReadingListToBrief(id) {
   history.replaceState(history.state, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
   if (!/^[a-z0-9-]{1,80}$/.test(id)) return;
   try {
-    const { collections = [] } = await request("/api/curiosity/collections");
-    const list = collections.find((item) => item?.id === id);
+    const { collections = [], lessons = [] } = await request("/api/curiosity/collections");
+    const list = [...collections, ...lessons].find((item) => item?.id === id);
     if (!list) {
       status("pin-status", "That reading list is no longer available.", true);
       return;

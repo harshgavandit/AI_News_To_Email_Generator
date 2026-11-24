@@ -242,3 +242,27 @@ def test_morning_suggestions_change_daily_without_repeats_and_skip_saved_cards(m
     for card in days[0]:
         # Links are canonicalized for email (for example, without a trailing slash).
         assert safe_href(card['url']) in brief['html'] and 'Read the original source' in brief['html']
+
+
+def test_postmortem_of_the_week_arrives_on_the_readers_monday_only():
+    from datetime import timedelta
+    from app import mail_schedule
+    from app.curiosity import postmortem_of_the_week
+
+    monday_utc = datetime(2026, 11, 23, 2, 30, tzinfo=UTC)
+    assert mail_schedule.weekly_postmortem_for(monday_utc, "Asia/Kolkata")["id"] == postmortem_of_the_week(monday_utc)["id"]
+    assert mail_schedule.weekly_postmortem_for(monday_utc + timedelta(days=1), "Asia/Kolkata") is None
+    # 23:00 UTC on Sunday is already Monday morning in Tokyo, and still Sunday in New York.
+    sunday_night = datetime(2026, 11, 22, 23, 0, tzinfo=UTC)
+    assert mail_schedule.weekly_postmortem_for(sunday_night, "Asia/Tokyo") is not None
+    assert mail_schedule.weekly_postmortem_for(sunday_night, "America/New_York") is None
+    assert mail_schedule.weekly_postmortem_for(monday_utc, "Not/AZone") is not None, "unknown zones fall back to UTC"
+
+    weekly = postmortem_of_the_week(monday_utc)
+    brief = mail_schedule.append_curiosity_section({'markdown': 'Brief', 'html': '<html><body><p>Brief</p></body></html>'},
+                                                   [], [weekly], weekly)
+    assert '## Postmortem of the week' in brief['markdown'] and 'The problem:' in brief['markdown']
+    assert 'Postmortem of the week' in brief['html'] and 'What they did' in brief['html']
+    assert '## Worth your curiosity today' not in brief['markdown'], 'the weekly pick is not repeated as a suggestion'
+    plain = mail_schedule.append_curiosity_section({'markdown': 'Brief', 'html': '<p>Brief</p>'}, [], [weekly])
+    assert 'Postmortem of the week' not in plain['markdown']
