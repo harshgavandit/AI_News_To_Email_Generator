@@ -418,6 +418,19 @@ def delivery_receipt(request: Request, response: Response,
             "tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET"))}
 
 
+# Failures that happen before the mail server accepts the message: nothing reached the reader,
+# so the attempt should not use up their daily allowance. Timeouts and errors after the message
+# was handed over stay counted, because the email may still arrive.
+NEVER_SENT = (smtplib.SMTPAuthenticationError, smtplib.SMTPConnectError, smtplib.SMTPHeloError,
+              smtplib.SMTPSenderRefused, smtplib.SMTPRecipientsRefused, smtplib.SMTPNotSupportedError,
+              ConnectionRefusedError, ssl.SSLError)
+
+
+def never_sent(error):
+    import socket
+    return isinstance(error, NEVER_SENT + (socket.gaierror,))
+
+
 @router.post("/challenge")
 def challenge(body: ChallengeBody, request: Request, response: Response):
     store = required_store()
@@ -432,19 +445,30 @@ def challenge(body: ChallengeBody, request: Request, response: Response):
     mailbox = digest_key("mailbox:" + email)
     if store.suppressed(mailbox):
         raise HTTPException(422, "Use a different inbox for verification.")
-    if not store.admit([
-        (f"code:{mailbox}", str(int(time.time()) // 60), 1),
+    # The per-minute throttle always counts; the daily allowances are refunded below if no code left.
+    allowances = [
         (f"code-day:{mailbox}", day(), 3),
         (f"code-ip:{ip}", day(), 8),
         *mail_capacity().policies(day(), "verification"),
-    ]):
+    ]
+    if not store.admit([(f"code:{mailbox}", str(int(time.time()) // 60), 1), *allowances]):
         raise limited("Verification is limited. Wait a minute or try again tomorrow.")
     ident, code = secrets.token_urlsafe(24), f"{secrets.randbelow(1_000_000):06d}"
     store.save_code(ident, mailbox, digest_key(f"code:{ident}:{code}"), time.time() + CODE_TTL)
     try:
         send_message(email, VERIFICATION_SUBJECT, f"This code expires in 10 minutes. Your code is {code}.", None, ident)
-    except (OSError, smtplib.SMTPException):
-        raise HTTPException(502, "The verification message could not be sent right now.") from None
+    except (OSError, smtplib.SMTPException) as error:
+        # Name the transport failure (never the code, password or recipient) so operators can fix it.
+        import logging
+        logging.getLogger(__name__).warning("verification_mail_failed error_type=%s smtp_code=%s",
+                                            type(error).__name__, getattr(error, "smtp_code", ""))
+        detail = "The verification message could not be sent right now."
+        if not os.getenv("VERCEL"):
+            # Local development only: show which transport step failed. Production keeps the generic text.
+            detail += f" (local diagnostic: {type(error).__name__} {getattr(error, 'smtp_code', '') or ''})".replace(" )", ")")
+        if never_sent(error):
+            store.refund(allowances)
+        raise HTTPException(502, detail) from None
     cookie(response, CHALLENGE, "challenge", [ident, email], CODE_TTL)
     return {"status": "code_sent"}
 

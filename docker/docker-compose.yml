@@ -1,6 +1,7 @@
 services:
   postgres:
-    image: postgres:17
+    # pgvector adds the vector extension used by semantic search; otherwise identical to postgres:17.
+    image: pgvector/pgvector:pg17
     container_name: ai-news-aggregator-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

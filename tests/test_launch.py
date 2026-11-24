@@ -151,3 +151,68 @@ def test_delivery_retry_preserves_reservation(store):
     assert store.reserve_delivery('another', policies) == ('new', None)
     assert store.reserve_delivery('third', policies) == ('new', None)
     assert store.reserve_delivery('fourth', policies) == ('limited', None)
+
+
+def test_verification_failures_before_handoff_do_not_use_the_daily_allowance(store, monkeypatch):
+    import smtplib
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app import public_mail
+
+    for key, value in {
+        'PUBLIC_EMAIL_ENABLED': '1', 'MAIL_SESSION_SECRET': 'session-secret-for-tests-at-least-32',
+        'MY_EMAIL': 'sender@example.org', 'APP_PASSWORD': 'local-test-password',
+        'NEWS_DATABASE_URL': 'sqlite:///test-fixture',
+        'TURNSTILE_SITE_KEY': 'test-site-key', 'TURNSTILE_SECRET_KEY': 'test-captcha-secret',
+        'PUBLIC_ORIGIN': 'https://brief.example.org',
+    }.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.delenv('VERCEL', raising=False)
+    monkeypatch.setattr(public_mail, 'get_store', lambda: store)
+    monkeypatch.setattr(public_mail, 'verify_human', lambda *args: True)
+    clock = [1_800_000_000.0]
+    monkeypatch.setattr(public_mail.time, 'time', lambda: clock[0])
+    outcome = {'error': smtplib.SMTPAuthenticationError(535, b'auth failed')}
+    sent = []
+
+    def transport(recipient, subject, body, html, key):
+        if outcome['error']:
+            raise outcome['error']
+        sent.append(recipient)
+        return 'accepted'
+
+    monkeypatch.setattr(public_mail, 'send_message', transport)
+    app = FastAPI()
+    app.include_router(public_mail.router)
+    client = TestClient(app, base_url='https://brief.example.org')
+    attempt = lambda: client.post('/api/mail/challenge', json={'email': 'reader@example.org', 'captcha': 'token'})
+
+    # Five rejected logins in five minutes: nothing reached the reader, so the 3-per-day allowance is intact.
+    for _ in range(5):
+        failed = attempt()
+        assert failed.status_code == 502
+        assert 'local diagnostic: SMTPAuthenticationError 535' in failed.json()['detail']
+        clock[0] += 61
+    # The per-minute throttle still applies to failed attempts.
+    attempt()
+    assert attempt().status_code == 429
+    clock[0] += 61
+
+    # A timeout may happen after the server accepted the message, so it stays counted.
+    outcome['error'] = TimeoutError()
+    assert attempt().status_code == 502
+    clock[0] += 61
+    outcome['error'] = None
+    assert attempt().status_code == 200
+    clock[0] += 61
+    assert attempt().status_code == 200
+    clock[0] += 61
+    assert attempt().status_code == 429, 'the timeout plus two delivered codes use the three daily codes'
+    assert sent == ['reader@example.org', 'reader@example.org']
+
+    # Production keeps the generic message (the local diagnostic is never shown on Vercel).
+    monkeypatch.setattr(public_mail, 'required_store', lambda: store)
+    monkeypatch.setenv('VERCEL', '1')
+    outcome['error'] = smtplib.SMTPAuthenticationError(535, b'auth failed')
+    other = client.post('/api/mail/challenge', json={'email': 'second@example.org', 'captcha': 'token'})
+    assert other.json()['detail'] == 'The verification message could not be sent right now.'

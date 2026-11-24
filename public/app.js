@@ -3541,7 +3541,8 @@ commandInput.addEventListener("keydown", (event) => {
 
 window.addEventListener("keydown", (event) => {
   if (event.defaultPrevented || event.isComposing) return;
-  const key = event.key.toLowerCase();
+  // Browser autofill dispatches keydown events without a key.
+  const key = String(event.key || "").toLowerCase();
   const palette = $("command-dialog");
   if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === "k") {
     if ($("mail-dialog").open || $("dossier-drawer").open || $("coverage-dialog").open || $("composer").classList.contains("open")) return;

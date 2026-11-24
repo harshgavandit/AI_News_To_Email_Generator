@@ -4,7 +4,9 @@
 import { HUBS } from "./globe.js";
 import { mountSignalGlobe, regionCounts } from "./globe-home.js";
 
-const LABELS = Object.fromEntries(HUBS.map((hub) => [hub.id, hub.label]));
+const HUB_IDS = new Set(HUBS.map((hub) => hub.id));
+// Most publishers report globally; they travel the wire too, without a regional hub on the globe.
+const LABELS = { ...Object.fromEntries(HUBS.map((hub) => [hub.id, hub.label])), Global: "Global" };
 const CYCLE_MS = 6500;
 
 export function safeLink(value) {
@@ -20,14 +22,22 @@ export function safeLink(value) {
 export function pickTransmissions(articles, limit = 14) {
   const seen = new Set();
   const picked = [];
-  for (const article of Array.isArray(articles) ? articles : []) {
+  // Newsroom reporting leads, then engineering writing, then community discussion; release notes stay in the feed.
+  const RANK = { reporting: 0, publisher: 0, article: 1, discussion: 2 };
+  const ranked = (Array.isArray(articles) ? articles : [])
+    .filter((article) => article && article.coverage !== "release")
+    .map((article, index) => ({ article, index, rank: RANK[article.coverage] ?? 1 }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((entry) => entry.article);
+  for (const article of ranked) {
     if (!article || typeof article.title !== "string" || !article.title.trim()) continue;
-    if (!LABELS[article.region_id] || !safeLink(article.url)) continue;
+    if (!safeLink(article.url)) continue;
     const publisher = article.publisher || article.sourceName || "";
     if (seen.has(publisher)) continue;
     seen.add(publisher);
     picked.push({ id: String(article.id), title: article.title.trim(), url: safeLink(article.url), publisher,
-      region: article.region_id, published: article.published_at || article.publishedAt || "" });
+      region: HUB_IDS.has(article.region_id) ? article.region_id : "Global",
+      published: article.published_at || article.publishedAt || "" });
     if (picked.length === limit) break;
   }
   // Interleave regions so consecutive transmissions come from different parts of the world.
@@ -155,12 +165,14 @@ export function mountCommandDeck(doc = document) {
   function place() {
     frame = 0;
     if (!current || !globe || card.hidden || !onscreen) return;
-    const point = globe.project(current.region);
     const box = host.getBoundingClientRect();
+    // Global stories have no hub: they hover over the front of the globe without a beam.
+    const point = HUB_IDS.has(current.region) ? globe.project(current.region)
+      : { x: box.width * 0.5, y: box.height * 0.42, z: 1, global: true };
     if (!point || !box.width) return;
     const facing = point.z > 0.05;
     card.dataset.facing = String(facing);
-    beam.dataset.facing = String(facing);
+    beam.dataset.facing = String(facing && !point.global);
     // The card stays inside the globe's half of the deck: beside the hub when there is room,
     // otherwise above or below it, and never over the headline column.
     const frameBox = deck.getBoundingClientRect();
@@ -168,7 +180,8 @@ export function mountCommandDeck(doc = document) {
     const maxX = frameBox.right - 16 - box.left;
     const width = card.offsetWidth || 260, height = card.offsetHeight || 110, gap = 30;
     let x, y;
-    if (point.x + gap + width <= maxX) { x = point.x + gap; y = point.y - height / 2; }
+    if (point.global) { x = Math.min(maxX - width, Math.max(minX, point.x - width / 2)); y = point.y; }
+    else if (point.x + gap + width <= maxX) { x = point.x + gap; y = point.y - height / 2; }
     else if (point.x - gap - width >= minX) { x = point.x - gap - width; y = point.y - height / 2; }
     else {
       x = Math.min(maxX - width, Math.max(minX, point.x - width / 2));
@@ -207,12 +220,13 @@ export function mountCommandDeck(doc = document) {
     index = (index + 1) % items.length;
     const item = items[index];
     card.dataset.state = "out";
-    globe.focus(item.region);
+    const regional = HUB_IDS.has(item.region);
+    if (regional) globe.focus(item.region);
     timer = setTimeout(() => {
-      globe.pulse(item.region);
+      if (regional) globe.pulse(item.region);
       show(item);
       schedule();
-    }, motion.allowed() ? 900 : 0);
+    }, motion.allowed() && regional ? 900 : motion.allowed() ? 350 : 0);
   }
 
   function schedule() {
@@ -253,7 +267,7 @@ export function mountCommandDeck(doc = document) {
 
   async function load() {
     try {
-      const response = await fetch("/api/news?hours=24&limit=40&sort=latest", { headers: { accept: "application/json" } });
+      const response = await fetch("/api/news?hours=24&limit=50&sort=latest", { headers: { accept: "application/json" } });
       if (!response.ok) return;
       const data = await response.json();
       setStat("stories", Number(data.total));

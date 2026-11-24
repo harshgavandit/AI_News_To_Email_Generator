@@ -886,6 +886,13 @@ class Store:
         except QuotaReached:
             return False
 
+    def refund(self, policies):
+        """Return one unit to each fixed-window quota, e.g. when a message provably never left."""
+        with self.engine.begin() as conn:
+            for scope, bucket, _ceiling in policies:
+                conn.execute(update(limits).where(limits.c.scope == scope, limits.c.bucket == bucket, limits.c.used > 0)
+                             .values(used=limits.c.used - 1))
+
     def _admit_windows(self, conn, policies):
         now = time.time()
         for scope, window, maximum in sorted(policies):

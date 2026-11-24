@@ -26,7 +26,7 @@ test('globe motion helpers: shortest turns, ripples on the surface and bounded o
   }
 });
 
-test('transmissions use one safe, region-tagged headline per publisher and alternate regions', () => {
+test('transmissions use one safe headline per publisher and alternate regions, including Global', () => {
   const articles = [
     { id: 1, title: 'EU chip rules', url: 'https://a.example/1', publisher: 'A', region_id: 'EU' },
     { id: 2, title: 'Second from A', url: 'https://a.example/2', publisher: 'A', region_id: 'EU' },
@@ -38,10 +38,17 @@ test('transmissions use one safe, region-tagged headline per publisher and alter
     { id: 8, title: 'Insecure', url: 'http://g.example/8', publisher: 'G', region_id: 'APAC' },
   ];
   const picked = pickTransmissions(articles);
-  assert.deepEqual(picked.map((item) => item.id), ['1', '3', '6']);
+  assert.deepEqual(picked.map((item) => item.id), ['1', '3', '5', '6']);
   assert.equal(picked[1].region, 'Africa');
+  assert.equal(picked[2].region, 'Global', 'stories without a regional hub ride the wire as Global');
   assert.equal(safeLink('https://user:pw@x.example/'), '');
   assert.equal(pickTransmissions(null).length, 0);
+  const ranked = pickTransmissions([
+    { id: 'r', title: 'Release v1.2', url: 'https://r.example/', publisher: 'R', coverage: 'release' },
+    { id: 'h', title: 'Ask HN', url: 'https://h.example/', publisher: 'H', coverage: 'discussion' },
+    { id: 'n', title: 'Reported story', url: 'https://n.example/', publisher: 'N', coverage: 'reporting' },
+  ]);
+  assert.deepEqual(ranked.map((item) => item.id), ['n', 'h'], 'reporting first, release notes left to the feed');
 });
 
 test('telemetry parsing and relative ages', () => {
