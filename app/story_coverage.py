@@ -6,6 +6,7 @@ import re
 from app.article_metadata import restore_metadata
 from app.discovery import search_text
 from app.intelligence import GENERIC_TERMS, references, story_identity
+from app.material_changes import signals
 from app.sources import BY_ID
 
 COVERAGE_WINDOW = timedelta(hours=72)
@@ -20,9 +21,11 @@ class Headline:
     words: frozenset[str]
     numbers: frozenset[str]
     references: frozenset[str]
+    opening: tuple[str, ...] = ()
+    changes: frozenset[str] = frozenset()
 
 
-def headline(article, *, include_status=False):
+def headline(article, *, include_status=False, frontpage=False):
     source = BY_ID.get(article.get("source_id"))
     if (not source or (source.coverage not in COVERAGE_TYPES and not (include_status and source.coverage == "status"))
             or source.kind in {"video", "research"}):
@@ -34,10 +37,13 @@ def headline(article, *, include_status=False):
     if published.utcoffset() is None:
         return None
     title = article["title"]
+    tokens = search_text(title).split()
+    changes = signals({"title": title, "source_id": article.get("source_id")}) if frontpage else {}
     return Headline(published, source.language,
-                    frozenset(word for word in search_text(title).split() if len(word) >= 3
+                    frozenset(word for word in tokens if len(word) >= 3
                               and not word.isdecimal() and word not in GENERIC_TERMS),
-                    frozenset(NUMBER.findall(title)), frozenset(references(article)))
+                    frozenset(NUMBER.findall(title)), frozenset(references(article)),
+                    tuple(tokens[:6]) if frontpage else (), frozenset(changes) - {"material_update"})
 
 
 def coverage_match(left, right):
@@ -56,6 +62,19 @@ def coverage_match(left, right):
     if close_match or comparable_reports:
         return similarity, "Closely matching headlines"
     return None
+
+
+def frontpage_match(left, right):
+    """Coalesce the same headline edition while keeping material updates available."""
+    if not left or not right or left.changes != right.changes:
+        return False
+    if coverage_match(left, right):
+        return True
+    # A shortened rewrite can omit duration or product numbers from the same lead.
+    return (left.language == right.language and len(left.opening) == 6 and left.opening == right.opening
+            and abs(left.published - right.published) <= timedelta(hours=36)
+            and not (left.numbers and right.numbers and left.numbers != right.numbers)
+            and not (left.references and right.references and left.references.isdisjoint(right.references)))
 
 
 def compare_coverage(article, candidates, limit=5):

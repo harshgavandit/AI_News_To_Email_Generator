@@ -67,6 +67,10 @@
             <label for="research-question">Search or ask about technology news</label>
             <textarea id="research-question" required maxlength="320" rows="2" aria-describedby="research-mode-help"
               placeholder="Enter a technology, event, or question"></textarea>
+            <div class="research-submit-row">
+              <button class="button primary" id="research-submit" type="submit">Find sources</button>
+              <p id="research-mode-help" class="research-meta">Find matching publisher records in the retained archive.</p>
+            </div>
             <div class="research-starters" role="group" aria-label="Example research queries">
               <span>Try a query</span>
               <button class="research-pill" type="button" data-task="search" data-query="Kubernetes releases">Kubernetes releases</button>
@@ -83,10 +87,8 @@
               <label>Task
                 <select id="research-mode"><option value="search">Find sources</option><option value="developments">Developments</option><option value="analyze">Answer with sources</option><option value="compare">Compare coverage</option><option value="global_compare">Compare across languages</option><option value="brief">Build a topic brief</option></select>
               </label>
-              <button class="button primary" id="research-submit" type="submit">Find sources</button>
             </div>
             <label id="research-language-field" class="research-language-field" hidden>Answer language <select id="research-language"></select></label>
-            <p id="research-mode-help" class="research-meta">Find matching publisher records in the retained archive.</p>
             <p class="research-privacy">Semantic search and AI analysis may send your query to OpenAI. <a href="/privacy.html">Privacy &amp; controls</a></p>
             <nav class="search-destinations" aria-label="Search result type">
               <a id="search-articles" href="/?view=feed#reading-room">Articles</a>

@@ -219,6 +219,14 @@
   .deck-wire-item { font-size: 12px; }
 }
 
+@media (max-width: 560px) {
+  .command-deck { --deck-pad: 18px; grid-template-rows: auto auto; row-gap: 10px; padding-bottom: 18px; }
+  .command-deck .signal-globe { --globe-size: 180px; right: -65px; top: -24px; }
+  .command-deck .deck-telemetry, .command-deck .deck-wire { display: none; }
+  .command-deck .edition-entry { margin-block: 9px; }
+  .command-deck .edition-coverage { padding: 12px 14px; }
+}
+
 /* ==========================================================================
    Scroll-driven depth: cards rise out of the page as they enter the viewport.
    Uses individual transform properties so hover tilts keep working.
@@ -346,4 +354,5 @@
 .signal-orb-place { overflow: hidden; color: #ffffff; font: 600 13px/1.35 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
 @keyframes orb-dock { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.9); } to { opacity: 1; transform: none; } }
 :root[data-motion="off"] .signal-orb { display: none; }
+@media (max-width: 1099px) { .signal-orb { display: none; } }
 @media print { .signal-orb { display: none; } }

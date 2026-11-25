@@ -7,7 +7,7 @@ from app.coverage import REGION_LABELS, public_article
 from app.intelligence import story_identity
 from app.selection import words
 from app.sources import BY_ID
-from app.story_coverage import coverage_match, headline
+from app.story_coverage import frontpage_match, headline
 from app.story_groups import coverage_summary
 from app.news_signals import COMMERCE, news_score, impact_score
 
@@ -26,10 +26,10 @@ def developing_coverage(rows, prepared):
     candidates = rows[:DEVELOPING_CANDIDATE_LIMIT]
     for anchor in candidates:
         current = prepared[anchor["id"]]
-        if impact_score(anchor) < 10 or any(coverage_match(current, old) for old in represented):
+        if impact_score(anchor) < 10 or any(frontpage_match(current, old) for old in represented):
             continue
         matches = [anchor, *(row for row in candidates if row["id"] != anchor["id"]
-                             and coverage_match(current, prepared[row["id"]]))]
+                             and frontpage_match(current, prepared[row["id"]]))]
         publishers, links, matched_sources = set(), set(), []
         for row in matches:
             source = BY_ID[row["source_id"]]
@@ -83,15 +83,17 @@ def build_headlines(rows, *, now=None, limit=4):
     shortlist = eligible[:DEVELOPING_CANDIDATE_LIMIT]
     shortlist.sort(key=lambda article: article_language(restore_metadata(article)) == "en", reverse=True)
     eligible[:DEVELOPING_CANDIDATE_LIMIT] = shortlist
-    prepared = {row["id"]: headline(row) for row in eligible[:DEVELOPING_CANDIDATE_LIMIT]}
+    prepared = {row["id"]: headline(row, frontpage=True) for row in eligible[:DEVELOPING_CANDIDATE_LIMIT]}
     coverage = developing_coverage(eligible, prepared)
     picked, publishers, used_regions, used_topics, seen_titles = [], set(), set(), set(), []
     links, headlines = set(), []
+    represented = [prepared[item["id"]] for item in coverage]
     for unique_topic, unique_region in ((True, True), (False, True), (False, False)):
         for candidate in eligible:
             if candidate["publisher"] in publishers:
                 continue
-            if any(coverage_match(headline(candidate), prepared[item["id"]]) for item in coverage):
+            candidate_headline = headline(candidate, frontpage=True)
+            if any(frontpage_match(candidate_headline, old) for old in represented):
                 continue
             article = public_article(candidate)
             region = article["region_id"]
@@ -101,8 +103,7 @@ def build_headlines(rows, *, now=None, limit=4):
             if any(tokens and len(tokens & old) / len(tokens | old) >= .67 for old in seen_titles):
                 continue
             identity = story_identity(article)
-            candidate_headline = headline(article)
-            if identity in links or any(coverage_match(candidate_headline, old) for old in headlines):
+            if identity in links or any(frontpage_match(candidate_headline, old) for old in headlines):
                 continue
             picked.append(article)
             links.add(identity)
@@ -114,3 +115,12 @@ def build_headlines(rows, *, now=None, limit=4):
             if len(picked) == limit:
                 return {"coverage": coverage, "articles": picked}
     return {"coverage": coverage, "articles": picked}
+
+
+def frontpage_signals(rows, headlines):
+    from app.signals import priority_signals
+
+    shown_ids = {row["id"] for row in headlines["articles"]}
+    shown_ids.update(source["article_id"] for group in headlines["coverage"] for source in group["sources"])
+    shown = [headline(row, frontpage=True) for row in rows if row["id"] in shown_ids]
+    return priority_signals((row for row in rows if row["id"] not in shown_ids), represented=shown)["articles"]

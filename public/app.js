@@ -299,10 +299,15 @@ function coverageAction(story, className, label) {
 
 async function loadHeadlines() {
   try {
-    const { coverage, articles } = await request("/api/headlines");
+    const { coverage, articles, signals } = await request("/api/headlines");
+    if (Array.isArray(signals)) renderSignals(signals);
+    else void loadSignals();
     if (!coverage.length && !articles.length) return;
+    const readingRoom = $("reading-room");
+    const previousTop = readingRoom.getBoundingClientRect().top;
     const container = $("headlines-content");
-    container.classList.toggle("with-coverage", coverage.length > 0);
+    const otherCoverage = coverage.slice(1);
+    container.classList.toggle("with-coverage", otherCoverage.length > 0);
     container.replaceChildren();
     const lead = coverage[0];
     const edition = $("edition-coverage");
@@ -314,7 +319,7 @@ async function loadHeadlines() {
       edition.append(node("span", "edition-coverage-label", "Developing story"), title,
         coverageAction(lead, "edition-coverage-button", `Compare ${lead.sources.length} sources ↗`));
     }
-    for (const story of coverage) {
+    for (const story of otherCoverage) {
       const feature = node("article", "coverage-lead");
       const updated = node("time", "muted", `Updated ${readableTime(story.updated_at)}`);
       updated.dateTime = story.updated_at;
@@ -345,9 +350,7 @@ async function loadHeadlines() {
       }
       container.append(list);
     }
-    const readingRoom = $("reading-room");
-    const previousTop = readingRoom.getBoundingClientRect().top;
-    $("headlines").hidden = false;
+    $("headlines").hidden = !otherCoverage.length && !articles.length;
     const anchorTop = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
     if (location.hash === "#reading-room" && Math.abs(previousTop - anchorTop) < 40) {
       const offset = readingRoom.getBoundingClientRect().top - previousTop;
@@ -355,24 +358,28 @@ async function loadHeadlines() {
     }
   } catch {
     // Browsing and search still work when the optional headlines request fails.
+    void loadSignals();
   }
+}
+
+function renderSignals(articles) {
+  $("signals-content").replaceChildren(...articles.slice(0, 6).map((article) => {
+    const item = node("article", "priority-signal");
+    const open = node("button", "", article.title);
+    open.type = "button";
+    open.dir = "auto";
+    open.addEventListener("click", () => openDossier(article, open));
+    item.append(node("span", "signal-type", article.signal_reason), open,
+      node("p", "muted", `${article.publisher} · ${relativeTime(article.published_at, article.publication_date_precision)}`));
+    return item;
+  }));
+  $("priority-signals").hidden = !articles.length;
 }
 
 async function loadSignals() {
   try {
     const data = await request("/api/signals");
-    const articles = data.articles || [];
-    $("signals-content").replaceChildren(...articles.slice(0, 6).map((article) => {
-      const item = node("article", "priority-signal");
-      const open = node("button", "", article.title);
-      open.type = "button";
-      open.dir = "auto";
-      open.addEventListener("click", () => openDossier(article, open));
-      item.append(node("span", "signal-type", article.signal_reason), open,
-        node("p", "muted", `${article.publisher} · ${relativeTime(article.published_at, article.publication_date_precision)}`));
-      return item;
-    }));
-    $("priority-signals").hidden = !articles.length;
+    renderSignals(data.articles || []);
   } catch { /* Optional; search and reading continue when signals are unavailable. */ }
 }
 
@@ -696,7 +703,11 @@ for (const button of document.querySelectorAll("[data-workspace-view]")) {
 $("curiosity-nav-link").addEventListener("click", closeWorkspaceMenu);
 function openHomeEdition(view) {
   $(`view-${view}`).click();
-  $("reading-title").focus();
+  const target = new URL(location.href);
+  target.hash = "reading-room";
+  history.replaceState(history.state, "", target);
+  $("reading-title").focus({ preventScroll: true });
+  $("reading-room").scrollIntoView({ block: "start" });
 }
 function reflectEditionInterests() {
   const topics = preferences.followedTopics();
@@ -2815,7 +2826,6 @@ if (location.hash === "#composer")
   window.addEventListener("load", () => openBuilder("build", $("nav-builder")), { once: true });
 loadNews().then(() => openLinkedArticle());
 loadHeadlines();
-loadSignals();
 loadTrending();
 loadCuriosity();
 deliveryStatus.restore();

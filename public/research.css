@@ -14,7 +14,9 @@
 .research-form > label { font-weight: 650; }
 .research-form textarea, .research-panel input, .research-panel select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 9px 11px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 7px; }
 .research-form textarea { min-height: 88px; margin: 8px 0 14px; resize: vertical; }
-.research-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 10px; }
+.research-submit-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; }
+.research-submit-row p { margin: 0; flex: 1 1 15rem; }
+.research-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 10px; }
 .research-controls label { font-size: .8rem; color: var(--muted); }
 .research-controls select { display: block; margin-top: 4px; }
 .research-panel .button { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }

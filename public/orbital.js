@@ -336,7 +336,7 @@ void main() {
     if (!enabled()) return;
     const key = `informa-decoded:${location.pathname}`;
     try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch { /* Private mode: decode anyway. */ }
-    const titles = document.querySelectorAll("#hero-title, .research-header h1, .curiosity-hero h1, .directory-intro h1, .information-hero h1, .contribute-hero h1");
+    const titles = document.querySelectorAll("#hero-title, .curiosity-hero h1, .directory-intro h1, .information-hero h1, .contribute-hero h1");
     for (const title of titles) {
       if (title.children.length || !title.textContent.trim()) continue;
       const text = title.textContent;

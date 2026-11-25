@@ -2,6 +2,21 @@
   scroll-margin-top: 14px;
 }
 
+.mobile-reading-region { display: none; }
+
+@media (max-width: 760px) {
+  .mobile-reading-region {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: -4px 0 10px;
+    color: var(--muted);
+    font-size: .82rem;
+  }
+  .mobile-reading-region a { color: var(--green); text-underline-offset: .2em; }
+}
+
 .reading .section-top {
   align-items: center;
   margin-bottom: 12px;
