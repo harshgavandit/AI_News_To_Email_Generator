@@ -3,8 +3,6 @@
 import { mountFeedback } from "./feedback.js";
 import { mountAlertPanel, syncAlerts } from "./push-alerts.js";
 
-let deferredInstall = null;
-
 function installButtons() {
   return [...document.querySelectorAll("[data-install-app]")];
 }
@@ -14,8 +12,8 @@ function showInstall(visible) {
 }
 
 export function bindInstall(win = window) {
+  let deferredInstall = null;
   win.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
     deferredInstall = event;
     showInstall(true);
   });
@@ -28,7 +26,11 @@ export function bindInstall(win = window) {
     const prompt = deferredInstall;
     deferredInstall = null;
     showInstall(false);
-    await prompt.prompt();
+    try {
+      await prompt.prompt();
+    } catch {
+      // The browser may already have used the prompt. Its install menu remains available.
+    }
   });
 }
 

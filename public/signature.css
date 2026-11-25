@@ -190,9 +190,8 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 .site-footer .footer-nav a { color: var(--sig-ink-soft); text-underline-offset: .22em; }
 .site-footer .footer-nav a:hover { color: var(--green); }
 
-/* ---------- Page transitions ---------- */
-/* Moving between pages cross-fades the content while the header stays put (supporting browsers only). */
-@view-transition { navigation: auto; }
+/* ---------- Theme transitions ---------- */
+/* Keep the header steady while the theme cross-fades. */
 .site-header { view-transition-name: site-header; }
 ::view-transition-old(site-header), ::view-transition-new(site-header) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(root) { animation: sig-out 180ms var(--sig-ease) both; }
@@ -202,7 +201,6 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 
 /* ---------- Motion, contrast and print ---------- */
 @media (prefers-reduced-motion: reduce) {
-  @view-transition { navigation: none; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
   .button, .curiosity-card, .curiosity-list-card, #stories .story, #stories .story h3 a { transition: none !important; }
 }

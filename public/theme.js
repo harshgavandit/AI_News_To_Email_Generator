@@ -40,8 +40,15 @@
         } catch {}
         // Cross-fade the change where supported; reduced motion switches instantly.
         const animate = document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches;
-        if (animate) document.startViewTransition(apply);
-        else apply();
+        if (!animate) {
+          apply();
+          return;
+        }
+        const transition = document.startViewTransition(apply);
+        // A new theme change or navigation can cancel the animation while the change still applies.
+        transition.ready.catch(() => {});
+        transition.updateCallbackDone.catch(() => {});
+        transition.finished.catch(() => {});
       });
     }
     window.addEventListener("storage", (event) => {
