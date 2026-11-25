@@ -22,38 +22,54 @@ jobs:
         run: |
           set -uo pipefail
           failures=0
-          check() {  # name, path, jq test (empty for non-JSON), minimum bytes
-            local name="$1" path="$2" test="$3" min="${4:-200}" body status
-            body=$(mktemp)
-            status=$(curl --silent --show-error --location --max-time 60 --output "$body" --write-out '%{http_code}' "$SITE$path" || echo 000)
-            size=$(wc -c < "$body")
-            if [[ "$status" != 200 || "$size" -lt "$min" ]]; then
-              echo "::error::$name ($path) answered $status with $size bytes"; failures=$((failures + 1)); return
+          workdir=$(mktemp -d)
+          trap 'rm -rf -- "$workdir"' EXIT
+          body="$workdir/body"
+          headers="$workdir/headers"
+          check() {
+            local name="$1" path="$2" test="$3" min="${4:-200}" status size request_id failure
+            : > "$body"
+            : > "$headers"
+            if ! status=$(curl --silent --show-error --location --max-time 30 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$SITE$path"); then
+              status=000
             fi
-            if [[ -n "$test" ]] && ! jq -e "$test" "$body" > /dev/null; then
-              echo "::error::$name ($path) returned unexpected content"; failures=$((failures + 1)); return
+            size=$(wc -c < "$body")
+            request_id=$(awk 'tolower($1) == "x-request-id:" { id=$2 } END { sub(/\r$/, "", id); if (id ~ /^[0-9a-f]+$/) print id }' "$headers")
+            failure=""
+            if [[ "$path" == /api/recap && "$status" == 404 ]] && jq -e '.detail | strings | startswith("That week")' "$body" >/dev/null 2>&1; then
+              echo "::warning::No weekly recap is published yet. Run the 'Prepare weekly recap' workflow."
+              return
+            elif [[ "$status" == 503 ]] && jq -e '.detail == "The news database is temporarily unavailable."' "$body" >/dev/null 2>&1; then
+              failure="HTTP 503: archive database unavailable"
+            elif [[ "$status" != 200 || "$size" -lt "$min" ]]; then
+              failure="HTTP $status, $size bytes"
+            elif [[ -n "$test" ]] && ! jq -e "$test" "$body" >/dev/null 2>&1; then
+              failure="HTTP 200, unexpected response content"
+            fi
+            if [[ -n "$failure" ]]; then
+              local message="$name ($path) failed: $failure${request_id:+ (request ID $request_id)}"
+              echo "::error::$message"
+              echo "Failed — $message" >> "$GITHUB_STEP_SUMMARY"
+              failures=$((failures + 1))
+              return
             fi
             echo "ok  $name ($status, $size bytes)" | tee -a "$GITHUB_STEP_SUMMARY"
           }
           check "Home page" / "" 5000
-          check "Health" /api/health '.status != null' 10
+          check "API liveness" /api/health '.status == "ok"' 10
+          check "Archive readiness" /api/ready '.freshness.counts.fresh > 0' 10
           check "Latest stories" '/api/news?hours=24&limit=12' '.articles | length > 0'
           check "Developing stories" /api/headlines '.articles != null' 50
           check "Curiosity Cards" '/api/curiosity/cards?limit=6' '.cards | length > 0'
           check "Trackers: releases" /api/trackers/releases '.items | length > 0'
           check "Trackers: security" /api/trackers/security '.items.cves != null'
           check "Alerts config" /api/push/config '.enabled != null' 10
+          if jq -e '.enabled == false' "$body" >/dev/null 2>&1; then
+            echo "::warning::Device alerts are off: set NEWS_PUSH_VAPID_PRIVATE_KEY in Vercel (docs/PUSH-ALERTS.md)."
+          fi
           check "RSS: latest" /feeds/latest.xml "" 500
           check "RSS: Curiosity" /feeds/curiosity.xml "" 500
           check "Sitemap" /sitemap.xml "" 200
           check "Service worker" /sw.js "" 200
-          recap=$(curl --silent --max-time 60 --output /dev/null --write-out '%{http_code}' "$SITE/api/recap" || echo 000)
-          if [[ "$recap" != 200 ]]; then
-            echo "::warning::No weekly recap is published yet ($recap). Run the 'Prepare weekly recap' workflow."
-          else
-            echo "ok  Weekly recap (200)" | tee -a "$GITHUB_STEP_SUMMARY"
-          fi
-          if [[ $(curl --silent --max-time 30 "$SITE/api/push/config" | jq -r '.enabled') != true ]]; then
-            echo "::warning::Device alerts are off: set NEWS_PUSH_VAPID_PRIVATE_KEY in Vercel (docs/PUSH-ALERTS.md)."
-          fi
+          check "Weekly recap" /api/recap '.week | strings | length > 0' 10
           exit $(( failures > 0 ))
