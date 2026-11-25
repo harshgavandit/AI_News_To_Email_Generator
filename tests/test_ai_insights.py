@@ -293,6 +293,16 @@ def test_opted_in_radar_gets_personalized_morning_mail_and_history_after_accepta
     assert radar_store.histories(store, [mailbox])[mailbox]
 
 
+def test_official_recovery_supersedes_reporting_only_once():
+    from app.material_changes import change_kind
+
+    report = {"title": "Service has been restored.", "source_id": "ars-technica"}
+    official = {**report, "source_id": "google-cloud-status"}
+    assert change_kind(official, [report]) == "resolved"
+    assert change_kind(official, [report, official]) == "additional_reporting"
+    assert change_kind(report, [official]) == "additional_reporting"
+
+
 def test_catchup_and_development_search_return_meaningful_changes_over_http(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from app import insight_api, server
@@ -327,6 +337,9 @@ def test_catchup_and_development_search_return_meaningful_changes_over_http(tmp_
     update = data["events"][0]
     assert update["change"] == "updated"
     assert update["change_sources"][0]["change_label"] == "Resolved"
+    assert "restored" in update["change_sources"][0]["reported_fact"]
+    assert update["change_sources"][0]["evidence_basis"]
+    assert update["change_sources"][0]["uncertainty"]
     assert update["change_sources"][0]["excerpt"] == revised["description"]
     assert update["change_sources"][0]["url"] == report["url"]
     assert client.post("/api/intelligence/catchup", json={

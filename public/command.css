@@ -55,6 +55,15 @@
   align-items: start; row-gap: 18px; min-height: clamp(470px, 46vw, 610px); padding: var(--deck-pad) var(--deck-pad) 0;
 }
 .command-deck .deck-copy { grid-column: 1; grid-row: 1; max-width: 560px; }
+.edition-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 12px; }
+.command-deck .edition-entry .button.secondary { background: #0e2345; color: #eaf4ff; border-color: #7591b5; }
+.command-deck .edition-entry .text-button { color: #bce8ff; }
+.command-deck .edition-entry .edition-topic { min-height: 34px; padding: 4px 10px; font-size: .8rem; }
+.command-deck .edition-entry .edition-topic[aria-pressed="true"] { background: #c3ebff; color: #101d33; }
+.edition-interests { min-inline-size: 0; padding: 10px 0 0; margin: 8px 0; border: 0; border-top: 1px solid #7591b5; }
+.edition-interests legend { color: #eaf4ff; padding-inline: 0 8px; font-weight: 650; }
+.command-deck .edition-interests p { color: #b9cce5; margin: 0; font-size: .8rem; }
+.command-deck .edition-freshness { color: #b9cce5; margin-block: 10px; font-size: .8rem; }
 .command-deck::before {
   background:
     radial-gradient(1px 1px at 12% 22%, #e0f7ffcc 50%, transparent 51%), radial-gradient(1px 1px at 31% 71%, #e0f7ff99 50%, transparent 51%),

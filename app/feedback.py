@@ -29,7 +29,7 @@ CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 class Feedback(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    kind: Literal["idea", "bug", "praise", "other", "useful", "not_useful"] = "other"
+    kind: Literal["idea", "bug", "praise", "other", "useful", "not_useful", "coverage", "update_yes", "update_no"] = "other"
     message: str = Field(default="", max_length=2000)
     page: str = Field(default="/", max_length=120)
     contact: str = Field(default="", max_length=200)
@@ -97,7 +97,7 @@ def send_feedback(body: Feedback, request: Request):
     rate_limit(request, "feedback", 6)
     if body.website:
         return Response(status_code=204)  # quietly drop bot submissions
-    if body.kind not in {"useful", "not_useful"} and len(body.message) < 3:
+    if body.kind not in {"useful", "not_useful", "update_yes", "update_no"} and len(body.message) < 3:
         raise HTTPException(422, "Write a few words so we know what to fix or build.")
     store = get_store()
     if not store:

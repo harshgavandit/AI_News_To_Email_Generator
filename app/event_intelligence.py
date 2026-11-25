@@ -14,7 +14,7 @@ from app.coverage import public_article
 from app.discovery import search_terms, search_text
 from app.intelligence import GENERIC_TERMS, references
 from app.launch_store import articles, schema, search_document
-from app.material_changes import LABELS, change_kind
+from app.material_changes import LABELS, change_kind, revision_evidence
 from app.sources import BY_ID
 from app.story_coverage import coverage_match, headline
 
@@ -223,6 +223,14 @@ def catalog(store, *, hours=168, limit=80, topic="all", event_ids=(), query=""):
     return result
 
 
+def article_events(store, article_ids):
+    if not article_ids or not ready(store):
+        return {}
+    with store.engine.connect() as conn:
+        return dict(conn.execute(select(event_items.c.article_id, event_items.c.event_id)
+                                 .where(event_items.c.article_id.in_(article_ids))).all())
+
+
 def timeline(store, ident, since=None, *, observed_since=None):
     if not ready(store):
         return None
@@ -237,7 +245,9 @@ def timeline(store, ident, since=None, *, observed_since=None):
             event_updates.c.article_id.in_(retained)).order_by(event_updates.c.observed.desc()).limit(40)).mappings()
         def entry(row):
             return {**dict(row), "source": retained[row["article_id"]],
-                    "change_label": LABELS.get(row["reason"], "Publisher update")}
+                    "change_label": LABELS.get(row["reason"], "Publisher update"),
+                    **revision_evidence(dict(row, source_id=retained[row["article_id"]]["source_id"]),
+                                        retained[row["article_id"]].get("coverage"))}
 
         entries = [entry(row) for row in updates]
         changes = []

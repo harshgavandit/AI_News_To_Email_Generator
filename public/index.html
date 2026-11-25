@@ -129,6 +129,17 @@
           <div class="deck-copy"><time id="edition-date" class="edition-date"></time>
             <h1 id="hero-title">The technology desk.</h1>
             <p>Global technology news, research, and releases, with the sources behind each story.</p>
+            <div class="edition-entry" aria-label="Start reading">
+              <a id="edition-start" class="button primary" href="/?view=briefing#reading-room" data-edition-view="briefing">Read Today’s Top 5</a>
+              <a class="button secondary" href="/?view=feed#reading-room" data-edition-view="feed">Browse all stories</a>
+              <a id="edition-followed" class="text-button" href="/?view=for-you#reading-room" data-edition-view="for-you" hidden>Updates you follow</a>
+            </div>
+            <fieldset id="edition-interests" class="edition-interests" hidden>
+              <legend>Follow a few topics</legend>
+              <div id="edition-interest-options" class="edition-entry"></div>
+              <p id="edition-interest-status" class="small" role="status">Optional. Your choices stay in this browser.</p>
+            </fieldset>
+            <p id="edition-freshness" class="edition-freshness" hidden></p>
             <ul id="signal-regions" class="signal-globe-regions" aria-label="Browse stories by publisher region"></ul>
             <dl id="deck-telemetry" class="deck-telemetry" hidden>
               <div class="deck-stat" hidden><dt>Stories · 24 h</dt><dd data-stat="stories">0</dd></div>
@@ -163,6 +174,7 @@
         >
           <div class="section-top">
             <h2 id="reading-title" tabindex="-1">Reading Room</h2>
+            <button type="button" class="text-button" data-feedback-open data-feedback-kind="coverage">Missing coverage?</button>
             <div class="source-health">
               <button
                 id="source-health-button"
@@ -188,6 +200,7 @@
                   </button>
                 </div>
                 <p id="updated" class="small">Waiting for source checks.</p>
+                <p id="next-source-sweep" class="small" hidden></p>
                 <div id="source-health-list"></div>
                 <a href="/sources.html">See all sources ↗</a>
               </div>
@@ -268,6 +281,7 @@
             </div>
             <div id="home-catchup-freshness"></div>
             <div id="home-catchup-results"></div>
+            <div id="catchup-useful" class="useful-box" data-useful="update" hidden></div>
           </section>
           <section id="visit-catchup" class="visit-catchup" aria-labelledby="visit-catchup-title" hidden>
             <h3 id="visit-catchup-title">What changed?</h3>

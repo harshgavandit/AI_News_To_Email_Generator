@@ -47,6 +47,7 @@ UPDATE_PROMPT = PROMPT + """
 Compare the current publisher update with earlier evidence, when supplied.
 Use earlier evidence only as context and cite only the current evidence.
 Explain the newly reported fact and attribute confirmations, recoveries and corrections to the source.
+If the operator newly confirms something previously reported elsewhere, describe that confirmation as the change.
 If the current excerpt only repeats earlier facts, return insufficient."""
 
 
@@ -61,6 +62,7 @@ class RadarProfile(BaseModel):
     interests: list[str] = Field(default_factory=list, max_length=12)
     stack: list[str] = Field(default_factory=list, max_length=12)
     topics: list[str] = Field(default_factory=list, max_length=6)
+    preferred_topics: list[str] = Field(default_factory=list, max_length=10)
     language: str = "en"
     depth: Literal["simple", "developer", "technical"] = "simple"
     length: Literal[3, 5, 10] = 5
@@ -83,7 +85,7 @@ class RadarProfile(BaseModel):
             raise ValueError("Use short technology topics or project names.")
         return list(dict.fromkeys(value.strip() for value in values))
 
-    @field_validator("topics")
+    @field_validator("topics", "preferred_topics")
     @classmethod
     def supported_topics(cls, values):
         if any(value not in TOPICS for value in values):
@@ -224,7 +226,9 @@ def update_evidence(changes):
     return [{"id": item["id"], "title": item["title"], "excerpt": item["excerpt"],
              "published_at": item["published_at"], "publisher": item["source"]["publisher"],
              "url": item["source"]["url"], "editorial_notice": notice(item["title"]),
-             "change_label": item["change_label"], "coverage": item["source"].get("coverage")} for item in changes]
+             "change_label": item["change_label"], "coverage": item["source"].get("coverage"),
+             "reported_fact": item.get("reported_fact"), "evidence_basis": item.get("evidence_basis"),
+             "uncertainty": item.get("uncertainty")} for item in changes]
 
 
 def earlier_evidence(timeline):
@@ -259,6 +263,7 @@ def rank_events(items, profile, seen, *, related_subjects=(), followed_only=Fals
     ranked = []
     now = datetime.now(UTC)
     follows = set(profile.followed_events)
+    preferred_topics = set(profile.preferred_topics)
     for event in items:
         if seen.get(event["id"]) == event["digest_version"]:
             continue
@@ -274,6 +279,7 @@ def rank_events(items, profile, seen, *, related_subjects=(), followed_only=Fals
         companies = list(dict.fromkeys(name for article in event["articles"]
             for name in company_matches(article, profile.feedback.companies)))
         topic_match = any(article["topic"] in profile.topics for article in event["articles"])
+        preferred = any(article["topic"] in preferred_topics for article in event["articles"])
         explicit_follow = followed or tracked or companies or stack_matches
         if profile.topics and not (explicit_follow or topic_match or (followed_only and matches)):
             continue
@@ -291,6 +297,9 @@ def rank_events(items, profile, seen, *, related_subjects=(), followed_only=Fals
                    ["Relevant to your " + ROLES[profile.role].lower() + " perspective"] if event["topic"] in ROLE_TOPICS[profile.role] else ["Broader technology context"])
         if topic_match:
             reasons.insert(0, "Matches a selected topic")
+        elif preferred:
+            score += 4
+            reasons.insert(0, "Matches a topic you follow")
         if event["id"] in seen:
             reasons.append("Updated since your last catch-up")
         if followed:

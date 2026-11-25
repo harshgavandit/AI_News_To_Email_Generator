@@ -52,7 +52,10 @@ export function catchupCard(event, helpers) {
     for (const change of event.change_sources.slice(0, 3)) {
       const item = node("li");
       item.append(node("span", "catchup-change-label", change.change_label));
-      if (change.excerpt) item.append(node("p", "catchup-summary", change.excerpt));
+      if (change.evidence_basis) item.append(node("span", "research-meta", ` · ${change.evidence_basis}`));
+      if (change.reported_fact || change.excerpt)
+        item.append(node("p", "catchup-summary", change.reported_fact || change.excerpt));
+      if (change.uncertainty) item.append(node("p", "research-meta", change.uncertainty));
       const source = externalLink(change.url, `${change.publisher} ↗`);
       source.className = "catchup-change-source";
       item.append(source);

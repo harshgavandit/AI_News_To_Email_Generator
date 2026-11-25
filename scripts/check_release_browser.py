@@ -90,6 +90,33 @@ def main() -> None:
                         page.on("pageerror", lambda error: errors.append(str(error)))
                         page.goto(url, wait_until="domcontentloaded")
                         expect(page).to_have_title(re.compile("Informa AI"))
+                        expect(
+                            page.get_by_role("link", name="Read Today’s Top 5")
+                        ).to_be_visible()
+                        topic = page.locator("#edition-interests").get_by_role(
+                            "button", name="AI & Machine Learning"
+                        )
+                        topic.click()
+                        expect(topic).to_have_attribute("aria-pressed", "true")
+                        expect(
+                            page.get_by_role("link", name="Updates you follow")
+                        ).to_be_visible()
+                        page.evaluate(
+                            "localStorage.setItem('informa-catchup-checkpoint', String(Date.now() - 3600000))"
+                        )
+                        page.set_viewport_size({"width": 375, "height": 812})
+                        page.reload(wait_until="domcontentloaded")
+                        expect(
+                            page.get_by_role(
+                                "link", name="What changed since your last visit?"
+                            )
+                        ).to_be_visible()
+                        page.get_by_role("button", name="Missing coverage?").click()
+                        expect(
+                            page.get_by_role("radio", name="Missing story or source")
+                        ).to_be_checked()
+                        page.get_by_role("button", name="Close feedback").click()
+                        page.set_viewport_size({"width": 1280, "height": 720})
                         theme = page.get_by_role("combobox", name="Color theme")
                         theme.select_option("dark")
                         expect(page.locator("html")).to_have_attribute(

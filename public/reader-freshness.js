@@ -13,6 +13,22 @@ export function coverageWarning(snapshot) {
   return notes.length ? `Some sources are catching up · ${notes.join(" · ")}.` : "";
 }
 
+export function nextSweepText(snapshot) {
+  const next = Date.parse(snapshot?.next_full_sweep_at);
+  return Number.isFinite(next) && next > Date.now()
+    ? `Next full sweep: ${moment(snapshot.next_full_sweep_at)} (your local time).`
+    : "";
+}
+
+export function editionFreshnessText(snapshot) {
+  const { enabled, fresh } = snapshot?.counts || {};
+  if (!enabled) return "";
+  const label = fresh === enabled ? "Coverage up to date" : "Coverage partial";
+  return [label + ` (${fresh} of ${enabled} feeds).`,
+    snapshot.checked_at ? `Latest source check: ${moment(snapshot.checked_at)}.` : "",
+    nextSweepText(snapshot)].filter(Boolean).join(" ");
+}
+
 export function freshnessNotice(snapshot, doc = document, { compact = false } = {}) {
   if (!snapshot?.counts) return null;
   const section = doc.createElement("section");
@@ -21,7 +37,8 @@ export function freshnessNotice(snapshot, doc = document, { compact = false } = 
   const scope = doc.createElement("strong");
   scope.textContent = snapshot.scope;
   const summary = doc.createElement("p");
-  summary.textContent = `Latest recorded check: ${moment(snapshot.checked_at)}. ${coverageWarning(snapshot)}`;
+  summary.textContent = [`Latest recorded check: ${moment(snapshot.checked_at)}.`, coverageWarning(snapshot),
+    nextSweepText(snapshot)].filter(Boolean).join(" ");
   if (compact) {
     const detail = doc.createElement("details");
     const heading = doc.createElement("summary");

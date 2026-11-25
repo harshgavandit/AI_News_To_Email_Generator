@@ -358,6 +358,7 @@ test('returning readers open Catch up and can mark cited updates as read', async
   globalThis.setInterval = () => 0;
   const lastVisit = Date.now() - 3600_000;
   localStorage.setItem('informa-catchup-checkpoint', String(lastVisit));
+  localStorage.setItem('informa-interests-v1', JSON.stringify({ topics: ['software'] }));
   const requests = [];
   const article = { id: 'news', title: 'Regional network outage', publisher: 'Provider status',
     url: 'https://example.org/incident', cleanSummary: 'The provider is investigating.' };
@@ -370,7 +371,10 @@ test('returning readers open Catch up and can mark cited updates as read', async
         updated_at: new Date().toISOString(), articles: [article], source_count: 2,
         change_sources: [{ change_label: 'Resolved', excerpt: 'Service has been restored.', url: article.url, publisher: article.publisher }],
       }];
-      return new Response(JSON.stringify({ events }));
+      return new Response(JSON.stringify({ events, coverage_freshness: {
+        counts: { enabled: 3, fresh: 2, failed: 1 }, checked_at: new Date().toISOString(),
+        next_full_sweep_at: new Date(Date.now() + 3600_000).toISOString(),
+      } }));
     }
     return new Response(JSON.stringify({ ...catalog, articles: [], coverage: [], trending: [] }));
   };
@@ -381,12 +385,16 @@ test('returning readers open Catch up and can mark cited updates as read', async
     assert.equal(document.getElementById('reading-title').textContent, 'Catch up');
     assert.equal(requests[0].since, lastVisit / 1000);
     assert.equal(requests[0].summary_only, true);
+    assert.deepEqual(requests[0].profile.preferred_topics, ['software']);
+    assert.equal(document.getElementById('edition-start').dataset.editionView, 'catchup');
+    assert.equal(document.getElementById('edition-followed').hidden, false);
+    assert.match(document.getElementById('edition-freshness').textContent, /Coverage partial \(2 of 3 feeds\).*Next full sweep/);
     assert.equal(results.querySelector('a').href, article.url);
     document.getElementById('home-catchup-mark').click();
     await until(() => results.textContent.includes('Another development'));
     assert.deepEqual(requests[1].seen, { [first]: '2' });
     document.getElementById('home-catchup-mark').click();
-    await until(() => document.getElementById('home-catchup-status').textContent.includes('caught up'));
+    await until(() => document.getElementById('home-catchup-status').textContent.includes('Some source checks are incomplete'));
     assert.deepEqual(requests[2].seen, { [first]: '2', [next]: '2' });
     assert.ok(requests.every(request => request.since === lastVisit / 1000));
     document.getElementById('home-catchup-browse').click();

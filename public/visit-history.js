@@ -35,6 +35,7 @@ export function openVisit({ storage, now = Date.now() } = {}) {
       saved && now - saved.lastActivityAt <= archiveAge ? saved.lastActivityAt : null;
     storage.setItem(VISIT_HISTORY_KEY, JSON.stringify({ startedAt, lastActivityAt: now, previousAt }));
     return {
+      startedAt,
       previousVisit: previousAt === null ? null : new Date(previousAt).toISOString(),
       persistent: true,
       touch({ now: activeAt = Date.now() } = {}) {

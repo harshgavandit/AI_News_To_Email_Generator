@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 import httpx
 from dotenv import load_dotenv
@@ -34,6 +35,7 @@ from app.client_identity import client_address
 from app.mail_schedule import run_due_subscriptions
 from app.mail_capacity import batch_sender, mail_capacity
 from app.mail_events import router as mail_events_router
+from app.news import canonical_url
 from app import public_mail, reader_freshness
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
@@ -859,6 +861,41 @@ def admin_sources(authorization: str | None = Header(default=None)):
     return {"sources": source_catalog(source_store())}
 
 
+class CoverageReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(max_length=2048)
+
+    @field_validator("url")
+    @classmethod
+    def original_link(cls, value):
+        return canonical_url(value)
+
+
+@app.post("/api/admin/coverage-review")
+def coverage_review(body: CoverageReviewRequest, response: Response,
+                    authorization: str | None = Header(default=None)):
+    """Inspect a reported publisher URL using only the retained archive."""
+    require_owner(authorization, detail="Enter a valid owner access key to review coverage.")
+    response.headers["Cache-Control"] = "private, no-store"
+    store = source_store()
+    rows = store.lookup_url(body.url)
+    entries = event_intelligence.article_events(store, [row["id"] for row in rows])
+    briefing = cached_briefing(store, 24)["articles"] if rows else []
+    ranks = {row["id"]: index for index, row in enumerate(briefing, start=1)}
+    host = urlsplit(body.url).hostname
+    feeds = [{"id": source["id"], "enabled": source["enabled"], "last_success": source.get("last_success"),
+              "freshness": source.get("freshness")}
+             for source in source_catalog(store, include_archive=False)
+             if host and any(host == domain or host.endswith("." + domain) for domain in BY_ID[source["id"]].hosts)]
+    return {"status": "indexed" if rows else "missing_from_retained_archive",
+            "feeds_on_host": feeds,
+            "matches": [{"id": row["id"], "publisher": row["publisher"], "title": row["title"],
+                         "published_at": row["published_at"], "development_id": entries.get(row["id"]),
+                         "top_five_rank": ranks.get(row["id"])} for row in rows],
+            "notice": ("A missing match may be outside retention, use a different permalink, or be absent from the feeds. "
+                       "A match with no Top 5 rank may be outside 24 hours, ineligible, grouped with another story, or below the cutoff.")}
+
+
 @app.post("/api/admin/setup")
 def initialize_news(authorization: str | None = Header(default=None)):
     require_owner(authorization)
@@ -1031,7 +1068,7 @@ def mail_job_health(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
     capacity = mail_capacity()
     return {"mode": "batch" if batch_sender() and os.getenv("MAIL_PILOT_MODE") != "1" else "single",
-            "sending_enabled": public_mail.ready(), "delivery_events_configured": bool(os.getenv("RESEND_WEBHOOK_SECRET")),
+            "sending_enabled": public_mail.ready(), "delivery_events_configured": public_mail.has_delivery_tracking(),
             "outbound_daily_limit": capacity.outbound, "digest_daily_limit": capacity.digests,
             **source_store().mail_backlog(time.time())}
 
