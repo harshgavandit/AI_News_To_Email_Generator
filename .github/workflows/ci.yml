@@ -3,20 +3,27 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, Staging]
+
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   PYTHON_DOTENV_DISABLED: '1'
+
 jobs:
   verify:
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -25,40 +32,117 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.13.9'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked
+      - name: Lint, compile and check changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git diff --check "$BASE_SHA" HEAD
+          uv run --no-sync ruff check app tests scripts main.py
+          uv run --no-sync python -m compileall -q app main.py
+      - name: Check formatting, maintainability and types of release tooling
+        if: matrix.python-version == '3.12'
+        run: |
+          files=(scripts/check_release_schema.py scripts/check_release_browser.py scripts/check_production_release.py tests/test_release_gates.py)
+          uv run --no-sync ruff format --check "${files[@]}"
+          uv run --no-sync ruff check --select C90 --config 'lint.mccabe.max-complexity = 14' "${files[@]}"
+          uv run --no-sync mypy --strict --follow-imports=silent "${files[@]:0:3}"
+      - name: Test and enforce branch-inclusive coverage
+        if: matrix.python-version == '3.12'
+        run: |
+          uv run --no-sync coverage run --branch --source app -m pytest -q
+          uv run --no-sync coverage report --precision=2 --fail-under=79 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Test second supported Python version
+        if: matrix.python-version == '3.14'
+        run: uv run --no-sync pytest -q
+      - name: Replay reader intelligence quality cases
+        if: matrix.python-version == '3.12'
+        run: uv run --no-sync python -m scripts.check_reader_quality
+
+  frontend:
+    name: Frontend build and browser smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
-      - name: Install frontend test dependencies
-        run: npm ci
-      - name: Install locked dependencies
-        run: |
-          python -m pip install uv
-          uv sync --frozen
-      - name: Check Python and frontend syntax
-        run: |
-          uv run ruff check app tests scripts main.py
-          uv run python -m compileall -q app main.py
-          npm run lint
-          npm run build
-          npm test
-      - name: Test API, feed handling, and delivery controls
-        run: uv run python -m pytest -q
-      - name: Check locked dependencies for security advisories
-        if: matrix.python-version == '3.12'
-        run: |
-          npm audit --audit-level=high
-          python -m pip install pip-audit==2.10.1
-          uv export --frozen --no-dev --no-emit-project --no-hashes --output-file "$RUNNER_TEMP/informa-dependencies.txt"
-          pip-audit --no-deps --disable-pip -r "$RUNNER_TEMP/informa-dependencies.txt"
-      - name: Replay reader intelligence quality cases
-        run: uv run python -m scripts.check_reader_quality
-  mail-capacity:
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.13.9'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: uv sync --locked
+      - name: Install headless Chromium
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Test reader journeys against the production assets
+        run: uv run --no-sync python -m scripts.check_release_browser
+
+  security:
+    name: Supply chain and static security
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan proposed commits for secrets
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_VERSION: '8.30.1'
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.13.9'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Scan npm lockfile for high and critical advisories
+        run: npm audit --audit-level=high
+      - run: uv sync --locked
+      - name: Scan locked Python runtime dependencies
+        run: |
+          uv export --locked --no-dev --no-emit-project --no-hashes --output-file "$RUNNER_TEMP/informa-dependencies.txt"
+          uvx pip-audit==2.10.1 --no-deps --disable-pip -r "$RUNNER_TEMP/informa-dependencies.txt"
+      - name: Scan first-party Python for high-confidence, high-severity findings
+        run: uv run --no-sync bandit -q -r -lll -iii app scripts
+
+  database:
+    name: PostgreSQL migration and integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17
@@ -77,35 +161,59 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
-      - name: Run synthetic 10,000-recipient rehearsal
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: '0.13.9'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked
+      - name: Compare the proposed schema to the target branch
         env:
-          UV_PYTHON: '3.12'
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          python -m pip install uv
-          uv sync --frozen
-          uv run python -m scripts.check_mail_capacity --postgres
-      - name: Test the archive upgrade and intelligence on PostgreSQL
+          if git diff --quiet "$BASE_SHA" HEAD -- app scripts '*.sql' pyproject.toml uv.lock; then
+            echo "No application, SQL, migration script, or Python dependency changes."
+            exit 0
+          fi
+          mkdir "$RUNNER_TEMP/base"
+          git archive "$BASE_SHA" | tar -x -C "$RUNNER_TEMP/base"
+          (
+            cd "$RUNNER_TEMP/base"
+            PYTHONPATH="$PWD" "$GITHUB_WORKSPACE/.venv/bin/python" "$GITHUB_WORKSPACE/scripts/check_release_schema.py"
+          ) > "$RUNNER_TEMP/before.json"
+          uv run --no-sync python -m scripts.check_release_schema > "$RUNNER_TEMP/after.json"
+          git diff --unified=0 "$BASE_SHA" HEAD -- app scripts '*.sql' > "$RUNNER_TEMP/schema.diff"
+          uv run --no-sync python -m scripts.check_release_schema \
+            "$RUNNER_TEMP/before.json" "$RUNNER_TEMP/after.json" --sql-diff "$RUNNER_TEMP/schema.diff"
+      - name: Rehearse 10,000 synthetic recipients on PostgreSQL
+        run: uv run --no-sync python -m scripts.check_mail_capacity --postgres
+      - name: Test legacy schema upgrades and archive reads
         env:
-          UV_PYTHON: '3.12'
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
-        run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py tests/test_reader_intelligence.py
+        run: uv run --no-sync pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py tests/test_reader_intelligence.py
+
   release:
     name: Release CI
-    needs: [verify, mail-capacity]
+    needs: [verify, frontend, security, database]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}
     steps:
-      - name: Require successful results from all test jobs
+      - name: Require every quality gate to succeed
         env:
-          VALIDATION_RESULT: ${{ needs.verify.result }}
-          POSTGRES_RESULT: ${{ needs.mail-capacity.result }}
+          PYTHON: ${{ needs.verify.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          SECURITY: ${{ needs.security.result }}
+          DATABASE: ${{ needs.database.result }}
         run: |
-          if [[ "$VALIDATION_RESULT" != "success" || "$POSTGRES_RESULT" != "success" ]]; then
-            echo "::error::Release blocked. Validation: $VALIDATION_RESULT. PostgreSQL rehearsal: $POSTGRES_RESULT."
+          printf '| Gate | Result |\n| --- | --- |\n| Python | %s |\n| Frontend | %s |\n| Security | %s |\n| PostgreSQL | %s |\n' \
+            "$PYTHON" "$FRONTEND" "$SECURITY" "$DATABASE" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$PYTHON" != success || "$FRONTEND" != success || "$SECURITY" != success || "$DATABASE" != success ]]; then
+            echo "::error::Release blocked. Open the jobs above for the failing quality gate."
             exit 1
           fi

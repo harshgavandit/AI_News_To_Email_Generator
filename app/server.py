@@ -426,7 +426,11 @@ def api_docs():
 
 
 @app.get("/api/health")
-def health():
+def health(response: Response):
+    revision = os.getenv("VERCEL_GIT_COMMIT_SHA", "")
+    if re.fullmatch(r"[0-9a-f]{40}", revision):
+        response.headers["X-Informa-Revision"] = revision
+    response.headers["Cache-Control"] = "no-store"
     return {"status": "ok", "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
             "email_configured": public_mail.has_transport()}
 
