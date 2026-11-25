@@ -114,6 +114,29 @@ def test_runner_requires_the_database_secret(monkeypatch, capsys):
     assert "NEWS_DATABASE_URL" in capsys.readouterr().out
 
 
+def test_runner_explains_an_unusable_database_without_printing_the_url(monkeypatch, capsys):
+    from sqlalchemy.exc import OperationalError
+
+    url = "postgresql://user:secret@db.example/news"
+    monkeypatch.setenv("NEWS_DATABASE_URL", url)
+    monkeypatch.setattr(run_publisher_sweep, "wait_for_slot", lambda kind: None)
+
+    def quota(kind, budget):
+        raise OperationalError("connect", {}, Exception("ERROR:  Your account or project has exceeded the quota."))
+
+    monkeypatch.setattr(run_publisher_sweep, "sweep", quota)
+    assert run_publisher_sweep.main(["--run", "full"]) == 1
+    out = capsys.readouterr().out
+    assert "used up its plan quota" in out and "Vercel's NEWS_DATABASE_URL" in out and "secret@" not in out
+
+    def unreachable(kind, budget):
+        raise OperationalError("connect", {}, Exception("Network is unreachable"))
+
+    monkeypatch.setattr(run_publisher_sweep, "sweep", unreachable)
+    assert run_publisher_sweep.main(["--run", "priority"]) == 1
+    assert "Could not connect" in capsys.readouterr().out
+
+
 def test_workflow_runs_the_sweep_in_the_runner_not_on_vercel():
     workflow = (ROOT / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]

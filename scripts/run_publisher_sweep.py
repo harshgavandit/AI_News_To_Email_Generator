@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import HTTPException
+from sqlalchemy.exc import OperationalError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("publisher_sweep")
@@ -103,6 +104,17 @@ def start_morning_mail(origin, secret):
     return True
 
 
+def database_error(error):
+    """A one-line workflow annotation for a database the runner cannot use; the URL is never printed."""
+    text = str(error).lower()
+    if "exceeded the quota" in text or "upgrade your plan" in text:
+        return ("::error::The database in the NEWS_DATABASE_URL repository secret has used up its plan quota. "
+                "If production moved to another database, copy Vercel's NEWS_DATABASE_URL into this secret; "
+                "otherwise raise the plan limit. No sources were checked.")
+    return ("::error::Could not connect to the database in the NEWS_DATABASE_URL repository secret "
+            f"({type(error).__name__}). It must be the same database as Vercel production. No sources were checked.")
+
+
 def outcome(kind, summary):
     """Exit code for the workflow: 0 when the sweep finished or its window had closed."""
     status = summary["status"]
@@ -132,7 +144,11 @@ def main(argv=None):
         print("::error::Add the production NEWS_DATABASE_URL as a repository secret. See docs/LAUNCH.md.")
         return 1
     wait_for_slot(args.run)
-    summary = sweep(args.run, args.budget_minutes * 60)
+    try:
+        summary = sweep(args.run, args.budget_minutes * 60)
+    except OperationalError as error:
+        print(database_error(error))
+        return 1
     logger.info("Sweep finished: status=%s checked=%s healthy=%s remaining=%s batches=%s", summary["status"],
                 summary.get("checked"), summary.get("healthy"), summary.get("remaining"), summary.get("batches"))
     summary_file = os.getenv("GITHUB_STEP_SUMMARY")
