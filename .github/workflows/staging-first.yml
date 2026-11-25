@@ -1,0 +1,23 @@
+name: Staging-first release
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  staging-source:
+    name: PR comes from Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the repository and source branch
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" || "$HEAD_BRANCH" != "Staging" ]]; then
+            echo "::error::Open the production pull request from this repository's Staging branch."
+            exit 1
+          fi
