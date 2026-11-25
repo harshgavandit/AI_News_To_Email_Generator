@@ -239,7 +239,6 @@
    Cinematic page transitions between the Reading Room, Research Desk and
    other pages (cross-document View Transitions; ignored where unsupported).
    ========================================================================== */
-@view-transition { navigation: auto; }
 .site-header { view-transition-name: site-header; }
 @media (prefers-reduced-motion: no-preference) {
   ::view-transition-old(root) { animation: 280ms cubic-bezier(.4, 0, 1, 1) both deck-page-out; }
