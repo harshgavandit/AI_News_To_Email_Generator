@@ -1,0 +1,52 @@
+name: Recover stories from the old database
+# Manual, one-off: copies stories published in a time window that only the previous production
+# database holds into the current one (scripts/recover_archive.py). Existing stories are never
+# changed. Needs the OLD_NEWS_DATABASE_URL repository secret; it never fetches feeds or sends mail.
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: Start of the window (UTC, ISO time)
+        type: string
+        default: '2026-11-23T12:00:00Z'
+      until:
+        description: End of the window (UTC, ISO time; empty means now)
+        type: string
+        default: '2026-11-25T08:00:00Z'
+      apply:
+        description: Copy the stories (off = only count them)
+        type: boolean
+        default: false
+permissions: {}
+concurrency:
+  group: recover-archive
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv
+          uv sync --frozen --no-dev
+      - name: Recover stories
+        env:
+          OLD_NEWS_DATABASE_URL: ${{ secrets.OLD_NEWS_DATABASE_URL }}
+          NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
+          SINCE: ${{ inputs.since }}
+          UNTIL: ${{ inputs.until }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          args=(--since "$SINCE")
+          [[ -n "$UNTIL" ]] && args+=(--until "$UNTIL")
+          [[ "$APPLY" == true ]] && args+=(--apply)
+          uv run --no-dev python -m scripts.recover_archive "${args[@]}"
