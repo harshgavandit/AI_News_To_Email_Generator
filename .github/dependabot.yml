@@ -1,0 +1,53 @@
+# Weekly, grouped dependency updates. Pull requests target Staging because main only
+# accepts promotions from Staging (see docs/RELEASE-FLOW.md); Release CI runs on each one.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    target-branch: Staging
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:30"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    target-branch: Staging
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:30"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: Staging
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:30"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns: ["*"]

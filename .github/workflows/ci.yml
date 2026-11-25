@@ -20,8 +20,43 @@ env:
   PYTHON_DOTENV_DISABLED: '1'
 
 jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Skip build and test gates for Markdown-only changes
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Everything except Markdown counts as code: docs/research JSON feeds the tests.
+          if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Base commit unavailable; running every gate." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            case "$path" in
+              *.md) ;;
+              *) code=true ;;
+            esac
+          done < <(git diff --name-only "$BASE_SHA" HEAD)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Code changed: $code" >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     name: Python ${{ matrix.python-version }}
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -52,10 +87,24 @@ jobs:
       - name: Check formatting, maintainability and types of release tooling
         if: matrix.python-version == '3.12'
         run: |
-          files=(scripts/check_release_schema.py scripts/check_release_browser.py scripts/check_production_release.py tests/test_release_gates.py)
+          files=(scripts/check_release_schema.py scripts/check_release_browser.py scripts/check_production_release.py tests/test_release_gates.py scripts/check_type_baseline.py tests/test_type_baseline.py)
           uv run --no-sync ruff format --check "${files[@]}"
           uv run --no-sync ruff check --select C90 --config 'lint.mccabe.max-complexity = 14' "${files[@]}"
-          uv run --no-sync mypy --strict --follow-imports=silent "${files[@]:0:3}"
+          uv run --no-sync mypy --strict --follow-imports=silent "${files[@]:0:3}" scripts/check_type_baseline.py
+      - name: Block new type errors in the application (ratchet)
+        if: matrix.python-version == '3.12'
+        run: uv run --no-sync python -m scripts.check_type_baseline
+      - name: Require Ruff formatting for new Python files
+        if: matrix.python-version == '3.12'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          mapfile -t added < <(git diff --diff-filter=A --name-only "$BASE_SHA" HEAD -- '*.py' 2>/dev/null || true)
+          if (( ${#added[@]} )); then
+            uv run --no-sync ruff format --check "${added[@]}"
+          else
+            echo "No new Python files."
+          fi
       - name: Test and enforce branch-inclusive coverage
         if: matrix.python-version == '3.12'
         run: |
@@ -70,6 +119,8 @@ jobs:
 
   frontend:
     name: Frontend build and browser smoke
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -141,6 +192,8 @@ jobs:
 
   database:
     name: PostgreSQL migration and integration
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
@@ -198,7 +251,7 @@ jobs:
 
   release:
     name: Release CI
-    needs: [verify, frontend, security, database]
+    needs: [changes, verify, frontend, security, database]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -206,14 +259,24 @@ jobs:
     steps:
       - name: Require every quality gate to succeed
         env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
           PYTHON: ${{ needs.verify.result }}
           FRONTEND: ${{ needs.frontend.result }}
           SECURITY: ${{ needs.security.result }}
           DATABASE: ${{ needs.database.result }}
         run: |
-          printf '| Gate | Result |\n| --- | --- |\n| Python | %s |\n| Frontend | %s |\n| Security | %s |\n| PostgreSQL | %s |\n' \
-            "$PYTHON" "$FRONTEND" "$SECURITY" "$DATABASE" >> "$GITHUB_STEP_SUMMARY"
-          if [[ "$PYTHON" != success || "$FRONTEND" != success || "$SECURITY" != success || "$DATABASE" != success ]]; then
+          printf '| Gate | Result |\n| --- | --- |\n| Changed areas | %s (code: %s) |\n| Python | %s |\n| Frontend | %s |\n| Security | %s |\n| PostgreSQL | %s |\n' \
+            "$CHANGES" "$CODE" "$PYTHON" "$FRONTEND" "$SECURITY" "$DATABASE" >> "$GITHUB_STEP_SUMMARY"
+          # Build and test gates may be skipped only when the change is Markdown alone.
+          allowed=success
+          [[ "$CHANGES" == success && "$CODE" == false ]] && allowed=skipped
+          blocked=false
+          [[ "$CHANGES" != success || "$SECURITY" != success ]] && blocked=true
+          for result in "$PYTHON" "$FRONTEND" "$DATABASE"; do
+            [[ "$result" == success || "$result" == "$allowed" ]] || blocked=true
+          done
+          if [[ "$blocked" == true ]]; then
             echo "::error::Release blocked. Open the jobs above for the failing quality gate."
             exit 1
           fi

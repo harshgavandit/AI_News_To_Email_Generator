@@ -12,6 +12,9 @@ jobs:
   verify:
     if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     timeout-minutes: 12
     steps:
       - name: Identify the release awaiting verification
@@ -39,3 +42,30 @@ jobs:
           set -o pipefail
           echo "Release $REVISION · https://getinformdaily.com/" >> "$GITHUB_STEP_SUMMARY"
           python -m scripts.check_production_release "$REVISION" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Open or update the release incident
+        if: failure() && steps.revision.outputs.current == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/report-incident.sh "Production smoke failed" "$REVISION" "$RUN_URL"
+
+  main-ci-failed:
+    name: Report a failed main build
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Open or update the release incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: bash .github/scripts/report-incident.sh "Release CI failed on main" "$REVISION" "$RUN_URL"
