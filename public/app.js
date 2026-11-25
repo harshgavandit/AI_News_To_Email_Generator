@@ -7,14 +7,14 @@ import { readingContent } from "./reading-content.js";
 import { readFeedback, toggleFeedback } from "./reader-feedback.js";
 import { createDeliveryStatus } from "./delivery-status.js";
 import { createStoryQuestion } from "./story-question.js";
-import { countUse } from "./usage.js";
+import { countUse, noteReaderMilestone } from "./usage.js";
 import { followedStories, followedTechnologies, saveStoryFollow } from "./technology-follow.js";
 import { catchupCheckpoint, entryView, homeCatchupRequest, markCatchupCheckpoint } from "./catchup-home.js";
 import { appendClaimEvidence, sourceEvidence } from "./claim-evidence.js";
 import { searchLink } from "./search-context.js";
 import { impactPanel } from "./personal-impact.js";
 import { developmentLink } from "./development-link.js";
-import { coverageWarning, freshnessNotice } from "./reader-freshness.js";
+import { coverageWarning, editionFreshnessText, freshnessNotice, nextSweepText } from "./reader-freshness.js";
 import { markDevelopmentsSeen } from "./development-seen.js";
 import { createCoverageDialog } from "./coverage-dialog.js";
 import { coverageSummaryNode, firstReportedText } from "./coverage-summary.js";
@@ -156,7 +156,9 @@ const layoutKey = "informa-story-layout";
 window.addEventListener("storage", (event) => {
   if (event.key === "informa-reader-reset") location.reload();
 });
-const preferences = createPreferences($("personalization"), () => {
+const preferences = createPreferences($("personalization"), (addedFollow) => {
+  if (addedFollow) readerMilestone("first_follow");
+  reflectEditionInterests();
   if (state.view === "for-you") loadNews();
   syncFollowActions();
 });
@@ -273,6 +275,10 @@ const jsonPost = (url, data) =>
 const deliveryStatus = createDeliveryStatus(request, readableTime);
 const openCoverage = createCoverageDialog($("coverage-dialog"), { externalLink, readableTime });
 const readingVisit = openVisit({ storage: (() => { try { return window.localStorage; } catch { return undefined; } })() });
+function readerMilestone(action) {
+  try { noteReaderMilestone(action, { storage: window.localStorage, sessionStartedAt: readingVisit.startedAt }); } catch {}
+}
+readerMilestone("first_visit");
 let lastVisitTouch = Date.now();
 function touchReadingVisit() {
   if (document.hidden || Date.now() - lastVisitTouch < 60_000) return;
@@ -604,7 +610,7 @@ function restoreURL() {
   if ($("sort").selectedIndex === -1) $("sort").value = defaultSort(state.searching);
   if ($("region").selectedIndex === -1) $("region").value = "";
   $("clear-search").hidden = !$("search").value;
-  state.view = entryView(params, lastCatchup);
+  state.view = entryView(params, lastCatchup || readingVisit.previousVisit);
   updateViewControls();
   reflectWorkspace();
 }
@@ -692,6 +698,41 @@ function openHomeEdition(view) {
   $(`view-${view}`).click();
   $("reading-title").focus();
 }
+function reflectEditionInterests() {
+  const topics = preferences.followedTopics();
+  $("edition-followed").hidden = topics.length === 0;
+  for (const button of $("edition-interest-options").children)
+    button.setAttribute("aria-pressed", String(topics.includes(button.dataset.topic)));
+}
+
+const editionStart = $("edition-start");
+if (lastCatchup || readingVisit.previousVisit) {
+  editionStart.textContent = "What changed since your last visit?";
+  editionStart.href = "/?view=catchup#reading-room";
+  editionStart.dataset.editionView = "catchup";
+}
+for (const link of document.querySelectorAll("[data-edition-view]")) {
+  link.addEventListener("click", (event) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    openHomeEdition(link.dataset.editionView);
+  });
+}
+if (!lastCatchup && !readingVisit.previousVisit) {
+  $("edition-interests").hidden = false;
+  for (const topic of ["ai", "software", "security", "startups", "chips", "research"]) {
+    const label = state.topics[topic];
+    const button = node("button", "button secondary edition-topic", label);
+    button.type = "button";
+    button.dataset.topic = topic;
+    button.addEventListener("click", () => {
+      preferences.toggleTopic(topic, label);
+      $("edition-interest-status").textContent = $("personalization").querySelector("[role=status]").textContent;
+    });
+    $("edition-interest-options").append(button);
+  }
+}
+reflectEditionInterests();
 $("home-catchup-browse").addEventListener("click", () => openHomeEdition("feed"));
 $("daily-delivery-slot").append($("daily-delivery"));
 $("briefing-email").addEventListener("click", () => {
@@ -1219,7 +1260,14 @@ $("digest-sources").addEventListener("change", (event) => {
   event.target.value = "all";
   renderDigestSources();
 });
+function renderEditionFreshness(freshness) {
+  const text = editionFreshnessText(freshness);
+  $("edition-freshness").textContent = text;
+  $("edition-freshness").hidden = !text;
+}
+
 function renderHealth(freshness, catalog = state.sources) {
+  renderEditionFreshness(freshness);
   state.healthSources = catalog.filter((source) => source.enabled &&
     (state.view === "briefing" || (state.source === "all" || state.source === source.source || state.source === source.id) &&
     (!state.publisher || state.publisher === source.id) &&
@@ -1235,6 +1283,8 @@ function renderHealth(freshness, catalog = state.sources) {
   $("updated").textContent = freshness?.checked_at
     ? `Selected feeds checked ${readableTime(freshness.checked_at)}`
     : state.healthSources.length ? "Individual source check times below." : "No enabled feeds in this selection.";
+  $("next-source-sweep").textContent = nextSweepText(freshness);
+  $("next-source-sweep").hidden = !$("next-source-sweep").textContent;
   if (!$("source-popover").hidden) renderHealthList();
   $("failed-alert").hidden = freshness?.status !== "stale";
   $("failed-message").textContent = "Feed updates are delayed. Showing the latest stories in the archive.";
@@ -1494,11 +1544,13 @@ async function loadHomeCatchup() {
   const mark = $("home-catchup-mark");
   const browse = $("home-catchup-browse");
   visibleCatchup = [];
+  $("catchup-useful").hidden = true;
   results.replaceChildren();
   $("home-catchup-freshness").replaceChildren();
   mark.hidden = true;
   browse.hidden = true;
-  if (!lastCatchup) {
+  const since = lastCatchup || Date.parse(readingVisit.previousVisit);
+  if (!since) {
     status("home-catchup-status", "Read today’s briefing to start tracking new developments in this browser.");
     browse.hidden = false;
     return;
@@ -1507,7 +1559,7 @@ async function loadHomeCatchup() {
   try {
     const data = await request("/api/intelligence/catchup", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(homeCatchupRequest(window.localStorage, lastCatchup, readFeedback(), followedTechnologies())),
+      body: JSON.stringify(homeCatchupRequest(window.localStorage, since, readFeedback(), followedTechnologies(), preferences.followedTopics().filter(id => Object.hasOwn(topicOptions(), id)))),
       signal: controller.signal,
     });
     if (state.controller !== controller || state.view !== "catchup") return;
@@ -1520,8 +1572,10 @@ async function loadHomeCatchup() {
       results.append(card);
     }
     mark.hidden = !results.childElementCount;
+    $("catchup-useful").hidden = !results.childElementCount;
     browse.hidden = results.childElementCount > 0;
     const notice = freshnessNotice(data.coverage_freshness, document, { compact: true });
+    renderEditionFreshness(data.coverage_freshness);
     if (notice) $("home-catchup-freshness").append(notice);
     status("home-catchup-status", results.childElementCount
       ? `${visibleCatchup.length} new or updated ${visibleCatchup.length === 1 ? "development" : "developments"} in your catch-up.`
@@ -2178,6 +2232,7 @@ async function composeBrief(body, isWorld) {
       ? await jsonPost("/api/digest", body)
       : await streamDigest(body);
     renderDigest();
+    if (state.digest.digest.articles.length) readerMilestone("first_brief");
     if (!isWorld) {
       for (const item of $("generation-stages").children) {
         item.classList.remove("active");
@@ -2419,7 +2474,11 @@ async function performDelivery() {
           subscribe: pending.subscribe,
           timezone,
         },
-  );
+  ).catch((error) => {
+    if (pending.kind !== "webhook" && [409, 502].includes(error.status))
+      deliveryStatus.track(pending.preview.preview_id);
+    throw error;
+  });
   const message =
     result.message ||
     (pending.kind === "webhook"
@@ -2974,6 +3033,7 @@ function openDossier(article, trigger, details) {
   renderDossier(details);
   $("dossier-drawer").showModal();
   countUse("story_dossier", "open");
+  readerMilestone("first_story");
   $("dossier-title").focus({ preventScroll: true });
 }
 

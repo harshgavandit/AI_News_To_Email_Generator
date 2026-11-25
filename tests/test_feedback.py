@@ -1,5 +1,6 @@
 """Reader feedback: validation, spam trap, owner-only reading, retention and count-only summaries."""
 import time
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 import pytest
@@ -36,6 +37,31 @@ def test_feedback_is_stored_and_only_the_owner_can_read_it(client):
     assert bug["page"] == "/recap.html" and bug["message"] == "The recap page shows nothing on Safari."
     assert bug["contact"] == "reader@example.com"
     assert [row["kind"] for row in owner(http, kind="useful").json()["feedback"]] == ["useful"]
+
+
+def test_missing_coverage_and_update_feedback_have_separate_owner_counts(client):
+    http, store = client
+    assert http.post("/api/feedback", json={"kind": "coverage"}).status_code == 422
+    assert http.post("/api/feedback", json={"kind": "coverage", "message": "Missing https://www.bbc.com/news/tech-example"}).status_code == 204
+    assert http.post("/api/feedback", json={"kind": "update_yes"}).status_code == 204
+    assert {row["kind"] for row in feedback.summary(store, "2000-01-01")} == {"coverage", "update_yes"}
+
+
+def test_coverage_review_reads_archive_without_visiting_the_reported_url(client):
+    http, store = client
+    auth = {"Authorization": "Bearer owner-key-for-tests-1234567890"}
+    path = "/api/admin/coverage-review"
+    url = "https://www.bbc.com/news/tech-example"
+    assert http.post(path, json={"url": url}).status_code == 401
+    missing = http.post(path, headers=auth, json={"url": url}).json()
+    assert missing["status"] == "missing_from_retained_archive"
+    store.ingest("bbc-tech", [{"id": "coverage-fixture", "source_id": "bbc-tech", "source": "bbc",
+        "publisher": "BBC Technology", "title": "Report covers a major new software release", "description": "Technology release.",
+        "kind": "blog", "category": "Technology", "url": url, "published_at": datetime.now(UTC).isoformat()}], True)
+    indexed = http.post(path, headers=auth, json={"url": url + "?utm_source=test"})
+    assert indexed.status_code == 200 and indexed.headers["cache-control"] == "private, no-store"
+    assert indexed.json()["matches"][0]["id"] == "coverage-fixture"
+    assert http.post(path, headers=auth, json={"url": "file:///local"}).status_code == 422
 
 
 def test_feedback_validation_spam_trap_and_cross_site(client):

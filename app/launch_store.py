@@ -1111,6 +1111,12 @@ class Store:
                     latest = max(events, key=lambda event: (priority.get(event.kind, -1), event.occurred_at))
                     state = latest.kind.removeprefix("email.")
                     updated = latest.occurred_at
+            else:
+                rejected_at = conn.scalar(select(mail_outcomes.c.occurred_at).where(
+                    mail_outcomes.c.provider_id == "local:" + ident,
+                    mail_outcomes.c.kind == "dispatch.rejected").limit(1))
+                if rejected_at is not None:
+                    state, updated = "failed", rejected_at
             return {"status": state, "updated_at": datetime.fromtimestamp(updated, UTC).isoformat()}
 
     def mail_used(self, mailbox, bucket):

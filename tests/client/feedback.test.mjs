@@ -58,3 +58,18 @@ test('pages without a footer get the button in the header tools; "Was this usefu
     assert.match(doc.querySelector('.useful-status').textContent, /What was missing\?/);
   } finally { cleanup(); }
 });
+
+test('missing coverage opens the reporting category and catch-up votes are distinct', async () => {
+  const { dom, module, calls, fetcher, cleanup } = await setup(
+    '<button data-feedback-open data-feedback-kind="coverage">Missing coverage?</button><div data-useful="update"></div>');
+  try {
+    module.mountFeedback({ fetcher });
+    const doc = dom.window.document;
+    doc.querySelector('[data-feedback-kind=coverage]').click();
+    assert.equal(doc.querySelector('input[name=kind]:checked').value, 'coverage');
+    assert.match(doc.querySelector('textarea').placeholder, /original link/);
+    doc.querySelector('[data-useful] button').click();
+    await settle();
+    assert.equal(calls[0].body.kind, 'update_yes');
+  } finally { cleanup(); }
+});

@@ -110,11 +110,19 @@ def feature_usage_section(days, store_factory=None):
         return ""
     opened = counts.get(("story_dossier", "open"), 0)
     asked = counts.get(("story_ask", "question"), 0)
+    milestones = "\n".join([
+        "## Reader milestones", "",
+        f"Anonymous counts from browser opt-ins in the last {days} days. These are event totals, not a linked cohort.", "",
+        *[f"- {label}: {counts.get(('reader_milestone', action), 0)}" for action, label in [
+            ("first_visit", "First visit"), ("first_story", "First story opened"), ("first_follow", "First follow"),
+            ("first_brief", "First brief prepared"), ("return_7d", "First return within seven days")]],
+        "",
+    ])
     if not opened and not asked:
-        return f"## Ask about this story\n\nNo counts in the last {days} days (readers opt in through audience analytics).\n"
+        return milestones + f"\n## Ask about this story\n\nNo counts in the last {days} days (readers opt in through audience analytics).\n"
     answered = counts.get(("story_ask", "answered"), 0)
     share = lambda part, whole: f"{part / whole:.0%}" if whole else "n/a"  # noqa: E731
-    return "\n".join([
+    return milestones + "\n" + "\n".join([
         "## Ask about this story", "",
         f"Anonymous counts from readers who turned on audience analytics, last {days} days.", "",
         f"- Story details opened: {opened}",

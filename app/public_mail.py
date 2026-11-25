@@ -30,6 +30,10 @@ CODE_TTL = 600
 SESSION_TTL = 7 * 86400
 
 
+def has_delivery_tracking():
+    return bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET"))
+
+
 def has_transport():
     sender = os.getenv("MAIL_FROM") or os.getenv("MY_EMAIL")
     transactional = sender and (os.getenv("RESEND_API_KEY") or os.getenv("POSTMARK_SERVER_TOKEN"))
@@ -361,7 +365,7 @@ def config(request: Request, response: Response):
         "limit": 3,
         "timezone": "UTC",
         "remaining_today": remaining,
-        "delivery_tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET")),
+        "delivery_tracking": enabled and has_delivery_tracking(),
     }
     if email and store:
         mailbox = digest_key("mailbox:" + email)
@@ -415,7 +419,7 @@ def delivery_receipt(request: Request, response: Response,
         raise HTTPException(404, "No delivery attempt for this brief and verified inbox.")
     return {**receipt, "remaining_today": max(0, 3 - store.mail_used(mailbox, day())),
             "limit": 3, "timezone": "UTC",
-            "tracking": bool(os.getenv("RESEND_API_KEY") and os.getenv("RESEND_WEBHOOK_SECRET"))}
+            "tracking": has_delivery_tracking()}
 
 
 # Failures that happen before the mail server accepts the message: nothing reached the reader,
@@ -554,6 +558,11 @@ def send(body: SendBody, request: Request):
             message_options["unsubscribe_url"] = build_unsubscribe_url(mailbox)
             payload = with_unsubscribe(payload, message_options["unsubscribe_url"])
         provider_id = send_message(recipient, BRIEF_SUBJECT, payload["markdown"], payload["html"], identity, **message_options)
+    except NEVER_SENT:
+        # Record only the outcome and receipt key. The original exception can include private data.
+        store.record_mail_event(digest_key(f"rejected:{identity}"), "dispatch.rejected", [],
+                                provider_id="local:" + identity)
+        raise HTTPException(502, "The mail transport rejected this send. Your brief is available to download.") from None
     except (OSError, smtplib.SMTPException):
         # Transport acceptance can be ambiguous after a timeout. Keep the reservation.
         raise HTTPException(502, "Delivery could not be confirmed. Check your inbox before trying another brief.") from None

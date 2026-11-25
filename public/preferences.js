@@ -67,14 +67,14 @@ export function createPreferences(container, onChange) {
     render(selected);
   }
 
-  function persist(message) {
+  function persist(message, addedFollow = false) {
     for (const key of preferences.authors) authorLabels[key] = catalog.authors[key] || authorLabels[key] || "Followed author";
     const labels = Object.fromEntries(preferences.authors.map((key) => [key, authorLabels[key]]));
     try {
       localStorage.setItem(KEY, JSON.stringify({ ...preferences, authorLabels: labels, useSaved }));
       feedback.textContent = message + " Saved in this browser.";
     } catch { feedback.textContent = message + " Applied for this session; browser storage is unavailable."; }
-    onChange();
+    onChange(addedFollow);
   }
 
   function toggle(key, value, label) {
@@ -86,7 +86,7 @@ export function createPreferences(container, onChange) {
     catalog[key][value] = label;
     render();
     const message = following ? "Removed from your followed list." : "Added to your followed list.";
-    persist(message);
+    persist(message, !following);
     return message;
   }
 
@@ -97,9 +97,10 @@ export function createPreferences(container, onChange) {
       feedback.textContent = `Choose up to ${limits[key]} ${key}.`;
       return;
     }
+    const addedFollow = Object.keys(limits).some(key => selected[key].some(id => !preferences[key].includes(id)));
     preferences = selected;
     useSaved = savedOption?.checked === true;
-    persist("Preferences updated.");
+    persist("Preferences updated.", addedFollow);
   });
   for (const input of container.querySelectorAll("[data-search-preferences]")) input.addEventListener("input", filterOptions);
   container.querySelector("[data-clear-preferences]").addEventListener("click", () => {
@@ -113,6 +114,8 @@ export function createPreferences(container, onChange) {
     key === "authors" ? [...preferences[key]] : preferences[key].filter((id) => Object.hasOwn(catalog[key], id))])); },
     usesSavedStories() { return useSaved; },
     follows(key, value) { return preferences[key]?.includes(value) || false; },
+    followedTopics() { return [...preferences.topics]; },
+    toggleTopic(value, label) { return toggle("topics", value, label); },
     toggleAuthor(article) { return toggle("authors", article.author_key, `${article.author} · ${article.publisher}`); },
     togglePublication(article) { return toggle("sources", article.source_id || article.source, article.publisher); },
   };

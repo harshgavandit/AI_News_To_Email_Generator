@@ -46,7 +46,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          git diff --check "$BASE_SHA" HEAD
+          git -c core.whitespace=cr-at-eol diff --check "$BASE_SHA" HEAD
           uv run --no-sync ruff check app tests scripts main.py
           uv run --no-sync python -m compileall -q app main.py
       - name: Check formatting, maintainability and types of release tooling

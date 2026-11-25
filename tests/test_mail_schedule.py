@@ -95,6 +95,24 @@ def test_unconfirmed_delivery_keeps_quota_and_cannot_be_sent_again(mail, monkeyp
     transport.assert_called_once()
 
 
+def test_definite_transport_rejection_is_visible_in_private_receipt(mail, monkeypatch):
+    from smtplib import SMTPAuthenticationError
+    from unittest.mock import Mock
+
+    store, client, _ = mail
+    transport = Mock(side_effect=SMTPAuthenticationError(535, b"private transport diagnostic"))
+    monkeypatch.setattr(public_mail, "send_message", transport)
+    preview = f'preview-{0:028}'
+    result = client.post('/api/mail/send', json={'preview_id': preview})
+    assert result.status_code == 502 and "rejected" in result.json()["detail"]
+    assert "private transport diagnostic" not in result.text
+    receipt = client.get(f'/api/mail/delivery/{preview}').json()
+    assert receipt['status'] == 'failed' and receipt['remaining_today'] == 2
+    assert store.mail_backlog(time.time())["provider_events_24h"]["dispatch.rejected"] == 1
+    assert client.post('/api/mail/send', json={'preview_id': preview}).status_code == 409
+    transport.assert_called_once()
+
+
 def test_signed_outcomes_handle_early_webhooks_replays_and_out_of_order_events(mail, monkeypatch):
     import base64
     import hashlib

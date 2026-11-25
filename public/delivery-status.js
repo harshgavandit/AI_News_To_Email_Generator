@@ -1,5 +1,5 @@
 const messages = {
-  accepted: ["Accepted for delivery", "Your email provider accepted the brief. Check your inbox and spam folder."],
+  accepted: ["Accepted for delivery", "The sending service accepted your brief. Check your inbox and spam folder."],
   sent: ["Sending to your mail server", "The provider is attempting delivery. Confirmation may follow."],
   delivered: ["Delivery confirmed", "Your receiving mail server accepted the brief. Check spam or promotions if it is missing."],
   delivery_delayed: ["Delivery is delayed", "The provider is retrying delivery. You can download a copy while you wait."],
@@ -30,10 +30,13 @@ export function createDeliveryStatus(request, readableTime) {
       const receipt = await request(`/api/mail/delivery/${encodeURIComponent(previewId)}`, { signal: active.signal });
       if (controller !== active) return;
       const [label, explanation] = messages[receipt.status] || messages.unconfirmed;
+      const visibility = receipt.status === "accepted" && receipt.tracking === false
+        ? " This mail connection only reports acceptance; inbox delivery remains unverified."
+        : "";
       for (const panel of panels) {
         panel.hidden = false;
         panel.querySelector(".receipt-state").textContent = label;
-        panel.querySelector(".receipt-detail").textContent = `${explanation} ${receipt.remaining_today} of 3 briefs left today (UTC). Updated ${readableTime(receipt.updated_at)}.`;
+        panel.querySelector(".receipt-detail").textContent = `${explanation}${visibility} ${receipt.remaining_today} of ${receipt.limit ?? 3} briefs left today (${receipt.timezone || "UTC"}). Updated ${readableTime(receipt.updated_at)}.`;
       }
       return receipt;
     } catch (error) {

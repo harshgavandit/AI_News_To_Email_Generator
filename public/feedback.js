@@ -1,6 +1,7 @@
 // "Send feedback" on every page, and "Was this useful?" where a page asks for it ([data-useful]).
 // Sends only what the reader types, the page path and an optional reply address.
-const KINDS = [["idea", "An idea"], ["bug", "Something's broken"], ["praise", "Something I like"], ["other", "Other"]];
+const KINDS = [["idea", "An idea"], ["bug", "Something's broken"], ["coverage", "Missing story or source"],
+  ["praise", "Something I like"], ["other", "Other"]];
 
 function el(tag, attributes = {}, text) {
   const node = document.createElement(tag);
@@ -85,14 +86,17 @@ export function mountFeedback(options = {}) {
   let parts;
   const open = (kind = "idea") => {
     parts ||= buildDialog(options);
-    const radio = parts.form.querySelector(`input[name=kind][value="${kind}"]`);
+    const radio = [...parts.form.querySelectorAll("input[name=kind]")].find(input => input.value === kind);
     if (radio) radio.checked = true;
+    parts.message.placeholder = kind === "coverage"
+      ? "Name the story or publisher. Include the original link if you have it."
+      : "What happened, or what would make this more useful?";
     parts.status.textContent = "";
     if (typeof parts.dialog.showModal === "function") parts.dialog.showModal(); else parts.dialog.setAttribute("open", "");
     parts.message.focus();
   };
   const triggers = [...document.querySelectorAll("[data-feedback-open]")];
-  if (!triggers.length) {
+  if (!triggers.some(trigger => !trigger.dataset.feedbackKind)) {
     const home = document.querySelector(".site-footer .footer-nav") || document.querySelector(".site-tools");
     if (home) {
       const button = el("button", { type: "button", class: "text-button feedback-trigger", "data-feedback-open": true }, "Send feedback");
@@ -108,7 +112,8 @@ export function mountFeedback(options = {}) {
 export function mountUseful(box, open, options = {}) {
   if (box.dataset.usefulMounted) return;
   box.dataset.usefulMounted = "1";
-  const question = el("span", { class: "useful-question" }, "Was this page useful?");
+  const update = box.dataset.useful === "update";
+  const question = el("span", { class: "useful-question" }, update ? "Were these updates useful?" : "Was this page useful?");
   const yes = el("button", { type: "button", class: "button secondary" }, "Yes");
   const no = el("button", { type: "button", class: "button secondary" }, "No");
   const status = el("span", { class: "useful-status", role: "status", "aria-live": "polite" });
@@ -116,10 +121,12 @@ export function mountUseful(box, open, options = {}) {
   const answer = async (kind) => {
     yes.disabled = no.disabled = true;
     try {
-      await sendFeedback({ kind, message: "" }, options);
-      status.replaceChildren(kind === "useful" ? "Thanks! " : "Thanks for saying so. ");
-      const more = el("button", { type: "button", class: "text-button" }, kind === "useful" ? "Anything to add?" : "What was missing?");
-      more.addEventListener("click", () => open("idea"));
+      const useful = kind === "useful";
+      const category = update ? (useful ? "update_yes" : "update_no") : kind;
+      await sendFeedback({ kind: category, message: "" }, options);
+      status.replaceChildren(useful ? "Thanks! " : "Thanks for saying so. ");
+      const more = el("button", { type: "button", class: "text-button" }, useful ? "Anything to add?" : "What was missing?");
+      more.addEventListener("click", () => open(update && !useful ? "coverage" : "idea"));
       status.append(more);
     } catch (error) {
       status.textContent = error.message;

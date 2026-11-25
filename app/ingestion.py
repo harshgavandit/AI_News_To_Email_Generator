@@ -383,7 +383,8 @@ def feed_freshness(catalog, **filters):
         status = "pending"
     return {"status": status, "counts": counts,
             "checked_at": max((s.get("checked_at") or "" for s in active), default="") or None,
-            "last_success": max((s.get("last_success") or "" for s in active), default="") or None}
+            "last_success": max((s.get("last_success") or "" for s in active), default="") or None,
+            "next_full_sweep_at": (latest_sweep(now) + SWEEP_INTERVAL).isoformat() if active else None}
 
 
 def ingestion_health(store, catalog=None):

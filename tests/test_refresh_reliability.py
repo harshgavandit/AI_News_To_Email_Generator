@@ -142,6 +142,7 @@ def test_publisher_freshness_is_separate_from_overall_archive_health(archive, da
     guardian = client.get("/api/news", params={"publisher": "guardian-tech"}).json()["freshness"]
     assert guardian["status"] == "fresh"
     assert guardian["counts"] == {"enabled": 1, "fresh": 1, "stale": 0, "failed": 0, "pending": 0}
+    assert guardian["next_full_sweep_at"] == "2026-11-17T14:30:00+00:00"
     response = client.get("/api/ready")
     assert response.status_code == 200
     assert response.json()["freshness"]["status"] == "degraded"

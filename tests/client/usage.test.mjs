@@ -1,6 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { countUse, flushUsage } from '../../public/usage.js';
+import { countUse, flushUsage, noteReaderMilestone } from '../../public/usage.js';
+
+test('reader milestones require opt-in and count distinct sessions within seven days', () => {
+  const values = new Map();
+  const storage = { getItem: key => values.get(key), setItem: (key, value) => values.set(key, value) };
+  const calls = [];
+  const note = (action, sessionStartedAt, now, nav = {}) => noteReaderMilestone(action, {
+    storage, nav, sessionStartedAt, now, track: (...args) => calls.push(args),
+  });
+  note('first_visit', 100, 100);
+  assert.equal(values.size, 0);
+  values.set('informa-analytics-consent', 'granted');
+  note('first_visit', 100, 100, { globalPrivacyControl: true });
+  assert.equal(calls.length, 0);
+  note('first_visit', 100, 100);
+  note('first_follow', 100, 102);
+  note('first_follow', 100, 103);
+  note('first_story', 200, 201);
+  assert.deepEqual(calls.map(([, action]) => action), ['first_visit', 'first_follow', 'first_story', 'return_7d']);
+});
 
 test('usage counts are sent only with consent, batched, and carry only feature and action', () => {
   assert.equal(countUse('story_ask', 'open', { allowed: () => false }), false);

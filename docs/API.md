@@ -84,6 +84,12 @@ Each card has `title`, `company`, `publisher`, `publisher_detail`, `author`, `pu
 - `GET /api/curiosity/popular?days=30` returns the most-opened cards by rank (no counts), once at least 20 opens are recorded and only for cards opened at least three times.
 - The monthly upkeep workflow (`scripts/curiosity_upkeep.py`, see `docs/CURIOSITY-UPKEEP.md`) reports broken seed links, unreviewed incident write-ups and what readers opened.
 
+## Coverage review and reader feedback
+
+- `POST /api/feedback` accepts `kind: "coverage"` with a short description and an optional original link in the message. Catch-up votes use `update_yes` and `update_no`. The existing consent setting applies to optional analytics and is separate from a reader choosing to send feedback.
+- Owners can review reports through `GET /api/admin/feedback?kind=coverage`. To inspect a reported link, send `{"url":"https://publisher.example/article"}` to `POST /api/admin/coverage-review` with the owner bearer key. It checks retained articles, development grouping, current Top 5 rank, and feeds on that host. It reads the archive and never fetches the reported URL. An absent match can also mean that the article is outside retention or has another permalink.
+- The scheduled upkeep report shows anonymous first-visit, story, follow, brief and seven-day return counts from consenting browsers. These are aggregate event counts, and cannot be joined into individual reader histories.
+
 ## Reading and recommendations
 
 `GET /api/articles/{article_id}` returns an enabled, retained article, up to five related articles, a reading notice and `summary`. The summary includes `text`, `basis`, `limited_source` and an array of short extractive `highlights`. `publisher_excerpt` uses supplied excerpt sentences, while `headline_only` has no highlights. An active, owner-approved permission makes `reading` available with sanitized HTML, plain text and attribution. Highlights from that body use `licensed_article_extract` with `limited_source: false`. `also_indexed_by` lists enabled secondary feeds that supplied the same archived ID. Missing or paused-source articles return `404`. Detail responses use `no-store` and check permission on each read. The frontend uses `/?article=<id>#reading-room` for shareable links during the article's archive retention.

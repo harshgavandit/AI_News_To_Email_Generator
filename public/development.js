@@ -57,11 +57,13 @@ function render(data) {
   if (freshness) content.append(freshness);
   const latest = data.latest_material || data.entries[0];
   if (latest) {
-    const latestSource = { ...latest.source, title: latest.title, excerpt: latest.excerpt };
+    const latestSource = { ...latest.source, title: latest.title, excerpt: latest.reported_fact || latest.excerpt };
     const ask = node("a", "Analyze this evidence in Research Desk ↗");
     ask.href = `/research.html?article=${encodeURIComponent(latest.source.id)}`;
-    content.append(panel("Latest reported change", node("p", latest.change_label, "research-meta"),
-      sourceList([latestSource]), ask), impactPanel(latest.source.id));
+    const context = [latest.change_label, latest.evidence_basis].filter(Boolean).join(" · ");
+    content.append(panel("Latest reported change", node("p", context, "research-meta"),
+      sourceList([latestSource]), ...(latest.uncertainty ? [node("p", latest.uncertainty, "research-meta")] : []), ask),
+      impactPanel(latest.source.id));
   }
   const timeline = sourceList(data.entries.map(row => ({ ...row.source, title: row.title,
     published_at: row.published_at, excerpt: row.excerpt, change_label: row.change_label, observed: row.observed })),

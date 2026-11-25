@@ -24,11 +24,11 @@ export function entryView(params, previousVisit) {
   return previousVisit ? "catchup" : "briefing";
 }
 
-export function homeCatchupRequest(storage, since, feedback, technologies) {
+export function homeCatchupRequest(storage, since, feedback, technologies, followedTopics = []) {
   let saved = {};
   try { saved = JSON.parse(storage.getItem(readingGroups.radar.key)) || {}; } catch {}
   const { role, interests, stack, topics, followed_events, language, depth } = saved;
-  const profile = { role, interests, stack, topics, followed_events, language, depth,
+  const profile = { role, interests, stack, topics, preferred_topics: followedTopics, followed_events, language, depth,
     feedback, followed_technologies: technologies, length: 10 };
   return { profile, hours: 720, since: since / 1000, seen: seenDevelopments(storage), summary_only: true };
 }
