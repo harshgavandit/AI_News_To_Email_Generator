@@ -12,12 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Check the repository and source branch
+      - name: Check the source branch and pull request title
         env:
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           HEAD_BRANCH: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           if [[ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" || "$HEAD_BRANCH" != "Staging" ]]; then
             echo "::error::Open the production pull request from this repository's Staging branch."
+            exit 1
+          fi
+          convention='^(feat|fix|docs|refactor|test|build|ci|chore|perf|revert)(\([[:alnum:]_./-]+\))?!?:[[:space:]]+[^[:space:]].*$'
+          if [[ ! "$PR_TITLE" =~ $convention ]]; then
+            echo "::error::Use a Conventional Commit title, for example: fix(reader): restore saved stories"
             exit 1
           fi
