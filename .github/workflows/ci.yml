@@ -6,9 +6,15 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  PYTHON_DOTENV_DISABLED: '1'
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     strategy:
@@ -16,13 +22,13 @@ jobs:
       matrix:
         python-version: ['3.12', '3.14']
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -68,10 +74,10 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
       - name: Run synthetic 10,000-recipient rehearsal
@@ -86,3 +92,20 @@ jobs:
           UV_PYTHON: '3.12'
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
         run: uv run pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py tests/test_reader_intelligence.py
+  release:
+    name: Release CI
+    needs: [verify, mail-capacity]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Require successful results from all test jobs
+        env:
+          VALIDATION_RESULT: ${{ needs.verify.result }}
+          POSTGRES_RESULT: ${{ needs.mail-capacity.result }}
+        run: |
+          if [[ "$VALIDATION_RESULT" != "success" || "$POSTGRES_RESULT" != "success" ]]; then
+            echo "::error::Release blocked. Validation: $VALIDATION_RESULT. PostgreSQL rehearsal: $POSTGRES_RESULT."
+            exit 1
+          fi
