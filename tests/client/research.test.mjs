@@ -33,6 +33,47 @@ function mountResearch(window) {
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+test('the Research Desk enables search after wiring the form and preserves the first query', async () => {
+  const { window } = new JSDOM(markup, {
+    url: 'https://informa.test/research.html?q=old+query&mode=developments&hours=12&topic=software',
+    runScripts: 'outside-only',
+  });
+  const { document } = window;
+  const question = document.getElementById('research-question');
+  const submit = document.getElementById('research-submit');
+  const searches = [];
+  const canned = data => ({ ok: true, json: async () => data });
+  let completeOptions;
+  const options = new Promise(resolve => { completeOptions = resolve; });
+  window.readingGroups = readingGroups;
+  window.fetch = async (path, request = {}) => {
+    if (path === '/api/intelligence/options') return options;
+    if (path === '/api/intelligence/research') {
+      searches.push(JSON.parse(request.body));
+      return canned({ evidence: [] });
+    }
+    return canned({});
+  };
+
+  try {
+    assert.equal(question.disabled, true);
+    assert.equal(submit.disabled, true);
+    mountResearch(window);
+    assert.equal(question.disabled, false);
+    assert.equal(submit.disabled, false);
+    assert.equal(question.value, 'old query');
+    document.getElementById('research-mode').value = 'search';
+    question.value = 'cloud service outage';
+    submit.click();
+    completeOptions(canned({ topics: { software: 'Software' } }));
+    await flush();
+    assert.deepEqual(searches, [{ q: 'cloud service outage', mode: 'search', scope: { hours: 12, topic: 'all' } }]);
+    assert.equal(question.value, 'cloud service outage');
+    assert.equal(document.getElementById('research-mode').value, 'search');
+    assert.equal(document.getElementById('research-topic').value, 'all');
+  } finally { window.close(); }
+});
+
 test('a scoped search opens development results and can save the followed-updates mode', async () => {
   const dom = new JSDOM(markup, { url: 'https://informa.test/research.html?q=cloud+outage&hours=12&topic=software&mode=developments',
     runScripts: 'outside-only' });

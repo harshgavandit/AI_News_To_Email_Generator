@@ -963,22 +963,31 @@ api("/api/trending").then(({ trending, momentum_window_hours }) => {
 
 const searchParams = new URLSearchParams(location.search);
 const article = searchParams.get("article");
-if (article && /^[a-zA-Z0-9_-]{1,40}$/.test(article)) {
+const directArticle = article && /^[a-zA-Z0-9_-]{1,40}$/.test(article);
+const selectedMode = searchParams.get("mode");
+const hours = searchParams.get("hours");
+if (directArticle) {
   mode.value = "analyze";
   byId("research-hours").value = "720";
   updateResearchMode();
   search({ article_id: article, mode: "analyze" });
 } else {
+  if (Object.hasOwn(taskLabels, selectedMode)) mode.value = selectedMode;
   try {
     question.value = (searchParams.get("q") || sessionStorage.getItem("informa-research-query") || "").slice(0, 320);
     sessionStorage.removeItem("informa-research-query");
   } catch { /* Start with an empty query when browser storage is unavailable. */ }
 }
+if ([...byId("research-hours").options].some(option => option.value === hours)) byId("research-hours").value = hours;
+const initialQuery = question.value;
+updateResearchMode();
+// Keep the very first interaction from racing module initialization or falling through to a native submit.
+question.disabled = false;
+if (!directArticle) submit.disabled = false;
 searchOptionsReady.then(() => {
-  const selectedMode = searchParams.get("mode"), hours = searchParams.get("hours");
-  if (!article && Object.hasOwn(taskLabels, selectedMode)) mode.value = selectedMode;
-  if ([...byId("research-hours").options].some(option => option.value === hours)) byId("research-hours").value = hours;
-  if ([...topic.options].some(option => option.value === searchParams.get("topic"))) topic.value = searchParams.get("topic");
+  const initialTopic = searchParams.get("topic");
+  if (!currentRequest && [...topic.options].some(option => option.value === initialTopic)) topic.value = initialTopic;
   syncSearchDestinations();
-  if (mode.value === "developments" && question.value.trim()) form.requestSubmit();
+  if (!currentRequest && selectedMode === "developments" && mode.value === selectedMode &&
+      question.value === initialQuery && initialQuery.trim()) form.requestSubmit();
 });

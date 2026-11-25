@@ -75,8 +75,18 @@ def exercise_mobile_research(page: Page) -> None:
     ).to_be_visible()
     expect(question).to_be_in_viewport()
     expect(submit).to_be_in_viewport()
+    expect(question).to_be_enabled()
+    expect(submit).to_be_enabled()
     question.fill("cloud service outage")
-    submit.click()
+    expect(question).to_have_value("cloud service outage")
+    with page.expect_response(
+        lambda response: (
+            response.url.endswith("/api/intelligence/research")
+            and response.request.method == "POST"
+        )
+    ) as search:
+        submit.click()
+    assert search.value.ok, f"Research search returned HTTP {search.value.status}"
     expect(page.locator("#research-results")).to_contain_text("Sample cloud provider")
 
 
