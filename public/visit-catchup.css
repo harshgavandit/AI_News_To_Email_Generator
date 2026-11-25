@@ -1,5 +1,7 @@
 .visit-catchup {
   min-width: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
   margin-block: 0 24px;
   padding: clamp(18px, 3vw, 36px);
   border: 1px solid var(--line);
@@ -47,6 +49,9 @@
   border-top: 1px solid var(--line);
   padding-block: 15px;
 }
+
+#visit-catchup-content { min-width: 0; }
+.visit-catchup :where(.visit-catchup-list, .visit-catchup-claims, .visit-catchup-entry) { min-width: 0; }
 .visit-catchup-story-title { font: 400 clamp(21px, 2.6vw, 29px)/1.12 var(--serif); margin: 0; }
 .visit-catchup-entry :is(.visit-catchup-note, .visit-catchup-excerpt) { margin: 0; }
 .visit-catchup-change, .visit-catchup-observed { font-size: 12px; }

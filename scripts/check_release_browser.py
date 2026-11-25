@@ -13,7 +13,67 @@ import time
 from pathlib import Path
 from urllib.request import urlopen
 
-from playwright.sync_api import expect, sync_playwright
+from playwright.sync_api import Page, expect, sync_playwright
+
+
+def seed_archive() -> None:
+    from datetime import UTC, datetime
+
+    from app import event_intelligence
+    from app import server  # noqa: F401 - register the archive tables before migration
+    from app.launch_store import get_store
+    from app.sources import BY_ID
+
+    store = get_store()  # type: ignore[no-untyped-call]
+    assert store is not None
+    store.migrate()
+    headline = "Sample cloud provider declares code red after service outage"
+    for index, source_id in enumerate(("bbc-tech", "the-verge")):
+        source = BY_ID[source_id]
+        row = {
+            "id": f"browser-smoke-{index}",
+            "source_id": source.id,
+            "source": source.group,
+            "publisher": source.label,
+            "kind": source.kind,
+            "category": "Service Outages",
+            "title": headline,
+            "description": "A local test fixture reporting a cloud outage.",
+            "url": f"https://{source.hosts[0]}/informa-browser-smoke",
+            "published_at": datetime.now(UTC).isoformat(),
+        }
+        store.ingest(source.id, [row], True)
+        event_intelligence.observe(store, row)  # type: ignore[no-untyped-call]
+
+
+def exercise_mobile_reading(page: Page) -> None:
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.reload(wait_until="domcontentloaded")
+    start = page.get_by_role("link", name="What changed since your last visit?")
+    start.click()
+    heading = page.get_by_role("heading", name="Catch up", exact=True)
+    expect(heading).to_be_focused()
+    expect(heading).to_be_in_viewport()
+    expect(page.locator("#home-catchup-results article h3").first).to_be_in_viewport()
+    expect(page.locator(".mobile-reading-region")).to_be_visible()
+    expect(page.locator(".signal-orb:visible")).to_have_count(0)
+    assert page.evaluate(
+        "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+    )
+
+
+def exercise_mobile_research(page: Page) -> None:
+    page.set_viewport_size({"width": 390, "height": 844})
+    question = page.get_by_role("textbox", name="Search or ask about technology news")
+    submit = page.get_by_role("button", name="Find sources", exact=True)
+    expect(
+        page.get_by_role("heading", name="Research Desk", exact=True)
+    ).to_be_visible()
+    expect(question).to_be_in_viewport()
+    expect(submit).to_be_in_viewport()
+    question.fill("cloud service outage")
+    submit.click()
+    expect(page.locator("#research-results")).to_contain_text("Sample cloud provider")
 
 
 def main() -> None:
@@ -37,9 +97,9 @@ def main() -> None:
             [
                 python,
                 "-s",
-                "-c",
-                "from app.server import get_store; store = get_store(); "
-                "store.ensure_discovery_schema(); store.ensure_curiosity_schema()",
+                "-m",
+                "scripts.check_release_browser",
+                "--seed-archive",
             ],
             env=env,
             check=True,
@@ -104,13 +164,14 @@ def main() -> None:
                         page.evaluate(
                             "localStorage.setItem('informa-catchup-checkpoint', String(Date.now() - 3600000))"
                         )
-                        page.set_viewport_size({"width": 375, "height": 812})
-                        page.reload(wait_until="domcontentloaded")
-                        expect(
-                            page.get_by_role(
-                                "link", name="What changed since your last visit?"
-                            )
-                        ).to_be_visible()
+                        expect(page.locator("#edition-coverage")).to_contain_text(
+                            "Compare 2 sources"
+                        )
+                        rail_copies = page.locator(
+                            "#headlines-content, #signals-content"
+                        ).get_by_text("Sample cloud provider")
+                        expect(rail_copies).to_have_count(0)
+                        exercise_mobile_reading(page)
                         page.get_by_role("button", name="Missing coverage?").click()
                         expect(
                             page.get_by_role("radio", name="Missing story or source")
@@ -137,6 +198,7 @@ def main() -> None:
                                 "textbox", name="Search or ask about technology news"
                             )
                         ).to_be_visible()
+                        exercise_mobile_research(page)
                         assert not errors, errors
                     finally:
                         browser.close()
@@ -148,4 +210,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if sys.argv[1:] == ["--seed-archive"]:
+        seed_archive()
+    else:
+        main()

@@ -43,6 +43,29 @@ def test_headlines_endpoint_uses_enabled_archive_sources(tmp_path, monkeypatch):
     assert response.headers["Vercel-CDN-Cache-Control"] == "public, s-maxage=30"
 
 
+def test_frontpage_groups_shortened_outage_headlines_and_keeps_recovery(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'frontpage.db'}")
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    now = datetime.now(UTC)
+    rows = [
+        article("full", "bbc-tech", "Microsoft Declares Code Red After Historic 24-Hour Microsoft 365 Outage", 1, now),
+        article("short", "the-verge", "Microsoft Declares Code Red After Historic Outage, Internal Memos Show", 2, now),
+        article("recovery", "wired", "Microsoft Declares Code Red After Historic Outage Has Been Resolved", 3, now),
+        article("separate", "ars-technica", "Startups launch a space imaging platform", 4, now),
+    ]
+    for row in rows:
+        store.ingest(row["source_id"], [row], True)
+    response = TestClient(server.app).get("/api/headlines")
+    assert response.status_code == 200
+    data = response.json()
+    group, = data["coverage"]
+    assert {source["article_id"] for source in group["sources"]} == {"full", "short"}
+    other_ids = [row["id"] for row in data["articles"] + data["signals"]]
+    assert len(other_ids) == len(set(other_ids))
+    assert set(other_ids) == {"recovery", "separate"}
+    store.engine.dispose()
+
+
 def test_headlines_leave_room_for_other_regions_during_an_apac_news_spike():
     now = datetime(2026, 11, 15, 12, tzinfo=UTC)
     rows = [article("asia", "scmp-tech", "Chipmaker CEO resigns", 1, now),

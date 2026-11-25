@@ -51,7 +51,7 @@ from app.services.email import send_email
 from app.ingestion import (PRIORITY_SOURCE_IDS, PRIORITY_WINDOW, SWEEP_CATCHUP, SWEEP_INTERVAL, SWEEP_WINDOW, VERCEL_FETCHED,
                            feed_freshness, latest_priority_check, latest_sweep, refresh_sources, runner_excluded,
                            source_catalog, sweep_plan)
-from app.headlines import HEADLINE_HOURS, build_headlines
+from app.headlines import HEADLINE_HOURS, build_headlines, frontpage_signals
 from app.briefing import build_briefing
 from app.article_summary import article_summary
 from app.curiosity import FORMATS as CURIOSITY_FORMATS, LEVELS as CURIOSITY_LEVELS, MAX_CURIOSITY_CARDS, PROBLEM_LABELS as CURIOSITY_PROBLEMS, THEME_LABELS as CURIOSITY_THEMES, build_curiosity_cards, curiosity_article, saved_curiosity_article
@@ -781,6 +781,7 @@ def headlines(response: Response):
             if data is None:
                 rows = store.headline_candidates(HEADLINE_HOURS, include_primary=True) if store else collect_news()["articles"]
                 data = build_headlines(rows)
+                data["signals"] = frontpage_signals(rows, data)
                 if data["articles"]:
                     _headline_cache.put(key, data, ttl=60)
     response.headers["Cache-Control"] = "public, max-age=0, must-revalidate"
