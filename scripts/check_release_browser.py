@@ -55,6 +55,10 @@ def exercise_mobile_reading(page: Page) -> None:
     expect(heading).to_be_focused()
     expect(heading).to_be_in_viewport()
     expect(page.locator("#home-catchup-results article h3").first).to_be_in_viewport()
+    assert page.evaluate(
+        "document.querySelector('#reading-title').getBoundingClientRect().top "
+        ">= document.querySelector('.site-header').getBoundingClientRect().bottom"
+    )
     expect(page.locator(".mobile-reading-region")).to_be_visible()
     expect(page.locator(".signal-orb:visible")).to_have_count(0)
     assert page.evaluate(
@@ -160,6 +164,9 @@ def main() -> None:
                         expect(topic).to_have_attribute("aria-pressed", "true")
                         expect(
                             page.get_by_role("link", name="Updates you follow")
+                        ).to_be_visible()
+                        expect(
+                            page.get_by_role("button", name="Customize this selection")
                         ).to_be_visible()
                         page.evaluate(
                             "localStorage.setItem('informa-catchup-checkpoint', String(Date.now() - 3600000))"
