@@ -1087,6 +1087,42 @@ CURATED_CURIOSITY = (
           why="An unusually open progress report on a large migration, including the targets that were missed.",
           question="What does GitHub’s move to Azure look like from the inside?",
           themes=("reliability", "databases", "cloud")),
+    # --- Round 13: outages from late 2025 and 2026 ----------------------------------------------------------
+    _seed("cloudflare-outage-december-2025", "Cloudflare outage on December 5, 2025",
+          "https://blog.cloudflare.com/5-december-2025-outage/", "Cloudflare Blog", "Cloudflare", 2025,
+          "While raising its WAF request-body buffer to protect React apps from CVE-2025-55182, Cloudflare turned off an internal WAF testing tool through its global configuration system. In its older FL1 proxy that killswitch hit a years-old Lua bug, and sites using the Managed Ruleset returned HTTP 500 errors for about 25 minutes.",
+          ("Postmortem", "Configuration", "WAF", "Lua"), 7, "cloudflare-blog", published="2025-12-05",
+          authors="Dane Knecht", publisher_detail="Cloudflare Blog", read_time_basis="publisher",
+          why="A second global outage 17 days after the first, from a config path with no gradual rollout.",
+          question="How did turning off a test tool break 28% of Cloudflare’s HTTP traffic?", themes=("reliability", "cloud")),
+    _seed("azure-front-door-october-2025", "Post Incident Review (PIR) – Azure Front Door – Connectivity issues across multiple regions",
+          "https://azure.status.microsoft/status/history/?trackingId=YKYN-BWZ", "Azure status history", "Microsoft", 2025,
+          "A sequence of valid customer configuration changes made across two control plane build versions produced incompatible metadata. It passed Azure Front Door’s staged safeguards because the data plane crash only surfaced asynchronously, reached most edge sites and the Last Known Good snapshot, and caused timeouts and DNS errors from 15:41 UTC on 29 October to 00:05 UTC on 30 October 2025.",
+          ("Post incident review", "CDN", "Configuration", "Rollback"), 14, None, published="2025-10-29",
+          publisher_detail="Azure Post Incident Review",
+          why="The safety net (staged rollout plus a last known good snapshot) was itself poisoned by the bad config.",
+          question="Why couldn’t Azure Front Door roll back to its last known good config?", themes=("reliability", "cloud")),
+    _seed("clerk-query-plan-flip-2026", "Postmortem: Clerk System Outage (February 19, 2026)",
+          "https://clerk.com/blog/2026-02-19-system-outage-postmortem", "Clerk blog", "Clerk", 2026,
+          "A routine automatic ANALYZE sampled too few rows, concluded a column was 100% NULL and flipped Postgres to a plan that traversed over 17,000 rows. Slow queries queued up until more than 95% of requests got 429s; re-running ANALYZE by hand restored the old plan about 90 minutes in.",
+          ("Postmortem", "Postgres", "Query planner", "Failover"), 7, None, published="2026-02-19",
+          authors="Braden Sidoti", publisher_detail="Clerk blog",
+          why="A statistics sample, not a deploy, took down an auth provider, and a customer’s retries looked like the cause.",
+          question="How can Postgres statistics take down a whole service?", themes=("reliability", "databases")),
+    _seed("coinbase-may-2026-outage", "A postmortem of our May 7, 2026 outage",
+          "https://www.coinbase.com/blog/a-postmortem-of-our-may-7-2026-outage", "Coinbase blog", "Coinbase", 2026,
+          "Chiller failures in one AWS us-east-1 data hall shut down racks in a single availability zone. Coinbase’s matching engine, co-located in one placement group for latency, lost Raft quorum with no automated cross-zone failover, and a defect in AWS’s managed Kafka control plane left clusters unable to elect partition leaders, so trading was down for about eight hours.",
+          ("Postmortem", "Raft", "Kafka", "Availability zones"), 8, None, published="2026-06-01",
+          publisher_detail="Coinbase engineering blog",
+          why="A latency trade-off and a managed service that failed silently turned a one-zone event into hours of downtime.",
+          question="Why did one AWS zone stop trading on Coinbase for eight hours?", themes=("reliability", "cloud", "distributed-systems")),
+    _seed("microsoft-365-november-2026", "Preliminary Post Incident Report: Microsoft 365 (EX1550543 / MO1550821)",
+          "https://next.ink/wp-content/uploads/2026/11/PostIncidentReport.pdf", "Microsoft, published by Next", "Microsoft", 2026,
+          "Microsoft’s preliminary report on a roughly 24-hour outage from November 12 to 13, 2026, in which most users could not reach Exchange Online mailboxes. It describes a latent defect in a Windows fix on networking gateway servers, extra load after Teams failed over to the same gateway, and capacity already offline, which together caused a cascading failure that spread across regions.",
+          ("Post incident report", "Exchange Online", "Cascading failure", "Gateways"), 10, None, published="2026-11-15",
+          publisher_detail="Microsoft preliminary PIR, published by Next",
+          why="Three ordinary conditions lined up into a global cascade that regional bulkheads did not contain.",
+          question="How did Microsoft 365 go down for a full day?", themes=("reliability", "cloud")),
     # --- Round 11: engineering at India scale, and making web and mobile apps fast -------------------------
     _seed("zerodha-scaling-common-sense", "Scaling with common sense",
           "https://zerodha.tech/blog/scaling-with-common-sense/", "Zerodha Tech Blog", "Zerodha", 2020,
@@ -1496,6 +1532,26 @@ REVIEWED_BREAKDOWNS = {
         "Utility feed A failed while feed B’s breaker was open for repairs, and the generator controller saw voltage upstream of it.",
         "The PLC never started the generators; the team moved the load to the standby utility source, then fixed the PLC logic.",
         "europe-west2-b lost power once its UPS batteries ran out; the main impact was resolved within 6 hours and 8 minutes."),
+    "cloudflare-outage-december-2025": (
+        "Turning off an internal WAF test tool via the global config system hit a long-standing Lua bug in the FL1 proxy.",
+        "Cloudflare reverted the change and committed to gradual, health-checked rollouts and fail-open handling for config data.",
+        "About 28% of HTTP traffic was affected for roughly 25 minutes, from 08:47 to 09:12 UTC."),
+    "azure-front-door-october-2025": (
+        "Incompatible configuration metadata crashed AFD’s data plane asynchronously, after passing its staged safeguards.",
+        "Microsoft manually removed the bad configurations from the Last Known Good snapshot and reloaded edge sites in phases.",
+        "Impact ran from 15:41 UTC on 29 October to 00:05 UTC on 30 October 2025."),
+    "clerk-query-plan-flip-2026": (
+        "An automatic ANALYZE misread a column as 100% NULL and Postgres switched to a much slower query plan.",
+        "Clerk enabled a new session-token failover, then re-ran ANALYZE manually to restore the previous plan.",
+        "Service recovered about 90 minutes in; Clerk raised the statistics target and refactored the query."),
+    "microsoft-365-november-2026": (
+        "A latent defect in a Windows fix on gateway servers, extra Teams failover load and offline capacity coincided.",
+        "Engineers returned the connection-handling code to a known good state and restored servers in groups.",
+        "Exchange Online access was impaired for about 24 hours; a final review was due by November 20, 2026."),
+    "coinbase-may-2026-outage": (
+        "One AWS zone lost cooling, taking out three of five matching-engine nodes and stalling managed Kafka clusters.",
+        "Engineers shipped an emergency code change to restore quorum and manually reassigned Kafka partitions with AWS.",
+        "Trading halted for about eight hours, with full recovery of all systems taking another twelve."),
     "github-availability-september-2026": (
         "Two September incidents hit GitHub while it moved production services and databases to Azure.",
         "GitHub reduced load on shared databases, added overload controls and paused regional ramps when capacity was uneven.",
@@ -1619,6 +1675,9 @@ REVIEWED_PROBLEMS = {
     "hotstar-scaling-for-50m": ("scaling-traffic", "performance"), "spotify-tech-migrations": ("migrations",),
     "airbnb-great-migration-soa": ("migrations",), "honeycomb-hard-stuff-llms": ("performance", "dev-productivity"),
     "google-cloud-europe-west2-power-2026": ("outages",), "github-availability-september-2026": ("outages", "migrations"),
+    "cloudflare-outage-december-2025": ("outages",), "azure-front-door-october-2025": ("outages",),
+    "clerk-query-plan-flip-2026": ("outages", "performance"), "coinbase-may-2026-outage": ("outages",),
+    "microsoft-365-november-2026": ("outages",),
     "zerodha-scaling-common-sense": ("scaling-data", "cost"), "phonepe-technology-journey": ("scaling-data", "scaling-traffic"),
     "flipkart-tidb-active-passive": ("data-integrity", "scaling-data"), "swiggy-serviceability-platform": ("performance", "scaling-traffic"),
     "dream11-ipl-2023-concurrency": ("scaling-traffic",), "meesho-rollout-service": ("dev-productivity", "migrations"),
@@ -1785,7 +1844,8 @@ def card_problems(article, limit=2):
     return [ident for _, _, ident in sorted(scored)[:limit]]
 
 
-_postmortem = re.compile(r"\b(?:postmortem|post-mortem|outage|incident report|return to service|root cause)\b", re.I)
+_postmortem = re.compile(r"\b(?:postmortem|post-mortem|outage|incident report|return to service|root cause|"
+                         r"post[- ]incident (?:review|report))\b", re.I)
 _case_study = re.compile(
     r"\bhow (?:we|[\w.&'’-]+(?: [\w.&'’-]+)?) (?:built|build|scaled|scale|migrated|rebuilt|rewrote|redesigned|"
     r"serves?|handles?|stores?|runs?|ships?|deploy\w*|moderni[sz]ed|keeps?|uses?|optimi[sz]ed|cut|reduced|"
@@ -2291,6 +2351,12 @@ COLLECTIONS = (
      "Dropbox’s own storage, Stack Overflow on a handful of servers, and Segment folding 140 services into one.",
      ("37signals-left-the-cloud", "dropbox-magic-pocket", "stack-overflow-architecture-2016",
       "segment-goodbye-microservices"), ("cost",)),
+    ("outages-late-2025-2026", "Outages of late 2025 and 2026",
+     "The most recent big failures, each with the provider’s own write-up: Azure Front Door’s poisoned rollback, "
+     "Cloudflare’s second outage in 17 days, a Postgres plan flip at Clerk, a one-zone outage that halted Coinbase, "
+     "and Microsoft 365’s day-long cascade.",
+     ("azure-front-door-october-2025", "cloudflare-outage-december-2025", "clerk-query-plan-flip-2026",
+      "coinbase-may-2026-outage", "microsoft-365-november-2026", "google-cloud-europe-west2-power-2026"), ("outages",)),
     ("recent-outages-2024-2025", "The big outages of 2024 and 2025",
      "The incidents that took down large parts of the internet recently: a telemetry rollout at OpenAI, an "
      "unflagged code path at Google Cloud, a DNS race at AWS, an oversized config file at Cloudflare and a content "

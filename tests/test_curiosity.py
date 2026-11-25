@@ -183,7 +183,9 @@ def test_expanded_seed_collection_is_unique_secure_and_covers_requested_companie
     assert len({seed["title"].casefold() for seed in seeds}) == len(seeds)
     for seed in seeds:
         parts = urlsplit(seed["url"])
-        assert parts.scheme == "https" and parts.netloc and not parts.query, seed["id"]
+        # No tracking parameters; the Azure status history only addresses a review by its tracking ID.
+        allowed_query = parts.netloc == "azure.status.microsoft" and re.fullmatch(r"trackingId=[A-Z0-9-]+", parts.query)
+        assert parts.scheme == "https" and parts.netloc and (not parts.query or allowed_query), seed["id"]
         # Talks and posts outside the feed catalog carry no source_id; everything else maps to a reviewed feed.
         assert seed["source_id"] is None or seed["source_id"] in BY_ID, seed["id"]
         assert 60 <= len(seed["description"]) <= 400, seed["id"]
@@ -1061,3 +1063,17 @@ def test_reading_list_index_is_small_and_list_ids_are_validated():
     again = client.get("/api/curiosity/collections", headers={"If-None-Match": index.headers["etag"]})
     assert again.status_code == 304
 
+
+
+def test_round_thirteen_adds_recent_provider_postmortems():
+    from app import curiosity
+
+    added = ("cloudflare-outage-december-2025", "azure-front-door-october-2025", "clerk-query-plan-flip-2026",
+             "coinbase-may-2026-outage", "microsoft-365-november-2026")
+    for ident in added:
+        card = curiosity._card(curiosity.SEEDS_BY_ID[ident], {})
+        assert card["format"] == "postmortem" and "outages" in card["problems"] and card["breakdown"], ident
+    lists = {ident: cards for ident, _, _, cards, _ in curiosity.COLLECTIONS}
+    assert set(added) <= set(lists["outages-late-2025-2026"]) <= set(curiosity.SEEDS_BY_ID)
+    urls = [seed["url"] for seed in curiosity.CURATED_CURIOSITY]
+    assert len(urls) == len(set(urls))
