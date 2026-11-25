@@ -44,3 +44,7 @@ def build_briefing(rows, *, hours=24, limit=5):
             "latest_published_at": max((row["published_at"] for row in pool), default=None),
             "publishers": len({row["publisher"] for row in pool}), "total_candidates": len(pool),
             "basis": "Recent publisher reporting, official updates and research, with English stories prioritized across regions."}
+
+
+def _negative_gate_test() -> int:
+    return "deliberate type error for the CI negative test"
