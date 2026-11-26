@@ -4,20 +4,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import time
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 SITE = "https://getinformdaily.com"
 
 
 def fetch(path: str, content_type: str) -> tuple[bytes, str]:
-    with urlopen(SITE + path, timeout=10) as response:
+    request = Request(SITE + path)
+    if token := os.getenv("SITE_MONITOR_TOKEN"):
+        request.add_unredirected_header("X-Informa-Site-Monitor", token)
+    with urlopen(request, timeout=10) as response:
         if (
             response.status != 200
             or response.headers.get_content_type() != content_type
+            or response.geturl() != request.full_url
         ):
-            raise ValueError(f"{path}: unexpected HTTP status or content type")
+            raise ValueError(f"{path}: unexpected redirect, HTTP status, or content type")
         return response.read(), response.headers.get("X-Informa-Revision", "")
 
 
