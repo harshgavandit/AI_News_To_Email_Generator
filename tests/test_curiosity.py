@@ -885,6 +885,31 @@ def test_single_card_endpoint_serves_seeds_and_404s_unknown_ids(cards_api):
     assert client.get("/api/curiosity/cards/..%2Fetc").status_code in {404, 422}
 
 
+def test_production_search_collection_serves_reviewed_uber_and_notion_cards(cards_api):
+    client, _ = cards_api
+    list_id = "production-search-and-rag"
+    collection = client.get(f"/api/curiosity/collections/{list_id}").json()["list"]
+    cards = collection["cards"]
+    assert len(cards) == 9
+    assert {card["company"] for card in cards} == {"Uber", "Notion"}
+    assert all(set(card["breakdown"]) == {"problem", "approach", "result"} for card in cards)
+    index = client.get("/api/curiosity/collections").json()["collections"]
+    assert next(item for item in index if item["id"] == list_id)["card_count"] == len(cards)
+
+    featured = (
+        ("uber-enhanced-agentic-rag", "Uber", "Agentic RAG", "2025-05-29",
+         "https://www.uber.com/us/en/blog/enhanced-agentic-rag/"),
+        ("notion-vector-search", "Notion", "vector search", "2026-02-19",
+         "https://www.notion.com/blog/two-years-of-vector-search-at-notion"),
+    )
+    assert [card["id"] for card in cards[:2]] == [ident for ident, *_ in featured]
+    for ident, company, query, published_at, url in featured:
+        card = client.get(f"/api/curiosity/cards/{ident}").json()["card"]
+        assert (card["url"], card["company"], card["published_at"]) == (url, company, published_at)
+        results = client.get("/api/curiosity/cards", params={"company": company, "q": query}).json()["cards"]
+        assert ident in {result["id"] for result in results}
+
+
 @pytest.fixture
 def events_api(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
