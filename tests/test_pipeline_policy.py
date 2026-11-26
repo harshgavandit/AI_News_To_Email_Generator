@@ -1,5 +1,6 @@
 """Repository delivery policy: pinned actions, gate wiring and the Release CI decision."""
 
+import json
 import os
 from pathlib import Path
 import re
@@ -15,6 +16,11 @@ WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
 
 def load(path):
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def test_vercel_builds_require_a_manual_deployment():
+    config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    assert config["git"]["deploymentEnabled"] is False
 
 
 def test_every_action_is_pinned_to_a_full_commit_sha():

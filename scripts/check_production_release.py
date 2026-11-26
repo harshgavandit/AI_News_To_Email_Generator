@@ -4,20 +4,28 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import time
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 SITE = "https://getinformdaily.com"
 
 
 def fetch(path: str, content_type: str) -> tuple[bytes, str]:
-    with urlopen(SITE + path, timeout=10) as response:
+    request = Request(SITE + path)
+    if token := os.getenv("SITE_MONITOR_TOKEN"):
+        request.add_unredirected_header("X-Informa-Site-Monitor", token)
+    with urlopen(request, timeout=10) as response:
         if (
             response.status != 200
             or response.headers.get_content_type() != content_type
+            or response.geturl() != request.full_url
         ):
-            raise ValueError(f"{path}: unexpected HTTP status or content type")
+            raise ValueError(
+                f"{path}: unexpected redirect, HTTP status, or content type"
+            )
         return response.read(), response.headers.get("X-Informa-Revision", "")
 
 
@@ -50,6 +58,14 @@ def verify(revision: str, wait_seconds: int) -> None:
             if final_revision != revision:
                 raise ValueError("The production alias changed during the smoke test")
         except (OSError, ValueError) as error:
+            if (
+                isinstance(error, HTTPError)
+                and error.code == 429
+                and error.headers.get("X-Vercel-Mitigated") == "challenge"
+            ):
+                raise SystemExit(
+                    "::error::Vercel challenged the production monitor. Check the firewall rule and SITE_MONITOR_TOKEN."
+                ) from error
             if time.monotonic() >= deadline:
                 raise SystemExit(
                     f"::error::Production smoke failed for {revision}: {error}"

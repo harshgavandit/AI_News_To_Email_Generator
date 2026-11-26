@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Check pages, APIs and feeds
         shell: bash
+        env:
+          SITE_MONITOR_TOKEN: ${{ secrets.SITE_MONITOR_TOKEN }}
         run: |
           set -uo pipefail
           failures=0
@@ -30,7 +32,8 @@ jobs:
             local name="$1" path="$2" test="$3" min="${4:-200}" status size request_id failure
             : > "$body"
             : > "$headers"
-            if ! status=$(curl --silent --show-error --location --max-time 30 --dump-header "$headers" --output "$body" --write-out '%{http_code}' "$SITE$path"); then
+            if ! status=$(curl --silent --show-error --max-time 30 --dump-header "$headers" --output "$body" --write-out '%{http_code}' \
+              --header @- "$SITE$path" <<< "X-Informa-Site-Monitor: $SITE_MONITOR_TOKEN"); then
               status=000
             fi
             size=$(wc -c < "$body")
@@ -45,6 +48,8 @@ jobs:
               failure="HTTP 503: no fresh publisher sources ($(jq -r '.freshness.counts | "\(.stale) stale, \(.failed) failed, \(.pending) pending"' "$body"))"
             elif [[ "$status" == 402 ]]; then
               failure="HTTP 402: Vercel deployment unavailable. Check project usage and deployment status."
+            elif [[ "$status" == 429 ]] && grep -qi '^x-vercel-mitigated: challenge' "$headers"; then
+              failure="HTTP 429: Vercel challenged this monitor. Check the firewall rule and SITE_MONITOR_TOKEN."
             elif [[ "$status" != 200 || "$size" -lt "$min" ]]; then
               failure="HTTP $status, $size bytes"
             elif [[ -n "$test" ]] && ! jq -e "$test" "$body" >/dev/null 2>&1; then
@@ -62,7 +67,7 @@ jobs:
           check "Home page" / "" 5000
           check "API liveness" /api/health '.status == "ok"' 10
           check "Archive readiness" /api/ready '.freshness.counts.fresh > 0' 10
-          check "Latest stories" '/api/news?hours=24&limit=12' '.articles | length > 0'
+          check "Latest stories" '/api/news?hours=24&limit=1&catalog=0' '.articles | length > 0' 10
           check "Developing stories" /api/headlines '.articles != null' 50
           check "Curiosity Cards" '/api/curiosity/cards?limit=6' '.cards | length > 0'
           check "Trackers: releases" /api/trackers/releases '.items | length > 0'
