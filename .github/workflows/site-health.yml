@@ -41,6 +41,10 @@ jobs:
               return
             elif [[ "$status" == 503 ]] && jq -e '.detail == "The news database is temporarily unavailable."' "$body" >/dev/null 2>&1; then
               failure="HTTP 503: archive database unavailable"
+            elif [[ "$path" == /api/ready && "$status" == 503 ]] && jq -e '.freshness.counts.fresh == 0' "$body" >/dev/null 2>&1; then
+              failure="HTTP 503: no fresh publisher sources ($(jq -r '.freshness.counts | "\(.stale) stale, \(.failed) failed, \(.pending) pending"' "$body"))"
+            elif [[ "$status" == 402 ]]; then
+              failure="HTTP 402: Vercel deployment unavailable. Check project usage and deployment status."
             elif [[ "$status" != 200 || "$size" -lt "$min" ]]; then
               failure="HTTP $status, $size bytes"
             elif [[ -n "$test" ]] && ! jq -e "$test" "$body" >/dev/null 2>&1; then

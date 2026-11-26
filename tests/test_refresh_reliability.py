@@ -329,11 +329,13 @@ def test_sweeps_check_the_full_catalog_once_each_and_respect_boundaries(archive,
         assert not attempts
         response = client.post(VERCEL_SWEEP, headers=headers)
         assert response.status_code == 200
-        result = response.json()
+        result = response.json()["vercel_feeds"]
         assert result["remaining"] == 0
         assert not result["unconfirmed"]
-        assert result["checked"] == len(sources)
+        assert result["checked"] == len(sources & server.VERCEL_FETCHED)
         assert client.post(VERCEL_SWEEP, headers=headers).json()["status"] == "complete"
+        from scripts import run_publisher_sweep
+        assert run_publisher_sweep.sweep("full", 600)["remaining"] == 0
         assert client.get(SWEEP, headers=JOB_HEADERS).json()["status"] == "complete"
         assert len(attempts) == len(sources) and set(attempts) == sources
         daily_clock(scheduled + timedelta(minutes=45))
@@ -359,8 +361,8 @@ def test_publisher_followup_drains_only_inside_the_two_daily_sweep_windows():
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     refresh_job = workflow.split("  refresh:\n", 1)[1].split("  mail:\n", 1)[0]
     assert "github.event_name == 'workflow_dispatch'" in refresh_job
-    assert "- cron: '40 2,14 * * *'" in workflow
-    assert "github.event.schedule == '40 2,14 * * *'" in refresh_job
+    assert "- cron: '30 2,14 * * *'" in workflow
+    assert "github.event.schedule == '30 2,14 * * *'" in refresh_job
     assert "github.event.schedule == '2-57/5 * * * *'" not in refresh_job
     assert "--retry" not in refresh_job
 
@@ -440,17 +442,16 @@ def test_explicit_host_rate_limit_stops_queued_feeds_and_survives_a_new_runner(a
     assert fetched[-1] == other.id
 
 
-def test_follow_up_cron_runs_inside_both_ist_sweep_windows():
+def test_github_starts_both_ist_sweep_windows():
     from datetime import datetime, timedelta, timezone
-    from app.ingestion import SWEEP_WINDOW, latest_sweep
+    from app.ingestion import latest_sweep
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github/workflows/refresh-feeds.yml").read_text(encoding="utf-8")
     minute, hours = workflow.split("- cron: '", 2)[2].split("'", 1)[0].split()[:2]
     for hour in map(int, hours.split(",")):
         fired = datetime(2026, 11, 21, hour, int(minute), tzinfo=timezone.utc)
         opened = latest_sweep(fired)
-        # The follow-up must start after Vercel's sweep opens and leave time before the window closes.
-        assert timedelta(minutes=5) <= fired - opened <= SWEEP_WINDOW - timedelta(minutes=20)
+        assert fired == opened
 
 
 def test_follow_up_waits_for_a_running_vercel_batch():
@@ -524,7 +525,7 @@ def test_second_follow_up_cron_covers_skipped_github_runs():
 
 
 def test_unfinished_sweep_hands_off_to_a_continuation_run(archive, monkeypatch, daily_clock):
-    """Vercel's run checks what fits its budget, then a continuation run finishes the same sweep."""
+    """An authenticated recovery batch can hand off the remainder of the same sweep."""
     store, client = archive
     sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:5]
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
@@ -548,10 +549,10 @@ def test_unfinished_sweep_hands_off_to_a_continuation_run(archive, monkeypatch, 
 
     monkeypatch.setattr(server.httpx, "get", handoff)
     daily_clock(MORNING + timedelta(minutes=2))
-    headers = {"Authorization": "Bearer cron-secret-for-tests-0123", "ce-vssscheduledat": MORNING.isoformat()}
-    response = client.post(VERCEL_SWEEP, headers=headers)
+    headers = {"Authorization": "Bearer cron-secret-for-tests-0123"}
+    response = client.get("/api/jobs/refresh?run=continue&hop=0", headers=headers)
     result = response.json()
-    assert response.status_code == 503 and result["remaining"] == 3 and result["handed_off"] is True
+    assert response.status_code == 200 and result["remaining"] == 3 and result["handed_off"] is True
     assert handoffs == [("https://getinformdaily.com/api/jobs/refresh", {"run": "continue", "hop": 1},
                          "Bearer cron-secret-for-tests-0123")]
     # The continuation (accepted with the same secret) finishes the sweep and stops chaining.

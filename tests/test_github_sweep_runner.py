@@ -43,12 +43,14 @@ def test_vercel_schedule_starts_the_github_run_instead_of_fetching(archive, monk
 
 
 @pytest.mark.parametrize("reply", [httpx.Response(403), httpx.ConnectError("down")])
-def test_vercel_sweeps_itself_when_github_refuses(archive, monkeypatch, daily_clock, reply):  # noqa: F811
+def test_vercel_checks_only_its_publishers_when_github_refuses(archive, monkeypatch, daily_clock, reply):  # noqa: F811
     store, client = archive
     monkeypatch.setenv("GITHUB_SWEEP_TOKEN", TOKEN)
     sources = tuple(source for source in ingestion.DEFAULT_SOURCES if source.enabled)[:2]
     monkeypatch.setattr(ingestion, "DEFAULT_SOURCES", sources)
-    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: ([], {"available": True}))
+    monkeypatch.setattr(server, "VERCEL_FETCHED", frozenset({sources[0].id}))
+    fetched = []
+    monkeypatch.setattr(ingestion, "read_feed", lambda feed, **kwargs: (fetched.append(feed.id) or [], {"available": True}))
 
     def post(url, **kwargs):
         if isinstance(reply, Exception):
@@ -58,7 +60,8 @@ def test_vercel_sweeps_itself_when_github_refuses(archive, monkeypatch, daily_cl
     monkeypatch.setattr(server.httpx, "post", post)
     daily_clock(MORNING + timedelta(minutes=1))
     result = client.post(VERCEL_SWEEP, headers=HEADERS).json()
-    assert result["status"] == "refreshed" and result["checked"] == 2
+    assert result["status"] == "refreshed" and result["vercel_feeds"]["checked"] == 1
+    assert fetched == [sources[0].id]
 
 
 def test_no_token_and_late_deliveries_never_dispatch(archive, monkeypatch, daily_clock):  # noqa: F811
@@ -112,6 +115,14 @@ def test_runner_requires_the_database_secret(monkeypatch, capsys):
     monkeypatch.delenv("NEWS_DATABASE_URL", raising=False)
     assert run_publisher_sweep.main(["--run", "full"]) == 1
     assert "NEWS_DATABASE_URL" in capsys.readouterr().out
+
+
+def test_feed_only_recovery_never_starts_morning_mail(monkeypatch):
+    monkeypatch.setenv("NEWS_DATABASE_URL", "sqlite://")
+    monkeypatch.setattr(run_publisher_sweep, "wait_for_slot", lambda kind: None)
+    monkeypatch.setattr(run_publisher_sweep, "sweep", lambda *args: {"status": "refreshed", "checked": 3})
+    monkeypatch.setattr(run_publisher_sweep, "start_morning_mail", lambda *args: pytest.fail("recovery started mail"))
+    assert run_publisher_sweep.main(["--run", "full", "--feeds-only"]) == 0
 
 
 def test_runner_explains_an_unusable_database_without_printing_the_url(monkeypatch, capsys):

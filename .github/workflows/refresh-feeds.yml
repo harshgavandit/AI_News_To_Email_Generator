@@ -5,10 +5,9 @@ on:
     # already release due briefs and update the index; polling Vercel every five minutes
     # used most of the Hobby plan's Active CPU allowance (paused on 23 November).
     - cron: '23 */3 * * *'
-    # Vercel's 08:00/20:00 IST schedule starts the sweep here through workflow_dispatch.
-    # These follow-ups finish it if that start was missed. GitHub schedule cron is UTC:
-    # 02:40 and 14:40 UTC are 08:10 and 20:10 IST.
-    - cron: '40 2,14 * * *'
+    # Start the two full sweeps directly on GitHub, even when Vercel is unavailable.
+    # 02:30 and 14:30 UTC are 08:00 and 20:00 IST.
+    - cron: '30 2,14 * * *'
     # Light checks of the busiest newsrooms, advisories and status pages between full
     # sweeps: 20:32 and 08:32 UTC are 02:02 and 14:02 IST (each window is two hours).
     - cron: '32 8,20 * * *'
@@ -39,9 +38,8 @@ concurrency:
 
 jobs:
   refresh:
-    # Vercel's 08:00/20:00 IST schedule starts this run through workflow_dispatch when
-    # GITHUB_SWEEP_TOKEN is set; the two schedules below finish any sweep left unfinished.
-    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && inputs.run != 'priority') || (github.event_name == 'schedule' && (github.event.schedule == '40 2,14 * * *' || github.event.schedule == '17 5,17 * * *'))
+    # Scheduled, dispatched and recovery runs share the same archive lease and sweep slot.
+    if: (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && inputs.run != 'priority') || (github.event_name == 'schedule' && (github.event.schedule == '30 2,14 * * *' || github.event.schedule == '17 5,17 * * *'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -65,10 +63,15 @@ jobs:
         env:
           NEWS_DATABASE_URL: ${{ secrets.NEWS_DATABASE_URL }}
           FEED_REFRESH_SECRET: ${{ secrets.FEED_REFRESH_SECRET }}
+          FEEDS_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.feeds_only }}
           # Publishers that refuse GitHub's network are fetched by Vercel (app/ingestion.py).
           INFORMA_SWEEP_RUNNER: github
           PUBLIC_ORIGIN: https://getinformdaily.com
-        run: uv run --no-dev python -m scripts.run_publisher_sweep --run full --budget-minutes 50
+        shell: bash
+        run: |
+          args=()
+          if [[ "$FEEDS_ONLY" == true ]]; then args+=(--feeds-only); fi
+          uv run --no-dev python -m scripts.run_publisher_sweep --run full --budget-minutes 50 "${args[@]}"
   mail:
     if: github.event.schedule == '23 */3 * * *' || (github.event_name == 'workflow_dispatch' && !inputs.intelligence_only && !inputs.feeds_only && inputs.run != 'priority')
     runs-on: ubuntu-latest
