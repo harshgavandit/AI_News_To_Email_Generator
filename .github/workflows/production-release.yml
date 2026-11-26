@@ -1,6 +1,11 @@
 name: Production release smoke
 on:
   workflow_dispatch:
+    inputs:
+      revision:
+        description: Full deployed commit SHA (optional, defaults to current main)
+        type: string
+        required: false
   workflow_run:
     workflows: [Python checks]
     branches: [main]
@@ -16,39 +21,41 @@ jobs:
     permissions:
       contents: read
       issues: write
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
       - name: Identify the release awaiting verification
         id: revision
         env:
           GH_TOKEN: ${{ github.token }}
-          REVISION: ${{ github.sha }}
+          REVISION: ${{ inputs.revision || github.sha }}
         run: |
-          latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
-          if [[ "$REVISION" == "$latest" ]]; then
-            echo "current=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Release $REVISION superseded by $latest" >> "$GITHUB_STEP_SUMMARY"
+          if [[ ! "$REVISION" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::Provide a full lowercase Git commit SHA.'
+            exit 1
           fi
+          relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$REVISION...main" --jq .status)
+          if [[ "$relation" != identical && "$relation" != ahead ]]; then
+            echo '::error::The selected release revision must belong to main.'
+            exit 1
+          fi
+          echo "sha=$REVISION" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        if: steps.revision.outputs.current == 'true'
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Verify the exact promoted revision and public routes
-        if: steps.revision.outputs.current == 'true'
         env:
-          REVISION: ${{ github.sha }}
+          REVISION: ${{ steps.revision.outputs.sha }}
           SITE_MONITOR_TOKEN: ${{ secrets.SITE_MONITOR_TOKEN }}
         run: |
           set -o pipefail
           echo "Release $REVISION · https://getinformdaily.com/" >> "$GITHUB_STEP_SUMMARY"
-          python -m scripts.check_production_release "$REVISION" | tee -a "$GITHUB_STEP_SUMMARY"
+          python -m scripts.check_production_release "$REVISION" --wait-seconds 120 | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Open or update the release incident
-        if: failure() && steps.revision.outputs.current == 'true'
+        if: failure() && steps.revision.outputs.sha != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          REVISION: ${{ github.sha }}
+          REVISION: ${{ steps.revision.outputs.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash .github/scripts/report-incident.sh "Production smoke failed" "$REVISION" "$RUN_URL"
 

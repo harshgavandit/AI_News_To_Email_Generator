@@ -45,3 +45,20 @@ def test_smoke_token_is_not_forwarded_by_redirects(monkeypatch):
     monkeypatch.setattr(check_production_release, "urlopen", follow_redirect)
     with pytest.raises(ValueError, match="redirect inspected"):
         check_production_release.fetch("/api/health", "application/json")
+
+
+def test_smoke_stops_immediately_if_the_monitor_is_challenged(monkeypatch):
+    from urllib.error import HTTPError
+
+    import pytest
+
+    from scripts import check_production_release
+
+    def challenged(*args):
+        raise HTTPError("https://getinformdaily.com/api/health", 429, "challenge",
+                        {"X-Vercel-Mitigated": "challenge"}, None)
+
+    monkeypatch.setattr(check_production_release, "fetch", challenged)
+    monkeypatch.setattr(check_production_release.time, "sleep", lambda seconds: pytest.fail("retried WAF challenge"))
+    with pytest.raises(SystemExit, match="Vercel challenged the production monitor"):
+        check_production_release.verify("a" * 40, 120)

@@ -7,6 +7,7 @@ import json
 import os
 import re
 import time
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 SITE = "https://getinformdaily.com"
@@ -55,6 +56,10 @@ def verify(revision: str, wait_seconds: int) -> None:
             if final_revision != revision:
                 raise ValueError("The production alias changed during the smoke test")
         except (OSError, ValueError) as error:
+            if isinstance(error, HTTPError) and error.code == 429 and error.headers.get("X-Vercel-Mitigated") == "challenge":
+                raise SystemExit(
+                    "::error::Vercel challenged the production monitor. Check the firewall rule and SITE_MONITOR_TOKEN."
+                ) from error
             if time.monotonic() >= deadline:
                 raise SystemExit(
                     f"::error::Production smoke failed for {revision}: {error}"
