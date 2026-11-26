@@ -910,6 +910,26 @@ def test_production_search_collection_serves_reviewed_uber_and_notion_cards(card
         assert ident in {result["id"] for result in results}
 
 
+def test_agent_reading_list_surfaces_seed_to_scale_thesis_and_other_publishers(cards_api):
+    client, _ = cards_api
+    response = client.get("/api/curiosity/collections/production-ai-agents")
+    assert response.status_code == 200
+    cards = response.json()["list"]["cards"]
+    assert len(cards) == 9
+    assert {card["company"] for card in cards} == {"Accel", "Anthropic", "Cloudflare", "OpenAI"}
+    assert all(card["seed"] and card["breakdown"] for card in cards)
+
+    thesis = cards[0]
+    assert thesis["id"] == "seedtoscale-scalable-agent-data"
+    assert thesis["url"] == "https://www.seedtoscale.com/the-working-knowledge/agents-need-a-scalable-data-world"
+    assert thesis["publisher"] == "Seed to Scale"
+    detail = client.get(f"/api/curiosity/cards/{thesis['id']}").json()["card"]
+    assert detail["author"] == "Vishwajit Sasi · Anagh Prasad"
+    assert detail["related"][0]["id"] == "seedtoscale-vertical-ai-product"
+    matches = client.get("/api/curiosity/cards", params={"q": "scalable data world", "theme": "agents"}).json()["cards"]
+    assert thesis["id"] in {card["id"] for card in matches}
+
+
 @pytest.fixture
 def events_api(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
