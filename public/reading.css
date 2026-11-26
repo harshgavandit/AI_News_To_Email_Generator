@@ -64,8 +64,7 @@
   min-width: 44px;
 }
 
-.reading .health-source,
-.reading .health-source span {
+.reading .health-source {
   font-size: 12px;
 }
 
@@ -390,7 +389,7 @@
   margin: 10px 0 0;
 }
 
-.reading :is(.outage-links, .failed-alert, .news-update) {
+.reading :is(.outage-links, .news-update) {
   margin-top: 12px;
   border-radius: 8px;
   font-size: 13px;

@@ -186,7 +186,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--green); }
 :root[data-theme="dark"] .reading .reading-empty::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a7d9c8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 5h16v14H4z'/%3E%3Cpath d='M8 9h8M8 13h5'/%3E%3C/svg%3E");
 }
-.failed-alert, .news-update { border-radius: 12px; box-shadow: var(--sys-e1); }
+.news-update { border-radius: 12px; box-shadow: var(--sys-e1); }
 .news-update { animation: sys-pop 260ms var(--sys-curve) both; }
 
 /* ---------- Panels, dialogs, drawers ---------- */

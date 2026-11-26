@@ -59,11 +59,6 @@ export function relativeAge(iso, now = Date.now()) {
   return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} d ago`;
 }
 
-export function parseFeedHealth(text) {
-  const match = /([\d,]+)\s+of\s+([\d,]+)\s+feeds/i.exec(text || "");
-  return match ? { fresh: Number(match[1].replace(/,/g, "")), total: Number(match[2].replace(/,/g, "")) } : null;
-}
-
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -147,13 +142,6 @@ export function mountCommandDeck(doc = document) {
     visible.forEach((stat, i) => { stat.toggleAttribute("data-last", i === visible.length - 1); });
   }
 
-  // Health counts appear once app.js has checked the feeds; follow its label rather than re-fetching.
-  const health = doc.getElementById("source-health-label");
-  const readHealth = () => {
-    const parsed = parseFeedHealth(health?.textContent);
-    if (parsed) setStat("feeds", parsed.fresh);
-  };
-  if (health) new MutationObserver(readHealth).observe(health, { childList: true, characterData: true, subtree: true });
   const select = doc.getElementById("region");
   const readRegions = () => {
     const live = Object.values(regionCounts(select)).filter((count) => count > 0).length;
@@ -273,11 +261,12 @@ export function mountCommandDeck(doc = document) {
       setStat("stories", Number(data.total));
       const publishers = Object.keys(data.source_counts || {}).filter((key) => key !== "all").length;
       if (publishers) setStat("publishers", publishers);
+      const feeds = data.freshness?.counts?.enabled;
+      if (feeds > 0) setStat("feeds", feeds);
       items = pickTransmissions(data.articles);
       if (wire) renderWire(wire, items);
       if (!motion.allowed()) setWirePaused(true);
       if (globe && items.length) next();
-      readHealth();
       readRegions();
     } catch { /* The deck is optional; the Reading Room below has the same stories. */ }
   }

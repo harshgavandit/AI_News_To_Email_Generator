@@ -14,7 +14,7 @@ import { appendClaimEvidence, sourceEvidence } from "./claim-evidence.js";
 import { searchLink } from "./search-context.js";
 import { impactPanel } from "./personal-impact.js";
 import { developmentLink } from "./development-link.js";
-import { coverageWarning, editionFreshnessText, freshnessNotice, nextSweepText } from "./reader-freshness.js";
+import { editionFreshnessText, nextSweepText } from "./reader-freshness.js";
 import { markDevelopmentsSeen } from "./development-seen.js";
 import { createCoverageDialog } from "./coverage-dialog.js";
 import { coverageSummaryNode, firstReportedText } from "./coverage-summary.js";
@@ -1225,6 +1225,10 @@ function updateSourceCatalog(sources) {
   if (!sources?.length) return;
   state.sources = sources;
   const enabled = sources.filter((s) => s.enabled).sort((a, b) => a.label.localeCompare(b.label));
+  const count = enabled.length;
+  $("source-health-label").textContent = count
+    ? `${count.toLocaleString()} ${count === 1 ? "feed" : "feeds"} tracked`
+    : "Browse sources";
   for (const id of ["publisher", "digest-sources"]) {
     const select = $(id);
     const value = id === "publisher" ? state.publisher : select.value;
@@ -1286,19 +1290,13 @@ function renderHealth(freshness, catalog = state.sources) {
     (!$("language").value || $("language").value === source.language) &&
     ($("kind").value === "all" || $("kind").value === source.kind) &&
     (!$("coverage").value || $("coverage").value === source.coverage)));
-  const { enabled = 0, fresh = 0, failed = 0, stale = 0 } = freshness?.counts || {};
-  const checkedLabel = fresh === enabled ? `${fresh} ${fresh === 1 ? "feed" : "feeds"}` : `${fresh} of ${enabled} feeds`;
-  $("source-health-label").textContent = fresh ? `${checkedLabel} up to date` :
-    failed || stale ? "Updates delayed" : enabled ? "Awaiting source checks" : "No feeds selected";
-  $("source-health-button").classList.toggle("degraded", fresh < enabled);
   $("updated").textContent = freshness?.checked_at
-    ? `Selected feeds checked ${readableTime(freshness.checked_at)}`
-    : state.healthSources.length ? "Individual source check times below." : "No enabled feeds in this selection.";
+    ? `Latest source check ${readableTime(freshness.checked_at)}`
+    : "";
+  $("updated").hidden = !$("updated").textContent;
   $("next-source-sweep").textContent = nextSweepText(freshness);
   $("next-source-sweep").hidden = !$("next-source-sweep").textContent;
   if (!$("source-popover").hidden) renderHealthList();
-  $("failed-alert").hidden = freshness?.status !== "stale";
-  $("failed-message").textContent = "Feed updates are delayed. Showing the latest stories in the archive.";
 }
 
 function renderHealthList() {
@@ -1306,14 +1304,7 @@ function renderHealthList() {
   $("source-health-list").replaceChildren();
   for (const s of state.healthSources) {
     const row = node("div", "health-source");
-    row.append(
-      node("strong", "", s.label),
-      node(
-        "span",
-        "",
-        `${s.freshness === "stale" ? "Check overdue" : s.available === true ? "Available" : s.available === false ? "Last check failed" : "Waiting for first check"}${s.checked_at ? ` · Checked ${readableTime(s.checked_at)}` : ""}${s.last_success ? ` · Last success ${readableTime(s.last_success)}` : ""}`,
-      ),
-    );
+    row.append(node("strong", "", s.label));
     $("source-health-list").append(row);
   }
 }
@@ -1557,7 +1548,6 @@ async function loadHomeCatchup() {
   visibleCatchup = [];
   $("catchup-useful").hidden = true;
   results.replaceChildren();
-  $("home-catchup-freshness").replaceChildren();
   mark.hidden = true;
   browse.hidden = true;
   const since = lastCatchup || Date.parse(readingVisit.previousVisit);
@@ -1585,14 +1575,10 @@ async function loadHomeCatchup() {
     mark.hidden = !results.childElementCount;
     $("catchup-useful").hidden = !results.childElementCount;
     browse.hidden = results.childElementCount > 0;
-    const notice = freshnessNotice(data.coverage_freshness, document, { compact: true });
     renderEditionFreshness(data.coverage_freshness);
-    if (notice) $("home-catchup-freshness").append(notice);
     status("home-catchup-status", results.childElementCount
       ? `${visibleCatchup.length} new or updated ${visibleCatchup.length === 1 ? "development" : "developments"} in your catch-up.`
-      : coverageWarning(data.coverage_freshness)
-        ? "No new developments found in the available archive. Some source checks are incomplete."
-        : "You’re caught up on matching developments in the available archive.");
+      : "No new developments found in the available archive.");
   } catch (error) {
     if (state.controller !== controller || error.name === "AbortError") return;
     status("home-catchup-status", error.message, true);
@@ -1918,11 +1904,10 @@ async function loadTrending() {
 }
 
 setInterval(checkForUpdates, 60_000);
-for (const id of ["refresh", "retry-sources"])
-  $(id).addEventListener("click", () => {
-    loadNews(false, true);
-    loadTrending();
-  });
+$("refresh").addEventListener("click", () => {
+  loadNews(false, true);
+  loadTrending();
+});
 function showHealth(show) {
   $("source-popover").hidden = !show;
   $("source-health-button").setAttribute("aria-expanded", String(show));
