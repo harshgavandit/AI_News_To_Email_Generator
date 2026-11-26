@@ -221,14 +221,6 @@ p {
 .muted {
   color: var(--muted);
 }
-.live-dot {
-  height: 6px;
-  width: 6px;
-  display: inline-block;
-  flex-shrink: 0;
-  background: #768a58;
-  border-radius: 50%;
-}
 .hero h1 {
   font: normal clamp(38px, 3.6vw, 54px)/1.12 var(--serif);
   letter-spacing: -1.8px;
@@ -362,9 +354,6 @@ h2 {
   padding: 7px 10px;
   font-size: 10px;
 }
-.health-pill.degraded .live-dot {
-  background: #b1843f;
-}
 .source-popover {
   position: absolute;
   z-index: 8;
@@ -397,10 +386,6 @@ h2 {
 }
 .health-source strong {
   display: block;
-}
-.health-source span {
-  font-size: 10px;
-  color: var(--muted);
 }
 .topic-controls,
 .interest-chips {
@@ -1408,23 +1393,6 @@ dialog .button {
   padding: 6px 13px;
   flex-shrink: 0;
 }
-.failed-alert {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--warning-line);
-  background: var(--warning-surface);
-  border-radius: 6px;
-  padding: 10px 13px;
-  margin-top: 14px;
-  font-size: 11px;
-  color: var(--warning-text);
-}
-.failed-alert button {
-  flex-shrink: 0;
-  color: inherit;
-}
 .digest-form > select {
   margin-bottom: 22px;
   font-size: 12px;
@@ -1620,12 +1588,6 @@ dialog .button {
   .source-filters .topic-chip {
     font-size: 10px;
     padding: 6px 9px;
-  }
-  .failed-alert {
-    align-items: flex-start;
-  }
-  .failed-alert span {
-    overflow-wrap: anywhere;
   }
   .hero {
     grid-template-columns: 1fr;

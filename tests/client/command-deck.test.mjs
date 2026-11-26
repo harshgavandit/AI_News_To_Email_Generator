@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
 import { orbitalPosition, orbitals, ringAround, shortestAngle, toVector } from '../../public/globe.js';
-import { parseFeedHealth, pickTransmissions, relativeAge, renderWire, safeLink } from '../../public/command-center.js';
+import { pickTransmissions, relativeAge, renderWire, safeLink } from '../../public/command-center.js';
 
 const root = new URL('../../public/', import.meta.url);
 
@@ -51,9 +51,7 @@ test('transmissions use one safe headline per publisher and alternate regions, i
   assert.deepEqual(ranked.map((item) => item.id), ['n', 'h'], 'reporting first, release notes left to the feed');
 });
 
-test('telemetry parsing and relative ages', () => {
-  assert.deepEqual(parseFeedHealth('1,204 of 1,310 feeds up to date'), { fresh: 1204, total: 1310 });
-  assert.equal(parseFeedHealth('Checking sources'), null);
+test('relative ages stay readable across the day boundary', () => {
   const now = Date.parse('2026-11-23T12:00:00Z');
   assert.equal(relativeAge('2026-11-23T11:40:00Z', now), '20 min ago');
   assert.equal(relativeAge('2026-11-23T02:00:00Z', now), '10 h ago');

@@ -264,7 +264,6 @@ body.sheet-open { overflow: hidden; }
   .workspace-content .desk-layout { padding-top: 16px; }
   .workspace-content .section-top h2 { font-size: 24px; }
   .reading .health-pill { font-size: 9px; gap: 5px; }
-  .reading .live-dot { width: 5px; height: 5px; }
   .reading .stories { grid-template-columns: minmax(0, 1fr); }
   .reading .discovery-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-topic { display: block; }

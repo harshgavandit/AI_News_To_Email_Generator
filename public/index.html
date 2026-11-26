@@ -145,7 +145,7 @@
               <div class="deck-stat" hidden><dt>Stories · 24 h</dt><dd data-stat="stories">0</dd></div>
               <div class="deck-stat" hidden><dt>Publishers</dt><dd data-stat="publishers">0</dd></div>
               <div class="deck-stat" hidden><dt>Regions reporting</dt><dd data-stat="regions">0</dd></div>
-              <div class="deck-stat" hidden><dt>Feeds up to date</dt><dd data-stat="feeds">0</dd></div>
+              <div class="deck-stat" hidden><dt>Feeds tracked</dt><dd data-stat="feeds">0</dd></div>
             </dl>
           </div>
 
@@ -183,23 +183,22 @@
                 aria-expanded="false"
                 aria-controls="source-popover"
               >
-                <span class="live-dot"></span
-                ><span id="source-health-label">Checking sources</span
+                <span id="source-health-label">Browse sources</span
                 ><span aria-hidden="true">⌄</span>
               </button>
               <div id="source-popover" class="source-popover" hidden>
                 <div class="popover-heading">
-                  <strong>Source health</strong
+                  <strong>Source coverage</strong
                   ><button
                     id="source-popover-close"
                     type="button"
                     class="text-button"
-                    aria-label="Close source status"
+                    aria-label="Close source coverage"
                   >
                     ✕
                   </button>
                 </div>
-                <p id="updated" class="small">Waiting for source checks.</p>
+                <p id="updated" class="small" hidden></p>
                 <p id="next-source-sweep" class="small" hidden></p>
                 <div id="source-health-list"></div>
                 <a href="/sources.html">See all sources ↗</a>
@@ -280,7 +279,6 @@
                 <a href="/research.html#radar-title" class="text-button">Edit interests</a>
               </div>
             </div>
-            <div id="home-catchup-freshness"></div>
             <div id="home-catchup-results"></div>
             <div id="catchup-useful" class="useful-box" data-useful="update" hidden></div>
           </section>
@@ -445,12 +443,6 @@
                 rel="noopener noreferrer"
                 >GitHub ↗</a
               >
-            </div>
-            <div id="failed-alert" class="failed-alert" hidden>
-              <span id="failed-message"></span
-              ><button id="retry-sources" class="text-button" type="button">
-                Retry ↻
-              </button>
             </div>
             <div id="news-update" class="news-update" hidden>
               <span id="news-update-text" role="status">New stories are available.</span>

@@ -21,10 +21,8 @@ export function nextSweepText(snapshot) {
 }
 
 export function editionFreshnessText(snapshot) {
-  const { enabled, fresh } = snapshot?.counts || {};
-  if (!enabled) return "";
-  const label = fresh === enabled ? "Coverage up to date" : "Coverage partial";
-  return [label + ` (${fresh} of ${enabled} feeds).`,
+  if (!snapshot?.counts?.enabled) return "";
+  return [
     snapshot.checked_at ? `Latest source check: ${moment(snapshot.checked_at)}.` : "",
     nextSweepText(snapshot)].filter(Boolean).join(" ");
 }

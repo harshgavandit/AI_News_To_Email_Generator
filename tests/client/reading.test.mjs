@@ -320,15 +320,29 @@ test('daily briefing navigation, read state and modal brief pins work together',
     publisher: 'Original publisher', source: 'medium', source_id: 'medium-codex', topic: 'software', category: 'software',
     published_at: new Date().toISOString(), url: `https://example.org/update-${index}`, has_excerpt: true,
     coverage_count: 2, coverage_publishers: ['Original publisher', 'Other publisher'] }));
+  const sources = [
+    ...catalog.sources,
+    { id: 'failed', label: 'Second publisher', enabled: true, available: false, freshness: 'failed' },
+    { id: 'stale', label: 'Third publisher', enabled: true, available: true, freshness: 'stale' },
+    { id: 'paused', label: 'Paused publisher', enabled: false },
+  ];
   globalThis.fetch = async url => {
     const path = String(url);
     const data = path === '/api/briefing' ? { articles, publishers: 8 } : path.startsWith('/api/news') ?
-      { ...catalog, articles, total: 2, sources: catalog.sources, facets: {} } : {};
+      { ...catalog, articles, total: 2, sources, facets: {},
+        freshness: { status: 'stale', counts: { enabled: 3, fresh: 0, failed: 1, stale: 2 } } } : {};
     return new Response(JSON.stringify(data), { status: 200 });
   };
   try {
     await import(`../../public/app.js?briefing=${Date.now()}`);
     await until(() => document.querySelector('#stories .story'));
+    assert.equal(document.getElementById('source-health-label').textContent, '3 feeds tracked');
+    document.getElementById('source-health-button').click();
+    const popover = document.getElementById('source-popover');
+    assert.match(popover.textContent, /Second publisher/);
+    assert.doesNotMatch(popover.textContent, /Check overdue|Last check failed|Paused publisher/);
+    assert.equal(document.getElementById('failed-alert'), null);
+    document.getElementById('source-popover-close').click();
     document.querySelector('[data-workspace-view="briefing"]').click();
     await until(() => document.getElementById('stories').getAttribute('aria-busy') === 'false');
     assert.equal(document.getElementById('reading-title').textContent, 'Today');
@@ -388,13 +402,15 @@ test('returning readers open Catch up and can mark cited updates as read', async
     assert.deepEqual(requests[0].profile.preferred_topics, ['software']);
     assert.equal(document.getElementById('edition-start').dataset.editionView, 'catchup');
     assert.equal(document.getElementById('edition-followed').hidden, false);
-    assert.match(document.getElementById('edition-freshness').textContent, /Coverage partial \(2 of 3 feeds\).*Next full sweep/);
+    const edition = document.getElementById('edition-freshness');
+    assert.match(edition.textContent, /Latest source check.*Next full sweep/);
+    assert.doesNotMatch(edition.textContent, /Coverage partial|2 of 3/);
     assert.equal(results.querySelector('a').href, article.url);
     document.getElementById('home-catchup-mark').click();
     await until(() => results.textContent.includes('Another development'));
     assert.deepEqual(requests[1].seen, { [first]: '2' });
     document.getElementById('home-catchup-mark').click();
-    await until(() => document.getElementById('home-catchup-status').textContent.includes('Some source checks are incomplete'));
+    await until(() => document.getElementById('home-catchup-status').textContent.includes('No new developments found in the available archive'));
     assert.deepEqual(requests[2].seen, { [first]: '2', [next]: '2' });
     assert.ok(requests.every(request => request.since === lastVisit / 1000));
     document.getElementById('home-catchup-browse').click();
