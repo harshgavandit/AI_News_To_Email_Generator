@@ -71,6 +71,6 @@ These settings live in GitHub or Vercel.
 | General → Pull requests | Merge commits only, titled from the PR; always suggest updating PR branches; do not delete head branches automatically (that would delete `Staging`). |
 | Actions → General | Read-only default token, Actions may not approve PRs, require actions pinned to a full SHA. |
 | Advanced Security | Dependency graph, Dependabot alerts, secret scanning with push protection, private vulnerability reporting; code scanning failure thresholds as above. |
-| Vercel | Automatic Git deployments and on-demand concurrent builds are off. Production deploys are owner-initiated. Deployment Checks wait for `Release CI` before promoting `main`, and automatic system environment variables stay enabled. |
+| Vercel | `git.deploymentEnabled: false` in `vercel.json` suppresses Git-triggered builds. On-demand concurrent builds are off and the build machine stays on Standard. Production deploys are owner-initiated. Deployment Checks wait for `Release CI` before promoting `main`, and automatic system environment variables stay enabled. |
 
 A second maintainer is the remaining gap: with one maintainer, GitHub cannot require an approval from someone other than the author. Add one and require one approving review when possible.
