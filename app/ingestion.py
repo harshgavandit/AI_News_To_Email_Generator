@@ -15,9 +15,9 @@ from app.sources import DEFAULT_SOURCES
 INDIA_TIME = timezone(timedelta(hours=5, minutes=30))
 SWEEP_INTERVAL = timedelta(hours=12)
 SWEEP_WINDOW = timedelta(minutes=45)
-# Vercel starts each sweep inside SWEEP_WINDOW. GitHub's follow-up finishes whatever that left,
-# and GitHub can start scheduled jobs hours late, so the follow-up may still complete the same
-# sweep (one check per source) until an hour before the next one begins.
+# GitHub runs full sweeps and Vercel checks its small publisher set inside SWEEP_WINDOW.
+# GitHub can start hours late, so a continuation can finish the same sweep until an
+# hour before the next one begins.
 SWEEP_CATCHUP = timedelta(hours=11)
 HOST_WORKERS = 2
 # Light checks at 02:00 and 14:00 IST cover the busiest newsrooms, advisories and status

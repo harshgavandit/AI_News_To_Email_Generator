@@ -139,6 +139,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", choices=("full", "priority"), default="full")
     parser.add_argument("--budget-minutes", type=int, default=30)
+    parser.add_argument("--feeds-only", action="store_true", help="Refresh publishers without starting morning mail.")
     args = parser.parse_args(argv)
     if not os.getenv("NEWS_DATABASE_URL"):
         print("::error::Add the production NEWS_DATABASE_URL as a repository secret. See docs/LAUNCH.md.")
@@ -159,7 +160,7 @@ def main(argv=None):
                          f"| {summary['status']} | {summary.get('checked', 0)} | {summary.get('healthy', 0)} | "
                          f"{summary.get('remaining') or 0} | {summary.get('batches', 0)} |\n")
     code = outcome(args.run, summary)
-    if args.run == "full" and code == 0 and summary["status"] == "refreshed" and summary.get("checked"):
+    if not args.feeds_only and args.run == "full" and code == 0 and summary["status"] == "refreshed" and summary.get("checked"):
         start_morning_mail(os.getenv("PUBLIC_ORIGIN", "https://getinformdaily.com"), os.getenv("FEED_REFRESH_SECRET", ""))
     return code
 

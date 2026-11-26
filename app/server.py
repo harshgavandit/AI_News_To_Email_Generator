@@ -1147,7 +1147,7 @@ def dispatch_github_sweep():
     allowance. With GITHUB_SWEEP_TOKEN set (a fine-grained token with Actions read and
     write on this repository only), Vercel's schedule just starts the GitHub run, which
     fetches feeds and writes to the same database. Without it, or if GitHub refuses,
-    Vercel runs the sweep itself as before.
+    GitHub's own schedules still start the full sweep.
     """
     token = os.getenv("GITHUB_SWEEP_TOKEN", "")
     repository = os.getenv("GITHUB_SWEEP_REPOSITORY", "harshgavandit/AI_News_To_Email_Generator")
@@ -1181,34 +1181,19 @@ def scheduled_feed_sweep(response: Response, authorization: str | None = Header(
     except ValueError as exc:
         raise HTTPException(422, "Invalid sweep time.") from exc
     now = datetime.now(timezone.utc)
-    if latest_sweep(now) == scheduled and now < scheduled + SWEEP_WINDOW and dispatch_github_sweep():
-        logger.info("publisher_sweep_dispatched scheduled=%s runner=github", scheduled.isoformat())
-        result = {"status": "dispatched", "runner": "github", "scheduled_at": scheduled.isoformat()}
-        # Vercel fetches the few publishers that refuse GitHub's network. This is a partial
-        # sweep, so it never starts morning mail; the GitHub run does once it finishes.
-        try:
-            own = run_sweep(expected_slot=scheduled, source_ids=VERCEL_FETCHED)
-        except HTTPException as error:
-            own = {"status": "failed", "detail": error.detail}
-        result["vercel_feeds"] = {key: own.get(key) for key in ("status", "checked", "healthy", "remaining")}
-        logger.info("publisher_sweep_vercel_feeds scheduled=%s result=%s", scheduled.isoformat(), result["vercel_feeds"])
-        return result
-    result = run_sweep(expected_slot=scheduled)
-    result["handed_off"] = continue_sweep(result, 0)
-    result["mail_started"] = deliver_after_sweep(result)
-    incomplete = result["status"] == "closed" or result.get("remaining") or result.get("unconfirmed")
-    if incomplete:
+    if latest_sweep(now) != scheduled or now >= scheduled + SWEEP_WINDOW:
         response.status_code = 503
-        for ident in result.get("unconfirmed", ()):
-            logger.error("publisher_check_interrupted source_id=%s scheduled=%s", ident, scheduled.isoformat())
-        for ident in result.get("unfinished", ()):
-            logger.log(logging.INFO if result["handed_off"] else logging.ERROR,
-                       "publisher_check_not_started source_id=%s scheduled=%s reason=sweep_budget handed_off=%s",
-                       ident, scheduled.isoformat(), result["handed_off"])
-    logger.log(logging.WARNING if incomplete or result.get("deferrals") else logging.INFO,
-               "publisher_sweep scheduled=%s status=%s checked=%s healthy=%s remaining=%s deferred=%s unconfirmed=%s",
-               scheduled.isoformat(), result["status"], result.get("checked"), result.get("healthy"),
-               result.get("remaining"), result.get("deferrals"), result.get("unconfirmed"))
+        return {"status": "closed", "scheduled_at": (latest_sweep(now) + SWEEP_INTERVAL).isoformat()}
+    # Never fall back to running the full catalog on the web deployment. A slow sweep
+    # can exhaust the same compute allowance that serves readers.
+    own = run_sweep(expected_slot=scheduled, source_ids=VERCEL_FETCHED)
+    dispatched = dispatch_github_sweep()
+    result = {"status": "dispatched" if dispatched else own["status"], "runner": "github",
+              "scheduled_at": scheduled.isoformat(), "vercel_feeds": own}
+    if own["status"] == "already_started" or own.get("remaining") or own.get("unconfirmed"):
+        response.status_code = 503
+    logger.info("publisher_sweep scheduled=%s github_dispatched=%s vercel_feeds=%s",
+                scheduled.isoformat(), dispatched, own)
     return result
 
 
