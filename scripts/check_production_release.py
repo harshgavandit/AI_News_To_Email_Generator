@@ -23,7 +23,9 @@ def fetch(path: str, content_type: str) -> tuple[bytes, str]:
             or response.headers.get_content_type() != content_type
             or response.geturl() != request.full_url
         ):
-            raise ValueError(f"{path}: unexpected redirect, HTTP status, or content type")
+            raise ValueError(
+                f"{path}: unexpected redirect, HTTP status, or content type"
+            )
         return response.read(), response.headers.get("X-Informa-Revision", "")
 
 
@@ -56,7 +58,11 @@ def verify(revision: str, wait_seconds: int) -> None:
             if final_revision != revision:
                 raise ValueError("The production alias changed during the smoke test")
         except (OSError, ValueError) as error:
-            if isinstance(error, HTTPError) and error.code == 429 and error.headers.get("X-Vercel-Mitigated") == "challenge":
+            if (
+                isinstance(error, HTTPError)
+                and error.code == 429
+                and error.headers.get("X-Vercel-Mitigated") == "challenge"
+            ):
                 raise SystemExit(
                     "::error::Vercel challenged the production monitor. Check the firewall rule and SITE_MONITOR_TOKEN."
                 ) from error
