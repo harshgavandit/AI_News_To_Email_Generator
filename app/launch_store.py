@@ -913,8 +913,10 @@ class Store:
 
     def mail_backlog(self, now):
         with self.engine.connect() as conn:
-            due, oldest = conn.execute(select(func.count(), func.min(subscriptions.c.next_run)).where(
-                subscriptions.c.enabled.is_(True), subscriptions.c.next_run <= now)).one()
+            due_now = subscriptions.c.next_run <= now
+            active, due, oldest = conn.execute(select(
+                func.count(), func.count().filter(due_now), func.min(subscriptions.c.next_run).filter(due_now),
+            ).where(subscriptions.c.enabled.is_(True))).one()
             totals = dict((state, size) for state, size in conn.execute(
                 select(mail_batches.c.state, func.sum(mail_batches.c.size)).group_by(mail_batches.c.state)
                 .where(mail_batches.c.created >= now - 86400)))
@@ -922,7 +924,7 @@ class Store:
                 .where(mail_events.c.received_at >= now - 86400).group_by(mail_events.c.kind)))
             queued, first_queued = conn.execute(select(func.sum(mail_batches.c.size), func.min(mail_batches.c.created))
                 .where(mail_batches.c.state == "pending")).one()
-            return {"due": due, "oldest_due_seconds": max(0, round(now - oldest)) if oldest else 0,
+            return {"active_subscriptions": active, "due": due, "oldest_due_seconds": max(0, round(now - oldest)) if oldest else 0,
                     "queued": queued or 0, "oldest_queued_seconds": max(0, round(now - first_queued)) if first_queued else 0,
                     "batches_24h": totals, "provider_events_24h": outcomes}
 

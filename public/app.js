@@ -31,6 +31,7 @@ const editions = ["saved", "briefing", "catchup"];
 let lastCatchup = catchupCheckpoint(window.localStorage);
 let visibleCatchup = [];
 let implicitHome = !location.search && !location.hash;
+let revealDailyDelivery = location.hash === "#daily-delivery";
 const state = {
   articles: [],
   recommendations: [],
@@ -746,6 +747,7 @@ if (!lastCatchup && !readingVisit.previousVisit) {
 reflectEditionInterests();
 $("home-catchup-browse").addEventListener("click", () => openHomeEdition("feed"));
 $("daily-delivery-slot").append($("daily-delivery"));
+if (revealDailyDelivery) $("daily-delivery").open = true;
 $("briefing-email").addEventListener("click", () => {
   $("daily-delivery").open = true;
   $("hero-email").focus();
@@ -1404,6 +1406,10 @@ async function loadBriefing() {
     if (data.freshness) renderHealth(data.freshness);
     $("briefing-pin").hidden = !data.articles.length;
     renderStories();
+    if (revealDailyDelivery) {
+      revealDailyDelivery = false;
+      $("daily-delivery").scrollIntoView?.({ block: "start" });
+    }
   } catch (error) {
     if (state.controller !== controller || error.name === "AbortError") return;
     state.briefing = [];

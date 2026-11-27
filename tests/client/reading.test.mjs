@@ -366,6 +366,26 @@ test('daily briefing navigation, read state and modal brief pins work together',
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
+test('the tracker email link opens and scrolls to the daily delivery form', async () => {
+  const env = mount(html, 'https://informa.test/?view=briefing#daily-delivery');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  let scrolled = false;
+  const delivery = document.getElementById('daily-delivery');
+  delivery.scrollIntoView = () => { scrolled = true; };
+  globalThis.fetch = async path => new Response(JSON.stringify(
+    path === '/api/briefing' ? { articles: [] } : path === '/api/sources' ? catalog : {},
+  ), { status: 200 });
+  try {
+    await import(`../../public/app.js?delivery-link=${Date.now()}`);
+    await until(() => scrolled);
+    assert.equal(delivery.open, true);
+    assert.equal(delivery.parentElement.hidden, false);
+    assert.equal(location.hash, '#daily-delivery');
+    await delay(50);
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
 test('returning readers open Catch up and can mark cited updates as read', async () => {
   const env = mount();
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;

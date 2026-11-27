@@ -1,7 +1,10 @@
 """Coverage linking, reviewed background rules, and workspace access through the public API."""
 from datetime import UTC, datetime
 import json
+from pathlib import Path
 import time
+from urllib.parse import urlsplit
+from xml.etree import ElementTree
 
 from fastapi.testclient import TestClient
 import pytest
@@ -66,6 +69,46 @@ def test_technology_page_grounding_and_radar_follow(archive, monkeypatch):
         assert edition["answer"]["claims"][0]["quotes"]
         catchup = browser.post("/api/intelligence/catchup", json={"profile": {"followed_technologies": ["kubernetes"]}}).json()
         assert any("Technology you follow: Kubernetes" in row["reasons"] for row in catchup["events"])
+
+
+def test_public_tracker_html_matches_sitemap_and_keeps_publisher_context(archive):
+    article = release(archive, "landing", "1.34.0", "Publisher excerpt for the interactive reader.",
+                      title="Kubernetes release & upgrade notes")
+    root = ElementTree.parse(Path(__file__).resolve().parents[1] / "public" / "sitemap.xml")
+    urls = [row.text for row in root.findall(".//{*}loc") if "/technologies" in row.text]
+    assert len(urls) == 7
+    with TestClient(app) as browser:
+        directory = browser.get("/technologies")
+        for url in urls:
+            path = urlsplit(url).path
+            response = browser.get(path)
+            assert response.status_code == 200
+            assert f'<link rel="canonical" href="{url}"' in response.text
+            assert "noindex" not in response.headers.get("X-Robots-Tag", "")
+            if path != "/technologies":
+                assert f'href="{path}"' in directory.text
+        tracker = browser.get("/technologies/kubernetes")
+        assert "Kubernetes release &amp; upgrade notes" in tracker.text
+        assert f'href="{article["url"]}"' in tracker.text
+        assert "Publisher excerpt for the interactive reader." not in tracker.text
+        assert 'href="/?view=briefing#daily-delivery"' in tracker.text
+        assert "schema.org/BreadcrumbList" in tracker.text
+        assert browser.get("/technologies/unknown").status_code == 404
+
+
+def test_mail_health_counts_only_active_opt_ins(archive, monkeypatch):
+    now = time.time()
+    archive.subscribe("active", "active@example.test", "UTC", now + 3600)
+    archive.subscribe("removed", "removed@example.test", "UTC", now + 3600)
+    archive.unsubscribe("removed")
+    monkeypatch.setenv("FEED_REFRESH_SECRET", "local-seo-test-fixture-only")
+    with TestClient(app) as browser:
+        assert browser.get("/api/jobs/mail-health").status_code == 401
+        response = browser.get("/api/jobs/mail-health", headers={"Authorization": "Bearer local-seo-test-fixture-only"})
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store"
+        assert response.json()["active_subscriptions"] == 1
+        assert response.json()["due"] == 0
 
 
 def test_technology_answer_can_cite_exact_official_release_title(archive, monkeypatch):
