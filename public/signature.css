@@ -457,3 +457,23 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
   border-radius: 50%; font-size: 1.6rem; color: inherit; }
 .feedback-head .dialog-close:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
 .feedback-actions .button { width: auto; min-width: 8rem; }
+.source-checked {
+  display: inline-block;
+  padding: 0.25em 0.65em;
+  border: 1px solid var(--accent-line, currentColor);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.checked-sources { padding-inline-start: 1.3em; }
+.ask-page { max-width: 52rem; margin-block: clamp(1.5rem, 5vw, 4rem); }
+.ask-panel { padding: clamp(1rem, 3vw, 2rem); margin-block: 1rem; border: 1px solid var(--accent-line, currentColor); border-radius: 12px; }
+.ask-panel h2, .ask-panel h1 { margin-block: 0 0.25rem; }
+.ask-panel label { display: block; font-weight: 650; }
+.ask-panel form { display: grid; gap: 0.6rem; }
+.ask-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+.ask-actions input { flex: 1 1 18rem; min-width: 0; }
+.ask-panel select, .ask-panel input, .ask-panel textarea { max-width: 100%; font-size: 1rem; }
+.ask-panel button { min-height: 44px; }
+.ask-panel [data-ask-answer] { overflow-wrap: anywhere; }
+.ask-panel [data-ask-status]:empty { margin: 0; }

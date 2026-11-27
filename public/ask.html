@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ask about recent technology news and check each answer against its publisher sources." />
+    <title>Ask Informa · Informa AI</title>
+    <link rel="canonical" href="https://getinformdaily.com/ask.html" />
+    <link rel="icon" href="/informa-ai-icon.png" />
+    <script src="/theme.js"></script>
+    <script type="module" src="/ask.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/system.css" />
+    <link rel="stylesheet" href="/command.css" />
+    <link rel="stylesheet" href="/orbital.css" />
+    <link rel="stylesheet" href="/signature.css" />
+    <script defer src="/system.js"></script>
+    <script defer src="/ambient.js"></script>
+    <script defer src="/orbital.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/#reading-room">Reading Room</a>
+          <a href="/research.html">Research Desk</a>
+          <a href="/connect.html">Connect an assistant</a>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap ask-page">
+      <section class="ask-panel" data-ask aria-labelledby="ask-title">
+        <h1 id="ask-title">Ask Informa</h1>
+        <p>Ask a question about recent tech news. Read the source behind each answer.</p>
+        <form method="post" action="/api/ask">
+          <label for="archive-question">Your question</label>
+          <textarea name="question" id="archive-question" required minlength="3" maxlength="320" rows="3" aria-describedby="archive-question-help" placeholder="What changed in AI coding tools this week?"></textarea>
+          <p id="archive-question-help" class="small">Leave out personal details. Questions aren’t saved to the archive.</p>
+          <div class="ask-actions">
+            <label for="archive-days">Look back</label>
+            <select name="days" id="archive-days">
+              <option value="1">Past day</option>
+              <option value="7" selected>Past week</option>
+              <option value="30">Past month</option>
+            </select>
+            <button class="button primary" type="submit">Find an answer</button>
+          </div>
+        </form>
+        <div class="ask-actions" role="group" aria-label="Example questions">
+          <button class="button secondary" type="button" data-ask-example="What changed in AI coding tools this week?">AI coding tools</button>
+          <button class="button secondary" type="button" data-ask-example="What have cloud providers reported about service outages?">Cloud outages</button>
+        </div>
+        <p class="status" data-ask-status role="status"></p>
+        <div data-ask-answer></div>
+      </section>
+    </main>
+  </body>
+</html>

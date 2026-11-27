@@ -66,7 +66,7 @@ def release_decision(**results):
         **{key.upper(): value for key, value in results.items()},
     }
     return subprocess.run(
-        ["bash", "-c", step["run"]], env=env, capture_output=True, text=True
+        [shutil.which("bash"), "-c", step["run"]], env=env, capture_output=True, text=True
     ).returncode
 
 

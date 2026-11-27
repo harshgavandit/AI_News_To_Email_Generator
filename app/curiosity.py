@@ -2440,7 +2440,7 @@ def _interleave(seeds, fresh):
     return ordered
 
 
-def build_curiosity_cards(store, *, limit=24):
+def build_curiosity_cards(store, *, limit=24, read_only=False):
     """Blend verified evergreen seeds with high-signal records in the archive."""
     limit = max(1, min(int(limit), MAX_CURIOSITY_CARDS))
     reserve = min(MAX_FRESH_CARDS, max(1, limit // FRESH_SLOT_SHARE)) if limit > 1 else 0
@@ -2452,7 +2452,7 @@ def build_curiosity_cards(store, *, limit=24):
 
     summaries = {}
     summary_targets = [article for article in selected if not article.get("curiosity_seed")]
-    if summary_targets:
+    if summary_targets and not read_only:
         try:
             from app.web_digest import build_digest
             digest = build_digest(summary_targets, "Reader", "Engineering systems and lessons learned", store=store,
@@ -2464,6 +2464,8 @@ def build_curiosity_cards(store, *, limit=24):
             import logging
             logging.getLogger(__name__).warning("curiosity_summary_unavailable error_type=%s", type(error).__name__)
     cards = [_card(article, summaries) for article in selected]
+    if read_only:
+        return cards
     return cards + _evergreen_library(store, cards, selected, limit - len(cards))
 
 

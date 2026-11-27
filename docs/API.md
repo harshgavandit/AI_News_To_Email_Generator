@@ -1,8 +1,18 @@
 # Informa AI HTTP API
 
+For the read-only Streamable HTTP endpoint at `/mcp`, see the [MCP connector guide](MCP.md).
+
 The running app exposes OpenAPI at `/openapi.json`. Swagger UI at `/api/docs` is available in local and preview deployments; production serves it only when `API_DOCS_ENABLED=1`, because the UI loads third-party scripts with inline code. Public read routes that reach the database have per-client request budgets. IPv6 clients share one budget per /64 prefix. JSON errors include a `detail` field. API responses include an `X-Request-ID` for log correlation. A `429` may include `Retry-After`.
 
 ## Research and intelligence
+
+`POST /api/ask` accepts `{"question":"What changed in Kubernetes this week?","topic":"all","days":7}`. The optional topic is a key from `/api/sources` and `days` is 1–30. The archive supplies up to eight distinct English publisher excerpts using vector and keyword search when vectors are available, or keyword search alone. The result includes `status`, `answer`, `citations`, `checks`, `retrieved_count`, `retrieval` and `cached`. Citation objects contain `n`, `id`, `title`, `publisher`, `url` and `published_at`. An unavailable or budget-limited model returns `insufficient` with a `reason`. Questions share the story conversation allowance of 10 per 10 minutes per IP. Over-limit requests receive HTTP 429 with `Retry-After`. Checked and empty-archive results are cached for 30 minutes by a question hash and scope.
+
+Run `uv run python -m scripts.run_evals` to score the same Ask pipeline against a synthetic archive using a model stub. The report is written to `evals/results/latest.json`. Python CI gates on the thresholds in `evals/thresholds.json`. Use `--live` or manually dispatch **Ask Informa live evaluation** to score the configured model on the same fixtures. The manual run uses `OPENAI_API_KEY` and can incur provider charges. It works with temporary SQLite and leaves production data alone.
+
+Story-scoped requests to `POST /api/intelligence/converse` (`context_only: true`) have a 320-character question limit and accept up to eight public story IDs. The source-only response includes `answer.guardrails` with `status`, `answer`, numbered `citations`, and `checks` for sourcing, quotation and link validation. A checked answer uses complete verbatim excerpt sentences. Rejected model text is discarded and replaced with a fixed message. The original evidence can still be read when the AI service is unavailable.
+
+`POST /api/feedback` accepts `kind: "ai_answer"` with `question`, `story_ids` and `page` after a reader chooses to submit a report. The feature sends no contact field. The question must omit personal and account information. Reports use the existing private feedback inbox and its retention policy.
 
 - `POST /api/intelligence/visit-catchup` accepts optional UTC timestamps `since` and `as_of`, plus `analyze` (default false). It returns the effective bounds and up to eight ranked evidence records. A first visit uses 24 hours and a return visit uses up to seven days. Publisher publication times and known event-index observation times are returned separately. On explicit analysis, the shared research budget and citation validator apply. Use the returned time bounds for the analysis request. Responses are private and uncached at the HTTP layer.
 

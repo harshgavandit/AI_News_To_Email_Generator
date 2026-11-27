@@ -1,0 +1,8 @@
+{
+  "citation_rate": 0.95,
+  "citation_precision": 0.95,
+  "must_include_recall": 0.9,
+  "must_not_include_violations": 0,
+  "correct_refusals": 1,
+  "status_accuracy": 0.95
+}

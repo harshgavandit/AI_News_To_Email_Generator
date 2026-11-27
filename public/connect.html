@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Connect Claude, ChatGPT or Cursor to Informa AI’s public technology news archive." />
+    <title>Connect your AI assistant · Informa AI</title>
+    <link rel="canonical" href="https://getinformdaily.com/connect.html" />
+    <link rel="icon" href="/informa-ai-icon.png" />
+    <script src="/theme.js"></script>
+    <script type="module" src="/connect.js"></script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/foundations.css" />
+    <link rel="stylesheet" href="/system.css" />
+    <link rel="stylesheet" href="/command.css" />
+    <link rel="stylesheet" href="/orbital.css" />
+    <link rel="stylesheet" href="/signature.css" />
+    <script defer src="/system.js"></script>
+    <script defer src="/ambient.js"></script>
+    <script defer src="/orbital.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="topbar wrap">
+        <a class="brand" href="/"><img class="brand-icon" src="/informa-ai-icon.png" width="32" height="32" alt="" /><span class="brand-name">Informa AI</span></a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/#reading-room">Reading Room</a>
+          <a href="/ask.html">Ask Informa</a>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap ask-page">
+      <section class="ask-panel" aria-labelledby="connect-title">
+        <h1 id="connect-title">Use Informa in your AI assistant</h1>
+        <p>Search public tech reporting, read the latest headlines, and ask for answers with links to original sources. The connector uses Streamable HTTP and is read-only.</p>
+        <label for="mcp-url">Connector URL</label>
+        <div class="ask-actions">
+          <input id="mcp-url" type="url" value="https://getinformdaily.com/mcp" readonly />
+          <button type="button" class="button primary" data-copy="mcp-url">Copy connector URL</button>
+        </div>
+        <p class="status" role="status" data-copy-status></p>
+      </section>
+      <section class="ask-panel" aria-labelledby="claude-title">
+        <h2 id="claude-title">Claude</h2>
+        <ol>
+          <li>Open <strong>Customize → Connectors</strong> and choose to add a custom connector.</li>
+          <li>Set the name to <strong>Informa AI</strong>, paste the connector URL, and choose <strong>Add</strong>.</li>
+          <li>Enable the connector in your chat. If your organization manages connectors, ask your workspace owner to add it.</li>
+        </ol>
+        <a href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp">Claude’s custom connector guide ↗</a>
+      </section>
+      <section class="ask-panel" aria-labelledby="chatgpt-title">
+        <h2 id="chatgpt-title">ChatGPT</h2>
+        <ol>
+          <li>On ChatGPT web, open <strong>Plugins</strong>, click <strong>+</strong>, and choose <strong>Add custom MCP server</strong>. If your workspace uses the older Apps settings, choose <strong>Apps → Create</strong>.</li>
+          <li>Name it <strong>Informa AI</strong>, paste the connector URL under <strong>Connection</strong>, and select <strong>No authentication</strong>.</li>
+          <li>Review the connection prompt and create the plugin. Start a chat and type <strong>@Informa AI</strong> to select it. Your plan and workspace permissions determine whether you can add it.</li>
+        </ol>
+        <a href="https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt">ChatGPT’s custom MCP guide ↗</a>
+      </section>
+      <section class="ask-panel" aria-labelledby="cursor-title">
+        <h2 id="cursor-title">Cursor</h2>
+        <p>Add this entry to <code>.cursor/mcp.json</code>. Merge it into the existing <code>mcpServers</code> object if you already have one.</p>
+        <pre id="cursor-config"><code>{
+  "mcpServers": {
+    "informa-ai": {
+      "url": "https://getinformdaily.com/mcp"
+    }
+  }
+}</code></pre>
+        <div class="ask-actions">
+          <button type="button" class="button secondary" data-copy="cursor-config">Copy Cursor config</button>
+          <a href="https://cursor.com/docs/mcp">Cursor’s MCP guide ↗</a>
+        </div>
+        <p class="status" role="status" data-copy-status></p>
+      </section>
+    </main>
+  </body>
+</html>

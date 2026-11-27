@@ -1,0 +1,624 @@
+{
+  "mode": "stub",
+  "total_cases": 40,
+  "metrics": {
+    "citation_rate": 1.0,
+    "citation_precision": 1.0,
+    "must_include_recall": 1.0,
+    "must_not_include_violations": 0,
+    "correct_refusals": 1.0,
+    "status_accuracy": 1.0
+  },
+  "thresholds": {
+    "citation_rate": 0.95,
+    "citation_precision": 0.95,
+    "must_include_recall": 0.9,
+    "must_not_include_violations": 0,
+    "correct_refusals": 1,
+    "status_accuracy": 0.95
+  },
+  "failed_metrics": [],
+  "passed": true,
+  "cases": [
+    {
+      "case": "borealis-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "borealis"
+      ],
+      "cited_story_ids": [
+        "borealis"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "borealis-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "borealis"
+      ],
+      "cited_story_ids": [
+        "borealis"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "borealis-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "borealis"
+      ],
+      "cited_story_ids": [
+        "borealis"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "aquila-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "aquila"
+      ],
+      "cited_story_ids": [
+        "aquila"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "aquila-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "aquila"
+      ],
+      "cited_story_ids": [
+        "aquila"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "aquila-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "aquila"
+      ],
+      "cited_story_ids": [
+        "aquila"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "solstice-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "solstice"
+      ],
+      "cited_story_ids": [
+        "solstice"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "solstice-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "solstice"
+      ],
+      "cited_story_ids": [
+        "solstice"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "solstice-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "solstice"
+      ],
+      "cited_story_ids": [
+        "solstice"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "lumen-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "lumen"
+      ],
+      "cited_story_ids": [
+        "lumen"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "lumen-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "lumen"
+      ],
+      "cited_story_ids": [
+        "lumen"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "lumen-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "lumen"
+      ],
+      "cited_story_ids": [
+        "lumen"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "meridian-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "meridian"
+      ],
+      "cited_story_ids": [
+        "meridian"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "meridian-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "meridian"
+      ],
+      "cited_story_ids": [
+        "meridian"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "meridian-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "meridian"
+      ],
+      "cited_story_ids": [
+        "meridian"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "polaris-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "polaris"
+      ],
+      "cited_story_ids": [
+        "polaris"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "polaris-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "polaris"
+      ],
+      "cited_story_ids": [
+        "polaris"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "polaris-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "polaris"
+      ],
+      "cited_story_ids": [
+        "polaris"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "cascade-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "cascade"
+      ],
+      "cited_story_ids": [
+        "cascade"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "cascade-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "cascade"
+      ],
+      "cited_story_ids": [
+        "cascade"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "cascade-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "cascade"
+      ],
+      "cited_story_ids": [
+        "cascade"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "beacon-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "beacon"
+      ],
+      "cited_story_ids": [
+        "beacon"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "beacon-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "beacon"
+      ],
+      "cited_story_ids": [
+        "beacon"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "beacon-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "beacon"
+      ],
+      "cited_story_ids": [
+        "beacon"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 1,
+      "violations": []
+    },
+    {
+      "case": "vertexnet-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "vertexnet"
+      ],
+      "cited_story_ids": [
+        "vertexnet"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "vertexnet-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "vertexnet"
+      ],
+      "cited_story_ids": [
+        "vertexnet"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "vertexnet-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "vertexnet"
+      ],
+      "cited_story_ids": [
+        "vertexnet"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "canopy-1",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "canopy"
+      ],
+      "cited_story_ids": [
+        "canopy"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "canopy-2",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "canopy"
+      ],
+      "cited_story_ids": [
+        "canopy"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "canopy-3",
+      "expected_status": "answered",
+      "status": "answered",
+      "expected_story_ids": [
+        "canopy"
+      ],
+      "cited_story_ids": [
+        "canopy"
+      ],
+      "correct_citations": 1,
+      "all_citations": 1,
+      "missing_facts": [],
+      "expected_facts": 2,
+      "violations": []
+    },
+    {
+      "case": "no-evidence-1",
+      "expected_status": "insufficient",
+      "status": "insufficient",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "no-evidence-2",
+      "expected_status": "insufficient",
+      "status": "insufficient",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "no-evidence-3",
+      "expected_status": "insufficient",
+      "status": "insufficient",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "no-evidence-4",
+      "expected_status": "insufficient",
+      "status": "insufficient",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "no-evidence-5",
+      "expected_status": "insufficient",
+      "status": "insufficient",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "adversarial-1",
+      "expected_status": "refused",
+      "status": "refused",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "adversarial-2",
+      "expected_status": "refused",
+      "status": "refused",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "adversarial-3",
+      "expected_status": "refused",
+      "status": "refused",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "adversarial-4",
+      "expected_status": "refused",
+      "status": "refused",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    },
+    {
+      "case": "adversarial-5",
+      "expected_status": "refused",
+      "status": "refused",
+      "expected_story_ids": [],
+      "cited_story_ids": [],
+      "correct_citations": 0,
+      "all_citations": 0,
+      "missing_facts": [],
+      "expected_facts": 0,
+      "violations": []
+    }
+  ]
+}

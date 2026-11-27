@@ -22,6 +22,7 @@ feature_usage = Table("brief_feature_usage", schema,
 FEATURES = {
     "story_dossier": {"open"},
     "story_ask": {"open", "question", "answered", "unanswered", "error"},
+    "ask_informa": {"question", "answered", "unanswered", "error"},
     "reader_milestone": {"first_visit", "first_story", "first_follow", "first_brief", "return_7d"},
 }
 

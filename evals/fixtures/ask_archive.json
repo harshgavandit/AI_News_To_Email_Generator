@@ -1,0 +1,72 @@
+[
+  {
+    "id": "borealis",
+    "title": "Borealis outage affects storage API",
+    "excerpt": "The Borealis outage interrupted the storage API for 25 minutes.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "aquila",
+    "title": "Aquila database adds blue-green upgrades",
+    "excerpt": "Aquila added blue-green upgrades to its managed database service.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "solstice",
+    "title": "Solstice compiler releases Linux build",
+    "excerpt": "Solstice released a Linux build of its compiler for ARM servers.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "lumen",
+    "title": "Lumen battery researchers publish storage trial",
+    "excerpt": "The Lumen battery trial retained 91 percent of its capacity after 400 cycles.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "meridian",
+    "title": "Meridian updates browser memory isolation",
+    "excerpt": "The Meridian browser enabled memory isolation for unsigned extensions.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "polaris",
+    "title": "Polaris robotics lab opens simulator",
+    "excerpt": "The Polaris robotics lab published a warehouse simulator under the Apache license.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "cascade",
+    "title": "Cascade chip startup closes funding round",
+    "excerpt": "Cascade raised 12 million dollars to develop low-power inference chips.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "beacon",
+    "title": "Beacon AI evaluation dataset adds multilingual prompts",
+    "excerpt": "Beacon added 600 multilingual prompts to its public evaluation dataset.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "vertexnet",
+    "title": "VertexNet cloud service expands to Nairobi",
+    "excerpt": "VertexNet opened a new Nairobi region for its cloud storage service.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  },
+  {
+    "id": "canopy",
+    "title": "Canopy package manager updates release signing",
+    "excerpt": "The Canopy package manager began signing release manifests with a new hardware key.",
+    "source_id": "ars-technica",
+    "minutes_ago": 15
+  }
+]

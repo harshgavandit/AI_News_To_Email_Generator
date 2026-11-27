@@ -51,6 +51,7 @@
     <link rel="stylesheet" href="/reader-tools.css" />
     <link rel="stylesheet" href="/visit-catchup.css" />
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/ask.js"></script>
     <script type="module" src="/globe-home.js"></script>
     <script type="module" src="/command-center.js"></script>
     <script type="module" src="/signal-orb.js"></script>
@@ -165,6 +166,23 @@
             <div class="deck-wire-track"></div>
             <button id="deck-wire-toggle" class="deck-wire-toggle" type="button" aria-pressed="false" aria-label="Pause live wire"><span class="deck-wire-toggle-text">Pause</span></button>
           </div>
+        </section>
+        <section class="ask-panel" data-ask aria-labelledby="home-ask-title">
+          <div class="ask-actions">
+            <h2 id="home-ask-title">Ask Informa</h2>
+            <a href="/ask.html" class="text-button">Open Ask Informa ↗</a>
+          </div>
+          <form method="post" action="/api/ask">
+            <label for="home-ask-question">What would you like to know about this week in tech?</label>
+            <div class="ask-actions">
+              <input type="text" name="question" id="home-ask-question" required minlength="3" maxlength="320" aria-describedby="home-ask-help" placeholder="What changed in AI coding tools?" />
+              <button class="button primary" type="submit">Find an answer</button>
+            </div>
+          </form>
+          <p id="home-ask-help" class="small">Answers link to the original reporting. Leave out personal details.</p>
+          <button type="button" class="text-button" data-ask-example="What have cloud providers reported about service outages?">Try a question about cloud outages</button>
+          <p class="status" data-ask-status role="status"></p>
+          <div data-ask-answer></div>
         </section>
       <div class="desk-layout">
         <section

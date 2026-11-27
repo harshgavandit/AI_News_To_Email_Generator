@@ -1,5 +1,6 @@
 import { appendClaimEvidence } from "./claim-evidence.js";
 import { countUse } from "./usage.js";
+import { renderCheckedAnswer } from "./checked-answer.js";
 
 export function createStoryQuestion(request, context, externalLink) {
   const byId = id => document.getElementById(id);
@@ -36,6 +37,13 @@ export function createStoryQuestion(request, context, externalLink) {
           hours: 720, topic: "all", language: "en" }),
       });
       if (controller !== active) return;
+      if (data.answer?.guardrails) {
+        const checked = data.answer.guardrails;
+        const answered = renderCheckedAnswer(output, checked, question, { storyIds: [article.id] });
+        status.textContent = answered ? "" : checked.answer;
+        countUse("story_ask", answered ? "answered" : "unanswered");
+        return;
+      }
       const claims = document.createElement("ul");
       claims.className = "story-answer-claims";
       for (const claim of data.answer?.claims || []) {

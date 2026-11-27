@@ -10,7 +10,7 @@ import time
 from typing import Literal
 
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import Column, Float, String, Table, Text, delete, func, inspect, select
 
 from app.launch_store import get_store, schema
@@ -29,11 +29,27 @@ CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 class Feedback(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    kind: Literal["idea", "bug", "praise", "other", "useful", "not_useful", "coverage", "update_yes", "update_no"] = "other"
+    kind: Literal["idea", "bug", "praise", "other", "useful", "not_useful", "coverage", "update_yes", "update_no", "ai_answer"] = "other"
     message: str = Field(default="", max_length=2000)
     page: str = Field(default="/", max_length=120)
     contact: str = Field(default="", max_length=200)
     website: str = Field(default="", max_length=200)  # left empty by people; filled by form bots
+    question: str = Field(default="", max_length=320)
+    story_ids: list[str] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def validate_report(self):
+        if self.kind != "ai_answer":
+            if self.question or self.story_ids:
+                raise ValueError("Story references belong on AI answer reports.")
+            return self
+        from app.guardrails import rejection
+        if self.contact or self.message or rejection(self.question):
+            raise ValueError("Report the question without personal or contact information.")
+        if not self.story_ids or any(not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", ident) for ident in self.story_ids):
+            raise ValueError("Report at least one valid story reference.")
+        self.message = self.question + "\nStory IDs: " + ", ".join(dict.fromkeys(self.story_ids))
+        return self
 
     @field_validator("page")
     @classmethod
