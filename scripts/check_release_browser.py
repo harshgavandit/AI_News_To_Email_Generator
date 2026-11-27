@@ -121,9 +121,11 @@ def exercise_mobile_ask_and_connect(page: Page, origin: str) -> None:
     expect(page.locator("[data-copy-status]").first).to_have_text(
         re.compile("Copied|Copy the selected")
     )
-    assert page.evaluate(
-        "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
-    )
+    for width in (390, 320):
+        page.set_viewport_size({"width": width, "height": 844})
+        assert page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        ), f"Connector page overflows at {width}px"
 
 
 def main() -> None:
