@@ -5,6 +5,12 @@
   "buildCommand": "npm ci && npm run build",
   "redirects": [
     {
+      "source": "/technologies/:path*",
+      "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
+      "destination": "https://getinformdaily.com/technologies/:path*",
+      "permanent": true
+    },
+    {
       "source": "/",
       "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
       "destination": "https://getinformdaily.com/",
@@ -111,6 +117,10 @@
     },
     {
       "source": "/technology.html",
+      "headers": [{ "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://vercel.live; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" }]
+    },
+    {
+      "source": "/technologies/:path*",
       "headers": [{ "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://vercel.live; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" }]
     },
     {

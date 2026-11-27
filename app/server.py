@@ -40,6 +40,7 @@ from app import public_mail, reader_freshness
 from app.workspace_delivery import router as workspace_router
 from app.sanitation import sanitize_article
 from app.brand import BRIEF_SUBJECT, HEADLINE, NAME, PUBLIC_SITE, TAGLINE
+from app.technology_landing import router as technology_landing_router
 from app.coverage import REGION_LABELS, TOPICS, article_source, public_article, region_id, region_matches, topic_for
 from app.discovery import (
     COVERAGE_TYPES, InvalidCursor, SortOrder, facet_counts, page_fingerprint, page_result, page_window,
@@ -1590,6 +1591,8 @@ def email(body: EmailRequest, request: Request, authorization: str | None = Head
 def index():
     return FileResponse(PUBLIC / "index.html")
 
+
+app.include_router(technology_landing_router)
 
 # Vercel serves public/ from its CDN and omits it from the Python bundle.
 if PUBLIC.is_dir():

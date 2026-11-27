@@ -12,6 +12,13 @@
   <url>
     <loc>https://getinformdaily.com/research.html</loc>
   </url>
+  <url><loc>https://getinformdaily.com/technologies</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/kubernetes</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/postgresql</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/nodejs</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/rust</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/google-cloud</loc></url>
+  <url><loc>https://getinformdaily.com/technologies/openai</loc></url>
   <url>
     <loc>https://getinformdaily.com/recap.html</loc>
   </url>
@@ -29,12 +36,6 @@
   </url>
   <url>
     <loc>https://getinformdaily.com/technology.html</loc>
-  </url>
-  <url>
-    <loc>https://getinformdaily.com/about.html</loc>
-  </url>
-  <url>
-    <loc>https://getinformdaily.com/privacy.html</loc>
   </url>
   <url>
     <loc>https://getinformdaily.com/trust.html</loc>
