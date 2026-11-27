@@ -477,4 +477,4 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 .ask-panel button { min-height: 44px; }
 .ask-panel [data-ask-answer] { overflow-wrap: anywhere; }
 .ask-panel [data-ask-status]:empty { margin: 0; }
-#cursor-config { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mcp-snippet { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }

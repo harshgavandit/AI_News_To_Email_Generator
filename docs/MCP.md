@@ -1,6 +1,9 @@
 # Informa AI MCP connector
 
-The connector URL is `https://getinformdaily.com/mcp` after deployment. For a local server, use `http://127.0.0.1:8000/mcp`. Configure a remote **Streamable HTTP** server with **no authentication**. The [connection guide](https://getinformdaily.com/connect.html) has steps and copyable configuration for Claude, ChatGPT and Cursor.
+The connector URL is `https://getinformdaily.com/mcp`. For a local server, use `http://127.0.0.1:8000/mcp`. Configure a remote **Streamable HTTP** server with **no authentication**. The [connection guide](https://getinformdaily.com/connect.html) covers Claude, ChatGPT, Cursor, OpenCode and Google Antigravity.
+
+- **OpenCode 2.** Run `opencode mcp add informa-ai --url https://getinformdaily.com/mcp` in your project, then run `opencode mcp list`. For OpenCode 1, use the configuration under **Setup for OpenCode 1**. [Informa’s OpenCode setup](https://getinformdaily.com/connect.html#opencode) · [OpenCode MCP guide](https://opencode.ai/docs/mcp-servers/)
+- **Google Antigravity.** In the agent panel, open **MCP Servers → Manage MCP Servers → View raw config**. In `mcp_config.json`, set `mcpServers.informa-ai.serverUrl` to `https://getinformdaily.com/mcp`. [Informa’s Antigravity setup](https://getinformdaily.com/connect.html#antigravity) · [Antigravity MCP guide](https://antigravity.google/docs/ide-mcp)
 
 The endpoint uses the official Python MCP SDK with JSON responses and no server-side session. It implements the SDK's initialization, ping, tool listing and tool call support. Each request owns its lifecycle, so handling a request does not rely on an ASGI startup hook or a warm function. Long-lived SSE sessions and browser cross-origin calls are outside the connector's transport.
 

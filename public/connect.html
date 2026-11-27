@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Connect Claude, ChatGPT or Cursor to Informa AI’s public technology news archive." />
+    <meta name="description" content="Connect Claude, ChatGPT, Cursor, OpenCode or Google Antigravity to Informa AI’s public technology news archive." />
     <title>Connect your AI assistant · Informa AI</title>
     <link rel="canonical" href="https://getinformdaily.com/connect.html" />
     <link rel="icon" href="/informa-ai-icon.png" />
@@ -32,7 +32,7 @@
     <main class="wrap ask-page">
       <section class="ask-panel" aria-labelledby="connect-title">
         <h1 id="connect-title">Use Informa in your AI assistant</h1>
-        <p>Search public tech reporting, read the latest headlines, and ask for answers with links to original sources. The connector uses Streamable HTTP and is read-only.</p>
+        <p>Search public tech reporting, read the latest headlines, and ask for answers with links to original sources. The connector uses Streamable HTTP and is read-only. No API key is required.</p>
         <label for="mcp-url">Connector URL</label>
         <div class="ask-actions">
           <input id="mcp-url" type="url" value="https://getinformdaily.com/mcp" readonly />
@@ -61,7 +61,7 @@
       <section class="ask-panel" aria-labelledby="cursor-title">
         <h2 id="cursor-title">Cursor</h2>
         <p>Add this entry to <code>.cursor/mcp.json</code>. Merge it into the existing <code>mcpServers</code> object if you already have one.</p>
-        <pre id="cursor-config"><code>{
+        <pre id="cursor-config" class="mcp-snippet"><code>{
   "mcpServers": {
     "informa-ai": {
       "url": "https://getinformdaily.com/mcp"
@@ -73,6 +73,54 @@
           <a href="https://cursor.com/docs/mcp">Cursor’s MCP guide ↗</a>
         </div>
         <p class="status" role="status" data-copy-status></p>
+      </section>
+      <section class="ask-panel" id="opencode" aria-labelledby="opencode-title">
+        <h2 id="opencode-title">OpenCode</h2>
+        <p>In OpenCode 2, run these commands from the project where you want to use Informa. The second command shows whether the server is connected.</p>
+        <pre id="opencode-commands" class="mcp-snippet"><code>opencode mcp add informa-ai --url https://getinformdaily.com/mcp
+opencode mcp list</code></pre>
+        <div class="ask-actions">
+          <button type="button" class="button secondary" data-copy="opencode-commands">Copy OpenCode commands</button>
+          <a href="https://opencode.ai/docs/mcp-servers/">OpenCode’s MCP guide ↗</a>
+        </div>
+        <details>
+          <summary>Setup for OpenCode 1</summary>
+          <p>Add this configuration to your project’s <code>opencode.json</code>. If it already has an <code>mcp</code> object, merge the <code>informa-ai</code> entry into it. Reopen OpenCode and run <code>opencode mcp list</code> to check the connection.</p>
+          <pre id="opencode-v1-config" class="mcp-snippet"><code>{
+  "mcp": {
+    "informa-ai": {
+      "type": "remote",
+      "url": "https://getinformdaily.com/mcp"
+    }
+  }
+}</code></pre>
+          <button type="button" class="button secondary" data-copy="opencode-v1-config">Copy OpenCode 1 config</button>
+        </details>
+        <p class="status" role="status" data-copy-status></p>
+      </section>
+      <section class="ask-panel" id="antigravity" aria-labelledby="antigravity-title">
+        <h2 id="antigravity-title">Google Antigravity</h2>
+        <ol>
+          <li>In the agent panel, open <strong>⋯ → MCP Servers → Manage MCP Servers → View raw config</strong>.</li>
+          <li>Add the configuration below to <code>mcp_config.json</code>. If you already have an <code>mcpServers</code> object, merge the <code>informa-ai</code> entry into it.</li>
+          <li>Save and return to <strong>MCP Servers</strong> to check for <strong>informa-ai</strong>.</li>
+        </ol>
+        <pre id="antigravity-config" class="mcp-snippet"><code>{
+  "mcpServers": {
+    "informa-ai": {
+      "serverUrl": "https://getinformdaily.com/mcp"
+    }
+  }
+}</code></pre>
+        <div class="ask-actions">
+          <button type="button" class="button secondary" data-copy="antigravity-config">Copy Antigravity config</button>
+          <a href="https://antigravity.google/docs/ide-mcp">Antigravity’s MCP guide ↗</a>
+        </div>
+        <p class="status" role="status" data-copy-status></p>
+      </section>
+      <section class="ask-panel" aria-labelledby="try-title">
+        <h2 id="try-title">Try your first request</h2>
+        <blockquote>Use Informa AI to show me five recent tech stories. Summarize each in one sentence and link to the original publisher.</blockquote>
       </section>
     </main>
   </body>

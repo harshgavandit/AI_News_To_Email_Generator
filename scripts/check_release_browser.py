@@ -90,7 +90,7 @@ def exercise_mobile_research(page: Page) -> None:
     expect(page.locator("#research-results")).to_contain_text("Sample cloud provider")
 
 
-def exercise_mobile_ask_and_connect(page: Page, origin: str) -> None:
+def exercise_mobile_ask(page: Page, origin: str) -> None:
     page.set_viewport_size({"width": 390, "height": 844})
     page.goto(f"{origin}/ask.html", wait_until="domcontentloaded")
     question = page.get_by_role("textbox", name="Your question")
@@ -110,6 +110,9 @@ def exercise_mobile_ask_and_connect(page: Page, origin: str) -> None:
     )
     expect(page.locator(".source-checked")).to_have_count(0)
 
+
+def exercise_mobile_connect(page: Page, origin: str) -> None:
+    page.set_viewport_size({"width": 390, "height": 844})
     page.goto(f"{origin}/connect.html", wait_until="domcontentloaded")
     expect(
         page.get_by_role("heading", name="Use Informa in your AI assistant")
@@ -119,6 +122,24 @@ def exercise_mobile_ask_and_connect(page: Page, origin: str) -> None:
     )
     page.get_by_role("button", name="Copy connector URL").click()
     expect(page.locator("[data-copy-status]").first).to_have_text(
+        re.compile("Copied|Copy the selected")
+    )
+    opencode = page.get_by_role("region", name="OpenCode", exact=True)
+    expect(opencode.locator("#opencode-commands")).to_contain_text(
+        "opencode mcp add informa-ai --url https://getinformdaily.com/mcp"
+    )
+    opencode.get_by_role("button", name="Copy OpenCode commands").click()
+    expect(opencode.get_by_role("status")).to_have_text(
+        re.compile("Copied|Copy the selected")
+    )
+    opencode.get_by_text("Setup for OpenCode 1", exact=True).click()
+    expect(opencode.locator("#opencode-v1-config")).to_be_visible()
+    antigravity = page.get_by_role("region", name="Google Antigravity")
+    expect(antigravity.locator("#antigravity-config")).to_contain_text(
+        '"serverUrl": "https://getinformdaily.com/mcp"'
+    )
+    antigravity.get_by_role("button", name="Copy Antigravity config").click()
+    expect(antigravity.get_by_role("status")).to_have_text(
         re.compile("Copied|Copy the selected")
     )
     for width in (390, 320):
@@ -264,7 +285,8 @@ def main() -> None:
                             )
                         ).to_be_visible()
                         exercise_mobile_research(page)
-                        exercise_mobile_ask_and_connect(page, url)
+                        exercise_mobile_ask(page, url)
+                        exercise_mobile_connect(page, url)
                         assert not errors, errors
                     finally:
                         browser.close()
