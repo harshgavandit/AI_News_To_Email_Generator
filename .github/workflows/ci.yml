@@ -116,6 +116,10 @@ jobs:
       - name: Replay reader intelligence quality cases
         if: matrix.python-version == '3.12'
         run: uv run --no-sync python -m scripts.check_reader_quality
+      - name: Score Ask Informa with an offline model stub
+        if: matrix.python-version == '3.12'
+        shell: bash
+        run: uv run --no-sync python -m scripts.run_evals | tee -a "$GITHUB_STEP_SUMMARY"
 
   frontend:
     name: Frontend build and browser smoke
@@ -244,10 +248,13 @@ jobs:
             "$RUNNER_TEMP/before.json" "$RUNNER_TEMP/after.json" --sql-diff "$RUNNER_TEMP/schema.diff"
       - name: Rehearse 10,000 synthetic recipients on PostgreSQL
         run: uv run --no-sync python -m scripts.check_mail_capacity --postgres
-      - name: Test legacy schema upgrades and archive reads
+      - name: Test legacy schema upgrades, archive reads, and AI features on PostgreSQL
         env:
           TEST_NEWS_POSTGRES_URL: postgresql+psycopg://capacity:capacity@127.0.0.1:55432/capacity
-        run: uv run --no-sync pytest -q tests/test_global_discovery.py tests/test_syndication.py tests/test_research.py tests/test_reader_intelligence.py
+        run: >-
+          uv run --no-sync pytest -q tests/test_global_discovery.py tests/test_syndication.py
+          tests/test_research.py tests/test_reader_intelligence.py tests/test_guardrails.py
+          tests/test_ask.py tests/test_mcp_connector.py
 
   release:
     name: Release CI

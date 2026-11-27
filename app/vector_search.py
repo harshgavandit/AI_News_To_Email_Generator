@@ -87,7 +87,8 @@ def nearest(store, encoder, query_vector, *, hours, threshold=.42, limit=32, **f
         return None
     from app.launch_store import articles
     value = cast(literal(json.dumps(FORMAT.unpack(query_vector))), Vector())
-    distance = vectors.c.embedding.op("<=>", return_type=Float())(value)
+    # The extension lives in public even when the archive uses a different search path.
+    distance = vectors.c.embedding.op("OPERATOR(public.<=>)", return_type=Float())(value)
     stmt = store.query(hours, **filters).join(vectors, and_(articles.c.id == vectors.c.id,
         vectors.c.encoder == encoder, articles.c.title == vectors.c.title,
         articles.c.description == vectors.c.description)).add_columns(distance.label("semantic_distance"))

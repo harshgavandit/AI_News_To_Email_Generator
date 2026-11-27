@@ -16,6 +16,19 @@ logger = logging.getLogger(__name__)
 MAX_PUBLISHERS_LISTED = 8
 
 
+def distinct_stories(rows):
+    """Keep ranked representatives while preserving materially different reports."""
+    from app.story_coverage import frontpage_match, headline
+
+    kept, headlines = [], []
+    for row in rows:
+        candidate = headline(row, include_status=True, frontpage=True)
+        if not any(frontpage_match(candidate, previous) for previous in headlines):
+            kept.append(row)
+            headlines.append(candidate)
+    return kept
+
+
 def _moment(value):
     try:
         moment = datetime.fromisoformat(str(value).replace("Z", "+00:00"))

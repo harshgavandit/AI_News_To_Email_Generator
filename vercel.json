@@ -17,7 +17,7 @@
       "permanent": true
     },
     {
-      "source": "/:page(about|contribute|curiosity|development|feeds|inbox|privacy|projects|recap|research|sources|technology|trackers|trust).html",
+      "source": "/:page(about|ask|connect|contribute|curiosity|development|feeds|inbox|privacy|projects|recap|research|sources|technology|trackers|trust).html",
       "has": [{ "type": "host", "value": "ai-news-to-email-generator\\.vercel\\.app" }],
       "destination": "https://getinformdaily.com/:page.html",
       "permanent": true
@@ -30,6 +30,13 @@
     }
   },
   "headers": [
+    {
+      "source": "/mcp",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex" }
+      ]
+    },
     {
       "source": "/sw.js",
       "headers": [
@@ -152,7 +159,7 @@
       ]
     },
     {
-      "source": "/:page(curiosity|development|inbox|research).html",
+      "source": "/:page(ask|connect|curiosity|development|inbox|research).html",
       "headers": [
         {
           "key": "Content-Security-Policy",

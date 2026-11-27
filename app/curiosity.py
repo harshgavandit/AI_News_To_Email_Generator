@@ -1403,6 +1403,82 @@ CURATED_CURIOSITY = (
           why="Consider when past decisions help an agent and how stale context can make its answer worse.",
           question="How can agents share what they learned without carrying old mistakes into new sessions?",
           themes=("agents", "ai-engineering")),
+    _seed("seedtoscale-scalable-agent-data", "Agents Need a Scalable Data World",
+          "https://www.seedtoscale.com/the-working-knowledge/agents-need-a-scalable-data-world",
+          "Seed to Scale", "Accel", 2026,
+          "Accel’s thesis examines how agent work can outlive a run. It follows objects such as working trees, caches, and task records, and explains what later processes need to find them, check their provenance, and reuse them safely.",
+          ("Agent state", "Data lineage", "Versioning", "Permissions"), 18, None,
+          authors="Vishwajit Sasi · Anagh Prasad", publisher_detail="The Working Knowledge · Issue 02 · November 2026",
+          kind="research", why="Use the decision grid when turning temporary agent output into data another run can trust.",
+          question="What must an agent record so another run can find and trust its work?",
+          themes=("agents", "databases", "distributed-systems")),
+    _seed("seedtoscale-vertical-ai-product", "How to Build a Vertical AI Product",
+          "https://www.seedtoscale.com/the-working-knowledge/how-to-build-a-vertical-ai-product",
+          "Seed to Scale", "Accel", 2026,
+          "Tarun Raheja’s playbook starts by measuring what a model can do on real tasks in one domain. It explains when to add retrieval, tooling, or orchestration, and how to revisit those decisions when a model upgrade changes the trade-offs.",
+          ("Vertical AI", "Agent harness", "Model routing", "Evaluation"), 15, None,
+          authors="Tarun Raheja", publisher_detail="The Working Knowledge · Issue 01 · October 2026",
+          kind="research", why="See how a domain-specific test suite can guide what you build around the model.",
+          question="Which parts of a domain-specific agent are still worth maintaining after a model upgrade?",
+          themes=("agents", "ai-engineering")),
+    _seed("seedtoscale-tools-for-experience", "Tools for the era of experience",
+          "https://www.seedtoscale.com/blog/tools-for-the-era-of-experience", "Seed to Scale", "Accel", 2025,
+          "Nikhil Ramesh explores how agents might improve by acting in a real or simulated environment and observing the outcomes. He looks at how builders could capture useful telemetry, define feedback, and supervise long-running workflows.",
+          ("Experiential learning", "Simulation", "Telemetry", "Agent feedback"), 9, None, published="2025-08-26",
+          authors="Nikhil Ramesh", publisher_detail="Seed to Scale · Accel essay",
+          why="The essay offers a way to think about what to log and how to tell whether an action was useful.",
+          question="What feedback would let an agent learn whether its actions helped?",
+          themes=("agents", "ai")),
+    _seed("seedtoscale-ai-operator-metrics", "Benchmarks Are Broken: 5 Operator Metrics Every AI Exec Should Track",
+          "https://www.seedtoscale.com/blog/benchmarks-are-broken-5-operator-metrics-every-ai-exec-should-track",
+          "Seed to Scale", "Accel", 2026,
+          "Aryan Kargwal proposes measuring AI workflows in production using operating costs, human review effort, dependency risk, and delivery metrics. The piece explains how retries, fallbacks, and supervision change the economics of a completed task.",
+          ("AI operations", "Cost per task", "Human review", "Observability"), 11, None, published="2026-01-05",
+          authors="Aryan Kargwal", publisher_detail="Seed to Scale · Guest essay",
+          why="Use the operating metrics to account for expenses and review work that model benchmarks omit.",
+          question="What should a team measure once an AI workflow handles real traffic?",
+          themes=("ai-engineering", "performance")),
+    _seed("anthropic-long-running-agent-harnesses", "Effective harnesses for long-running agents",
+          "https://www.anthropic.com/research/effective-harnesses-for-long-running-agents", "Anthropic", "Anthropic", 2025,
+          "Anthropic tested a coding agent across context windows using a setup session, a structured feature list, and progress notes. Later sessions read that record, verify the app’s current state, and leave a tested increment for the next run.",
+          ("Agent harness", "Session handoff", "Context engineering", "End-to-end testing"), 13,
+          "anthropic-engineering", published="2025-11-26", authors="Justin Young", publisher_detail="Anthropic engineering",
+          why="See what a coding agent needs to leave behind so the next session can pick up the work.",
+          question="How can a coding agent resume a project after its context window resets?",
+          themes=("agents", "ai-engineering")),
+    _seed("anthropic-agent-evaluation", "Demystifying evals for AI agents",
+          "https://www.anthropic.com/research/demystifying-evals-for-ai-agents", "Anthropic", "Anthropic", 2026,
+          "Anthropic describes how to test agents that call tools and change their environment over several turns. It explains how to define a task, run multiple trials, and grade the final state as well as what the agent says it did.",
+          ("Agent evaluation", "Regression tests", "Grading", "Tool use"), 18,
+          "anthropic-engineering", published="2026-01-09", publisher_detail="Anthropic engineering",
+          authors="Mikaela Grace · Jeremy Hadfield · Rodrigo Olivares · Jiri De Jonghe",
+          why="Turn failures from real agent runs into repeatable tests with a measurable outcome.",
+          question="How do you verify that an agent’s actions actually completed the task?",
+          themes=("agents", "ai-engineering")),
+    _seed("anthropic-managed-agent-interfaces", "Scaling Managed Agents with stable interfaces",
+          "https://www.anthropic.com/research/managed-agents", "Anthropic", "Anthropic", 2026,
+          "Anthropic separates a managed agent into an append-only session log, the orchestration loop, and the execution sandbox. The design gives each part a stable interface so the implementation can evolve independently.",
+          ("Agent architecture", "Event logs", "Durable execution", "Sandboxing"), 9, "anthropic-engineering",
+          published="2026-04-08", publisher_detail="Anthropic engineering",
+          why="Compare this service architecture with an agent that stores its session and all its tools in one container.",
+          question="What should persist when the process running an agent changes or stops?",
+          themes=("agents", "distributed-systems", "reliability")),
+    _seed("openai-codex-harness-engineering", "Harness engineering: leveraging Codex in an agent-first world",
+          "https://openai.com/index/harness-engineering/", "OpenAI", "OpenAI", 2026,
+          "OpenAI reports on a team building an internal application with Codex. It describes making repository documents, tests, and telemetry accessible to the agent, and enforcing architectural rules with automated checks.",
+          ("Coding agents", "Repository knowledge", "Architecture tests", "Observability"), 14, "openai-news",
+          published="2026-02-11", authors="Ryan Lopopolo", publisher_detail="OpenAI engineering",
+          why="See which engineering practices made a real codebase easier for a coding agent to navigate and verify.",
+          question="How can a team give coding agents enough context to work without losing control of the architecture?",
+          themes=("ai-engineering", "agents", "engineering-practice")),
+    _seed("cloudflare-project-think", "Project Think: building the next generation of AI agents on Cloudflare",
+          "https://blog.cloudflare.com/project-think/", "Cloudflare Blog", "Cloudflare", 2026,
+          "Cloudflare describes how its Agents SDK uses Durable Objects for per-agent state. It adds checkpointed execution and persistent sessions so work can survive a process restart and resume when the agent receives another event.",
+          ("Durable Objects", "Durable execution", "Checkpointing", "Persistent sessions"), 13, "cloudflare-blog",
+          published="2026-04-15", authors="Sunil Pai · Kate Reznykova", read_time_basis="publisher",
+          why="Follow how an agent saves its place and wakes up without needing a dedicated process running continuously.",
+          question="How can a long-running agent survive an interruption without losing its work?",
+          themes=("agents", "cloud", "distributed-systems")),
 )
 # Reviewed themes where keyword evidence alone would mislabel a classic.
 for _ident, _themes in {
@@ -1424,6 +1500,42 @@ for _ident, _themes in {
 
 # Reviewed problem → approach → result lines for postmortems and case studies, written from each source.
 REVIEWED_BREAKDOWNS = {
+    "seedtoscale-scalable-agent-data": (
+        "Later runs can repeat work or act on stale information when earlier agent state is hard to find or verify.",
+        "Accel’s decision grid asks teams to define the object, version, lookup method, storage, access, and dependencies.",
+        "The thesis applies those decisions to several workloads and maps the tools that support them."),
+    "seedtoscale-vertical-ai-product": (
+        "A model’s general capabilities reveal little about where it fails on a specific industry workflow.",
+        "Measure performance task by task, add tools or context to cover observed gaps, and test what changes after upgrades.",
+        "The playbook gives teams a repeatable way to decide which parts of the harness to build, keep, or remove."),
+    "seedtoscale-tools-for-experience": (
+        "Training on static examples misses feedback about how actions change an environment over time.",
+        "The essay proposes collecting action sequences, observing outcomes, and designing rewards grounded in the domain.",
+        "It identifies environments, rewards, and supervision tools as areas for builders to explore."),
+    "seedtoscale-ai-operator-metrics": (
+        "Public model scores do not capture the costs and operational risks of real AI workflows.",
+        "The author proposes tracking measures such as adjusted gross margin, dependency exposure, and human review work.",
+        "The metrics let operators see where retries, escalations, and other costs affect the value of automation."),
+    "anthropic-long-running-agent-harnesses": (
+        "A new coding session can lose track of unfinished work or assume an incomplete feature is done.",
+        "An initializer creates a feature list and startup script, then each session verifies progress and records a tested change.",
+        "Anthropic demonstrates a coding agent making incremental progress across context windows in a web app experiment."),
+    "anthropic-agent-evaluation": (
+        "An agent can claim it finished a task even when it left the environment in the wrong state.",
+        "Run realistic tasks repeatedly and use graders suited to each task, including direct checks of state changes.",
+        "The guide shows how to build evaluations that flag regressions as prompts, tools, and models change."),
+    "anthropic-managed-agent-interfaces": (
+        "Bundling the agent loop, session, and execution environment makes each harder to scale and replace independently.",
+        "Managed Agents defines separate interfaces for the append-only session log, orchestration, and sandbox execution.",
+        "The service can change implementations behind those interfaces while preserving the session record."),
+    "openai-codex-harness-engineering": (
+        "An underspecified repository made it hard for the coding agent to find guidance and validate its changes.",
+        "The team made docs searchable from the repository, exposed app behavior to the agent, and enforced architecture with tests.",
+        "OpenAI reports using this setup to ship an internal beta whose code and maintenance artifacts were generated by Codex."),
+    "cloudflare-project-think": (
+        "A worker tied to one process can lose progress or incur idle compute overhead between tasks.",
+        "Cloudflare gives agents persistent per-instance storage and checkpointed execution using Durable Objects.",
+        "The SDK supports hibernating idle agents and resuming interrupted work from saved state."),
     "uber-enhanced-agentic-rag": (
         "Vector similarity alone confused privacy and policy documents with overlapping language.",
         "Uber enriched documents offline, split complex queries, merged keyword and vector results, and restored selected passages to document order.",
@@ -1762,6 +1874,13 @@ REVIEWED_BREAKDOWNS = {
         "Corporate applications that no longer rely on a trusted internal network."),
 }
 REVIEWED_PROBLEMS = {
+    "seedtoscale-scalable-agent-data": ("data-integrity", "scaling-data"),
+    "seedtoscale-vertical-ai-product": ("dev-productivity", "cost"),
+    "seedtoscale-tools-for-experience": ("scaling-data",), "seedtoscale-ai-operator-metrics": ("cost",),
+    "anthropic-long-running-agent-harnesses": ("dev-productivity", "data-integrity"),
+    "anthropic-agent-evaluation": ("dev-productivity", "data-integrity"),
+    "anthropic-managed-agent-interfaces": ("scaling-traffic", "data-integrity"),
+    "openai-codex-harness-engineering": ("dev-productivity",), "cloudflare-project-think": ("cost", "data-integrity"),
     "uber-enhanced-agentic-rag": ("data-integrity",), "uber-genie-on-call": ("dev-productivity",),
     "uber-agent-skill-evals": ("dev-productivity",), "uber-delivery-search-platform": ("performance", "migrations"),
     "uber-two-tower-recommendations": ("performance", "cost"), "notion-vector-search": ("scaling-data", "cost"),
@@ -2321,7 +2440,7 @@ def _interleave(seeds, fresh):
     return ordered
 
 
-def build_curiosity_cards(store, *, limit=24):
+def build_curiosity_cards(store, *, limit=24, read_only=False):
     """Blend verified evergreen seeds with high-signal records in the archive."""
     limit = max(1, min(int(limit), MAX_CURIOSITY_CARDS))
     reserve = min(MAX_FRESH_CARDS, max(1, limit // FRESH_SLOT_SHARE)) if limit > 1 else 0
@@ -2333,7 +2452,7 @@ def build_curiosity_cards(store, *, limit=24):
 
     summaries = {}
     summary_targets = [article for article in selected if not article.get("curiosity_seed")]
-    if summary_targets:
+    if summary_targets and not read_only:
         try:
             from app.web_digest import build_digest
             digest = build_digest(summary_targets, "Reader", "Engineering systems and lessons learned", store=store,
@@ -2345,6 +2464,8 @@ def build_curiosity_cards(store, *, limit=24):
             import logging
             logging.getLogger(__name__).warning("curiosity_summary_unavailable error_type=%s", type(error).__name__)
     cards = [_card(article, summaries) for article in selected]
+    if read_only:
+        return cards
     return cards + _evergreen_library(store, cards, selected, limit - len(cards))
 
 
@@ -2490,6 +2611,12 @@ COLLECTIONS = (
      ("uber-enhanced-agentic-rag", "notion-vector-search", "uber-genie-on-call", "uber-agent-skill-evals",
       "notion-lexical-search-reindexer", "uber-delivery-search-platform", "uber-two-tower-recommendations",
       "notion-multi-region-data", "notion-shared-agent-memory"), ("performance", "scaling-data", "dev-productivity")),
+    ("production-ai-agents", "Building reliable AI agents",
+     "What to save between agent runs, how to resume work after an interruption, and how to test and measure real outcomes.",
+     ("seedtoscale-scalable-agent-data", "seedtoscale-vertical-ai-product", "anthropic-long-running-agent-harnesses",
+      "anthropic-managed-agent-interfaces", "cloudflare-project-think", "openai-codex-harness-engineering",
+      "anthropic-agent-evaluation", "seedtoscale-ai-operator-metrics", "seedtoscale-tools-for-experience"),
+     ("data-integrity", "scaling-data", "dev-productivity")),
     ("engineering-at-india-scale", "Engineering at India scale",
      "How Indian companies serve hundreds of millions of people: a stockbroker on plain Postgres and Redis, payments "
      "rules for UPI growth, 10 million people at an IPL toss, food delivery checks in milliseconds, and cricket "

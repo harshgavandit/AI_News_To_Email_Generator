@@ -71,7 +71,7 @@ from app import research as research_service
 from app import monitoring
 from app import research_projects
 from app import curiosity_api, curiosity_pages, feature_usage, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
-from app import ai_insights, event_intelligence
+from app import ai_insights, ask, event_intelligence, mcp_connector
 from app.insight_api import router as insight_router
 
 app = FastAPI(title=NAME, description=f"{HEADLINE} {TAGLINE}", version="1.1.0", docs_url=None, redoc_url=None)
@@ -92,6 +92,8 @@ app.include_router(trackers.router)
 app.include_router(weekly_recap.router)
 app.include_router(feedback.router)
 app.include_router(feature_usage.router)
+app.include_router(ask.router)
+app.router.routes.append(mcp_connector.route)
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 logger = logging.getLogger(__name__)
 MAX_REQUEST_BYTES = 100_000
@@ -385,6 +387,9 @@ async def response_headers(request: Request, call_next):
         response = JSONResponse({"detail": "The service could not complete this request. Try again shortly."}, status_code=500)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
+    if request.url.path == "/mcp":
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Robots-Tag"] = "noindex"
     if request.url.path.startswith("/api/") or request.url.path == "/openapi.json":
         response.headers["X-Robots-Tag"] = "noindex"
     response.headers["X-Frame-Options"] = "DENY"

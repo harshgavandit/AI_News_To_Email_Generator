@@ -253,7 +253,13 @@ def package_check(body: stack_intelligence.PackageCheck, request: Request, respo
 
 @router.post("/api/intelligence/converse")
 def converse(body: ConversationRequest, request: Request, response: Response):
+    from app import guardrails
     from app.server import admit_expensive
+    response.headers["Cache-Control"] = "private, no-store"
+    if body.context_only and (reason := guardrails.rejection(body.question)):
+        return {"evidence": [], "clusters": [], "retrieval": "source_context",
+                "answer": {"status": "refused", "claims": [], "limitations": reason,
+                           "guardrails": guardrails.outcome("refused", reason)}}
     store = archive()
     admit_expensive(store, request, "source-conversation", 10, 600)
     context_rows = [public_article(row) for row in store.pinned_articles(body.context_ids)] if body.context_ids else []
@@ -264,7 +270,6 @@ def converse(body: ConversationRequest, request: Request, response: Response):
     result = research.research(store, question=body.question, retrieval_question=retrieval_query,
         context_rows=context_rows, context_only=body.context_only, mode="analyze", language=body.language,
         filters={"hours": body.hours, "topic": body.topic})
-    response.headers["Cache-Control"] = "private, no-store"
     return result
 
 
