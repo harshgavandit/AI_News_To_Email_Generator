@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Text
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
 Base = declarative_base()
 
@@ -52,4 +52,4 @@ class Digest(Base):
     url = Column(String(500), nullable=False)
     title = Column(String(500), nullable=False)
     summary = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow)

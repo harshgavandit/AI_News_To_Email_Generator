@@ -145,7 +145,7 @@ class Repository:
         return False
     
     def get_articles_without_digest(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        articles = []
+        articles: List[Dict[str, Any]] = []
         seen_ids = set()
         
         digests = self.session.query(Digest).all()
