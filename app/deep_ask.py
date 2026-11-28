@@ -241,31 +241,48 @@ def checked_report(draft: Draft, evidence: list[dict]) -> dict:
             list(dict.fromkeys(refs)),
         )
 
+    def kept(claims: list) -> list:
+        """Keep each claim that checks out on its own; one bad sentence no longer drops a section."""
+        result: list = []
+        for claim in claims:
+            row = by_id.get(claim.source_id)
+            if not row:
+                continue
+            text = (
+                guardrails.snap_sentence(claim.text, row.get("excerpt", ""))
+                or claim.text
+            )
+            candidate = claim.model_copy(update={"text": text})
+            if verified([candidate]) and all(c.text != text for c in result):
+                result.append(candidate)
+        return result
+
     sections: list[Section] = []
     headings: set[str] = set()
     for section in draft.sections[:6]:
-        if (
-            section.heading not in headings
-            and len(section.claims) <= 4
-            and verified(section.claims)
-        ):
-            sections.append(section)
+        claims = kept(section.claims[:4])
+        if section.heading not in headings and claims:
+            sections.append(Section(heading=section.heading, claims=claims))
             headings.add(section.heading)
 
     dates: list[TimelineEntry] = []
     events: set[tuple[str, str]] = set()
     for entry in sorted(draft.timeline[:12], key=lambda item: item.date):
         row = by_id.get(entry.source_id)
-        key = (entry.date, entry.text)
-        if (
-            row
-            and re.fullmatch(r"\d{4}-\d{2}-\d{2}", entry.date)
-            and entry.date == row["published_at"][:10]
-            and key not in events
-            and verified([entry])
-        ):
-            dates.append(entry)
+        if not row or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", entry.date):
+            continue
+        if entry.date != row["published_at"][:10]:
+            continue
+        checked = kept([entry])
+        key = (entry.date, checked[0].text) if checked else None
+        if key and key not in events:
+            dates.append(checked[0])
             events.add(key)
+
+    summary_claims = kept(draft.summary[:3])
+    if not summary_claims and sections:
+        summary_claims = [sections[0].claims[0]]
+    draft = draft.model_copy(update={"summary": summary_claims})
 
     section_evidence = {
         (claim.source_id, claim.text)
@@ -274,7 +291,6 @@ def checked_report(draft: Draft, evidence: list[dict]) -> dict:
     }
     if (
         not 1 <= len(draft.summary) <= 3
-        or not verified(draft.summary)
         or len(sections) < 3
         or len(section_evidence) < 3
         or not dates
@@ -417,6 +433,22 @@ class DeepGraph:
                 limit=min(7, remaining),
                 excerpts_only=True,
             )
+            if not rows:
+                # Archive search needs every term. When that finds nothing, accept
+                # stories that match at least half of the query's keywords.
+                terms = research.keywords(query)
+                needed = max(2, -(-len(terms) // 2))
+                extra = research.lexical_results(
+                    self.store,
+                    query,
+                    self.body.days * 24,
+                    {"topic": self.body.topic, "language": "en"},
+                )
+                rows = [
+                    archive_tools.public_article(row)
+                    for row in extra
+                    if research.keyword_rank(row, terms)[0] >= needed
+                ][: min(7, remaining)]
             self.control.stories += len(rows)
             prior.append(query)
             candidates.extend(rows)
@@ -511,7 +543,12 @@ class DeepGraph:
     def check(self, state: State) -> State:
         self.control.step("check", "Checking citations…")
         if (draft := state.get("draft")) is not None:
-            return {"result": checked_report(draft, state.get("evidence", []))}
+            report = checked_report(draft, state.get("evidence", []))
+            if report["status"] == "answered" or not self.control.fallback:
+                return {"result": report}
+            # The model judged coverage sufficient but its draft failed the checks:
+            # return the checked extractive report rather than nothing.
+            return {"result": self.control.fallback}
         if self.control.fallback:
             return {"result": self.control.fallback}
         if self.control.reason == "daily_limit":

@@ -209,3 +209,20 @@ def test_answer_report_reaches_private_feedback_inbox(research_database, monkeyp
     assert row["message"] == "Which storage APIs were affected?\nStory IDs: cloud-api"
     assert row["page"] == "/ask.html" and not row["contact"]
     store.engine.dispose()
+
+
+def test_claims_tolerate_typography_but_not_paraphrase():
+    source = "The company said its “new chip” ships in March. Analysts expect delays."
+    evidence = [{"id": "s1", "title": "Chip", "publisher": "P", "url": "https://p.example/1",
+                 "published_at": "2026-11-20T00:00:00+00:00", "excerpt": source}]
+    typed = 'The company said its "new chip" ships in March'
+    checked = guardrails.check_claims(
+        [{"text": typed, "source_ids": ["s1"], "quotes": [typed]}], evidence)
+    assert checked["status"] == "answered"
+    assert checked["answer"].startswith("The company said its “new chip” ships in March.")
+    paraphrase = "The firm will ship its new chip in March."
+    assert guardrails.check_claims(
+        [{"text": paraphrase, "source_ids": ["s1"], "quotes": [paraphrase]}], evidence
+    )["status"] == "insufficient"
+    assert guardrails.snap_sentence("analysts expect delays", source) == "Analysts expect delays."
+    assert guardrails.snap_sentence("Analysts", source) is None

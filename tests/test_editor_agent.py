@@ -365,3 +365,55 @@ def test_shared_spend_cap_after_admission_queues_only_heuristics(archive):
             select(articles.c.editor_hidden).where(articles.c.id == row["id"])
         ).scalar_one()
         assert hidden is None
+
+
+def test_measured_problems_skip_the_model_and_cannot_be_vetoed(archive):
+    record = {
+        "id": "s1",
+        "title": "Example feed",
+        "excerpt": "5 failed of 5 checks.",
+        "url": "/sources.html?q=s1",
+        "date": "2026-11-28",
+        "publisher": "Informa",
+    }
+    story = {
+        "id": "a1",
+        "title": "Future dated story headline",
+        "excerpt": "A story with an impossible publication date.",
+        "url": "https://example.com/a1",
+        "date": "2030-01-01",
+        "publisher": "P",
+    }
+    ruled = [
+        agent.proposal(
+            "source",
+            ["s1", "failures"],
+            {"source_id": "s1", "operation": "pause"},
+            [record],
+            "Failures",
+            0.94,
+        ),
+        agent.proposal(
+            "hide",
+            "a1",
+            {"story_id": "a1"},
+            [story],
+            "Invalid or future publication date",
+            0.97,
+        ),
+    ]
+    calls = []
+
+    def reject_all(store, items, timeout):
+        calls.append(items)
+        return agent.Judgment(decisions=[]).model_dump_json()
+
+    result = agent.review(
+        archive,
+        lambda: (),
+        lambda collected, deadline: (ruled, {}),
+        time.time(),
+        model=reject_all,
+    )
+    assert calls == [] and result["calls"] == 0
+    assert result["queued"] == 2
