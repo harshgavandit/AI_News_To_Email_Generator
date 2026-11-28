@@ -186,6 +186,32 @@
               <p>Background monitoring stores your watch terms and checks the archive when this page is closed. Terms stay for up to 30 days after your last visit.</p>
               <button id="monitor-enable" type="button" class="text-button">Enable background monitoring</button>
             </div>
+            <details id="watch-agent" class="radar-event">
+              <summary>Watch agent · alerts in plain language</summary>
+              <form data-agent-draft class="watch-agent-form">
+                <label>What should Informa watch for?
+                  <textarea name="sentence" rows="2" required minlength="8" maxlength="320"
+                    placeholder="Tell me when a major cloud provider has an outage."></textarea>
+                </label>
+                <p class="research-meta">Your watch is sent to the configured AI provider to draft and check it. Keep personal information out of it.</p>
+                <button class="button secondary" type="submit">Review watch</button>
+              </form>
+              <form data-agent-confirm class="watch-agent-form" hidden>
+                <label>Intent summary <input name="summary" required minlength="3" maxlength="140"></label>
+                <label>Topics <select name="topics" multiple size="3"></select></label>
+                <label>Entities <input name="entities" maxlength="735"></label>
+                <label>Search phrases <input name="keywords" maxlength="1105"></label>
+                <label>Must have <input name="must_have" maxlength="552"></label>
+                <label>Exclude <input name="exclude" maxlength="552"></label>
+                <label>Severity <select name="severity"><option value="any">Any</option>
+                  <option value="significant">Significant</option><option value="critical">Critical</option></select></label>
+                <p class="research-meta">Separate multiple phrases with commas. Saving turns on background monitoring for this browser.</p>
+                <div class="radar-actions"><button class="button primary" type="submit">Confirm and save</button>
+                  <button class="button secondary" data-agent-cancel type="button">Cancel</button></div>
+              </form>
+              <p data-agent-status class="research-status" role="status"></p>
+              <a href="/inbox.html#inbox-alerts-label">See alerts and enable device notifications ↗</a>
+            </details>
             <form id="watch-form">
               <label for="watch-query" class="sr-only">Keywords to watch</label>
               <input id="watch-query" type="search" required minlength="2" maxlength="150" placeholder="e.g. Kubernetes security" />

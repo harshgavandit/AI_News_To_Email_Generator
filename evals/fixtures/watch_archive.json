@@ -1,0 +1,135 @@
+[
+  {
+    "id": "cloud-outage",
+    "source_id": "ars-technica",
+    "title": "Borealis Cloud storage API outage blocks uploads in Europe",
+    "excerpt": "A Borealis Cloud storage API outage blocked customer uploads in Europe for 38 minutes.",
+    "topic": "outages"
+  },
+  {
+    "id": "zz-cloud-duplicate",
+    "source_id": "the-verge",
+    "title": "Borealis Cloud storage API outage blocks uploads in Europe",
+    "excerpt": "A Borealis Cloud storage API outage blocked uploads in Europe.",
+    "topic": "outages"
+  },
+  {
+    "id": "cloud-maint",
+    "source_id": "ars-technica",
+    "title": "Borealis Cloud storage API outage planned for Friday",
+    "excerpt": "Borealis Cloud scheduled a storage API outage for planned maintenance on Friday.",
+    "topic": "outages"
+  },
+  {
+    "id": "cloud-pricing",
+    "source_id": "the-verge",
+    "title": "Borealis Cloud announces cheaper storage API pricing",
+    "excerpt": "Borealis Cloud reduced its price for storage requests.",
+    "topic": "software"
+  },
+  {
+    "id": "model-release",
+    "source_id": "wired",
+    "title": "Chinese lab Lumen Lab publishes new model with open weights",
+    "excerpt": "Chinese lab Lumen Lab released its model with open weights and downloads.",
+    "topic": "ai"
+  },
+  {
+    "id": "model-bench",
+    "source_id": "the-verge",
+    "title": "Chinese lab Lumen Lab reports open weights model benchmark",
+    "excerpt": "The Chinese lab reported a benchmark only result for an open weights model.",
+    "topic": "ai"
+  },
+  {
+    "id": "model-closed",
+    "source_id": "ars-technica",
+    "title": "Chinese lab Lumen Lab releases hosted model",
+    "excerpt": "Lumen Lab announced an API for a closed-weight model.",
+    "topic": "ai"
+  },
+  {
+    "id": "model-other",
+    "source_id": "wired",
+    "title": "French lab Nacre publishes its first model with open weights",
+    "excerpt": "A French lab published a new model with open weights.",
+    "topic": "ai"
+  },
+  {
+    "id": "funding-done",
+    "source_id": "techcrunch",
+    "title": "Cascade Silicon confirms completed acquisition of Rosin",
+    "excerpt": "Chip company Cascade Silicon announced the completed acquisition of Rosin.",
+    "topic": "startups"
+  },
+  {
+    "id": "funding-rumor",
+    "source_id": "the-verge",
+    "title": "Cascade Silicon rumor suggests a completed acquisition",
+    "excerpt": "An unverified rumor suggests a completed acquisition for Cascade Silicon.",
+    "topic": "startups"
+  },
+  {
+    "id": "funding-round",
+    "source_id": "techcrunch",
+    "title": "Cascade Silicon raises capital to expand its chip fab",
+    "excerpt": "Cascade Silicon announced its latest financing round.",
+    "topic": "startups"
+  },
+  {
+    "id": "security-critical",
+    "source_id": "ars-technica",
+    "title": "Kubernetes publishes a critical security advisory",
+    "excerpt": "The Kubernetes team issued a critical security advisory and published mitigation guidance.",
+    "topic": "security"
+  },
+  {
+    "id": "security-low",
+    "source_id": "wired",
+    "title": "Kubernetes publishes a low severity security advisory",
+    "excerpt": "The Kubernetes team issued a security advisory with low severity.",
+    "topic": "security"
+  },
+  {
+    "id": "security-tutorial",
+    "source_id": "the-verge",
+    "title": "Kubernetes tutorial explains a critical security advisory",
+    "excerpt": "The tutorial describes a critical Kubernetes security advisory previously published.",
+    "topic": "security"
+  },
+  {
+    "id": "release-stable",
+    "source_id": "ars-technica",
+    "title": "Rill programming language publishes a stable release",
+    "excerpt": "Rill published a stable release containing a compiler update.",
+    "topic": "software"
+  },
+  {
+    "id": "release-preview",
+    "source_id": "the-verge",
+    "title": "Rill programming language previews a stable release",
+    "excerpt": "Rill published a preview ahead of its stable release.",
+    "topic": "software"
+  },
+  {
+    "id": "feedback-external",
+    "source_id": "ars-technica",
+    "title": "Lantern Cloud outage interrupts customer analytics",
+    "excerpt": "The Lantern Cloud outage blocked production dashboards for customers.",
+    "topic": "outages"
+  },
+  {
+    "id": "feedback-drill",
+    "source_id": "the-verge",
+    "title": "Lantern Cloud outage simulation tests recovery",
+    "excerpt": "Lantern Cloud ran a disaster drill simulating an outage for internal teams.",
+    "topic": "outages"
+  },
+  {
+    "id": "meridian-labs",
+    "source_id": "wired",
+    "title": "Meridian Research gives a progress update on its closed AI model",
+    "excerpt": "Meridian Research uses a hosted model in a new benchmark.",
+    "topic": "ai"
+  }
+]

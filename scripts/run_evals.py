@@ -346,7 +346,11 @@ def main() -> int:
     parser.add_argument(
         "--deep", action="store_true", help="Score archive research reports."
     )
+    parser.add_argument("--watch", action="store_true", help="Score the archive Watch agent.")
+    parser.add_argument("--editor", action="store_true", help="Score the archive Editor agent.")
     args = parser.parse_args()
+    if sum((args.deep, args.watch, args.editor)) > 1:
+        parser.error("Choose one evaluation mode.")
     if (
         args.deep
         and args.live
@@ -359,10 +363,21 @@ def main() -> int:
             "Live Deep Ask evaluation requires the manual Ask Informa live evaluation workflow."
         )
     try:
-        report = (run_deep if args.deep else run)(live=args.live)
+        if args.editor:
+            from scripts import editor_evals
+
+            report = editor_evals.run(live=args.live)
+        elif args.watch:
+            from scripts import watch_evals
+
+            report = watch_evals.run(live=args.live)
+        else:
+            report = (run_deep if args.deep else run)(live=args.live)
     except ValueError as error:
         parser.error(str(error))
-    path = ROOT / "results" / ("latest-deep.json" if args.deep else "latest.json")
+    filename = ("latest-editor.json" if args.editor else "latest-watch.json" if args.watch
+                else "latest-deep.json" if args.deep else "latest.json")
+    path = ROOT / "results" / filename
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(

@@ -244,11 +244,11 @@ def public_article(article):
     from app.intelligence import subjects_for
     article = restore_metadata(article)
     source = article_source(article)
-    saved_topic = article.get("topic")
+    saved_topic = article.get("editor_topic") or article.get("topic")
     topic = saved_topic if saved_topic in TOPICS else topic_for(article)
     article = sanitize_article(article)
     publisher = article.get("publisher") or (source.label if source else "")
-    region = source.region if source else "Global"
+    region = REGION_LABELS.get(article.get("editor_region")) or (source.region if source else "Global")
     url = article.get("url", "")
     published_at = article.get("published_at", "")
     
@@ -267,7 +267,8 @@ def public_article(article):
 
     private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
                       "community_relevant", "source_eligible", "classification_version", "detected_language", "_feed_ids",
-                      "_reading_access", "_reading_content"}
+                      "_reading_access", "_reading_content", "first_seen", "editor_topic", "editor_region",
+                      "editor_language", "editor_hidden"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }
@@ -277,7 +278,7 @@ def public_article(article):
         "whyItMatters": why_it_matters,
         "category": topic,
         "region": region,
-        "region_id": region_id(region),
+        "region_id": article.get("editor_region") or region_id(region),
         "sourceName": publisher,
         "publisher_family": source.publisher_family if source else article.get("source", ""),
         "content_format": source.content_format if source else "news",
@@ -306,7 +307,7 @@ def public_article(article):
         "url": url,
         "published_at": published_at,
         "coverage": source.coverage if source else "publisher",
-        "language": article_language(article),
+        "language": article.get("editor_language") or article_language(article),
         "excerpt_language": excerpt_language(clean_summary),
     })
     if source and source.coverage == "preprint":
@@ -366,4 +367,4 @@ def region_id(raw_region):
 def region_matches(article, region):
     source = article_source(article)
     actual = source.region if source else "Global"
-    return region in ("", "all") or region_id(actual) == region
+    return region in ("", "all") or (article.get("editor_region") or region_id(actual)) == region

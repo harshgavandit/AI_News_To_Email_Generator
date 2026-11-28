@@ -14,6 +14,8 @@ REQUEST_TIMEOUT_SECONDS = 45
 # Each task maps to a cost tier. Cheap, high-volume work uses the fast tier; multi-source
 # comparison uses the deep tier. Tiers are configured with NEWS_AI_MODEL_<TIER>.
 TASK_TIERS = {
+    "editor_judge": "fast",
+    "watch_agent_draft": "fast", "watch_judge": "fast",
     "watch_draft": "fast", "explain": "fast", "technical_brief": "fast", "curate": "fast", "email_intro": "fast",
     "query_understanding": "fast",
     "search": "standard", "analyze": "standard", "brief": "standard", "visit_catchup": "standard",

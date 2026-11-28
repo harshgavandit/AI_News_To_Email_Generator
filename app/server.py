@@ -69,7 +69,7 @@ from app.reader_signals import ReaderFeedback
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
 from app import research as research_service
-from app import monitoring
+from app import editor_agent, editor_api, monitoring, watch_storage
 from app import research_projects
 from app import curiosity_api, curiosity_pages, feature_usage, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
 from app import ai_insights, ask, deep_ask, event_intelligence, mcp_connector
@@ -82,6 +82,7 @@ app.include_router(workspace_router)
 app.include_router(syndication_router)
 app.include_router(discovery_router)
 app.include_router(monitoring.router)
+app.include_router(editor_api.router)
 app.include_router(insight_router)
 app.include_router(research_projects.router)
 app.include_router(research_projects.public_router)
@@ -978,13 +979,23 @@ def run_intelligence_check(store):
         watch_progress = run_monitoring_check(store, scheduled=True)
         progress = research_service.index_archive(store)
         event_progress = event_intelligence.sync(store)
+        try:
+            agent_progress = watch_storage.run(store)
+        except SQLAlchemyError as error:
+            logger.warning("watch_agent_store_unavailable type=%s", type(error).__name__)
+            agent_progress = {"watch_agent_status": "unavailable"}
         brief = research_service.refresh_research_brief(store)
         try:
             ai_insights.prepare_recent_changes(store)
         except SQLAlchemyError as error:
             logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
-        result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief,
+        result = {"status": "checked", **watch_progress, **progress, **event_progress, **agent_progress, "brief_status": brief,
                   **send_push_alerts(store)}
+        try:
+            result.update(editor_agent.run(store))
+        except SQLAlchemyError as error:
+            logger.warning("editor_archive_unavailable type=%s", type(error).__name__)
+            result["editor_status"] = "unavailable"
         if issue := research_service.take_provider_issue():
             # A coarse category only; provider messages can echo request details.
             result["ai_issue"] = issue
@@ -1032,8 +1043,14 @@ def weekly_recap_job(authorization: str | None = Header(default=None)):
     require_job_secret(authorization)
     store = source_store()
     started = time.monotonic()
+    week = weekly_recap.last_complete_week()
+    try:
+        editor_progress = editor_agent.draft_recap(store, week)
+    except SQLAlchemyError as error:
+        logger.warning("editor_recap_unavailable type=%s", type(error).__name__)
+        editor_progress = {"editor_recap_status": "unavailable"}
     status = weekly_recap.prepare(store)
-    return {"recap_status": status, "week": weekly_recap.last_complete_week(), "seconds": round(time.monotonic() - started, 1)}
+    return {"recap_status": status, "week": week, **editor_progress, "seconds": round(time.monotonic() - started, 1)}
 
 
 @app.get("/api/jobs/morning")

@@ -73,8 +73,20 @@ def rpc(client, method, params=None, *, headers=None):
 
 
 def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
-    archive,
+    archive, monkeypatch,
 ):
+    from app import watch_agent
+    from scripts.watch_evals import judge_stub
+
+    def watch_model(store, payload, prompt, schema, task, timeout):
+        if task == "watch_agent_draft":
+            return watch_agent.Proposal(watch=watch_agent.Spec(
+                summary="Borealis storage outage", topics=["outages"], entities=["Borealis"],
+                keywords=["outage"], must_have=["outage"], exclude=[], severity="any",
+            )).model_dump_json()
+        return judge_stub(store, payload, prompt, schema, task, timeout)
+
+    monkeypatch.setattr(watch_agent, "model_call", watch_model)
     statements = []
 
     @event.listens_for(archive.engine, "before_cursor_execute")
@@ -96,7 +108,7 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
                     assert session_id() is None
                     assert await session.send_ping()
                     listing = await session.list_tools()
-                    assert len(listing.tools) == 8
+                    assert len(listing.tools) == 10
                     assert {tool.name for tool in listing.tools} == {
                         "search_news",
                         "get_story",
@@ -106,6 +118,8 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
                         "weekly_recap",
                         "ask_informa",
                         "deep_research",
+                        "list_watch_examples",
+                        "preview_watch",
                     }
                     for tool in listing.tools:
                         assert tool.inputSchema["additionalProperties"] is False
@@ -151,6 +165,15 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
                                 "borealis",
                                 "borealis-verge",
                             }
+                    examples = await session.call_tool("list_watch_examples", {})
+                    assert examples.structuredContent["examples"]
+                    preview = await session.call_tool("preview_watch", {"sentence": "Watch for Borealis storage outages."})
+                    assert not preview.isError
+                    assert preview.structuredContent["status"] == "ready"
+                    assert len(preview.structuredContent["matches"]) == 1
+                    assert preview.structuredContent["matches"][0]["source_checked"]
+                    refusal = await session.call_tool("preview_watch", {"sentence": "Tell me football scores."})
+                    assert refusal.structuredContent["status"] == "refused"
 
     asyncio.run(exercise())
     assert statements
@@ -163,6 +186,7 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
             "brief_feedback",
             "brief_research_projects",
             "brief_monitor_",
+            "brief_watch_agent_",
             "brief_send",
         )
         for statement in statements
@@ -183,6 +207,8 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
         ("get_tracker", {"name": "subscribers"}),
         ("curiosity_cards", {"limit": 13}),
         ("weekly_recap", {"week": "2026-W99"}),
+        ("preview_watch", {"sentence": "Track Borealis outages.", "profile_id": "private"}),
+        ("get_private_watches", {}),
         ("send_email", {"recipient": "test@example.org"}),
     ],
 )

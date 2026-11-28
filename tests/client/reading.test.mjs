@@ -101,6 +101,36 @@ test('Inbox separates follow read state from server watch delivery controls', as
   } finally { globalThis.fetch = previousFetch; env.close(); }
 });
 
+test('Inbox shows a checked Watch agent reason, source, and feedback state', async () => {
+  const markup = readFileSync(new URL('../../public/inbox.html', import.meta.url), 'utf8');
+  const env = mount(markup, 'https://informa.test/inbox.html');
+  const previousFetch = globalThis.fetch;
+  const id = 'a'.repeat(32);
+  let rating;
+  globalThis.fetch = async (path, options = {}) => {
+    if (path === '/api/intelligence/inbox/feedback/' + id) rating = JSON.parse(options.body).rating;
+    return new Response(JSON.stringify({
+      active: true, available: true, unread: 0,
+      watches: [{ id: 'cloud', query: 'Cloud outage', agent: {}, precision: { useful: 0, rated: rating ? 1 : 0 } }],
+      alerts: [{ id, source_checked: true, feedback: rating, mode: 'keyword',
+        reason: ['Matches your watch', 'Source evidence: <script>'],
+        sources: [{ title: 'Cloud outage', publisher: 'Test', url: 'https://example.com/outage' }] }],
+    }));
+  };
+  try {
+    await import('../../public/reader-inbox.js?watch=' + Date.now());
+    await until(() => document.querySelector('.watch-agent-reason'));
+    const details = document.querySelector('.watch-agent-reason');
+    assert.match(details.textContent, /Source-checked.*Keyword fallback.*Source evidence: <script>/);
+    assert.equal(details.querySelector('script'), null);
+    assert.equal(document.querySelector('#inbox-alerts a').href, 'https://example.com/outage');
+    [...details.querySelectorAll('button')].find(button => button.textContent === 'Not relevant').click();
+    await until(() => document.querySelector('#inbox-alerts button[aria-pressed="true"]'));
+    assert.equal(rating, 'not_relevant');
+    assert.match(document.querySelector('#inbox-watches').textContent, /0 of 1 alerts marked useful/);
+  } finally { globalThis.fetch = previousFetch; env.close(); }
+});
+
 test('delivery receipt refresh never sends a brief and clears private status after verification expires', async () => {
   const env = mount();
   Object.defineProperty(document, 'hidden', { configurable: true, value: false });

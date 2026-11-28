@@ -123,6 +123,30 @@ def save_subscription(body: AlertSubscription, request: Request):
     return {"status": "on", "follows": follows, "settings": body.settings.model_dump()}
 
 
+@router.put("/api/intelligence/inbox/agent-push")
+def save_agent_subscription(body: AlertSubscription, request: Request, response: Response):
+    from app import monitoring
+
+    same_origin(request)
+    limit(request, "watch-agent-push", 10)
+    ident = monitoring.profile_id(request)
+    if not ident:
+        raise HTTPException(401, "Save a Watch agent watch in this browser first.")
+    if not push_alerts.enabled():
+        raise HTTPException(503, "Device alerts are not available yet.")
+    keys = body.subscription.keys
+    if not push_alerts.valid_keys(keys.p256dh, keys.auth):
+        raise HTTPException(422, "Turn device alerts off and on again to renew the keys.")
+    store = monitoring.configured_store()
+    try:
+        push_alerts.save(store, body.subscription.endpoint, keys.p256dh, keys.auth,
+                         follow_profile(body.profile), body.settings.model_dump(), monitor_id=ident)
+    except ValueError:
+        raise HTTPException(409, "This device could not be linked. Check that monitoring and push are on in this browser.") from None
+    response.headers["Cache-Control"] = "private, no-store"
+    return {"status": "on", "settings": body.settings.model_dump()}
+
+
 @router.post("/api/push/subscription/remove", status_code=204)
 def remove_subscription(body: EndpointOnly, request: Request):
     same_origin(request)
