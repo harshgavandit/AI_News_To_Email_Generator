@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from app import ai_usage, ask, deep_ask, research
 from app.cache import Cache
-from app.launch_store import Store
+from app.launch_store import Store, articles
 from scripts.check_reader_quality import fixture_row
 
 ROOT = Path(__file__).resolve().parents[1] / "evals"
@@ -20,8 +20,15 @@ ANCHOR = datetime(2026, 1, 15, 12, tzinfo=UTC)
 
 
 class FixtureArchive(Store):
+    first_pass: tuple[deep_ask.Control, frozenset[str]] | None = None
+
     def query(self, hours, *args, **filters):
-        return super().query(hours, *args, **{"now": ANCHOR, **filters})
+        statement = super().query(hours, *args, **{"now": ANCHOR, **filters})
+        if self.first_pass is not None:
+            control, withheld = self.first_pass
+            if control.rounds == 0:
+                return statement.where(articles.c.id.not_in(withheld))
+        return statement
 
 
 def populate(store: Store, records: list[dict]) -> None:
@@ -251,6 +258,9 @@ def grade_deep(case: dict, result: dict, control: deep_ask.Control) -> dict:
             and control.tokens <= deep_ask.MAX_TOKENS
         ),
         "steps": result["steps_used"],
+        "stories_read": result["stories_read"],
+        "reason": result.get("reason"),
+        "search_queries": control.search_queries,
         "rounds": control.rounds,
         "minimum_rounds": case["minimum_rounds"],
     }
@@ -313,6 +323,13 @@ def run_deep(*, live: bool = False) -> dict:
         results = []
         for case in cases:
             control = deep_ask.Control()
+            store.first_pass = None
+            if case["minimum_rounds"] > 1:
+                # A follow-up test must actually have a gap in the first pass,
+                # even if the live planner chooses a broad keyword query.
+                dates = case["expected_dates"]
+                seed = min(dates, key=dates.__getitem__)
+                store.first_pass = control, frozenset(dates) - {seed}
             model = None if live else deep_stub(case["plan"], case["follow_up"])
             result = deep_ask.research_archive(
                 store,

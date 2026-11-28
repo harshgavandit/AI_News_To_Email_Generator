@@ -67,6 +67,44 @@ def test_every_action_is_pinned_to_a_full_commit_sha():
     assert unpinned == []
 
 
+@pytest.mark.skipif(not shutil.which("bash"), reason="needs bash")
+@pytest.mark.parametrize(
+    "selection, failures, expected, status",
+    [
+        ({}, {}, ["quick"], 0),
+        ({"DEEP_EVAL": "true", "EDITOR_EVAL": "true"}, {}, ["deep", "editor"], 0),
+        ({"ALL_AGENTS": "true"}, {"deep": 1}, ["deep", "watch", "editor"], 1),
+        ({"ALL_AGENTS": "true"}, {"deep": 2}, ["deep"], 2),
+    ],
+)
+def test_live_workflow_runs_selected_agents_and_preserves_failures(
+    tmp_path, selection, failures, expected, status
+):
+    workflow = load(ROOT / ".github" / "workflows" / "ask-evals-live.yml")
+    step = next(step for step in workflow["jobs"]["evaluate"]["steps"] if "run" in step and "modes=" in step["run"])
+    simulator = '''uv() {
+      mode=${@: -1}
+      mode=${mode#--}
+      if [[ $mode == live ]]; then mode=quick; fi
+      echo "ran:$mode"
+      case "$mode" in
+        deep) return "$DEEP_STATUS";;
+        *) return 0;;
+      esac
+    }
+    '''
+    env = {
+        **os.environ,
+        **dict.fromkeys(("ALL_AGENTS", "DEEP_EVAL", "WATCH_EVAL", "EDITOR_EVAL"), "false"),
+        **selection,
+        "GITHUB_STEP_SUMMARY": (tmp_path / "summary").as_posix(),
+        "DEEP_STATUS": str(failures.get("deep", 0)),
+    }
+    result = subprocess.run([shutil.which("bash"), "-c", simulator + step["run"]], env=env, capture_output=True, text=True)
+    assert result.returncode == status, result.stderr
+    assert [line.removeprefix("ran:") for line in result.stdout.splitlines() if line.startswith("ran:")] == expected
+
+
 def test_build_and_test_gates_depend_on_change_detection_and_security_always_runs():
     jobs = load(ROOT / ".github" / "workflows" / "ci.yml")["jobs"]
     for name in ("verify", "frontend", "database"):

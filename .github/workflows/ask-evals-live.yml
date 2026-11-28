@@ -2,6 +2,10 @@ name: Ask Informa live evaluation
 on:
   workflow_dispatch:
     inputs:
+      all_agents:
+        description: Score Deep Ask, Watch, and Editor in one run
+        type: boolean
+        default: false
       deep:
         description: Score the Deep Ask research agent
         type: boolean
@@ -25,7 +29,7 @@ concurrency:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       PYTHON_DOTENV_DISABLED: '1'
     steps:
@@ -50,20 +54,36 @@ jobs:
           NEWS_AI_MODEL_FAST: ${{ vars.NEWS_AI_MODEL_FAST }}
           NEWS_AI_MODEL_DEEP: ${{ vars.NEWS_AI_MODEL_DEEP }}
           NEWS_AI_DAILY_BUDGET_USD: ${{ vars.NEWS_AI_DAILY_BUDGET_USD }}
+          ALL_AGENTS: ${{ inputs.all_agents }}
           DEEP_EVAL: ${{ inputs.deep }}
           WATCH_EVAL: ${{ inputs.watch }}
           EDITOR_EVAL: ${{ inputs.editor }}
         run: |
-          flags=(--live)
-          if [[ "$EDITOR_EVAL" == "true" ]]; then flags+=(--editor)
-          elif [[ "$WATCH_EVAL" == "true" ]]; then flags+=(--watch)
-          elif [[ "$DEEP_EVAL" == "true" ]]; then flags+=(--deep); fi
-          uv run --no-sync python -m scripts.run_evals "${flags[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+          set -euo pipefail
+          modes=()
+          if [[ "$ALL_AGENTS" == true || "$DEEP_EVAL" == true ]]; then modes+=(deep); fi
+          if [[ "$ALL_AGENTS" == true || "$WATCH_EVAL" == true ]]; then modes+=(watch); fi
+          if [[ "$ALL_AGENTS" == true || "$EDITOR_EVAL" == true ]]; then modes+=(editor); fi
+          if [[ ${#modes[@]} == 0 ]]; then modes+=(quick); fi
+          result=0
+          for mode in "${modes[@]}"; do
+            flags=(--live)
+            if [[ "$mode" != quick ]]; then flags+=("--$mode"); fi
+            printf '\n## %s\n\n' "$mode" | tee -a "$GITHUB_STEP_SUMMARY"
+            if uv run --no-sync python -m scripts.run_evals "${flags[@]}" | tee -a "$GITHUB_STEP_SUMMARY"; then
+              continue
+            else
+              status=("${PIPESTATUS[@]}")
+              if [[ ${status[0]} != 1 || ${status[1]} != 0 ]]; then exit 2; fi
+              result=1
+            fi
+          done
+          exit "$result"
       - name: Retain the scored results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ask-informa-live-eval
-          path: ${{ inputs.editor && 'evals/results/latest-editor.json' || inputs.watch && 'evals/results/latest-watch.json' || inputs.deep && 'evals/results/latest-deep.json' || 'evals/results/latest.json' }}
+          path: evals/results/latest*.json
           if-no-files-found: ignore
           retention-days: 14

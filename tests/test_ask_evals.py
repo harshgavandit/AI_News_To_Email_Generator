@@ -1,4 +1,5 @@
-from scripts import run_evals
+from app import weekly_recap
+from scripts import editor_evals, run_evals
 
 
 def test_scoring_detects_wrong_sources_missing_facts_and_bad_refusals():
@@ -58,3 +59,10 @@ def test_eval_matrix_has_independent_expected_outcomes():
         "insufficient",
         "refused",
     }
+
+
+def test_editor_recap_fixture_cites_distinct_stories_from_the_requested_week():
+    item = editor_evals.recap()
+    start, end = weekly_recap.week_bounds(item["action"]["week"])
+    assert len({row["id"] for row in item["evidence"]}) == 3
+    assert all(start.isoformat() <= row["date"] < end.isoformat() for row in item["evidence"])
