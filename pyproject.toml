@@ -24,6 +24,7 @@ dependencies = [
     "youtube-transcript-api>=1.2.3",
     "uvicorn>=0.34,<1",
     "mcp==1.30.0",
+    "langgraph==1.2.24",
 ]
 
 [dependency-groups]

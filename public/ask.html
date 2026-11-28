@@ -35,6 +35,11 @@
         <h1 id="ask-title">Ask Informa</h1>
         <p>Ask a question about recent tech news. Read the source behind each answer.</p>
         <form method="post" action="/api/ask">
+          <fieldset class="ask-mode" data-ask-mode>
+            <legend>Answer mode</legend>
+            <label><input type="radio" name="mode" value="quick" checked /> Quick answer</label>
+            <label><input type="radio" name="mode" value="deep" /> Deep research</label>
+          </fieldset>
           <label for="archive-question">Your question</label>
           <textarea name="question" id="archive-question" required minlength="3" maxlength="320" rows="3" aria-describedby="archive-question-help" placeholder="What changed in AI coding tools this week?"></textarea>
           <p id="archive-question-help" class="small">Leave out personal details. Questions aren’t saved to the archive.</p>
@@ -44,6 +49,7 @@
               <option value="1">Past day</option>
               <option value="7" selected>Past week</option>
               <option value="30">Past month</option>
+              <option value="90" data-deep-window disabled hidden>Past 90 days</option>
             </select>
             <button class="button primary" type="submit">Find an answer</button>
           </div>

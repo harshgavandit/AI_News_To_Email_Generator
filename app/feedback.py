@@ -36,11 +36,12 @@ class Feedback(BaseModel):
     website: str = Field(default="", max_length=200)  # left empty by people; filled by form bots
     question: str = Field(default="", max_length=320)
     story_ids: list[str] = Field(default_factory=list, max_length=10)
+    mode: Literal["", "deep"] = ""
 
     @model_validator(mode="after")
     def validate_report(self):
         if self.kind != "ai_answer":
-            if self.question or self.story_ids:
+            if self.question or self.story_ids or self.mode:
                 raise ValueError("Story references belong on AI answer reports.")
             return self
         from app.guardrails import rejection
@@ -49,6 +50,8 @@ class Feedback(BaseModel):
         if not self.story_ids or any(not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", ident) for ident in self.story_ids):
             raise ValueError("Report at least one valid story reference.")
         self.message = self.question + "\nStory IDs: " + ", ".join(dict.fromkeys(self.story_ids))
+        if self.mode:
+            self.message += "\nMode: " + self.mode
         return self
 
     @field_validator("page")

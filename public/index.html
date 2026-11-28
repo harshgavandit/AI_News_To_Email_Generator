@@ -175,13 +175,18 @@
             <a href="/ask.html" class="text-button">Open Ask Informa ↗</a>
           </div>
           <form method="post" action="/api/ask">
+            <fieldset class="ask-mode" data-ask-mode>
+              <legend>Answer mode</legend>
+              <label><input type="radio" name="mode" value="quick" checked /> Quick answer</label>
+              <label><input type="radio" name="mode" value="deep" /> Deep research</label>
+            </fieldset>
             <label for="home-ask-question">What would you like to know about this week in tech?</label>
             <div class="ask-actions">
               <input type="text" name="question" id="home-ask-question" required minlength="3" maxlength="320" aria-describedby="home-ask-help" placeholder="What changed in AI coding tools?" />
               <button class="button primary" type="submit">Find an answer</button>
             </div>
           </form>
-          <p id="home-ask-help" class="small">Answers link to the original reporting. Leave out personal details.</p>
+          <p id="home-ask-help" class="small">Answers include links to the reporting. Leave out personal details.</p>
           <button type="button" class="text-button" data-ask-example="What have cloud providers reported about service outages?">Try a question about cloud outages</button>
           <p class="status" data-ask-status role="status"></p>
           <div data-ask-answer></div>

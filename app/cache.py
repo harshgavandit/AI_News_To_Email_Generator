@@ -10,8 +10,9 @@ import httpx
 
 
 class Cache:
-    def __init__(self, namespace: str):
+    def __init__(self, namespace: str, *, shared: bool = True):
         self.namespace = namespace
+        self.shared = shared
         self.entries: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.lock = threading.Lock()
         self.client = httpx.Client(timeout=1.0, follow_redirects=False)
@@ -21,6 +22,8 @@ class Cache:
         return self.refresh_locks[hash(key) % len(self.refresh_locks)]
 
     def _command(self, *command: str):
+        if not self.shared:
+            return None
         endpoint = os.getenv("UPSTASH_REDIS_REST_URL", "").rstrip("/")
         token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
         if not endpoint.startswith("https://") or not token:

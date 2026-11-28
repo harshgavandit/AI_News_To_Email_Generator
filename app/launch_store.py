@@ -460,7 +460,7 @@ class Store:
         return stmt
 
     def page(self, *, hours, source, query, kind, publisher, limit, cursor, topic="all", region="", sort="latest",
-             coverage="", language="", subject=""):
+             coverage="", language="", subject="", archive_only=False):
         fingerprint = page_fingerprint(hours, source, query, kind, publisher, topic, region, sort, coverage, language, subject)
         ranked = sort == "relevance" and bool(query)
         anchor, marker = page_window(cursor, fingerprint, ranked=ranked)
@@ -472,6 +472,11 @@ class Store:
             score = search_rank(query)
             stmt = stmt.add_columns(score.label("search_score"))
             columns = (score, *columns)
+        if archive_only:
+            # Search agents only need the first page of retained excerpts.
+            with self.engine.connect() as conn:
+                rows = conn.execute(stmt.order_by(*(column.desc() for column in columns)).limit(limit))
+                return {"articles": [dict(row) for row in rows.mappings()]}
         with self.engine.connect() as conn:
             key = (articles.c.source_id, articles.c.source, articles.c.topic)
             groups = conn.execute(base.with_only_columns(*key, func.count()).group_by(*key)).all()

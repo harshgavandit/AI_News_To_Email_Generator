@@ -16,7 +16,8 @@ from starlette.concurrency import run_in_threadpool
 from starlette.routing import Route
 from starlette.types import Receive, Scope, Send
 
-from app import ask, guardrails, trackers, weekly_recap
+from app import archive_tools, ask, deep_ask, guardrails, trackers, weekly_recap
+from app.archive_tools import story_url
 from app.brand import PUBLIC_SITE
 from app.cache import Cache
 from app.coverage import REGION_LABELS, TOPICS, public_article
@@ -126,10 +127,6 @@ def archive():
     return store
 
 
-def story_url(ident: str) -> str:
-    return f"{PUBLIC_SITE}/?article={quote(ident, safe='')}#reading-room"
-
-
 def story_links(row: dict) -> dict:
     return {
         "id": row["id"],
@@ -145,20 +142,16 @@ def story_links(row: dict) -> dict:
 
 
 def search_news(body: SearchInputs, _request: Request) -> dict:
-    page = archive().page(
-        hours=body.days * 24,
+    rows = archive_tools.search_news(
+        archive(),
+        days=body.days,
         query=body.query,
-        source="all",
-        kind="all",
-        publisher="",
         topic=body.topic,
         region=body.region,
-        sort="relevance",
         limit=body.limit,
-        cursor=None,
     )
     return {
-        "stories": [story_links(public_article(row)) for row in page["articles"]],
+        "stories": [story_links(row) for row in rows],
         "informa_url": f"{PUBLIC_SITE}/#reading-room",
     }
 
@@ -280,7 +273,12 @@ def ask_informa(body: QuestionInputs, request: Request) -> dict:
     }
 
 
-TOOLS: dict[str, tuple[type[Inputs], Callable[..., dict], str]] = {
+async def deep_research(body: deep_ask.DeepRequest, request: Request) -> dict:
+    result = await deep_ask.answer_request(body, request, deep_ask.Control())
+    return {**result, "informa_url": f"{PUBLIC_SITE}/ask.html"}
+
+
+TOOLS: dict[str, tuple[type[BaseModel], Callable, str]] = {
     "search_news": (
         SearchInputs,
         search_news,
@@ -315,6 +313,11 @@ TOOLS: dict[str, tuple[type[Inputs], Callable[..., dict], str]] = {
         QuestionInputs,
         ask_informa,
         "Answer a technology news question with checked archive citations.",
+    ),
+    "deep_research": (
+        deep_ask.DeepRequest,
+        deep_research,
+        "Research a broad technology question using only the retained archive.",
     ),
 }
 
@@ -364,6 +367,8 @@ async def call_tool(name: str, arguments: dict) -> dict | types.CallToolResult:
     if not isinstance(request, Request):
         return tool_error("Connect using the MCP HTTP endpoint.")
     try:
+        if isinstance(body, deep_ask.DeepRequest):
+            return await deep_research(body, request)
         return await run_in_threadpool(handler, body, request)
     except HTTPException as error:
         retry = (error.headers or {}).get("Retry-After")

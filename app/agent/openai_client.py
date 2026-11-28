@@ -19,6 +19,7 @@ TASK_TIERS = {
     "search": "standard", "analyze": "standard", "brief": "standard", "visit_catchup": "standard",
     "technology": "standard", "project": "standard", "digest": "standard", "general": "standard",
     "compare": "deep", "global_compare": "deep",
+    "deep_plan": "fast", "deep_assess": "fast", "deep_write": "deep",
 }
 
 
@@ -82,14 +83,14 @@ def get_client() -> OpenAI:
     return OpenAI(api_key=get_openai_api_key(), timeout=REQUEST_TIMEOUT_SECONDS, max_retries=0)
 
 
-def _record(task, model, usage=None, *, ok=True):
+def _record(task, model, usage=None, *, ok=True, store=None):
     from app import ai_usage
     def tokens(name):
         value = getattr(usage, name, 0)
         return value if isinstance(value, int) and value >= 0 else 0
 
     try:
-        ai_usage.record(task, model, tokens("prompt_tokens"), tokens("completion_tokens"), ok=ok)
+        ai_usage.record(task, model, tokens("prompt_tokens"), tokens("completion_tokens"), ok=ok, store=store)
     except Exception:
         pass  # Accounting must never fail a model call.
 
@@ -105,12 +106,13 @@ def _fallback_worthy(error) -> bool:
     return isinstance(error, APIConnectionError) or (isinstance(error, APIStatusError) and error.status_code >= 500)
 
 
-def _complete(model, messages, max_tokens, response_model, task="general"):
-    completions = get_client().chat.completions
+def _complete(model, messages, max_tokens, response_model, task="general", *, timeout=None):
+    client = get_client()
+    completions = (client if timeout is None else client.with_options(timeout=timeout, max_retries=0)).chat.completions
     options = dict(model=model, messages=messages, max_completion_tokens=max_tokens)
     if effort := reasoning_effort(model, task):
         options["reasoning_effort"] = effort
-        if effort != "none":
+        if effort != "none" and timeout is None:
             options["max_completion_tokens"] = max_tokens + REASONING_HEADROOM
     if response_model:
         completion = completions.parse(**options, response_format=response_model)
@@ -120,6 +122,28 @@ def _complete(model, messages, max_tokens, response_model, task="general"):
         return parsed.model_dump_json(), completion.usage
     completion = completions.create(**options, response_format={"type": "json_object"})
     return completion.choices[0].message.content or "{}", completion.usage
+
+
+def generate_bounded_response(prompt, system, schema, *, task, max_tokens, input_bound, timeout, store):
+    """One routed provider attempt with an inclusive completion cap and no retry."""
+    from app import ai_usage
+
+    if not ai_usage.within_budget():
+        raise BudgetExceeded("The daily AI budget was reached.")
+    model = route_model(task)
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+    try:
+        content, usage = _complete(model, messages, max_tokens, schema, task, timeout=timeout)
+    except Exception as error:
+        usage = getattr(getattr(error, "completion", None), "usage", None)
+        if usage is None and isinstance(error, APIConnectionError):
+            # A timed out call may still have been billed by the provider.
+            ai_usage.record(task, model, input_bound, max_tokens, ok=False, store=store)
+        else:
+            _record(task, model, usage, ok=False, store=store)
+        raise
+    _record(task, model, usage, store=store)
+    return content
 
 
 def generate_response(prompt: str, system_prompt: str = "Return JSON.", response_model: type[BaseModel] | None = None,
