@@ -267,7 +267,7 @@ def public_article(article):
 
     private_fields = {"search_title", "search_description", "search_publisher", "topic_rank", "subject_keys",
                       "community_relevant", "source_eligible", "classification_version", "detected_language", "_feed_ids",
-                      "_reading_access", "_reading_content"}
+                      "_reading_access", "_reading_content", "first_seen"}
     result = {key: value for key, value in article.items() if key not in private_fields}
     result.update({
         # Strict requested schema: { id, title, cleanSummary, whyItMatters, category, region, sourceName, sourceUrl, publishedAt, readingTimeMinutes }

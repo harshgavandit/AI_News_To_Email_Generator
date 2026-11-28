@@ -142,6 +142,7 @@
             <p>Browser-only topic watches send their keywords to Informa AI while the Research Desk is open. Optional background monitoring stores keywords on the server so it can check the archive between visits. The monitor uses publisher records directly.</p>
             <p>The package checker sends the ecosystem, package name, and version you enter to OSV. Only enter public package names.</p>
             <p>Technology watch drafts may send the description you enter to OpenAI. The app saves a rule only after you review and save its filters.</p>
+            <p>Watch agent sends the draft text and reviewed conditions to OpenAI, along with relevant archived headlines, excerpts, and recent examples you marked not relevant for that watch. Its ratings and event history belong to your browser monitoring session. Device alerts use this browser’s existing push subscription with your permission.</p>
             <p>Research projects use your background-monitoring session. Collaborators can see the question, selected sources, and project notes. Publishing a brief creates a link that includes the question and public source evidence. Disable background monitoring to delete projects you own and withdraw their links.</p>
           </section>
           <section id="email-data">
@@ -187,7 +188,7 @@
       </dialog>
       <dialog id="delete-monitoring-dialog" class="privacy-dialog" aria-labelledby="delete-monitoring-title" aria-describedby="delete-monitoring-detail">
         <h2 id="delete-monitoring-title">Delete background monitoring data?</h2>
-        <p id="delete-monitoring-detail">This deletes your watches, rule settings, alert history, and research projects you own, including their shared brief links. It also removes your access to projects shared with this browser session.</p>
+        <p id="delete-monitoring-detail">This deletes your watches, rule settings, alert history, Watch agent feedback, and research projects you own, including their shared brief links. It also removes your access to projects shared with this browser session.</p>
         <p id="delete-monitoring-status" class="status" role="status"></p>
         <div class="dialog-actions"><button id="keep-monitoring" class="button secondary" type="button" autofocus>Keep monitoring</button><button id="confirm-delete-monitoring" class="button primary" type="button">Delete monitoring data</button></div>
       </dialog>

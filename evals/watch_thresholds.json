@@ -1,0 +1,8 @@
+{
+  "precision": 0.92,
+  "recall": 0.9,
+  "duplicate_suppression": 1,
+  "citation_accuracy": 1,
+  "refusals": 1,
+  "feedback_improvement": 1
+}

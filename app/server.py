@@ -69,7 +69,7 @@ from app.reader_signals import ReaderFeedback
 from app.syndication import router as syndication_router
 from app.discovery_health import router as discovery_router
 from app import research as research_service
-from app import monitoring
+from app import monitoring, watch_storage
 from app import research_projects
 from app import curiosity_api, curiosity_pages, feature_usage, feedback, feeds, push_alerts, push_api, story_groups, trackers, weekly_recap
 from app import ai_insights, ask, deep_ask, event_intelligence, mcp_connector
@@ -978,12 +978,17 @@ def run_intelligence_check(store):
         watch_progress = run_monitoring_check(store, scheduled=True)
         progress = research_service.index_archive(store)
         event_progress = event_intelligence.sync(store)
+        try:
+            agent_progress = watch_storage.run(store)
+        except SQLAlchemyError as error:
+            logger.warning("watch_agent_store_unavailable type=%s", type(error).__name__)
+            agent_progress = {"watch_agent_status": "unavailable"}
         brief = research_service.refresh_research_brief(store)
         try:
             ai_insights.prepare_recent_changes(store)
         except SQLAlchemyError as error:
             logger.warning("change_preparation_failed error_type=%s", type(error).__name__)
-        result = {"status": "checked", **watch_progress, **progress, **event_progress, "brief_status": brief,
+        result = {"status": "checked", **watch_progress, **progress, **event_progress, **agent_progress, "brief_status": brief,
                   **send_push_alerts(store)}
         if issue := research_service.take_provider_issue():
             # A coarse category only; provider messages can echo request details.

@@ -158,3 +158,11 @@
   .site-header .research-nav a { font-size: .75rem; min-height: 41px; }
   #conversation-form { grid-template-columns: minmax(0, 1fr); }
 }
+.watch-agent-form:not([hidden]) { display: grid; gap: .75rem; margin-block: .85rem; }
+.watch-agent-form label { display: grid; gap: .3rem; min-width: 0; }
+.watch-agent-form :is(textarea, input, select) { width: 100%; }
+.watch-agent-form textarea { min-height: 4.5rem; resize: vertical; }
+.watch-agent-form .radar-actions, .watch-agent-reason .reader-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.watch-agent-badge { display: inline-block; margin-inline-end: .75rem; font-weight: 650; }
+.watch-agent-reason { margin-block: .6rem; overflow-wrap: anywhere; }
+.watch-agent-reason p { margin: .3rem 0; }

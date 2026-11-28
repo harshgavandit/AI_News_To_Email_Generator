@@ -19,6 +19,7 @@ function mountResearch(window) {
     ['evidence-ui.js', ['node', 'requestJSON', 'answerBlock', 'sourceLink', 'sourceList', 'readableError']],
     ['source-history.js', ['historyControl']],
     ['watch-rule-ui.js', ['initRuleBuilder']],
+    ['watch-agent-ui.js', ['initWatchAgent', 'alertDetails', 'watchPrecision']],
     ['claim-evidence.js', ['appendClaimEvidence']],
     ['search-context.js', ['searchLink']],
     ['personal-impact.js', ['initImpactSettings']],
@@ -32,6 +33,49 @@ function mountResearch(window) {
   window.eval(script);
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
+
+test('Watch agent drafts without saving and confirms reviewed edits into the anonymous inbox', async () => {
+  const { window } = new JSDOM(markup, {
+    url: 'https://informa.test/research.html', runScripts: 'outside-only',
+  });
+  const calls = [];
+  const spec = { summary: 'Cloud outages', topics: ['outages'], entities: ['Borealis Cloud'],
+    keywords: ['outage'], must_have: ['service disruption'], exclude: ['planned maintenance'], severity: 'any' };
+  window.readingGroups = readingGroups;
+  window.fetch = async (path, options = {}) => {
+    const body = options.body ? JSON.parse(options.body) : undefined;
+    calls.push({ path, body });
+    const empty = { available: true, active: false, watches: [], alerts: [], unread: 0 };
+    const payload = path === '/api/intelligence/options' ? { topics: { outages: 'Service Outages' } } :
+      path.endsWith('/agent-draft') ? { status: 'ready', watch: spec } :
+      path.endsWith('/enable') ? { ...empty, active: true, watches: body.watches, revision: 0 } :
+      path.endsWith('/inbox') ? empty : {};
+    return { ok: true, json: async () => payload };
+  };
+  try {
+    mountResearch(window);
+    await flush();
+    const editor = window.document.querySelector('#watch-agent');
+    editor.open = true;
+    const input = editor.querySelector('[data-agent-draft]');
+    const confirm = editor.querySelector('[data-agent-confirm]');
+    input.elements.sentence.value = 'Tell me when a major cloud provider has an outage.';
+    input.dispatchEvent(new window.Event('submit', { cancelable: true }));
+    await flush();
+    assert.equal(confirm.hidden, false);
+    assert.equal(confirm.elements.summary.value, 'Cloud outages');
+    assert.equal(calls.filter(({ path }) => path.endsWith('/enable')).length, 0);
+    confirm.elements.severity.value = 'significant';
+    confirm.dispatchEvent(new window.Event('submit', { cancelable: true }));
+    await flush();
+    const saved = calls.find(({ path }) => path.endsWith('/enable')).body.watches[0];
+    assert.deepEqual(saved.agent, { ...spec, severity: 'significant' });
+    assert.equal(confirm.hidden, true);
+    window.document.querySelector('#watch-list article header button:nth-of-type(2)').click();
+    assert.equal(confirm.hidden, false);
+    assert.equal(confirm.elements.severity.value, 'significant');
+  } finally { window.close(); }
+});
 
 test('the Research Desk enables search after wiring the form and preserves the first query', async () => {
   const { window } = new JSDOM(markup, {

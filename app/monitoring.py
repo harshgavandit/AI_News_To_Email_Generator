@@ -16,7 +16,7 @@ from app.coverage import TOPICS
 from app.discovery import search_terms
 from app.launch_store import monitor_alerts, monitor_delivery, monitor_profiles, monitor_watches
 from app.research import watch_matches
-from app import watch_rules
+from app import watch_agent, watch_rules, watch_storage
 
 
 router = APIRouter(prefix="/api/intelligence/inbox")
@@ -35,9 +35,15 @@ class Watch(BaseModel):
     query: str = Field(min_length=2, max_length=150)
     topic: str = Field(default="all", max_length=24)
     rule: watch_rules.Rule | None = None
+    agent: watch_agent.Spec | None = None
 
     @model_validator(mode="after")
     def validate_scope(self):
+        if self.rule and self.agent:
+            raise ValueError("Choose one kind of watch.")
+        if self.agent:
+            self.topic = "all"
+            self.query = self.agent.summary
         if self.topic not in ("all", *TOPICS) or not search_terms(self.query):
             raise ValueError("Choose a topic and enter words to watch.")
         if self.rule:
@@ -53,7 +59,9 @@ class WatchList(BaseModel):
     @model_validator(mode="after")
     def unique_watches(self):
         if len({watch.id for watch in self.watches}) != len(self.watches) or len({
-            (search_terms(watch.query), watch.topic, watch.rule.model_dump_json() if watch.rule else "") for watch in self.watches
+            (search_terms(watch.query), watch.topic,
+             watch.rule.model_dump_json() if watch.rule else watch.agent.model_dump_json() if watch.agent else "")
+            for watch in self.watches
         }) != len(self.watches):
             raise ValueError("Each watch must be unique.")
         return self
@@ -116,7 +124,7 @@ def active_profile(conn, ident, now, *, lock=False):
 
 
 def watch_values(ident, watch, now):
-    return {"profile_id": ident, **watch.model_dump(exclude={"rule"}), "created": now, "next_check": now, "checked": None}
+    return {"profile_id": ident, **watch.model_dump(exclude={"rule", "agent"}), "created": now, "next_check": now, "checked": None}
 
 
 def rules_available(conn):
@@ -160,19 +168,39 @@ def snapshot(store, ident, now):
         alerts = conn.execute(select(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
             monitor_alerts.c.created >= now - RETENTION).order_by(monitor_alerts.c.updated.desc(),
             monitor_alerts.c.id.desc()).limit(MAX_ALERTS)).mappings()
-        alert_rows = [{"id": row["id"], "watch_id": row["watch_id"], "created": row["created"],
-                       "updated": row["updated"], "unread": row["read_at"] is None,
-                       "sources": json.loads(row["evidence"])} for row in alerts if not paused(controls.get(row["watch_id"]), now)]
+        agent_ready = watch_storage.ready(store, conn)
+        specs, ratings, totals, linked = watch_storage.watch_snapshot(conn, ident) if agent_ready else ({}, {}, {}, False)
+        alert_rows = []
+        for row in alerts:
+            if paused(controls.get(row["watch_id"]), now) and row["watch_id"] not in specs:
+                continue
+            sources = json.loads(row["evidence"])
+            alert = {"id": row["id"], "watch_id": row["watch_id"], "created": row["created"],
+                     "updated": row["updated"], "unread": row["read_at"] is None, "sources": sources}
+            if sources and sources[0].get("source_checked"):
+                alert.update({key: sources[0][key] for key in ("reason", "mode", "source_checked")})
+                alert["feedback"] = ratings.get(row["id"])
+            alert_rows.append(alert)
         watch_rows = [{key: row[key] for key in ("id", "query", "topic", "checked")} for row in watches]
         filters = stored_rules(conn, ident)
         for row in watch_rows:
             if row["id"] in filters:
                 row["rule"] = json.loads(filters[row["id"]])
+            if row["id"] in specs:
+                row["agent"], row["agent_status"] = specs[row["id"]]
+                counts = totals.get(row["id"], {})
+                row["precision"] = {"useful": counts.get("good", 0), "rated": sum(counts.values())}
             control = controls.get(row["id"])
             row["delivery"] = ({"muted": control["muted"], "snoozed_until": control["snoozed_until"]}
                                if paused(control, now) else {"muted": False, "snoozed_until": None})
         return {"available": True, "active": True, "revision": profile["revision"], "watches": watch_rows,
-                "alerts": alert_rows, "unread": sum(row["unread"] for row in alert_rows), "controls_ready": controls_ready}
+                "alerts": alert_rows, "unread": sum(row["unread"] for row in alert_rows), "controls_ready": controls_ready,
+                "agent_push": linked}
+
+
+def require_agent_schema(store, conn, watches):
+    if any(watch.agent for watch in watches) and not watch_storage.ready(store, conn):
+        raise HTTPException(503, "Watch agent setup is still in progress.")
 
 
 def set_cookie(response, request, token):
@@ -215,10 +243,12 @@ def enable(body: WatchList, request: Request, response: Response):
     token = secrets.token_hex(32)
     ident = hashlib.sha256(token.encode()).hexdigest()
     with store.engine.begin() as conn:
+        require_agent_schema(store, conn, body.watches)
         conn.execute(monitor_profiles.insert().values(id=ident, expires=now + INACTIVITY, revision=0))
         if body.watches:
             conn.execute(monitor_watches.insert(), [watch_values(ident, watch, now) for watch in body.watches])
             write_rules(conn, ident, body.watches)
+            watch_storage.write_specs(conn, ident, body.watches, now)
     set_cookie(response, request, token)
     response.headers["Cache-Control"] = "private, no-store"
     return snapshot(store, ident, now)
@@ -243,18 +273,27 @@ def save_watches(body: WatchUpdate, request: Request, response: Response):
         prior = {row["id"]: row for row in conn.execute(select(monitor_watches).where(
             monitor_watches.c.profile_id == ident)).mappings()}
         prior_rules = stored_rules(conn, ident)
+        require_agent_schema(store, conn, body.watches)
+        agent_ready = watch_storage.ready(store, conn)
+        prior_specs = dict(conn.execute(select(watch_storage.state.c.watch_id, watch_storage.state.c.spec).where(
+            watch_storage.state.c.profile_id == ident)).all()) if agent_ready else {}
         stable = {watch.id for watch in body.watches if watch.id in prior and
                   (watch.query, watch.topic) == (prior[watch.id]["query"], prior[watch.id]["topic"]) and
-                  (watch.rule.model_dump_json() if watch.rule else None) == prior_rules.get(watch.id)}
+                  (watch.rule.model_dump_json() if watch.rule else None) == prior_rules.get(watch.id) and
+                  (watch.agent.model_dump_json() if watch.agent else None) == prior_specs.get(watch.id)}
         removed = set(prior) - stable
         if removed:
+            edited_agents = {watch.id for watch in body.watches if watch.agent and watch.id in prior_specs}
+            if agent_ready:
+                watch_storage.remove(conn, [ident], removed, delete_events=False)
             conn.execute(delete(monitor_watches).where(monitor_watches.c.profile_id == ident,
                                                        monitor_watches.c.id.in_(removed)))
             conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
                                                      monitor_alerts.c.watch_id.in_(removed)))
-            if controls_available(conn):
+            reset_controls = removed - edited_agents
+            if reset_controls and controls_available(conn):
                 conn.execute(delete(monitor_delivery).where(monitor_delivery.c.profile_id == ident,
-                                                             monitor_delivery.c.watch_id.in_(removed)))
+                                                             monitor_delivery.c.watch_id.in_(reset_controls)))
             if prior_rules:
                 table = watch_rules.rules
                 conn.execute(delete(table).where(table.c.profile_id == ident, table.c.watch_id.in_(removed)))
@@ -262,6 +301,7 @@ def save_watches(body: WatchUpdate, request: Request, response: Response):
         if additions:
             conn.execute(monitor_watches.insert(), additions)
             write_rules(conn, ident, [watch for watch in body.watches if watch.id not in stable])
+            watch_storage.write_specs(conn, ident, [watch for watch in body.watches if watch.id not in stable], now)
         conn.execute(update(monitor_profiles).where(monitor_profiles.c.id == ident).values(revision=body.revision + 1))
     response.headers["Cache-Control"] = "private, no-store"
     return snapshot(store, ident, now)
@@ -295,6 +335,52 @@ def mark_alert_seen(alert_id: Annotated[str, Path(pattern=r"^[a-f0-9]{32}$")], r
             raise HTTPException(404, "This alert is unavailable.")
     response.headers["Cache-Control"] = "private, no-store"
     return snapshot(store, ident, now)
+
+
+class AlertFeedback(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rating: Literal["good", "not_relevant"]
+
+
+@router.put("/feedback/{alert_id}")
+def rate_alert(alert_id: Annotated[str, Path(pattern=r"^[a-f0-9]{32}$")], body: AlertFeedback,
+               request: Request, response: Response):
+    from app.server import admit_expensive
+
+    protect_write(request)
+    store, ident, now = configured_store(), profile_id(request), time.time()
+    admit_expensive(store, request, "watch-agent-feedback", 30, 60)
+    with store.engine.begin() as conn:
+        begin_write(conn)
+        if not active_profile(conn, ident, now, lock=True):
+            raise HTTPException(401, "Enable background monitoring in this browser first.")
+        if not watch_storage.ready(store, conn):
+            raise HTTPException(503, "Watch agent setup is still in progress.")
+        alert = conn.execute(select(monitor_alerts).where(monitor_alerts.c.profile_id == ident,
+            monitor_alerts.c.id == alert_id, monitor_alerts.c.created >= now - RETENTION)).mappings().first()
+        sources = json.loads(alert["evidence"]) if alert else []
+        if not alert or not sources or not sources[0].get("source_checked"):
+            raise HTTPException(404, "This Watch agent alert is unavailable.")
+        table = watch_storage.feedback
+        stmt = store.insert(table).values(alert_id=alert_id, profile_id=ident, watch_id=alert["watch_id"],
+            rating=body.rating, article_id=sources[0]["id"], updated=now)
+        conn.execute(stmt.on_conflict_do_update(index_elements=[table.c.alert_id],
+            set_={"rating": stmt.excluded.rating, "updated": stmt.excluded.updated}))
+    response.headers["Cache-Control"] = "private, no-store"
+    return snapshot(store, ident, now)
+
+
+@router.post("/agent-draft")
+def draft_agent(body: watch_agent.Sentence, request: Request, response: Response):
+    from app.server import admit_expensive
+
+    protect_write(request)
+    response.headers["Cache-Control"] = "private, no-store"
+    if watch_agent.rejection(body.sentence):
+        return {"status": "refused", "notice": watch_agent.REFUSAL}
+    store = configured_store()
+    admit_expensive(store, request, "watch-agent-draft", 6, 600)
+    return watch_agent.draft(store, body.sentence)
 
 
 @router.put("/watches/{watch_id}/delivery")
@@ -331,6 +417,10 @@ def delete_profiles(conn, ids):
         conn.execute(delete(watch_rules.rules).where(watch_rules.rules.c.profile_id.in_(ids)))
     if controls_available(conn):
         conn.execute(delete(monitor_delivery).where(monitor_delivery.c.profile_id.in_(ids)))
+    if inspect(conn).has_table(watch_storage.push_receipts.name):
+        watch_storage.remove(conn, ids)
+        alerts = select(monitor_alerts.c.id).where(monitor_alerts.c.profile_id.in_(ids))
+        conn.execute(delete(watch_storage.push_receipts).where(watch_storage.push_receipts.c.alert_id.in_(alerts)))
     conn.execute(delete(monitor_watches).where(monitor_watches.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_alerts).where(monitor_alerts.c.profile_id.in_(ids)))
     conn.execute(delete(monitor_profiles).where(monitor_profiles.c.id.in_(ids)))
@@ -416,6 +506,13 @@ def run_monitoring(store, *, now=None):
         old_alerts = select(monitor_alerts.c.id).where(monitor_alerts.c.created < now - RETENTION).limit(400)
         conn.execute(delete(monitor_alerts).where(monitor_alerts.c.id.in_(old_alerts)))
         scope = select(monitor_watches).join(monitor_profiles, monitor_profiles.c.id == monitor_watches.c.profile_id)
+        if watch_storage.ready(store, conn):
+            agent = watch_storage.state
+            scope = scope.where(~select(agent.c.watch_id).where(agent.c.profile_id == monitor_watches.c.profile_id,
+                agent.c.watch_id == monitor_watches.c.id).exists())
+            receipts = watch_storage.push_receipts
+            orphaned = select(receipts.c.alert_id).where(receipts.c.sent_at < now - RETENTION).limit(400)
+            conn.execute(delete(receipts).where(receipts.c.alert_id.in_(orphaned)))
         if controls_available(conn):
             scope = scope.outerjoin(monitor_delivery, (monitor_delivery.c.profile_id == monitor_watches.c.profile_id) &
                 (monitor_delivery.c.watch_id == monitor_watches.c.id)).where(

@@ -48,6 +48,10 @@ class Inputs(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
 
 
+class WatchPreviewInputs(Inputs):
+    sentence: str = Field(min_length=8, max_length=320)
+
+
 class TopicInputs(Inputs):
     topic: str = Field(
         default="all", description="A topic ID from Informa's public source catalog."
@@ -278,7 +282,27 @@ async def deep_research(body: deep_ask.DeepRequest, request: Request) -> dict:
     return {**result, "informa_url": f"{PUBLIC_SITE}/ask.html"}
 
 
+def list_watch_examples(_body: Inputs, _request: Request) -> dict:
+    from app.watch_agent import EXAMPLES
+
+    return {"examples": list(EXAMPLES)}
+
+
+def preview_watch(body: WatchPreviewInputs, request: Request) -> dict:
+    from app import watch_agent
+    from app.server import admit_expensive
+
+    if watch_agent.rejection(body.sentence):
+        return {"status": "refused", "notice": watch_agent.REFUSAL}
+    store = archive()
+    admit_expensive(store, request, "mcp-watch-preview", 5, 600)
+    return watch_agent.preview(store, body.sentence)
+
+
 TOOLS: dict[str, tuple[type[BaseModel], Callable, str]] = {
+    "list_watch_examples": (Inputs, list_watch_examples, "List public examples of plain-language technology watches."),
+    "preview_watch": (WatchPreviewInputs, preview_watch,
+                      "Draft a public technology watch and preview recent archived matches without saving."),
     "search_news": (
         SearchInputs,
         search_news,

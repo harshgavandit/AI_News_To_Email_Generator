@@ -34,7 +34,7 @@ articles = Table("brief_articles", schema,
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
     Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
     Column("community_relevant", Boolean), Column("source_eligible", Boolean), Column("author_key", String(39)),
-    Column("classification_version", Integer))
+    Column("classification_version", Integer), Column("first_seen", Float))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
                      articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
                      articles.c.source_eligible, articles.c.author_key, articles.c.classification_version)
@@ -64,6 +64,9 @@ article_indexes = (
     Index("brief_articles_source_page", articles.c.source_id, articles.c.published_at, articles.c.id),
     Index("brief_articles_topic_page", articles.c.topic, articles.c.published_at, articles.c.id),
 )
+article_arrival_index = Index("brief_articles_arrival", articles.c.first_seen, articles.c.id,
+                              postgresql_where=articles.c.first_seen.is_not(None),
+                              sqlite_where=articles.c.first_seen.is_not(None))
 search_document = (func.coalesce(articles.c.search_title, literal_column("''")) + literal_column("' '")
                    + func.coalesce(articles.c.search_description, literal_column("''")) + literal_column("' '")
                    + func.coalesce(articles.c.search_publisher, literal_column("''")))
@@ -257,7 +260,7 @@ class Store:
             if self._discovery_ready:
                 return
             known = {column["name"] for column in inspect(conn).get_columns(articles.name)}
-            missing = [column for column in discovery_columns if column.name not in known]
+            missing = [column for column in (*discovery_columns, articles.c.first_seen) if column.name not in known]
             if missing:
                 if self.engine.dialect.name == "postgresql":
                     conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
@@ -268,8 +271,11 @@ class Store:
                 for column in missing:
                     if column.name not in known:
                         conn.exec_driver_sql(f"ALTER TABLE brief_articles ADD COLUMN {column.name} {column.type.compile(conn.dialect)}")
-                backfill_discovery(conn)
-                article_indexes[-1].create(conn, checkfirst=True)
+                if any(column.name != "first_seen" for column in missing):
+                    backfill_discovery(conn)
+                    article_indexes[-1].create(conn, checkfirst=True)
+                if "first_seen" not in known:
+                    article_arrival_index.create(conn, checkfirst=True)
         self._discovery_ready = True
 
     def migrate(self):
@@ -280,6 +286,7 @@ class Store:
         with self.engine.begin() as conn:
             for index in article_indexes:
                 index.create(conn, checkfirst=True)
+            article_arrival_index.create(conn, checkfirst=True)
             backfill_discovery(conn)
         if self.engine.dialect.name == "postgresql":
             with self.engine.begin() as conn:
@@ -386,14 +393,14 @@ class Store:
                 stmt = self.insert(articles)
                 values = [{**{k: a[k] for k in ("id", "url", "title", "description", "source", "publisher",
                                                  "category", "published_at")}, "source_id": source_id,
-                           "kind": a.get("kind", "news"),
+                           "kind": a.get("kind", "news"), "first_seen": now,
                            "metadata_json": json.dumps(metadata_for(a), ensure_ascii=False)} for a in items]
                 values.sort(key=lambda row: row["id"])
                 ids = [row["id"] for row in values]
                 for article in values:
                     article.update(discovery_fields(restore_metadata(article)))
                 # Registry order owns overlapping publisher feeds regardless of refresh completion order.
-                fields = [c for c in articles.c if c.name != "id"]
+                fields = [c for c in articles.c if c.name not in {"id", "first_seen"}]
                 changed = or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))
                 preferred = source_order[:source_order.index(source_id)] if source_id in BY_ID else source_order
                 if preferred:

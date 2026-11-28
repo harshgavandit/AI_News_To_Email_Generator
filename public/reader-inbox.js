@@ -4,6 +4,8 @@ import { developmentLink } from "./development-link.js";
 import { followedStories, saveStoryFollow } from "./technology-follow.js";
 import { markDevelopmentsSeen, seenDevelopments } from "./development-seen.js";
 import { node, requestJSON, sourceLink } from "./evidence-ui.js";
+import { alertDetails, watchPrecision } from "./watch-agent-ui.js";
+import { alertSupport, defaultSettings, enableAlerts, readState } from "./push-alerts.js";
 
 const byId = id => document.getElementById(id);
 const feedback = byId("inbox-page-status");
@@ -29,11 +31,43 @@ function action(label, run) {
 }
 feedback.tabIndex = -1;
 
+let pushConfig;
+function renderAgentPush(data) {
+  const panel = byId("inbox-agent-push");
+  const button = panel.querySelector("button");
+  const status = panel.querySelector("[role=status]");
+  panel.hidden = !data.watches.some((watch) => watch.agent);
+  if (panel.hidden) return;
+  const support = alertSupport();
+  if (data.agent_push || !support.supported) {
+    button.hidden = true;
+    status.textContent = data.agent_push ? "Watch agent push is on for this device." :
+      support.reason === "ios-home-screen" ? "Add Informa to your Home Screen to use push." : "This browser cannot receive push.";
+    return;
+  }
+  button.hidden = false;
+  button.disabled = true;
+  pushConfig ||= requestJSON("/api/push/config").catch(() => { pushConfig = null; return null; });
+  pushConfig.then((config) => {
+    button.disabled = !config?.enabled;
+    status.textContent = config?.enabled ? "Uses your device’s quiet hours and delivery limits." : "Device alerts are unavailable right now.";
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        await enableAlerts({ config, registration: navigator.serviceWorker.ready, watchAgent: true,
+          settings: readState()?.settings || defaultSettings() });
+        renderWatches(await monitorInbox());
+      } catch (error) { status.textContent = readableError(error); button.disabled = false; }
+    };
+  });
+}
+
 function renderWatches(data) {
   const list = byId("inbox-alerts");
   const filters = byId("inbox-watches");
   list.replaceChildren();
   filters.replaceChildren();
+  renderAgentPush(data);
   byId("inbox-start-watches").hidden = data.active && data.watches.length > 0;
   byId("inbox-manage-watches").hidden = !data.active || !data.watches.length;
   byId("inbox-watch-status").textContent = !data.available ? "Background monitoring is unavailable." :
@@ -50,6 +84,14 @@ function renderWatches(data) {
       links.append(li);
     }
     item.append(links);
+    const explanation = alertDetails(alert, async (id, rating) => {
+      try {
+        renderWatches(await monitorInbox("/feedback/" + id, { method: "PUT", body: { rating } }));
+        feedback.textContent = "Alert feedback saved.";
+        feedback.focus({ preventScroll: true });
+      } catch (error) { feedback.textContent = readableError(error); }
+    });
+    if (explanation) item.append(explanation);
     if (alert.unread) item.append(action("Mark seen", async () => {
       renderWatches(await monitorInbox(`/read/${alert.id}`, { method: "POST" }));
       feedback.textContent = "Watch alert marked seen.";
@@ -63,8 +105,12 @@ function renderWatches(data) {
     const paused = watch.delivery?.muted || watch.delivery?.snoozed_until;
     item.append(node("strong", watch.query), node("p", watch.delivery?.muted ? "Muted" :
       paused ? `Snoozed until ${new Date(watch.delivery.snoozed_until * 1000).toLocaleString()}` : "Active", "research-meta"));
+    if (watch.agent) item.append(node("p", watchPrecision(watch), "research-meta"));
+    if (watch.agent_status === "ai_unavailable" && !paused) {
+      item.append(node("p", "AI unavailable. The check will retry.", "research-meta"));
+    }
     if (data.controls_ready) {
-      const controls = paused ? [["Resume", "resume"]] : [["Snooze for 24 hours", "snooze"], ["Mute", "mute"]];
+      const controls = paused ? [["Resume", "resume"]] : [["Snooze for 24 hours", "snooze"], [watch.agent ? "Pause" : "Mute", "mute"]];
       for (const [label, control] of controls) actions.append(action(label, async () => {
         renderWatches(await monitorInbox(`/watches/${encodeURIComponent(watch.id)}/delivery`,
           { method: "PUT", body: { action: control } }));

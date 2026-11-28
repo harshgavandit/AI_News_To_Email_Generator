@@ -5,6 +5,7 @@ import { readFeedback } from "./reader-feedback.js";
 import { followedTechnologies, followedStories } from "./technology-follow.js";
 import { historyControl } from "./source-history.js";
 import { initRuleBuilder } from "./watch-rule-ui.js";
+import { alertDetails, initWatchAgent, watchPrecision } from "./watch-agent-ui.js";
 import { appendClaimEvidence } from "./claim-evidence.js";
 import { searchLink } from "./search-context.js";
 import { initImpactSettings } from "./personal-impact.js";
@@ -712,6 +713,22 @@ function renderWatches() {
     });
     const header = element("header");
     header.append(title, remove);
+    if (watch.agent) {
+      const edit = element("button", "Edit", "text-button");
+      edit.type = "button";
+      edit.addEventListener("click", () => agentEditor.edit(watch));
+      header.append(edit);
+      const paused = watch.delivery?.muted || watch.delivery?.snoozed_until;
+      if (inbox?.controls_ready) {
+        const pause = element("button", paused ? "Resume" : "Pause", "text-button");
+        pause.type = "button";
+        pause.addEventListener("click", () => writeInbox("/watches/" + encodeURIComponent(watch.id) + "/delivery",
+          { method: "PUT", body: { action: paused ? "resume" : "mute" } }, paused ? "Watch resumed." : "Watch paused."));
+        header.append(pause);
+      }
+      const agentStatus = paused ? "Paused" : watch.agent_status === "ai_unavailable" ? "AI unavailable · will retry" : "Watch agent";
+      article.append(element("p", agentStatus + " · " + watchPrecision(watch), "research-meta"));
+    }
     article.append(header);
     const matching = Array.isArray(watch.matches) ? watch.matches : [];
     article.append(element("p", inbox?.active
@@ -791,7 +808,7 @@ function syncInbox(data) {
   byId("monitor-results").hidden = !data.active;
   byId("watch-description").textContent = data.active
     ? "New alerts appear here after the archive updates and your watches are checked."
-    : "Watch up to six keyword queries or technology rules. Browser-only alerts check while this desk is open.";
+    : "Save up to six watches. Plain-language watches are checked in the background.";
   watches = data.active ? data.watches : loadWatches();
   renderWatches();
   if (!data.active) return;
@@ -810,6 +827,9 @@ function syncInbox(data) {
     const title = element("h4");
     title.append(link(lead.title, `/?article=${encodeURIComponent(lead.id)}#reading-room`));
     row.append(label, title, link(lead.publisher, lead.url));
+    const explanation = alertDetails(alert, (id, rating) => writeInbox("/feedback/" + id,
+      { method: "PUT", body: { rating } }, "Alert feedback saved."));
+    if (explanation) row.append(explanation);
     if (supporting.length) {
       const details = element("details");
       details.append(element("summary", `${supporting.length} more source${supporting.length === 1 ? "" : "s"}`));
@@ -841,7 +861,9 @@ async function refreshInbox() {
   } finally { inboxBusy = false; }
 }
 
-const settings = (rows) => rows.map(({ id, query, topic: watchTopic, rule }) => ({ id, query, topic: watchTopic || "all", ...(rule && { rule }) }));
+const settings = (rows) => rows.map(({ id, query, topic: watchTopic, rule, agent }) => ({
+  id, query, topic: watchTopic || "all", ...(rule && { rule }), ...(agent && { agent }),
+}));
 
 async function writeInbox(path, options, feedback) {
   if (inboxBusy) {
@@ -891,6 +913,17 @@ window.addEventListener("storage", ({ key }) => {
     else { watches = loadWatches(); renderWatches(); }
   }
 });
+const agentEditor = initWatchAgent(byId("watch-agent"), async (watch) => {
+  if (!watches.some((item) => item.id === watch.id) && watches.length >= 6) {
+    throw new Error("You can save up to six watches. Remove one before adding another.");
+  }
+  const next = [...watches.filter((item) => item.id !== watch.id), watch];
+  if (!inbox?.active) {
+    if (!inbox?.available) throw new Error("Background monitoring is temporarily unavailable.");
+    return writeInbox("/enable", { method: "POST", body: { watches: settings(next) } }, "Watch agent enabled.");
+  }
+  return replaceWatches(next);
+});
 document.addEventListener("visibilitychange", checkWatches);
 setInterval(checkWatches, 60000);
 renderWatches();
@@ -904,6 +937,7 @@ initRuleBuilder(async (watch) => {
 });
 
 const searchOptionsReady = api("/api/intelligence/options").then((options) => {
+  agentEditor.topics(options.topics || {});
   for (const [id, label] of Object.entries(options.topics || {})) {
     topic.add(new Option(label, id));
     byId("watch-topic").add(new Option(label, id));

@@ -8,6 +8,7 @@ signed with the site's VAPID key (RFC 8292), so push services cannot read them.
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import UTC, datetime
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -184,27 +185,57 @@ def ensure(store):
     store._push_ready = True
 
 
-def save(store, endpoint, p256dh, auth, profile: dict, settings: dict, *, now=None):
+def save(store, endpoint, p256dh, auth, profile: dict, settings: dict, *, now=None, monitor_id=None):
     ensure(store)
     now = now or time.time()
     ident = endpoint_id(endpoint)
     values = {"endpoint": endpoint, "p256dh": p256dh, "auth": auth, "profile": json.dumps(profile, sort_keys=True),
               "settings": json.dumps(settings, sort_keys=True), "updated": now, "failures": 0}
     with store.engine.begin() as conn:
-        found = conn.execute(select(push_subscriptions.c.id).where(push_subscriptions.c.id == ident)).first()
+        if monitor_id:
+            from app.monitoring import active_profile, begin_write
+            from app.watch_storage import push_links, ready, state
+
+            begin_write(conn)
+            if not active_profile(conn, monitor_id, now, lock=True) or not ready(store, conn):
+                raise ValueError("Enable monitoring in this browser first.")
+            if not conn.scalar(select(state.c.watch_id).where(state.c.profile_id == monitor_id).limit(1)):
+                raise ValueError("Save a Watch agent watch first.")
+        found = conn.execute(select(push_subscriptions.c.p256dh, push_subscriptions.c.auth)
+                             .where(push_subscriptions.c.id == ident).with_for_update()).first()
+        if monitor_id and found and not (hmac.compare_digest(found.p256dh, p256dh)
+                                         and hmac.compare_digest(found.auth, auth)):
+            raise ValueError("This device's push keys have changed. Turn alerts off and on again.")
         if found:
             conn.execute(update(push_subscriptions).where(push_subscriptions.c.id == ident).values(**values))
         else:
             # Start from now: older coverage is not news to someone who just turned alerts on.
             conn.execute(push_subscriptions.insert().values(id=ident, created=now, seen=json.dumps({"_since": now}),
                                                             checked=0, last_sent=0, sent_day="", sent_count=0, **values))
+        if monitor_id:
+            linked = conn.execute(select(push_links).where(push_links.c.subscription_id == ident)).mappings().first()
+            if linked and linked["profile_id"] != monitor_id:
+                raise ValueError("This device is linked to another monitoring profile.")
+            stmt = store.insert(push_links).values(profile_id=monitor_id, subscription_id=ident, enabled_at=now)
+            conn.execute(stmt.on_conflict_do_update(index_elements=[push_links.c.profile_id],
+                set_={"subscription_id": ident, "enabled_at": now},
+                where=push_links.c.subscription_id != ident))
     return ident
+
+
+def remove_links(store, conn, ids):
+    from app.watch_storage import push_links, ready
+
+    if ready(store, conn):
+        conn.execute(delete(push_links).where(push_links.c.subscription_id.in_(ids)))
 
 
 def remove(store, endpoint) -> bool:
     ensure(store)
     with store.engine.begin() as conn:
-        return conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == endpoint_id(endpoint))).rowcount > 0
+        ident = endpoint_id(endpoint)
+        remove_links(store, conn, [ident])
+        return conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == ident)).rowcount > 0
 
 
 def find(store, endpoint):
@@ -219,10 +250,18 @@ def rotate(store, old_endpoint, endpoint, p256dh, auth) -> bool:
     row = find(store, old_endpoint)
     if not row:
         return False
+    new_id = endpoint_id(endpoint)
     with store.engine.begin() as conn:
+        from app.watch_storage import push_links, ready
+
+        if new_id != row["id"] and ready(store, conn):
+            if conn.scalar(select(push_links.c.profile_id).where(push_links.c.subscription_id == new_id)):
+                return False
+            conn.execute(update(push_links).where(push_links.c.subscription_id == row["id"])
+                         .values(subscription_id=new_id))
         conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == row["id"]))
-        conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == endpoint_id(endpoint)))
-        conn.execute(push_subscriptions.insert().values({**row, "id": endpoint_id(endpoint), "endpoint": endpoint,
+        conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == new_id))
+        conn.execute(push_subscriptions.insert().values({**row, "id": new_id, "endpoint": endpoint,
                                                           "p256dh": p256dh, "auth": auth, "updated": time.time()}))
     return True
 
@@ -291,6 +330,8 @@ def mark_seen(seen_raw, picks, now):
 
 def dispatch(store, *, now=None, budget_seconds=20.0, events=None, send=None):
     """Send at most one notification per reader per run. Called after the hourly intelligence check."""
+    from app.watch_storage import pending_push, push_receipts
+
     key = vapid_key()
     if key is None:
         return {"push_status": "disabled"}
@@ -301,6 +342,7 @@ def dispatch(store, *, now=None, budget_seconds=20.0, events=None, send=None):
     with store.engine.connect() as conn:
         rows = [dict(row) for row in conn.execute(select(push_subscriptions).where(push_subscriptions.c.failures < MAX_FAILURES)
                                                    .order_by(push_subscriptions.c.checked).limit(MAX_SUBSCRIPTIONS_PER_RUN)).mappings()]
+        pending = pending_push(store, conn, [row["id"] for row in rows], now) if rows else {}
     result = {"push_status": "checked", "push_checked": 0, "push_sent": 0, "push_removed": 0}
     if not rows:
         return result
@@ -310,25 +352,37 @@ def dispatch(store, *, now=None, budget_seconds=20.0, events=None, send=None):
             break
         result["push_checked"] += 1
         values = {"checked": now}
+        sent_alert = None
         try:
             settings = json.loads(row["settings"] or "{}")
             window = due(row, settings, now)
             if window:
-                if events is None:
-                    from app import event_intelligence
-                    events = event_intelligence.catalog(store, hours=24, limit=240)
-                picks, seen_raw = select_updates(row, events, now)
-                if picks:
-                    status = send(row, notification(picks))
+                alert = pending.get(row["id"])
+                if alert:
+                    source = json.loads(alert["evidence"])[0]
+                    message = {"title": "Watch agent alert", "body": source["title"][:180],
+                               "tag": f"watch-{alert['id']}", "url": "/inbox.html"}
+                else:
+                    if events is None:
+                        from app import event_intelligence
+                        events = event_intelligence.catalog(store, hours=24, limit=240)
+                    picks, seen_raw = select_updates(row, events, now)
+                    message = notification(picks) if picks else None
+                if message:
+                    status = send(row, message)
                     if status in {404, 410}:
                         with store.engine.begin() as conn:
+                            remove_links(store, conn, [row["id"]])
                             conn.execute(delete(push_subscriptions).where(push_subscriptions.c.id == row["id"]))
                         result["push_removed"] += 1
                         continue
                     if 200 <= status < 300:
                         day, sent_today = window
-                        values.update(seen=json.dumps(mark_seen(seen_raw, picks, now)), last_sent=now, sent_day=day,
-                                      sent_count=sent_today + 1, failures=0)
+                        values.update(last_sent=now, sent_day=day, sent_count=sent_today + 1, failures=0)
+                        if alert:
+                            sent_alert = alert["id"]
+                        else:
+                            values["seen"] = json.dumps(mark_seen(seen_raw, picks, now))
                         result["push_sent"] += 1
                     else:
                         values["failures"] = row["failures"] + 1
@@ -336,8 +390,12 @@ def dispatch(store, *, now=None, budget_seconds=20.0, events=None, send=None):
             logger.warning("push_subscription_skipped error_type=%s", type(error).__name__)
             values["failures"] = row["failures"] + 1
         with store.engine.begin() as conn:
+            if sent_alert:
+                conn.execute(store.insert(push_receipts).values(alert_id=sent_alert, sent_at=now).on_conflict_do_nothing())
             conn.execute(update(push_subscriptions).where(push_subscriptions.c.id == row["id"]).values(**values))
     with store.engine.begin() as conn:
+        obsolete = select(push_subscriptions.c.id).where(push_subscriptions.c.failures >= MAX_FAILURES)
+        remove_links(store, conn, obsolete)
         result["push_removed"] += conn.execute(delete(push_subscriptions).where(
             push_subscriptions.c.failures >= MAX_FAILURES)).rowcount
     return result

@@ -73,18 +73,20 @@ async function problem(response, fallback) {
   try { return (await response.json()).detail || fallback; } catch { return fallback; }
 }
 
-async function putSubscription(fetcher, subscription, profile, settings) {
-  const response = await fetcher("/api/push/subscription", { method: "PUT", headers: { "Content-Type": "application/json" },
+async function putSubscription(fetcher, subscription, profile, settings, watchAgent = false) {
+  const path = watchAgent ? "/api/intelligence/inbox/agent-push" : "/api/push/subscription";
+  const response = await fetcher(path, { method: "PUT", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ subscription: subscription.toJSON(), profile, settings }) });
   if (!response.ok) throw new Error(await problem(response, "Alerts could not be saved. Try again later."));
   return response.json();
 }
 
 export async function enableAlerts({ config, registration, storage = globalThis.localStorage, fetcher = globalThis.fetch,
-  requestPermission = () => globalThis.Notification.requestPermission(), settings = defaultSettings() }) {
+  requestPermission = () => globalThis.Notification.requestPermission(), settings = defaultSettings(), watchAgent = false }) {
   if (!config?.enabled || !config.public_key) throw new Error("Alerts aren't available yet.");
   const profile = alertProfile(storage);
-  if (!followSummary(profile).total) throw new Error("Follow a story, technology, company or topic first, then turn on alerts.");
+  watchAgent ||= readState(storage)?.watchAgent === true;
+  if (!watchAgent && !followSummary(profile).total) throw new Error("Follow a story, technology, company or topic first, then turn on alerts.");
   // Ask first: Safari only shows the permission prompt directly after the click.
   const permission = await requestPermission();
   if (permission !== "granted") throw new Error(permission === "denied"
@@ -98,8 +100,8 @@ export async function enableAlerts({ config, registration, storage = globalThis.
   } catch {
     throw new Error("This browser couldn't set up alerts. Private or incognito windows can't receive them; try a regular window.");
   }
-  const saved = await putSubscription(fetcher, subscription, profile, settings);
-  writeState(storage, { endpoint: subscription.endpoint, settings, synced: syncKey(profile, settings) });
+  const saved = await putSubscription(fetcher, subscription, profile, settings, watchAgent);
+  writeState(storage, { endpoint: subscription.endpoint, settings, synced: syncKey(profile, settings), ...(watchAgent && { watchAgent }) });
   return saved;
 }
 
@@ -117,8 +119,9 @@ export async function updateSettings(settings, { registration, storage = globalT
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) throw new Error("Alerts are off for this browser.");
   const profile = alertProfile(storage);
-  await putSubscription(fetcher, subscription, profile, settings);
-  writeState(storage, { endpoint: subscription.endpoint, settings, synced: syncKey(profile, settings) });
+  const watchAgent = readState(storage)?.watchAgent === true;
+  await putSubscription(fetcher, subscription, profile, settings, watchAgent);
+  writeState(storage, { endpoint: subscription.endpoint, settings, synced: syncKey(profile, settings), ...(watchAgent && { watchAgent }) });
 }
 
 // Runs on every page load: keeps the server's copy of the follow list in step with this browser.
@@ -139,12 +142,12 @@ export async function syncAlerts({ registration, storage = globalThis.localStora
     state.synced = "";
   }
   const profile = alertProfile(storage);
-  if (!followSummary(profile).total) {
+  if (!state.watchAgent && !followSummary(profile).total) {
     await disableAlerts({ registration, storage, fetcher });
     return "no-follows";
   }
   if (state.synced === syncKey(profile, state.settings)) return "current";
-  await putSubscription(fetcher, subscription, profile, state.settings);
+  await putSubscription(fetcher, subscription, profile, state.settings, state.watchAgent);
   writeState(storage, { ...state, synced: syncKey(profile, state.settings) });
   return "synced";
 }
