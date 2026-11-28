@@ -649,6 +649,7 @@ function reflectWorkspace() {
   $("personalization").hidden = state.view !== "for-you";
   $("briefing-intro").hidden = state.view !== "briefing";
   $("saved-library").hidden = state.view !== "saved";
+  $("video-picks").hidden = state.view !== "feed" || $("kind").value !== "video" || state.searching;
   $("story-results-line").hidden = $("stories").hidden = $("story-keyboard-hints").hidden = isCatchup;
   $("read-action-notice").hidden = state.view === "saved" || isCatchup || !readBatch.size;
   if (isCatchup) $("show-more").hidden = true;

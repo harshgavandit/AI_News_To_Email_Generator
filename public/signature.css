@@ -478,3 +478,8 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 .ask-panel [data-ask-answer] { overflow-wrap: anywhere; }
 .ask-panel [data-ask-status]:empty { margin: 0; }
 .mcp-snippet { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.video-picks { padding: 1rem; margin-block: 1rem; border: 1px solid var(--accent-line, currentColor); border-radius: 12px; }
+.video-picks-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.video-picks-heading h3 { margin: 0; }
+.video-picks ul { display: grid; gap: 0.65rem; margin-block: 0.75rem 0; padding-inline-start: 1.25rem; }
+.video-picks .small { display: block; }

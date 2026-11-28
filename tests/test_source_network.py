@@ -54,6 +54,26 @@ def test_podcast_focus_repairs_existing_archive_classification(tmp_path):
     assert store.article(story["id"])["topic"] == "security"
 
 
+def test_tech_news_podcasts_are_discoverable_by_format(tmp_path, monkeypatch):
+    store = Store(f"sqlite:///{tmp_path / 'tech-podcasts.db'}")
+    episode_paths = {
+        "bbc-tech-life": "/programmes/tech-update",
+        "bloomberg-tech-podcast": "/shows/bloomberg-tech/tech-update",
+    }
+    for source_id, path in episode_paths.items():
+        source = BY_ID[source_id]
+        assert source.enabled and source.content_format == "podcast"
+        story = item(source_id, ident=source_id)
+        story["url"] = f"https://{source.hosts[0]}{path}"
+        store.ingest(source_id, [story], True)
+    store.ingest("techcrunch", [item("techcrunch")], True)
+    monkeypatch.setattr(server, "get_store", lambda: store)
+    with TestClient(server.app) as client:
+        response = client.get("/api/news", params={"kind": "podcast", "hours": 168})
+    assert response.status_code == 200
+    assert {row["source_id"] for row in response.json()["articles"]} == set(episode_paths)
+
+
 def test_due_plan_is_bounded_host_aware_and_fair(monkeypatch):
     sources = tuple(Source(f"project-{i}", "projects", f"Project {i}", "engineering",
                     f"https://github.com/org/p{i}/releases.atom", ("github.com",), refresh_minutes=60) for i in range(10))

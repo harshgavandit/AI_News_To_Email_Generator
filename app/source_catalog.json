@@ -22218,5 +22218,36 @@
     "region": "India",
     "reviewed_at": "2026-11-24",
     "require_english": true
+  },
+  {
+    "id": "bbc-tech-life",
+    "group": "bbc-tech-life",
+    "publisher_group": "bbc",
+    "label": "BBC World Service · Tech Life",
+    "url": "https://podcasts.files.bbci.co.uk/p01plr2p.rss",
+    "hosts": ["bbc.co.uk", "bbc.com"],
+    "topic": "industry",
+    "kind": "podcast",
+    "coverage": "reporting",
+    "language": "en",
+    "region": "Global",
+    "collection": "Technology news podcasts",
+    "reviewed_at": "2026-11-28"
+  },
+  {
+    "id": "bloomberg-tech-podcast",
+    "group": "bloomberg-tech-podcast",
+    "publisher_group": "bloomberg",
+    "label": "Bloomberg Tech Podcast",
+    "url": "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/41764a4f-fc64-4e11-89ba-ae7c0030ab5e/9caafc41-289c-4115-995d-ae7c0030ab75/podcast.rss",
+    "hosts": ["omny.fm"],
+    "article_paths": ["/shows/bloomberg-tech/"],
+    "topic": "bigtech",
+    "kind": "podcast",
+    "coverage": "reporting",
+    "language": "en",
+    "region": "Global",
+    "collection": "Technology news podcasts",
+    "reviewed_at": "2026-11-28"
   }
 ]
