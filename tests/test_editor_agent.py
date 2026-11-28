@@ -287,6 +287,14 @@ def test_recap_note_is_invisible_until_approval_and_removable(archive):
             )
     result = agent.draft_recap(archive, week, model=stub)
     assert result["editor_recap_queued"] == 1
+
+    def unexpected_judge(*_args):
+        pytest.fail("An existing recap draft must prevent another model call")
+
+    assert agent.draft_recap(archive, week, model=unexpected_judge) == {
+        "editor_recap_status": "already_proposed"
+    }
+    assert db.pending_count(archive) == 1
     weekly_recap.save(
         archive,
         week,
@@ -337,3 +345,23 @@ def test_cursors_guardrails_fallback_and_budget(archive, monkeypatch):
         agent.run(archive, now=editor_now + 60, model=stub)["editor_model_calls"] == 0
     )
     assert all(inspect(archive.engine).has_table(table.name) for table in db.TABLES)
+
+
+def test_shared_spend_cap_after_admission_queues_only_heuristics(archive):
+    row = ingest(archive, "budget-ad", "Celebrity gossip and discount codes")
+
+    def exhausted(*_args):
+        raise agent.BudgetExceeded("fixture budget reached")
+
+    result = agent.run(archive, now=time.time() + 60, model=exhausted)
+    assert result["editor_status"] == "checked"
+    assert result["editor_model_calls"] == 0
+    assert result["editor_queued"] == 1
+    [suggestion] = admin().get(ROOT).json()["items"]
+    assert suggestion["mode"] == "heuristic"
+    assert suggestion["action"]["story_id"] == row["id"]
+    with archive.engine.connect() as conn:
+        hidden = conn.execute(
+            select(articles.c.editor_hidden).where(articles.c.id == row["id"])
+        ).scalar_one()
+        assert hidden is None
