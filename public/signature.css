@@ -477,4 +477,17 @@ body { font-feature-settings: "kern", "liga", "calt"; -webkit-font-smoothing: an
 .ask-panel button { min-height: 44px; }
 .ask-panel [data-ask-answer] { overflow-wrap: anywhere; }
 .ask-panel [data-ask-status]:empty { margin: 0; }
+.ask-mode { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0; padding: 0.35rem 0.65rem; border: 1px solid var(--line); border-radius: 8px; }
+.ask-mode legend { font-size: 0.875rem; padding-inline: 0.25rem; }
+.ask-panel .ask-mode label { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; cursor: pointer; }
+.deep-report { margin-block: 1.25rem; border-top: 1px solid var(--line); padding-block-start: 1rem; }
+.deep-report h3, .deep-report h4 { margin-block: 1rem 0.4rem; }
+.deep-timeline { padding-inline-start: 1.4rem; }
+.deep-timeline time { font-weight: 650; }
+.deep-timeline p { margin-block: 0.25rem 0.85rem; }
 .mcp-snippet { max-inline-size: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.video-picks { padding: 1rem; margin-block: 1rem; border: 1px solid var(--accent-line, currentColor); border-radius: 12px; }
+.video-picks-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.video-picks-heading h3 { margin: 0; }
+.video-picks ul { display: grid; gap: 0.65rem; margin-block: 0.75rem 0; padding-inline-start: 1.25rem; }
+.video-picks .small { display: block; }

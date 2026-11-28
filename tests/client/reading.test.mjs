@@ -366,6 +366,32 @@ test('daily briefing navigation, read state and modal brief pins work together',
   } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
 });
 
+test('media shortcuts show reviewed video links and open the podcast filter', async () => {
+  const env = mount(html, 'https://informa.test/?view=feed&kind=video&window=7d#reading-room');
+  const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;
+  globalThis.setInterval = () => 0;
+  const requests = [];
+  globalThis.fetch = async url => {
+    const path = new URL(String(url), location.origin);
+    if (path.pathname === '/api/news') requests.push(path.searchParams.get('kind'));
+    return new Response(JSON.stringify({ ...catalog, articles: [], total: 0, facets: {} }), { status: 200 });
+  };
+  try {
+    await import(`../../public/app.js?media=${Date.now()}`);
+    const picks = document.getElementById('video-picks');
+    await until(() => requests.includes('video'));
+    assert.equal(picks.hidden, false);
+    assert.ok(picks.querySelector('a[href="https://www.youtube.com/watch?v=vokj-2DfJhY"]'));
+    assert.equal(new URL(picks.querySelector('a[href*="kind=podcast"]').href).searchParams.get('window'), '7d');
+    const kind = document.getElementById('kind');
+    kind.value = 'podcast';
+    kind.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await until(() => requests.includes('podcast'));
+    assert.equal(picks.hidden, true);
+    await delay(50);
+  } finally { globalThis.fetch = fetchBefore; globalThis.setInterval = intervalBefore; env.close(); }
+});
+
 test('the tracker email link opens and scrolls to the daily delivery form', async () => {
   const env = mount(html, 'https://informa.test/?view=briefing#daily-delivery');
   const fetchBefore = globalThis.fetch, intervalBefore = globalThis.setInterval;

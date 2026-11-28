@@ -16,6 +16,9 @@ The endpoint uses the official Python MCP SDK with JSON responses and no server-
 | `curiosity_cards` | Optional `subject` or theme and `limit` (1–12) | Reviewed cards and archived source excerpts |
 | `weekly_recap` | Optional ISO `week`, such as `2026-W47` | A saved recap |
 | `ask_informa` | `question` | The same checked answer and citations as the website |
+| `deep_research` | `question`, optional `topic` and `days` (1–90) | A checked report with a summary, sections, dated coverage timeline, and numbered Informa story links |
+
+`deep_research` uses the same 45-second deadline, six-hour cache, and database-backed request limits as the website’s Deep research mode. It returns a complete report in one tool response. See [Deep Ask](DEEP-ASK.md).
 
 Use topic and region IDs from [the public source catalog](https://getinformdaily.com/api/sources). Results link to pages on Informa and preserve publisher links. A tool error appears as an MCP `isError` result. The HTTP transport permits 120 requests per 10 minutes per IP per warm instance. `ask_informa` additionally shares the public Ask and story-question database-backed rate limit and AI budgets. Tool calls do not fetch publishers. The Curiosity tool reads source excerpts and reviewed cards without generating summaries or saving library cards.
 

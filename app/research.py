@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, create_model
 from app import guardrails
 
 from app.agent.openai_client import BudgetExceeded, embed_texts, generate_response, get_openai_model, route_model
+from app.agent.openai_client import generate_bounded_response as generate_bounded_response
 from app.briefing import build_briefing
 from app.cache import Cache
 from app.coverage import public_article

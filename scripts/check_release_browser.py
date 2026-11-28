@@ -109,6 +109,16 @@ def exercise_mobile_ask(page: Page, origin: str) -> None:
         "I can answer questions about technology news"
     )
     expect(page.locator(".source-checked")).to_have_count(0)
+    page.get_by_role("radio", name="Deep research").check()
+    expect(page.get_by_label("Look back")).to_have_value("30")
+    question.fill("What did the sample cloud provider report about the outage?")
+    page.get_by_role("button", name="Research the archive").click()
+    expect(page.locator("[data-ask-status]")).to_contain_text(
+        "Deep research is temporarily unavailable"
+    )
+    expect(page.locator(".source-checked")).to_have_count(0)
+    page.set_viewport_size({"width": 320, "height": 740})
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
 
 
 def exercise_mobile_connect(page: Page, origin: str) -> None:

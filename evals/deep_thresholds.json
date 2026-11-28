@@ -1,0 +1,11 @@
+{
+  "citation_rate": 0.9,
+  "citation_precision": 0.95,
+  "required_fact_recall": 0.8,
+  "timeline_date_accuracy": 0.95,
+  "must_not_include_violations": 0,
+  "correct_refusals": 1,
+  "correct_insufficient": 0.9,
+  "steps_within_limits": 1,
+  "follow_up_success": 0.75
+}

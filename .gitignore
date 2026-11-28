@@ -113,3 +113,6 @@ app/google-service-account.json
 
 # Local scratch output from Claude sessions (screenshots, archives, .env backups)
 Claude outputs/
+
+# Generated local research evaluation
+/evals/results/latest-deep.json

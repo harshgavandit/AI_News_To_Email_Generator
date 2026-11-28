@@ -1,0 +1,86 @@
+[
+  {
+    "id": "deep-atlas-1",
+    "title": "atlas licensing update",
+    "excerpt": "Atlas rolled out export licensing checks for accelerator shipments.",
+    "source_id": "ars-technica",
+    "minutes_ago": 12960
+  },
+  {
+    "id": "deep-atlas-2",
+    "title": "atlas permits update",
+    "excerpt": "Atlas clarified that existing permits remain valid until expiry.",
+    "source_id": "ars-technica",
+    "minutes_ago": 8640
+  },
+  {
+    "id": "deep-atlas-3",
+    "title": "atlas review update",
+    "excerpt": "Atlas opened a separate review for regional inference hardware.",
+    "source_id": "ars-technica",
+    "minutes_ago": 4320
+  },
+  {
+    "id": "deep-cascade-1",
+    "title": "cascade funding update",
+    "excerpt": "Cascade raised 12 million dollars to develop low-power inference chips.",
+    "source_id": "ars-technica",
+    "minutes_ago": 12960
+  },
+  {
+    "id": "deep-cascade-2",
+    "title": "cascade laboratories update",
+    "excerpt": "Cascade shipped test accelerators to two research laboratories.",
+    "source_id": "ars-technica",
+    "minutes_ago": 8640
+  },
+  {
+    "id": "deep-cascade-3",
+    "title": "cascade trials update",
+    "excerpt": "Cascade published power measurements from the first accelerator trials.",
+    "source_id": "ars-technica",
+    "minutes_ago": 4320
+  },
+  {
+    "id": "deep-vertexnet-1",
+    "title": "vertexnet nairobi update",
+    "excerpt": "VertexNet opened a new Nairobi region for its cloud storage service.",
+    "source_id": "ars-technica",
+    "minutes_ago": 12960
+  },
+  {
+    "id": "deep-vertexnet-2",
+    "title": "vertexnet replication update",
+    "excerpt": "VertexNet expanded its regional storage to support offline replication.",
+    "source_id": "ars-technica",
+    "minutes_ago": 8640
+  },
+  {
+    "id": "deep-vertexnet-3",
+    "title": "vertexnet recovery update",
+    "excerpt": "VertexNet published the recovery results of a simulated service disruption.",
+    "source_id": "ars-technica",
+    "minutes_ago": 4320
+  },
+  {
+    "id": "deep-canopy-1",
+    "title": "canopy manifests update",
+    "excerpt": "The Canopy package manager began signing release manifests with a new hardware key.",
+    "source_id": "ars-technica",
+    "minutes_ago": 12960
+  },
+  {
+    "id": "deep-canopy-2",
+    "title": "canopy rotating update",
+    "excerpt": "Canopy published instructions for rotating package signing keys.",
+    "source_id": "ars-technica",
+    "minutes_ago": 8640
+  },
+  {
+    "id": "deep-canopy-3",
+    "title": "canopy unsigned update",
+    "excerpt": "Canopy removed unsigned manifests from the stable update channel.",
+    "source_id": "ars-technica",
+    "minutes_ago": 4320
+  }
+]

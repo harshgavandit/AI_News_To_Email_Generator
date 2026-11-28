@@ -96,7 +96,7 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
                     assert session_id() is None
                     assert await session.send_ping()
                     listing = await session.list_tools()
-                    assert len(listing.tools) == 7
+                    assert len(listing.tools) == 8
                     assert {tool.name for tool in listing.tools} == {
                         "search_news",
                         "get_story",
@@ -105,6 +105,7 @@ def test_official_client_discovers_and_calls_all_tools_with_no_startup_lifespan(
                         "curiosity_cards",
                         "weekly_recap",
                         "ask_informa",
+                        "deep_research",
                     }
                     for tool in listing.tools:
                         assert tool.inputSchema["additionalProperties"] is False
