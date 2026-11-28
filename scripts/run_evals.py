@@ -321,6 +321,7 @@ def run_deep(*, live: bool = False) -> dict:
                 model=model,
             )
             results.append(grade_deep(case, result, control))
+        usage = ai_usage.summary(store) if live else []
     metrics = deep_scores(results)
     thresholds = read_json("deep_thresholds.json")
     failures = gate(metrics, thresholds)
@@ -333,6 +334,7 @@ def run_deep(*, live: bool = False) -> dict:
         "failed_metrics": failures,
         "passed": not failures,
         "cases": results,
+        "model_usage": usage,
     }
 
 

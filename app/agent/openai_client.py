@@ -37,7 +37,7 @@ def get_openai_api_key() -> str:
 
 
 def get_openai_model() -> str:
-    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+    return (os.getenv("OPENAI_MODEL") or "").strip() or DEFAULT_MODEL
 
 
 def tier_for(task: str) -> str:
