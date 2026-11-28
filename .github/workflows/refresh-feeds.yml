@@ -115,7 +115,8 @@ jobs:
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/intelligence' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
           jq '{status, monitoring_status, watches_checked, alerts_created, index_status, indexed, brief_status, ai_issue,
-              push_status, push_sent}' <<< "$result"
+              push_status, push_sent, watch_agent_status, watch_agent_checked, watch_agent_alerts, watch_agent_candidates,
+              watch_agent_model_calls, editor_status, editor_candidates, editor_model_calls, editor_queued}' <<< "$result"
           for part in push_status; do
             if [[ $(jq -r ".$part // empty" <<< "$result") == failed ]]; then
               echo "::warning::$part failed in the intelligence job; see the Vercel function logs. Feeds and mail are unaffected."

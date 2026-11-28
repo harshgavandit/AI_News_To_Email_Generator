@@ -23,6 +23,36 @@ def test_vercel_builds_require_a_manual_deployment():
     assert config["git"]["deploymentEnabled"] is False
 
 
+@pytest.mark.parametrize(
+    "workflow, job, names",
+    [
+        (
+            "refresh-feeds.yml",
+            "intelligence",
+            {
+                "watch_agent_status",
+                "watch_agent_checked",
+                "watch_agent_alerts",
+                "watch_agent_candidates",
+                "watch_agent_model_calls",
+                "editor_status",
+                "editor_candidates",
+                "editor_model_calls",
+                "editor_queued",
+            },
+        ),
+        ("weekly-recap.yml", "recap", {"editor_recap_status", "editor_recap_queued"}),
+    ],
+)
+def test_existing_jobs_log_agent_counts_without_logging_the_raw_response(
+    workflow, job, names
+):
+    step = load(ROOT / ".github" / "workflows" / workflow)["jobs"][job]["steps"][0]
+    projection = re.search(r"jq '\{([a-z_,\s]+)\}' <<< \"\$result\"", step["run"])
+    assert projection
+    assert names <= set(re.findall(r"[a-z_]+", projection.group(1)))
+
+
 def test_every_action_is_pinned_to_a_full_commit_sha():
     unpinned = []
     for path in WORKFLOWS:
