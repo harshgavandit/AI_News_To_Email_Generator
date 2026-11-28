@@ -372,3 +372,30 @@ def test_search_retries_model_queries_without_filler_words(archive):
     # ...but a distinctive term with no coverage still finds nothing.
     empty = graph.search({"pending": ["cascade lunar"]})
     assert empty["candidates"] == []
+
+
+@pytest.mark.parametrize("enough", [True, False])
+def test_broad_second_pass_still_requires_relevant_evidence(archive, enough):
+    stages = []
+    control = deep_ask.Control(notify=lambda stage, _message: stages.append(stage))
+    stub = deep_stub(["cascade technology commercialization"], [])
+    assessed = []
+
+    def model(payload, instructions, schema, *, task, **options):
+        if task == "deep_assess":
+            evidence = json.loads(payload)["evidence"]
+            assessed.append(len(evidence))
+            return json.dumps({"enough": enough and len(evidence) >= 3, "queries": []})
+        if task == "deep_write" and not enough:
+            pytest.fail(
+                "The writer must not answer with evidence the assessor rejected"
+            )
+        return stub(payload, instructions, schema, task=task, **options)
+
+    result = deep_ask.research_archive(
+        archive, deep_ask.DeepRequest(question=QUESTION), control, model=model
+    )
+    assert assessed == [0, 3]
+    assert control.rounds == 2 and result["stories_read"] == 3
+    assert result["status"] == ("answered" if enough else "insufficient")
+    assert stages.count("assess") == 2
