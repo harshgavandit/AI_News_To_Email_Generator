@@ -531,11 +531,13 @@ Each candidate carries the rule that flagged it; confirm when the evidence suppo
   the publisher is based elsewhere. Publisher identity alone is not evidence.
 - hide: confirm promotional or non-news items such as press-release distribution, sponsored
   posts, coupons, gambling, gossip or clickbait. Reject real technology news, even if minor.
-- recap: select 3-5 distinct records about the week's biggest distinct themes.
+- recap: confirm when at least three supplied stories represent distinct themes from
+  the requested week. Return one exact quote from each of 3–5 different records.
 - curiosity: confirm engineering write-ups such as postmortems, case studies or deep dives.
 Do not confirm when the evidence does not show the flagged problem.
 Select an exact headline or excerpt span from one listed evidence record per quote. For a
-duplicate cite both articles. For other types cite one record.
+duplicate cite both articles. For labels, hide and curiosity cite one record. Use the
+3–5 citations required above for a recap.
 Return each candidate ID at most once. Never invent IDs, facts, quotes, links or actions."""
 
 

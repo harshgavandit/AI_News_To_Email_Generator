@@ -2,13 +2,14 @@
 
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
 
 from sqlalchemy import delete, update
 
-from app import ai_usage, editor_agent as agent, editor_store as db
+from app import ai_usage, editor_agent as agent, editor_store as db, weekly_recap
 from app.launch_store import Store
 from scripts.check_reader_quality import fixture_row
 from unittest.mock import patch
@@ -54,7 +55,10 @@ def feed(scenario, now):
     }
 
 
-def recap(now):
+def recap():
+    week = "2026-W44"
+    start, _ = weekly_recap.week_bounds(week)
+    now = (start + timedelta(days=2)).timestamp()
     rows = [
         article("ai", "Lumen Lab releases a new model with open weights", now),
         article(
@@ -69,7 +73,7 @@ def recap(now):
     return agent.proposal(
         "recap",
         "fixture-week",
-        {"week": "2026-W44"},
+        {"week": week},
         [agent.story_evidence(row) for row in rows],
         "Distinct archive highlights",
         0.89,
@@ -124,7 +128,7 @@ def detect_case(case, now):
     if kind == "source":
         return agent.detect_source(feed(variant, now), now)
     if kind == "recap":
-        return [recap(now)]
+        return [recap()]
     raw = article(
         case["id"], title, now, excerpt="A short note." if variant == "thin" else None
     )
@@ -148,7 +152,7 @@ def process_case(store, case, now, live):
     kind = case["kind"]
     _title, variant, *expected = case["inputs"]
     if variant == "rejection":
-        item = recap(now)
+        item = recap()
         first = agent.review(
             store, lambda: (), lambda *_: ([item], {}), now, model=stub
         )
@@ -170,7 +174,7 @@ def process_case(store, case, now, live):
         }
     items = detect_case(case, now)
     if kind == "safety" and variant == "invented-id":
-        items = [recap(now)]
+        items = [recap()]
     model = None if live else stub
     if (kind == "recap" and variant != "checked") or variant == "invented-id":
         model = model_with_invalid_evidence(variant)
