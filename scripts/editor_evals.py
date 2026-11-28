@@ -129,9 +129,12 @@ def detect_case(case, now):
         return agent.detect_source(feed(variant, now), now)
     if kind == "recap":
         return [recap()]
-    raw = article(
-        case["id"], title, now, excerpt="A short note." if variant == "thin" else None
-    )
+    excerpt = {
+        "thin": "A short note.",
+        "clickbait": "Get celebrity gossip, entertainment rumors, and bonus codes for online casinos.",
+        "spam": "Purchase a sponsored distribution package to promote your company's press release.",
+    }.get(variant)
+    raw = article(case["id"], title, now, excerpt=excerpt)
     if kind == "labels":
         raw["topic"] = variant
     if variant == "future":
