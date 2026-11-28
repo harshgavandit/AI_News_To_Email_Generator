@@ -358,7 +358,7 @@ def test_failed_model_draft_falls_back_to_checked_extract(archive):
     }
 
 
-def test_search_accepts_partial_keyword_matches_when_strict_search_is_empty(archive):
+def test_search_retries_model_queries_without_filler_words(archive):
     control = deep_ask.Control()
     graph = deep_ask.DeepGraph(
         archive,
@@ -366,5 +366,9 @@ def test_search_accepts_partial_keyword_matches_when_strict_search_is_empty(arch
         control,
         research.generate_bounded_response,
     )
-    state = graph.search({"pending": ["cascade factory nonexistentterm"]})
-    assert any("factory" in row["cleanSummary"] for row in state["candidates"])
+    # Filler words that stories never use no longer hide the matching story...
+    found = graph.search({"pending": ["cascade factory latest developments news"]})
+    assert any("factory" in row["cleanSummary"] for row in found["candidates"])
+    # ...but a distinctive term with no coverage still finds nothing.
+    empty = graph.search({"pending": ["cascade lunar"]})
+    assert empty["candidates"] == []
