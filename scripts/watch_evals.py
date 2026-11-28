@@ -196,12 +196,11 @@ def run(*, live=False):
             sum(row["state"] == "refused" and not row["found"] for row in refusals),
             len(refusals),
         ),
+        # With feedback applied, every alert must be right. A model that already skips the
+        # rated story without feedback passes too; requiring an earlier false positive would
+        # penalise better judging.
         "feedback_improvement": ratio(
-            sum(
-                bool(row["unrated_false_positives"])
-                and set(row["found"]) == set(row["expected"])
-                for row in feedback_cases
-            ),
+            sum(set(row["found"]) == set(row["expected"]) for row in feedback_cases),
             len(feedback_cases),
         ),
     }

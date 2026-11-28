@@ -36,6 +36,11 @@ MAX_QUESTIONS = 4
 MAX_ROUNDS = 2
 MAX_STORIES = 25
 MAX_STEPS = 6
+SEARCH_FILLER = frozenset(
+    "announcement announcements news coverage update updates latest details "
+    "changes results information report reports story stories overview "
+    "technology tech industry".split()
+)
 GRAPH_RUNS = 1 + 3 * MAX_ROUNDS + 2 + 1
 MAX_TOKENS = 28_000
 Model = Callable[..., str]
@@ -433,22 +438,21 @@ class DeepGraph:
                 limit=min(7, remaining),
                 excerpts_only=True,
             )
-            if not rows:
-                # Archive search needs every term. When that finds nothing, accept
-                # stories that match at least half of the query's keywords.
-                terms = research.keywords(query)
-                needed = max(2, -(-len(terms) // 2))
-                extra = research.lexical_results(
+            # Archive search needs every term. Model-written queries often add filler
+            # such as "developments" or "announcements" that stories never use, so
+            # retry once with only the query's distinctive terms.
+            core = " ".join(
+                term for term in research.keywords(query) if term not in SEARCH_FILLER
+            )
+            if not rows and core and core != search_text(query):
+                rows = archive_tools.search_news(
                     self.store,
-                    query,
-                    self.body.days * 24,
-                    {"topic": self.body.topic, "language": "en"},
+                    query=core,
+                    topic=self.body.topic,
+                    days=self.body.days,
+                    limit=min(7, remaining),
+                    excerpts_only=True,
                 )
-                rows = [
-                    archive_tools.public_article(row)
-                    for row in extra
-                    if research.keyword_rank(row, terms)[0] >= needed
-                ][: min(7, remaining)]
             self.control.stories += len(rows)
             prior.append(query)
             candidates.extend(rows)
