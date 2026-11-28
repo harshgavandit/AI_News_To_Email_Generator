@@ -168,6 +168,7 @@ class Control:
     tokens: int = 0
     rounds: int = 0
     queries: int = 0
+    search_queries: list[str] = field(default_factory=list)
     reason: str | None = None
     fallback: dict | None = None
 
@@ -457,6 +458,7 @@ class DeepGraph:
             prior.append(query)
             candidates.extend(rows)
         self.control.queries = len(prior)
+        self.control.search_queries = prior
         self.control.rounds = rounds + int(len(prior) > len(state.get("visited", [])))
         return {
             "visited": prior,

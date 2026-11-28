@@ -251,6 +251,9 @@ def grade_deep(case: dict, result: dict, control: deep_ask.Control) -> dict:
             and control.tokens <= deep_ask.MAX_TOKENS
         ),
         "steps": result["steps_used"],
+        "stories_read": result["stories_read"],
+        "reason": result.get("reason"),
+        "search_queries": control.search_queries,
         "rounds": control.rounds,
         "minimum_rounds": case["minimum_rounds"],
     }
