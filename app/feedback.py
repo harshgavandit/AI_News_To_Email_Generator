@@ -142,4 +142,6 @@ def read_feedback(authorization: str | None = Header(default=None),
         rows = [dict(row) for row in conn.execute(statement.order_by(feedback_rows.c.created.desc()).limit(500)).mappings()]
     for row in rows:
         row["created"] = datetime.fromtimestamp(row["created"], UTC).isoformat(timespec="seconds")
-    return {"days": days, "count": len(rows), "feedback": rows}
+    from app.editor_store import pending_count
+    return {"days": days, "count": len(rows), "feedback": rows, "editor_pending": pending_count(store),
+            "editor_url": "/admin-editor.html"}

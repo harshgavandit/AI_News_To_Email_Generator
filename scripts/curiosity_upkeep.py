@@ -147,6 +147,19 @@ def build_report(link_results, queue_section, usage=""):
     ]).rstrip() + "\n"
 
 
+def editorial_section(store_factory=None):
+    from app.editor_store import pending_count
+    from app.launch_store import get_store
+
+    try:
+        store = (store_factory or get_store)()
+        if store:
+            return f"\n## Editor agent\n\n{pending_count(store)} pending suggestions. Review at /admin-editor.html.\n"
+    except Exception as error:
+        logger.warning("editor_count_unavailable type=%s", type(error).__name__)
+    return ""
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--days", type=int, default=35, help="How far back the review queue looks (1-180).")
@@ -156,7 +169,7 @@ def main(argv=None):
     results = check_seeds()
     days = max(1, min(args.days, 180))
     report = build_report(results, review_queue_section(days, max(1, min(args.limit, 200))),
-                          usage_section(days) + feature_usage_section(days) + feedback_section(days))
+                          usage_section(days) + feature_usage_section(days) + feedback_section(days) + editorial_section())
     print(report)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)

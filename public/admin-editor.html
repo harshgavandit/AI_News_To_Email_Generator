@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Editor queue | Informa AI</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/research.css">
+  <link rel="stylesheet" href="/admin-editor.css">
+  <link rel="stylesheet" href="/system.css">
+  <link rel="stylesheet" href="/command.css">
+  <link rel="stylesheet" href="/orbital.css">
+  <link rel="stylesheet" href="/signature.css">
+  <script type="module" src="/admin-editor.js"></script>
+  <script defer src="/system.js"></script>
+  <script defer src="/ambient.js"></script>
+  <script defer src="/orbital.js"></script>
+</head>
+<body>
+  <main class="editor-workspace">
+    <header>
+      <a href="/">Informa AI</a>
+      <h1>Editor queue</h1>
+      <p>Review archive suggestions and reverse approved changes from the activity log.</p>
+    </header>
+    <form id="editor-login" class="editor-controls" method="post">
+      <label>Owner access key <input name="key" type="password" required autocomplete="off"></label>
+      <button type="submit" class="button primary">Open review queue</button>
+    </form>
+    <p id="editor-status" role="status" aria-live="polite" tabindex="-1"></p>
+    <section id="editor-work" hidden aria-label="Editorial workspace">
+      <div class="editor-controls">
+        <button id="editor-lock" type="button" class="button secondary">Lock queue</button>
+        <button id="editor-feedback" type="button" class="button secondary">Open owner feedback</button>
+      </div>
+      <form id="editor-filters" class="editor-controls">
+        <label>Type <select name="kind"><option value="all">All types</option><option value="duplicate">Duplicate grouping</option>
+          <option value="labels">Classification</option><option value="hide">Hide story</option>
+          <option value="source">Source health</option><option value="recap">Recap note</option><option value="curiosity">Curiosity candidate</option></select></label>
+        <label>Status <select name="status"><option value="pending">Pending</option><option value="snoozed">Snoozed</option>
+          <option value="approved">Approved</option><option value="rejected">Rejected</option><option value="undone">Undone</option><option value="all">All</option></select></label>
+        <label>Confidence <select name="minimum"><option value="0">Any</option><option value="0.8">80% and up</option>
+          <option value="0.92">92% and up</option></select></label>
+        <label>Look back <select name="days"><option value="7">7 days</option><option selected value="30">30 days</option>
+          <option value="90">90 days</option><option value="3650">All retained</option></select></label>
+        <button type="submit" class="button secondary">Apply filters</button>
+      </form>
+      <p id="editor-count"></p>
+      <button id="editor-bulk" type="button" class="button primary" disabled>Approve selected duplicates</button>
+      <div id="editor-items" class="editor-grid"></div>
+      <div class="editor-controls">
+        <button id="editor-previous" type="button" class="button secondary" hidden>Previous page</button>
+        <button id="editor-next" type="button" class="button secondary" hidden>Next page</button>
+      </div>
+      <section class="editor-card" aria-labelledby="editor-activity-title">
+        <h2 id="editor-activity-title">Activity log</h2>
+        <ol id="editor-activity"></ol>
+        <div class="editor-controls">
+          <button id="editor-newer-activity" type="button" class="button secondary" hidden>Newer decisions</button>
+          <button id="editor-older-activity" type="button" class="button secondary" hidden>Older decisions</button>
+        </div>
+      </section>
+      <section id="editor-feedback-panel" class="editor-card" hidden aria-label="Owner feedback"></section>
+    </section>
+  </main>
+</body>
+</html>

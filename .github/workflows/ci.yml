@@ -125,6 +125,7 @@ jobs:
           uv run --no-sync python -m scripts.run_evals | tee -a "$GITHUB_STEP_SUMMARY"
           uv run --no-sync python -m scripts.run_evals --deep | tee -a "$GITHUB_STEP_SUMMARY"
           uv run --no-sync python -m scripts.run_evals --watch | tee -a "$GITHUB_STEP_SUMMARY"
+          uv run --no-sync python -m scripts.run_evals --editor | tee -a "$GITHUB_STEP_SUMMARY"
 
   frontend:
     name: Frontend build and browser smoke
@@ -260,6 +261,7 @@ jobs:
           uv run --no-sync pytest -q tests/test_global_discovery.py tests/test_syndication.py
           tests/test_research.py tests/test_reader_intelligence.py tests/test_guardrails.py
           tests/test_ask.py tests/test_mcp_connector.py tests/test_deep_ask.py tests/test_watch_agent.py
+          tests/test_editor_agent.py
 
   release:
     name: Release CI

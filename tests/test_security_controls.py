@@ -80,9 +80,14 @@ def test_every_static_html_route_has_an_edge_content_security_policy():
     configuration = json.loads((root / "vercel.json").read_text(encoding="utf-8"))
     paths = {entry["source"] for entry in configuration["headers"]
              if any(header["key"] == "Content-Security-Policy" for header in entry["headers"])}
-    policies = [header["value"] for entry in configuration["headers"] for header in entry["headers"]
-                if header["key"] == "Content-Security-Policy"]
-    assert policies and all("https://vercel.live" in policy for policy in policies)
+    policies = {entry["source"]: header["value"] for entry in configuration["headers"] for header in entry["headers"]
+                if header["key"] == "Content-Security-Policy"}
+    # The owner key is entered on this page. The preview feedback script is only for reader pages.
+    editor = policies.pop("/admin-editor.html")
+    assert "script-src 'self';" in editor and "connect-src 'self';" in editor
+    assert "frame-ancestors 'none'" in editor and "form-action 'none'" in editor
+    assert "https://" not in editor and "unsafe-inline" not in editor
+    assert policies and all("https://vercel.live" in policy for policy in policies.values())
     for route in ("/", *("/" + page.name for page in (root / "public").glob("*.html"))):
         assert any(route == path or (
             path.startswith("/:page(") and re.fullmatch(path.removeprefix("/:page"), route.removeprefix("/"))

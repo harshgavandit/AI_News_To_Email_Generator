@@ -38,6 +38,13 @@ export function renderRecap(data) {
     ["Providers with incidents", data.stats.providers_with_incidents], ["Notable releases", data.stats.releases]]
     .map(([label, value]) => { const box = el("div"); box.append(el("dt", "", label), el("dd", "", String(value))); return box; }));
   stats.hidden = false;
+  const note = Array.isArray(data.editor_note) ? data.editor_note : [];
+  byId("recap-editor-section").hidden = !note.length;
+  byId("recap-editor-note").replaceChildren(...note.map((line) => {
+    const row = el("li");
+    row.append(el("p", "", line.text), anchor(line.publisher || line.title, line.url));
+    return row;
+  }));
   listItems("recap-top", data.top_stories.map((story) => {
     const item = el("li", "recap-story");
     const title = anchor(story.title, story.url, !story.url.startsWith("/"));

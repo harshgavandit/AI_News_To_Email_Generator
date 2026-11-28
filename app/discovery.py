@@ -132,15 +132,16 @@ def facet_counts(groups, *, source, topic, region, language=""):
     languages = dict.fromkeys(LANGUAGES, 0)
     sources = {"all": 0}
     total = 0
-    for source_id, group, category, count in groups:
+    for source_id, group, category, *extra, count in groups:
         entry = BY_ID.get(source_id)
-        bucket = region_id(entry.region if entry else "Global")
+        override_region, override_language = extra or (None, None)
+        bucket = override_region or region_id(entry.region if entry else "Global")
         # A prior deployment can finish an in-flight insert during a rolling release.
         if category is None:
             category = "all"  # Until the next refresh backfills it, include it in unfiltered totals only.
         in_region = not region or bucket == region
         in_topic = topic in ("all", category)
-        code = entry.language if entry else "en"
+        code = override_language or (entry.language if entry else "en")
         in_language = not language or code == language
         if in_region and in_topic and in_language:
             sources["all"] += count

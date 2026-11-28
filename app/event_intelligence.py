@@ -3,6 +3,7 @@
 Grouping is evidence linkage, not a claim that publishers agree. Public reads
 never fetch a URL or run a model. The existing intelligence worker maintains it.
 """
+from contextlib import nullcontext
 from datetime import UTC, datetime
 import hashlib
 import json
@@ -84,18 +85,18 @@ def event_score(row, candidate):
     return 0
 
 
-def observe(store, row, *, now=None, semantic_ids=()):
+def observe(store, row, *, now=None, semantic_ids=(), connection=None, isolate=False):
     now = now or time.time()
     stamp = fingerprint(row)
     keys = keys_for(row)
-    track_revisions = revisions_ready(store)
-    with store.engine.begin() as conn:
-        old = conn.execute(select(event_items).where(event_items.c.article_id == row["id"])).mappings().first()
+    track_revisions = revisions_ready(store) if connection is None else inspect(connection).has_table(event_revisions.name)
+    with (store.engine.begin() if connection is None else nullcontext(connection)) as conn:
+        old = conn.execute(select(event_items).where(event_items.c.article_id == row["id"]).with_for_update()).mappings().first()
         if old and old["fingerprint"] == stamp:
             conn.execute(update(event_items).where(event_items.c.article_id == row["id"]).values(observed=now))
             return old["event_id"], False
         event_id = old["event_id"] if old else None
-        if not event_id and keys:
+        if not event_id and keys and not isolate:
             recent = now - 7 * 86400
             candidates = conn.execute(select(events.c.id, articles).join(event_keys, event_keys.c.event_id == events.c.id)
                 .join(articles, articles.c.id == events.c.anchor_id).where(event_keys.c.key.in_(keys), events.c.updated >= recent)
@@ -145,6 +146,74 @@ def observe(store, row, *, now=None, semantic_ids=()):
             conn.execute(store.insert(event_revisions).values(update_id=update_id, event_id=event_id,
                 revision=revision).on_conflict_do_nothing())
     return event_id, True
+
+
+def merge_reviewed(store, conn, records, now):
+    """Move memberships and their timeline as one owner transaction."""
+    article_ids = [row["id"] for row in records]
+    memberships = dict(conn.execute(select(event_items.c.article_id, event_items.c.event_id)
+        .where(event_items.c.article_id.in_(article_ids)).with_for_update()).all())
+    initialized = {}
+    for row in records:
+        if row["id"] not in memberships:
+            memberships[row["id"]], _ = observe(store, row, now=now, connection=conn, isolate=True)
+            initialized[memberships[row["id"]]] = row["id"]
+    anchor, duplicate = [memberships[ident] for ident in article_ids]
+    if anchor == duplicate:
+        return None
+    target = conn.execute(select(events).where(events.c.id == anchor).with_for_update()).mappings().one()
+    original = conn.execute(select(events).where(events.c.id == duplicate).with_for_update()).mappings().one()
+    members = list(conn.scalars(select(event_items.c.article_id).where(event_items.c.event_id == duplicate)))
+    keys = list(conn.scalars(select(event_keys.c.key).where(event_keys.c.event_id == duplicate)))
+    timelines = list(conn.scalars(select(event_updates.c.id).where(event_updates.c.event_id == duplicate)))
+    revision_rows = list(conn.execute(select(event_revisions.c.update_id, event_revisions.c.revision)
+        .where(event_revisions.c.event_id == duplicate)).all())
+    if len(members) > 240 or len(timelines) > 1200 or len(keys) > 1000:
+        raise ValueError("This event has too much history for an automatic merge.")
+    conn.execute(update(event_items).where(event_items.c.event_id == duplicate).values(event_id=anchor))
+    conn.execute(update(event_updates).where(event_updates.c.event_id == duplicate).values(event_id=anchor))
+    conn.execute(update(event_revisions).where(event_revisions.c.event_id == duplicate)
+        .values(event_id=anchor, revision=target["revision"] + 1))
+    new_keys = [key for key in keys if conn.scalar(store.insert(event_keys).values(key=key, event_id=anchor)
+        .on_conflict_do_nothing().returning(event_keys.c.key)) is not None]
+    conn.execute(delete(event_keys).where(event_keys.c.event_id == duplicate))
+    conn.execute(update(events).where(events.c.id == anchor).values(updated=now, revision=events.c.revision + 1))
+    return {"anchor": anchor, "duplicate": dict(original), "members": members, "keys": keys,
+            "new_keys": new_keys, "initialized": initialized, "at": now,
+            "revisions": [list(row) for row in revision_rows]}
+
+
+def undo_reviewed_merge(store, conn, receipt, now):
+    duplicate, anchor = receipt["duplicate"], receipt["anchor"]
+    ident = duplicate["id"]
+    member_filter = event_items.c.article_id.in_(receipt["members"])
+    if set(conn.scalars(select(event_items.c.article_id).where(member_filter, event_items.c.event_id == anchor)
+            .with_for_update())) != set(receipt["members"]):
+        raise ValueError("Another grouping changed this event. Undo that grouping first.")
+    conn.execute(store.insert(events).values(**duplicate).on_conflict_do_nothing())
+    conn.execute(update(event_items).where(member_filter, event_items.c.event_id == anchor).values(event_id=ident))
+    conn.execute(update(event_updates).where(event_updates.c.article_id.in_(receipt["members"]),
+        event_updates.c.event_id == anchor).values(event_id=ident))
+    conn.execute(update(event_revisions).where(event_revisions.c.event_id == anchor,
+        event_revisions.c.update_id.in_(select(event_updates.c.id).where(event_updates.c.event_id == ident)))
+        .values(event_id=ident, revision=duplicate["revision"] + 1))
+    for update_id, revision in receipt["revisions"]:
+        conn.execute(update(event_revisions).where(event_revisions.c.update_id == update_id).values(revision=revision))
+    for key in receipt["keys"]:
+        conn.execute(store.insert(event_keys).values(key=key, event_id=ident).on_conflict_do_nothing())
+    target = conn.execute(select(events.c.updated).where(events.c.id == anchor)).scalar_one()
+    if target == receipt.get("at") and receipt.get("new_keys"):
+        conn.execute(delete(event_keys).where(event_keys.c.event_id == anchor, event_keys.c.key.in_(receipt["new_keys"])))
+    for event_id, article_id in receipt.get("initialized", {}).items():
+        members = list(conn.scalars(select(event_items.c.article_id).where(event_items.c.event_id == event_id)))
+        material = list(conn.execute(select(event_updates.c.id, event_updates.c.observed).where(event_updates.c.event_id == event_id)))
+        if members == [article_id] and len(material) == 1 and material[0].observed == receipt["at"]:
+            # This grouping existed only because of the approval. Preserve any later reporting.
+            conn.execute(delete(event_revisions).where(event_revisions.c.update_id == material[0].id))
+            for table in (event_items, event_updates, event_keys):
+                conn.execute(delete(table).where(table.c.event_id == event_id))
+            conn.execute(delete(events).where(events.c.id == event_id))
+    conn.execute(update(events).where(events.c.id.in_([anchor, ident])).values(updated=now, revision=events.c.revision + 1))
 
 
 def sync(store, *, maximum=96):

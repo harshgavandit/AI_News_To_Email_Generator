@@ -254,9 +254,11 @@ def archive():
 def respond(response, payload, store):
     if payload is None:
         raise HTTPException(404, "That week's recap isn't ready yet. Recaps are prepared early each Monday (UTC).")
-    response.headers["Cache-Control"] = "public, max-age=600"
-    response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=1800, stale-while-revalidate=86400"
-    return {**payload, "weeks": available(store)}
+    from app.editor_store import approved_note
+
+    response.headers["Cache-Control"] = "public, max-age=60, must-revalidate"
+    response.headers["Vercel-CDN-Cache-Control"] = "public, s-maxage=60, must-revalidate"
+    return {**payload, "weeks": available(store), "editor_note": approved_note(store, payload["week"])}
 
 
 @router.get("/api/recap")

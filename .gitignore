@@ -117,3 +117,4 @@ Claude outputs/
 # Generated local research evaluation
 /evals/results/latest-deep.json
 /evals/results/latest-watch.json
+/evals/results/latest-editor.json

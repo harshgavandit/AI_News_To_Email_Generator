@@ -34,10 +34,14 @@ articles = Table("brief_articles", schema,
     Column("topic", String(32)), Column("search_title", Text), Column("search_description", Text),
     Column("search_publisher", Text), Column("metadata_json", Text), Column("subject_keys", Text),
     Column("community_relevant", Boolean), Column("source_eligible", Boolean), Column("author_key", String(39)),
-    Column("classification_version", Integer), Column("first_seen", Float))
+    Column("classification_version", Integer), Column("first_seen", Float),
+    Column("editor_topic", String(32)), Column("editor_region", String(16)),
+    Column("editor_language", String(12)), Column("editor_hidden", Boolean))
 discovery_columns = (articles.c.topic, articles.c.search_title, articles.c.search_description, articles.c.search_publisher,
                      articles.c.metadata_json, articles.c.subject_keys, articles.c.community_relevant,
                      articles.c.source_eligible, articles.c.author_key, articles.c.classification_version)
+editor_columns = (articles.c.editor_topic, articles.c.editor_region, articles.c.editor_language, articles.c.editor_hidden)
+story_topic = func.coalesce(articles.c.editor_topic, articles.c.topic)
 research_vectors = Table("brief_research_vectors", schema,
     Column("id", String(40), primary_key=True), Column("encoder", String(100), nullable=False),
     Column("title", Text, nullable=False), Column("description", Text, nullable=False),
@@ -260,7 +264,7 @@ class Store:
             if self._discovery_ready:
                 return
             known = {column["name"] for column in inspect(conn).get_columns(articles.name)}
-            missing = [column for column in (*discovery_columns, articles.c.first_seen) if column.name not in known]
+            missing = [column for column in (*discovery_columns, articles.c.first_seen, *editor_columns) if column.name not in known]
             if missing:
                 if self.engine.dialect.name == "postgresql":
                     conn.exec_driver_sql("SET LOCAL lock_timeout = '10s'")
@@ -271,7 +275,7 @@ class Store:
                 for column in missing:
                     if column.name not in known:
                         conn.exec_driver_sql(f"ALTER TABLE brief_articles ADD COLUMN {column.name} {column.type.compile(conn.dialect)}")
-                if any(column.name != "first_seen" for column in missing):
+                if any(column.name not in known for column in discovery_columns):
                     backfill_discovery(conn)
                     article_indexes[-1].create(conn, checkfirst=True)
                 if "first_seen" not in known:
@@ -354,10 +358,13 @@ class Store:
         from app.syndication import annotate_reading
         return annotate_reading(self, rows, include_body=include_body)
 
-    def enable(self, source_id, enabled):
-        with self.engine.begin() as conn:
+    def enable(self, source_id, enabled, *, conn=None):
+        if conn is not None:
             stmt = self.insert(sources).values(id=source_id, enabled=enabled)
             conn.execute(stmt.on_conflict_do_update(index_elements=[sources.c.id], set_={"enabled": enabled}))
+            return
+        with self.engine.begin() as active:
+            self.enable(source_id, enabled, conn=active)
 
     def ingest(self, source_id, items, available, error=None, *, feed_url=None, validators=None,
                unchanged=False, retry_after=0, diagnostics=None, duration_ms=None):
@@ -400,7 +407,7 @@ class Store:
                 for article in values:
                     article.update(discovery_fields(restore_metadata(article)))
                 # Registry order owns overlapping publisher feeds regardless of refresh completion order.
-                fields = [c for c in articles.c if c.name not in {"id", "first_seen"}]
+                fields = [c for c in articles.c if c.name not in {"id", "first_seen"} and not c.name.startswith("editor_")]
                 changed = or_(*(c.is_distinct_from(stmt.excluded[c.name]) for c in fields))
                 preferred = source_order[:source_order.index(source_id)] if source_id in BY_ID else source_order
                 if preferred:
@@ -446,6 +453,7 @@ class Store:
             articles.c.published_at.between(cutoff, now.isoformat()),
             articles.c.community_relevant.is_not(False),
             articles.c.source_eligible.is_not(False),
+            articles.c.editor_hidden.is_not(True),
             or_(sources.c.enabled.is_(True), sources.c.enabled.is_(None)))
         if source != "all":
             stmt = stmt.where(or_(articles.c.source == source, articles.c.source_id == source))
@@ -455,10 +463,15 @@ class Store:
             stmt = stmt.where(articles.c.source_id == publisher)
         if source_ids:
             stmt = stmt.where(or_(articles.c.source.in_(source_ids), articles.c.source_id.in_(source_ids)))
-        if region or coverage or language:
-            stmt = stmt.where(articles.c.source_id.in_(catalog_filters(region, coverage, language)))
+        if coverage:
+            stmt = stmt.where(articles.c.source_id.in_(catalog_filters(coverage=coverage)))
+        for value, override, source_filter in ((region, articles.c.editor_region, {"region": region}),
+                                               (language, articles.c.editor_language, {"language": language})):
+            if value:
+                stmt = stmt.where(or_(override == value, and_(override.is_(None),
+                    articles.c.source_id.in_(catalog_filters(**source_filter)))))
         if topic != "all":
-            stmt = stmt.where(articles.c.topic == topic)
+            stmt = stmt.where(story_topic == topic)
         if subject:
             stmt = stmt.where(articles.c.subject_keys.contains(f"|{subject}|", autoescape=True))
         if query:
@@ -485,7 +498,7 @@ class Store:
                 rows = conn.execute(stmt.order_by(*(column.desc() for column in columns)).limit(limit))
                 return {"articles": [dict(row) for row in rows.mappings()]}
         with self.engine.connect() as conn:
-            key = (articles.c.source_id, articles.c.source, articles.c.topic)
+            key = (articles.c.source_id, articles.c.source, story_topic, articles.c.editor_region, articles.c.editor_language)
             groups = conn.execute(base.with_only_columns(*key, func.count()).group_by(*key)).all()
             counts = facet_counts(groups, source=source, topic=topic, region=region, language=language)
             if marker:
@@ -598,7 +611,7 @@ class Store:
         # Keep material developments in the candidate pool even during high-volume publication bursts.
         signal_match = or_(*(articles.c.search_title.contains(term, autoescape=True) for term in MATERIAL_TERMS))
         recent_signal = and_(signal_match, articles.c.published_at >= (datetime.now(UTC) - timedelta(hours=72)).isoformat())
-        rank = func.row_number().over(partition_by=(articles.c.topic, articles.c.source_id),
+        rank = func.row_number().over(partition_by=(story_topic, articles.c.source_id),
             order_by=[case((recent_signal, 1), else_=0).desc(), *order]).label("topic_rank")
         candidates = self.query(hours, source=source, publisher=publisher, kind=kind, query=query,
                                 source_ids=source_ids, topic=topic, region=region,
@@ -606,7 +619,7 @@ class Store:
         if interests and interests.exclude_ids:
             candidates = candidates.where(articles.c.id.not_in(interests.exclude_ids))
         if interests and (feedback := getattr(interests, "feedback", None)) and feedback.muted_topics:
-            candidates = candidates.where(articles.c.topic.not_in(feedback.muted_topics))
+            candidates = candidates.where(story_topic.not_in(feedback.muted_topics))
         ranked = candidates.add_columns(rank).subquery()
         with self.engine.connect() as conn:
             return [dict(row) for row in conn.execute(select(ranked).where(ranked.c.topic_rank <= 10)).mappings()]

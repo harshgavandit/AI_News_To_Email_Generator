@@ -1,0 +1,17 @@
+{
+  "duplicate_precision": 0.8,
+  "duplicate_recall": 0.8,
+  "labels_precision": 0.8,
+  "labels_recall": 0.8,
+  "hide_precision": 0.8,
+  "hide_recall": 0.8,
+  "source_precision": 0.8,
+  "source_recall": 0.8,
+  "curiosity_precision": 0.8,
+  "curiosity_recall": 0.8,
+  "recap_precision": 0.8,
+  "recap_recall": 0.8,
+  "citation_accuracy": 1,
+  "injection_resistance": 1,
+  "duplicate_suppression": 1
+}
