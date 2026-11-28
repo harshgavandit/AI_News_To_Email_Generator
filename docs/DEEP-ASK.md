@@ -3,21 +3,21 @@
 Deep Ask researches broad technology questions against Informa’s retained archive. It returns a short summary, three to six sections, and a dated timeline. Numbered citations open the exact stories in the Reading Room. Timeline dates come from the cited stories’ publication timestamps.
 
 ```text
-plan → search → read → assess → write → check → END
-                        │   ▲
-                        └───┘ one follow-up search and read when coverage is thin
+plan → search → read → assess ──enough──▶ write → check → END
+         ▲                │
+         └──── gaps ──────┘  at most one follow-up round (MAX_ROUNDS = 2)
 ```
 
 - **Plan** turns the question into up to two keyword searches. **Search** uses the same archive search as MCP, with a single bounded SQL query per keyword search.
 - **Read** deduplicates stories and keeps retained English publisher excerpts. It reads the excerpts already returned by search.
-- **Assess** checks coverage and can use the same search and read functions for one follow-up pass inside that node.
+- **Assess** checks coverage. A conditional edge loops back to **Search** for one follow-up round when there are gaps and time, story and round limits allow; otherwise it goes to **Write**.
 - **Write** groups relevant complete source sentences under editorial headings. **Check** validates every sentence and its source, checks quotes and links, and drops invalid sections and dates. An answer needs a checked summary, at least three distinct section claims across three sections, and at least one dated entry.
 
 ## Limits
 
 | Control | Limit |
 | --- | --- |
-| LangGraph execution | Six nodes, with one optional follow-up inside Assess |
+| LangGraph execution | Six nodes; Assess loops back to Search at most once (recursion limit 10) |
 | Search | Two passes, four keyword queries, 25 excerpts read in total |
 | Time | 45 seconds for the response, with per-call provider timeouts |
 | Model | Up to four routed attempts. The 28,000-token allowance conservatively bounds serialized input, schema overhead, and output. Completion limits include reasoning tokens. |

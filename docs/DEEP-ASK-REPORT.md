@@ -4,7 +4,7 @@
 
 | Item | Status | Result |
 | --- | --- | --- |
-| 1. Research graph | Done | Six LangGraph nodes, with one bounded follow-up search inside Assess. No checkpoint persistence. |
+| 1. Research graph | Done | Six LangGraph nodes. A conditional edge loops Assess back to Search for at most one follow-up round. No checkpoint persistence. |
 | 2. API | Done | JSON and SSE on `POST /api/ask/deep` with shared guardrails, admission, cache, and response deadline. |
 | 3. MCP | Done | Read-only `deep_research` on `/mcp` calls the same service. The existing tools retain their interfaces. |
 | 4. Frontend | Done | Quick and Deep modes on `/ask.html` and the homepage. Added progress, checked reports, a coverage timeline, numbered links and optional feedback. |

@@ -36,6 +36,7 @@ MAX_QUESTIONS = 4
 MAX_ROUNDS = 2
 MAX_STORIES = 25
 MAX_STEPS = 6
+GRAPH_RUNS = 1 + 3 * MAX_ROUNDS + 2 + 1
 MAX_TOKENS = 28_000
 Model = Callable[..., str]
 Progress = Callable[[str, str], None]
@@ -486,15 +487,11 @@ class DeepGraph:
         )
 
     def assess(self, state: State) -> State:
-        reviewed: State = {**state, **self.review_sources(state)}
-        if not self.can_search_again(reviewed):
-            return {"pending": []}
-        # Reuse search and read for a single follow-up inside this graph step.
-        # The outer graph always executes at most its six named nodes.
-        searched = self.search(reviewed)
-        reread = self.read({**reviewed, **searched})
-        self.review_sources({**reviewed, **searched, **reread})
-        return {**searched, **reread, "pending": []}
+        return self.review_sources(state)
+
+    def route(self, state: State) -> str:
+        """Loop back to search while gaps remain and the run is within its limits."""
+        return "search" if self.can_search_again(state) else "write"
 
     def write(self, state: State) -> State:
         self.control.step("write", "Writing…")
@@ -537,12 +534,14 @@ class DeepGraph:
         graph.add_edge("plan", "search")
         graph.add_edge("search", "read")
         graph.add_edge("read", "assess")
-        graph.add_edge("assess", "write")
+        graph.add_conditional_edges(
+            "assess", self.route, {"search": "search", "write": "write"}
+        )
         graph.add_edge("write", "check")
         graph.add_edge("check", END)
         with tracing_context(enabled=False):
-            # LangGraph needs one extra tick to observe the terminal edge.
-            result = graph.compile().invoke({}, {"recursion_limit": MAX_STEPS + 1})[
+            # plan, up to MAX_ROUNDS of search/read/assess, write, check, plus one tick for END.
+            result = graph.compile().invoke({}, {"recursion_limit": GRAPH_RUNS})[
                 "result"
             ]
         return self.control.finish(result)
