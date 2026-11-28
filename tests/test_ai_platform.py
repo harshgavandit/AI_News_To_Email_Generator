@@ -73,6 +73,22 @@ def test_tasks_route_to_tiers_with_overrides(store, monkeypatch):
     assert openai_client.route_model("unknown-task") == "base-model"
 
 
+@pytest.mark.parametrize("configured", ["", " \t"])
+def test_empty_workflow_model_uses_the_default_for_bounded_calls(store, monkeypatch, configured):
+    monkeypatch.setenv("OPENAI_MODEL", configured)
+    client, calls = fake_client(lambda _model: "{}")
+    client.with_options.return_value = client
+    monkeypatch.setattr(openai_client, "get_client", lambda: client)
+
+    for task in ("deep_plan", "deep_write", "watch_judge", "editor_judge"):
+        result = openai_client.generate_bounded_response(
+            "{}", "Return JSON.", None, task=task, max_tokens=100,
+            input_bound=100, timeout=5, store=store,
+        )
+        assert result == "{}"
+    assert calls == [openai_client.DEFAULT_MODEL] * 4
+
+
 def test_unavailable_model_falls_back_and_usage_is_recorded(store, monkeypatch):
     monkeypatch.setenv("NEWS_AI_MODEL_DEEP", "gpt-4o")
 

@@ -156,10 +156,66 @@ def check_answer(answer: str, evidence: list[dict]) -> dict:
     return outcome("answered", answer, citations, sourced=True, quotes_verified=True)
 
 
+_TYPOGRAPHY = str.maketrans(
+    {
+        "“": '"',
+        "”": '"',
+        "„": '"',
+        "‘": "'",
+        "’": "'",
+        "–": "-",
+        "—": "-",
+        "\u00a0": " ",
+    }
+)
+_SENTENCE_END = re.compile(r"(?<=[.!?])[\"”’']?\s+")
+
+
+def _loose(text: str) -> str:
+    text = unicodedata.normalize("NFKC", text).translate(_TYPOGRAPHY)
+    text = " ".join(text.split()).rstrip(" .!?…").rstrip(".")
+    return text.casefold()
+
+
+def snap_sentence(text: str, source: str) -> str | None:
+    """Return the exact source sentence that ``text`` reproduces up to typography.
+
+    Models often change curly quotes, dashes, spacing or the final full stop when copying a
+    sentence. Matching after normalising only those differences, and then using the source's
+    own wording, keeps answers verbatim without rejecting faithful copies.
+    """
+    wanted = _loose(text)
+    if len(wanted) < 12:
+        return None
+    for sentence in _SENTENCE_END.split(" ".join(source.split())):
+        sentence = sentence.strip()
+        if sentence and _loose(sentence) == wanted:
+            return sentence
+    return None
+
+
+def _snap_claim(claim: dict, evidence: list[dict], numbers: dict) -> dict:
+    ids, quotes = list(claim["source_ids"]), list(claim["quotes"])
+    text = claim["text"]
+    for index, (ident, quote) in enumerate(zip(ids, quotes)):
+        if ident not in numbers:
+            continue
+        excerpt = evidence[numbers[ident] - 1]["excerpt"]
+        if quote in excerpt and _source_span(quote.strip(), excerpt):
+            continue
+        snapped = snap_sentence(quote, excerpt)
+        if snapped:
+            if _loose(text) == _loose(quote):
+                text = snapped
+            quotes[index] = snapped
+    return {**claim, "text": text, "quotes": quotes}
+
+
 def check_claims(claims: list[dict], evidence: list[dict]) -> dict:
     numbers = {row["id"]: number for number, row in enumerate(evidence, 1)}
     lines = []
     for claim in claims:
+        claim = _snap_claim(claim, evidence, numbers)
         ids, quotes = claim["source_ids"], claim["quotes"]
         if (
             not ids

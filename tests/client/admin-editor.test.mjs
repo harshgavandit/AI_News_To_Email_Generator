@@ -5,7 +5,7 @@ import { JSDOM } from "jsdom";
 
 const html = readFileSync(new URL("../../public/admin-editor.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../../public/admin-editor.js", import.meta.url), "utf8")
-  .replace(/^import.*\n/m, "").replace("export function", "function")
+  .replace(/^import[^\r\n]*\r?\n/m, "").replace("export function", "function")
   .replace(/if \(typeof document.*startEditor\(\);/, "");
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const id = "a".repeat(64);

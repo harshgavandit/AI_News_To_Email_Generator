@@ -313,3 +313,58 @@ def test_wall_time_returns_checked_fallback(monkeypatch):
 def test_stub_evaluation_hits_targets():
     report = run_deep()
     assert report["total_cases"] >= 20 and report["passed"], report["metrics"]
+
+
+def test_typographic_copies_snap_to_source_and_bad_claims_drop_alone():
+    evidence = found_evidence()
+    draft = deep_ask.extractive_draft(evidence)
+    # A faithful copy with a changed final stop and an extra space is restored to the
+    # source wording; a paraphrase in the same section is dropped on its own.
+    loose = EXCERPTS[1].rstrip(".").replace(" its ", "  its ")
+    draft.sections[1].claims = [
+        deep_ask.Claim(source_id=evidence[1]["id"], text=loose),
+        deep_ask.Claim(source_id=evidence[1]["id"], text="Cascade doubled output."),
+    ]
+    report = deep_ask.checked_report(draft, evidence)
+    assert report["status"] == "answered"
+    texts = [section["text"] for section in report["sections"]]
+    assert any(text.startswith(EXCERPTS[1]) for text in texts)
+    assert not any("doubled" in text for text in texts)
+
+
+def test_failed_model_draft_falls_back_to_checked_extract(archive):
+    stub = deep_stub(PLAN, FOLLOW_UP)
+
+    def unsupported(payload, instructions, schema, *, task, **options):
+        if task == "deep_write":
+            return json.dumps(
+                {
+                    "summary": [{"source_id": "cascade-1", "text": "Invented."}],
+                    "sections": [],
+                    "timeline": [],
+                }
+            )
+        return stub(payload, instructions, schema, task=task, **options)
+
+    result = deep_ask.research_archive(
+        archive, deep_ask.DeepRequest(question=QUESTION), model=unsupported
+    )
+    assert result["status"] == "answered", result
+    assert "Invented" not in json.dumps(result)
+    assert {c["id"] for c in result["citations"]} <= {
+        "cascade-1",
+        "cascade-2",
+        "cascade-3",
+    }
+
+
+def test_search_accepts_partial_keyword_matches_when_strict_search_is_empty(archive):
+    control = deep_ask.Control()
+    graph = deep_ask.DeepGraph(
+        archive,
+        deep_ask.DeepRequest(question=QUESTION),
+        control,
+        research.generate_bounded_response,
+    )
+    state = graph.search({"pending": ["cascade factory nonexistentterm"]})
+    assert any("factory" in row["cleanSummary"] for row in state["candidates"])

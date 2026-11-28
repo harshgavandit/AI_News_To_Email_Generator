@@ -28,7 +28,7 @@ jobs:
           result=$(curl --silent --show-error --fail --max-time 290 \
             --header @- 'https://ai-news-to-email-generator.vercel.app/api/jobs/recap' \
             <<< "Authorization: Bearer $FEED_REFRESH_SECRET")
-          jq '{recap_status, week, seconds}' <<< "$result" | tee -a "$GITHUB_STEP_SUMMARY"
+          jq '{recap_status, week, seconds, editor_recap_status, editor_recap_queued}' <<< "$result" | tee -a "$GITHUB_STEP_SUMMARY"
           jq -e '.recap_status | IN("ready", "current", "partial", "unavailable")' <<< "$result" > /dev/null
           if [[ $(jq -r '.recap_status' <<< "$result") == unavailable ]]; then
             echo "::warning::No recap could be built for $(jq -r '.week' <<< "$result") (no stored coverage for that week)."

@@ -168,6 +168,7 @@ def run(*, live=False):
                     score_case(store, raw, case, live=live)
                     for case in read("watch_cases.json")
                 ]
+            usage = ai_usage.summary(store) if live else []
             hourly = None if live else hourly_sample(store, now)
         finally:
             store.engine.dispose()
@@ -215,4 +216,5 @@ def run(*, live=False):
         "passed": not failed,
         "cases": results,
         "fixture_hourly_run": hourly,
+        "model_usage": usage,
     }

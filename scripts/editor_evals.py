@@ -228,6 +228,7 @@ def run(*, live=False):
                     with store.engine.begin() as conn:
                         conn.execute(delete(db.queue))
                     results.append(process_case(store, case, now, live))
+            usage = ai_usage.summary(store) if live else []
             for title, ident in [
                 ("Celebrity gossip and discount codes", "ad"),
                 ("How we migrated a cloud database between regions", "engineering"),
@@ -273,4 +274,5 @@ def run(*, live=False):
         "passed": not failed,
         "cases": results,
         "fixture_hourly_run": hourly,
+        "model_usage": usage,
     }
