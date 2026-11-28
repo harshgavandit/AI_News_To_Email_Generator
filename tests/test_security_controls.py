@@ -91,7 +91,7 @@ def test_every_static_html_route_has_an_edge_content_security_policy():
     for policy in policies.values():
         directives = [directive.split() for directive in policy.split(";") if directive.strip()]
         script_sources = next((tokens[1:] for tokens in directives if tokens[0] == "script-src"), [])
-        assert "https://vercel.live" in script_sources
+        assert any(source == "https://vercel.live" for source in script_sources)
     for route in ("/", *("/" + page.name for page in (root / "public").glob("*.html"))):
         assert any(route == path or (
             path.startswith("/:page(") and re.fullmatch(path.removeprefix("/:page"), route.removeprefix("/"))
